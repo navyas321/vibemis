@@ -317,9 +317,9 @@ int main(int argc, char *argv[])
     // Set these here to allow us to use the default QSettings constructor.
     // These also ensure that our cache directory is named correctly. As such,
     // it is critical that these be called before Path::initialize().
-    QCoreApplication::setOrganizationName("Artemis Desktop Project");
-    QCoreApplication::setOrganizationDomain("artemisdesktop.com");
-    QCoreApplication::setApplicationName("Artemis");
+    QCoreApplication::setOrganizationName("Vibemis Project");
+    QCoreApplication::setOrganizationDomain("github.com/navyas321/vibemis");
+    QCoreApplication::setApplicationName("Vibemis");
 
     if (QFile(QDir::currentPath() + "/portable.dat").exists()) {
         QSettings::setDefaultFormat(QSettings::IniFormat);

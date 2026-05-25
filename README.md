@@ -1,8 +1,33 @@
-# Artemis Qt
+# Vibemis
+
+**Vibemis** is a Linux-focused fork of [Artemis Qt](https://github.com/wjbeckett/artemis), tuned for pairing with [Vibepollo](https://github.com/navyas321/Vibepollo) as its host. It targets desktop Linux, Steam Deck, and Linux handhelds, shipping as AppImage / Flatpak.
+
+Vibemis inherits all of Artemis Qt's Apollo-extension client features (clipboard sync, server commands, OTP pairing, virtual display toggle, enhanced quick menu, fractional refresh rates, resolution scaling, UUID app launching, permissions viewer) and adds Vibepollo-specific polish, presets, and a small set of new client-only features (video scale modes, in-stream pan/zoom, custom shortcut commands, configurable quick-menu trigger, simplified perf overlay).
+
+> Compatibility note: Vibemis pairs with **Vibepollo**, Apollo, and vanilla Sunshine hosts. Apollo-only features (clipboard sync, server commands, virtual display, OTP pairing) light up automatically when the host is Vibepollo/Apollo and are hidden against Sunshine.
+
+## 🙏 Attribution
+
+Vibemis stands on the shoulders of several upstreams. Credit and gratitude to all of them:
+
+- **[Artemis Qt](https://github.com/wjbeckett/artemis)** by [wjbeckett](https://github.com/wjbeckett) — the C++/QML fork of Moonlight Qt that ported the Artemis-Android Apollo extensions to desktop. Vibemis is a downstream of Artemis Qt's `develop` branch and inherits the bulk of its functionality.
+- **[Moonlight Qt](https://github.com/moonlight-stream/moonlight-qt)** by the [Moonlight Team](https://github.com/moonlight-stream) — the upstream streaming client. The core decode / network / input pipeline is theirs.
+- **[Apollo](https://github.com/ClassicOldSong/Apollo)** and **[Artemis Android](https://github.com/ClassicOldSong/moonlight-android)** by [ClassicOldSong](https://github.com/ClassicOldSong) — the Sunshine fork and Android client whose protocol extensions Artemis Qt (and therefore Vibemis) speak.
+- **[Sunshine](https://github.com/LizardByte/Sunshine)** by [LizardByte](https://github.com/LizardByte) — the original self-hosted gamestream server.
+
+---
+
+## 🙏 Original Artemis Qt README (preserved below)
+
+The remainder of this document is the upstream Artemis Qt README, kept verbatim. Items marked "✅ COMPLETE" in the upstream README are inherited by Vibemis; refer to Vibemis's own release notes for what's new in this fork.
+
+---
+
+# Artemis Qt (upstream)
 
 [Artemis Qt](https://github.com/wjbeckett/artemis) is an enhanced cross-platform client for NVIDIA GameStream and [Apollo](https://github.com/ClassicOldSong/Apollo)/[Sunshine](https://github.com/LizardByte/Sunshine) servers. It brings the advanced features from [Artemis Android](https://github.com/ClassicOldSong/moonlight-android) to desktop platforms.
 
-## 🙏 Attribution
+## 🙏 Attribution (upstream)
 
 Artemis Qt is built upon the excellent foundation of [**Moonlight Qt**](https://github.com/moonlight-stream/moonlight-qt) by the [Moonlight Team](https://github.com/moonlight-stream). We extend our sincere gratitude to the original developers for creating such a robust and well-architected streaming client.
 
