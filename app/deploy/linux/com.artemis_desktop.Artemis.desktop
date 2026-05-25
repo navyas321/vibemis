@@ -1,6 +1,6 @@
 [Desktop Entry]
-Name=Artemis
-Comment=Stream games and other applications from another PC running Sunshine or GeForce Experience
+Name=Vibemis
+Comment=Linux-focused Artemis Qt fork tuned for pairing with Vibepollo. Streams games and applications from a Sunshine / Apollo / Vibepollo host.
 Exec=artemis
 Icon=artemis
 Terminal=false
