@@ -24,7 +24,14 @@
 #define RESUME_TIMEOUT_MS 30000
 #define QUIT_TIMEOUT_MS 30000
 
-NvHTTP::NvHTTP(NvAddress address, uint16_t httpsPort, QSslCertificate serverCert) :
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+#define XML_NAME_EQUALS(x, y) ((x) == (y))
+#else
+#define XML_NAME_EQUALS(x, y) ((x) == (u##y))
+#endif
+
+NvHTTP::NvHTTP(NvAddress address, uint16_t httpsPort, QSslCertificate serverCert, QNetworkAccessManager* nam) :
+    m_Nam(nam ? nam : new QNetworkAccessManager(this)),
     m_ServerCert(serverCert)
 {
     m_BaseUrlHttp.setScheme("http");
@@ -35,13 +42,11 @@ NvHTTP::NvHTTP(NvAddress address, uint16_t httpsPort, QSslCertificate serverCert
 
     // Never use a proxy server
     QNetworkProxy noProxy(QNetworkProxy::NoProxy);
-    m_Nam.setProxy(noProxy);
-
-    connect(&m_Nam, &QNetworkAccessManager::sslErrors, this, &NvHTTP::handleSslErrors);
+    m_Nam->setProxy(noProxy);
 }
 
-NvHTTP::NvHTTP(NvComputer* computer) :
-    NvHTTP(computer->activeAddress, computer->activeHttpsPort, computer->serverCert)
+NvHTTP::NvHTTP(NvComputer* computer, QNetworkAccessManager* nam) :
+    NvHTTP(computer->activeAddress, computer->activeHttpsPort, computer->serverCert, nam)
 {
 
 }
@@ -116,7 +121,7 @@ NvHTTP::getCurrentGame(QString serverInfo)
     // has the semantics that its name would indicate. To contain the effects of this change as much
     // as possible, we'll force the current game to zero if the server isn't in a streaming session.
     QString serverState = getXmlString(serverInfo, "state");
-    if (serverState != nullptr && serverState.endsWith("_SERVER_BUSY"))
+    if (serverState.endsWith("_SERVER_BUSY"))
     {
         return getXmlString(serverInfo, "currentgame").toInt();
     }
@@ -319,17 +324,19 @@ NvHTTP::getDisplayModeList(QString serverInfo)
     while (!xmlReader.atEnd()) {
         while (xmlReader.readNextStartElement()) {
             auto name = xmlReader.name();
-            if (name == QString("DisplayMode")) {
+            if (XML_NAME_EQUALS(name, "DisplayMode")) {
                 modes.append(NvDisplayMode());
             }
-            else if (name == QString("Width")) {
-                modes.last().width = xmlReader.readElementText().toInt();
-            }
-            else if (name == QString("Height")) {
-                modes.last().height = xmlReader.readElementText().toInt();
-            }
-            else if (name == QString("RefreshRate")) {
-                modes.last().refreshRate = xmlReader.readElementText().toInt();
+            else if (!modes.isEmpty()) {
+                if (XML_NAME_EQUALS(name, "Width")) {
+                    modes.last().width = xmlReader.readElementText().toInt();
+                }
+                else if (XML_NAME_EQUALS(name, "Height")) {
+                    modes.last().height = xmlReader.readElementText().toInt();
+                }
+                else if (XML_NAME_EQUALS(name, "RefreshRate")) {
+                    modes.last().refreshRate = xmlReader.readElementText().toInt();
+                }
             }
         }
     }
@@ -352,7 +359,7 @@ NvHTTP::getAppList()
     while (!xmlReader.atEnd()) {
         while (xmlReader.readNextStartElement()) {
             auto name = xmlReader.name();
-            if (name == QString("App")) {
+            if (XML_NAME_EQUALS(name, "App")) {
                 // We must have a valid app before advancing to the next one
                 if (!apps.isEmpty() && !apps.last().isInitialized()) {
                     qWarning() << "Invalid applist XML";
@@ -360,20 +367,25 @@ NvHTTP::getAppList()
                 }
                 apps.append(NvApp());
             }
-            else if (name == QString("AppTitle")) {
-                apps.last().name = xmlReader.readElementText();
-            }
-            else if (name == QString("ID")) {
-                apps.last().id = xmlReader.readElementText().toInt();
-            }
-            else if (name == QString("UUID")) {
-                apps.last().uuid = xmlReader.readElementText();
-            }
-            else if (name == QString("IsHdrSupported")) {
-                apps.last().hdrSupported = xmlReader.readElementText() == "1";
-            }
-            else if (name == QString("IsAppCollectorGame")) {
-                apps.last().isAppCollectorGame = xmlReader.readElementText() == "1";
+            // Vibemis: hand-merged — upstream added the `!apps.isEmpty()` safety
+            // wrapper and the XML_NAME_EQUALS macro style; wjbeckett added the
+            // UUID branch for Apollo's UUID-based app launching. Keeping both.
+            else if (!apps.isEmpty()) {
+                if (XML_NAME_EQUALS(name, "AppTitle")) {
+                    apps.last().name = xmlReader.readElementText();
+                }
+                else if (XML_NAME_EQUALS(name, "ID")) {
+                    apps.last().id = xmlReader.readElementText().toInt();
+                }
+                else if (XML_NAME_EQUALS(name, "UUID")) {
+                    apps.last().uuid = xmlReader.readElementText();
+                }
+                else if (XML_NAME_EQUALS(name, "IsHdrSupported")) {
+                    apps.last().hdrSupported = xmlReader.readElementText() == "1";
+                }
+                else if (XML_NAME_EQUALS(name, "IsAppCollectorGame")) {
+                    apps.last().isAppCollectorGame = xmlReader.readElementText() == "1";
+                }
             }
         }
     }
@@ -388,7 +400,7 @@ NvHTTP::verifyResponseStatus(QString xml)
 
     while (xmlReader.readNextStartElement())
     {
-        if (xmlReader.name() == QString("root"))
+        if (XML_NAME_EQUALS(xmlReader.name(), "root"))
         {
             // Status code can be 0xFFFFFFFF in some rare cases on GFE 3.20.3, and
             // QString::toInt() will fail in that case, so use QString::toUInt()
@@ -439,13 +451,7 @@ QByteArray
 NvHTTP::getXmlStringFromHex(QString xml,
                             QString tagName)
 {
-    QString str = getXmlString(xml, tagName);
-    if (str == nullptr)
-    {
-        return nullptr;
-    }
-
-    return QByteArray::fromHex(str.toLatin1());
+    return QByteArray::fromHex(getXmlString(xml, tagName).toUtf8());
 }
 
 QString
@@ -467,7 +473,7 @@ NvHTTP::getXmlString(QString xml,
         }
     }
 
-    return nullptr;
+    return QString();
 }
 
 QStringList
@@ -590,15 +596,15 @@ NvHTTP::openConnection(QUrl baseUrl,
     request.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);
 #endif
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0) && QT_VERSION < QT_VERSION_CHECK(5, 15, 1) && !defined(QT_NO_BEARERMANAGEMENT)
-    // HACK: Set network accessibility to work around QTBUG-80947 (introduced in Qt 5.14.0 and fixed in Qt 5.15.1)
-    QT_WARNING_PUSH
-    QT_WARNING_DISABLE_DEPRECATED
-    m_Nam.setNetworkAccessible(QNetworkAccessManager::Accessible);
-    QT_WARNING_POP
+#if QT_VERSION >= QT_VERSION_CHECK(6, 3, 0)
+    // Use fine-grained idle timeouts to avoid calling QNetworkAccessManager::clearAccessCache(),
+    // which tears down the NAM's global thread each time. We must not keep persistent connections
+    // or GFE will puke.
+    request.setAttribute(QNetworkRequest::ConnectionCacheExpiryTimeoutSecondsAttribute, 0);
 #endif
 
-    QNetworkReply* reply = m_Nam.get(request);
+    auto sslErrorsConnection = connect(m_Nam, &QNetworkAccessManager::sslErrors, this, &NvHTTP::handleSslErrors);
+    QNetworkReply* reply = m_Nam->get(request);
 
     // Run the request with a timeout if requested
     QEventLoop loop;
@@ -621,9 +627,11 @@ NvHTTP::openConnection(QUrl baseUrl,
         reply->abort();
     }
 
-    // We must clear out cached authentication and connections or
-    // GFE will puke next time
-    m_Nam.clearAccessCache();
+#if QT_VERSION < QT_VERSION_CHECK(6, 3, 0)
+    // If we couldn't use fine-grained connection idle timeouts, kill them all now
+    m_Nam->clearAccessCache();
+#endif
+    disconnect(sslErrorsConnection);
 
     // Handle error
     if (reply->error() != QNetworkReply::NoError)
@@ -696,7 +704,10 @@ NvHTTP::sendClipboardContent(const QString& content)
 #endif
 
         // Send POST request with clipboard content
-        QNetworkReply* reply = m_Nam.post(request, content.toUtf8());
+        // Vibemis: m_Nam is a QNetworkAccessManager* in this codebase; wjbeckett's
+        // clipboard-sync block used value-style `.` which mismatched the pointer
+        // declaration in nvhttp.h. Fixed to pointer-style `->`.
+        QNetworkReply* reply = m_Nam->post(request, content.toUtf8());
 
         // Wait for response with timeout
         QEventLoop loop;

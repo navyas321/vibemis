@@ -59,7 +59,7 @@ void AutoUpdateChecker::start()
 void AutoUpdateChecker::parseStringToVersionQuad(QString& string, QVector<int>& version)
 {
     QStringList list = string.split('.');
-    for (const QString& component : list) {
+    for (const QString& component : std::as_const(list)) {
         version.append(component.toInt());
     }
 }
@@ -141,7 +141,10 @@ void AutoUpdateChecker::handleUpdateCheckRequestFinished(QNetworkReply* reply)
             return;
         }
 
-        // Get the most recent release (first in the array)
+        // Vibemis: keep wjbeckett's GitHub-Releases-based update path (checks our own
+        // navyas321/vibemis releases). Upstream moonlight-qt switched to a server-hosted
+        // manifest at this point — not applicable to a fork that publishes via GitHub.
+        // Get the most recent release (first in the array).
         QJsonObject releaseObj = releasesArray[0].toObject();
 
         // Extract version from tag_name (remove 'v' prefix if present)
