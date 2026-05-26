@@ -935,8 +935,23 @@ bool Session::initialize()
         m_SupportedVideoFormats.deprioritizeByMask(~VIDEO_FORMAT_MASK_YUV444);
     }
 
-    // Mask off 10-bit codecs if HDR is not enabled
-    if (!m_Preferences->enableHdr) {
+    // Vibemis: HDR is gated on TWO conditions, not one:
+    //   1. enableHdr (user wants HDR-capable streaming codec)
+    //   2. displayHdrCapability (user confirms their display can actually show HDR)
+    // Without (2), asking the host for HDR results in PQ-encoded pixels rendered
+    // on an SDR panel, which looks washed out (the Phase 2 #13 bug reported on
+    // the Legion Go S Z2 LCD). When the user explicitly unchecks "My display
+    // supports HDR" in Settings, we keep the codec path 8-bit even though
+    // enableHdr is true.
+    bool effectiveHdr = m_Preferences->enableHdr && m_Preferences->displayHdrCapability;
+    if (m_Preferences->enableHdr && !m_Preferences->displayHdrCapability) {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "Session: HDR enabled in preferences but 'My display supports HDR' is unchecked. "
+                    "Streaming will use 8-bit (SDR) codecs. Re-check the setting in Settings if your display actually supports HDR.");
+    }
+
+    // Mask off 10-bit codecs if HDR is not effectively enabled
+    if (!effectiveHdr) {
         m_SupportedVideoFormats.removeByMask(VIDEO_FORMAT_MASK_10BIT);
     }
     else {

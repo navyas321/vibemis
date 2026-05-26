@@ -1859,6 +1859,32 @@ Flickable {
                                       qsTr("HDR streaming is not supported on this PC.")
                 }
 
+                // Vibemis: companion checkbox under "Enable HDR". When unchecked,
+                // the client keeps the HDR setting but does NOT actually ask the
+                // host for HDR pixels — fixing the wash-out on SDR displays like
+                // the Legion Go S Z2 LCD, most Steam Decks, etc.
+                CheckBox {
+                    id: displayHdrCapability
+                    width: parent.width
+                    text: qsTr("    My display supports HDR")
+                    font.pointSize: 11
+
+                    visible: enableHdr.checked
+                    enabled: enableHdr.checked
+                    checked: StreamingPreferences.displayHdrCapability
+                    onCheckedChanged: {
+                        StreamingPreferences.displayHdrCapability = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 6000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Uncheck this if HDR-streamed content looks washed out, dim, or color-shifted. " +
+                                       "Many Linux handhelds (Steam Deck LCD, Legion Go S Z2, etc.) can decode HDR but " +
+                                       "their display panels can't actually show HDR — leaving this checked makes the picture look wrong. " +
+                                       "Unchecking keeps the HDR codec path off; re-check it later if you connect an HDR display.")
+                }
+
                 CheckBox {
                     id: enableYUV444
                     width: parent.width

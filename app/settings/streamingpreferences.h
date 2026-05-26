@@ -141,6 +141,12 @@ public:
     Q_PROPERTY(AudioConfig audioConfig MEMBER audioConfig NOTIFY audioConfigChanged)
     Q_PROPERTY(VideoCodecConfig videoCodecConfig MEMBER videoCodecConfig NOTIFY videoCodecConfigChanged)
     Q_PROPERTY(bool enableHdr MEMBER enableHdr NOTIFY enableHdrChanged)
+    // Vibemis: companion gate to enableHdr. When the user enables HDR but their
+    // display can't actually show HDR (e.g. Legion Go S Z2 LCD), the host
+    // streams HDR PQ-encoded content that looks washed out on the SDR panel.
+    // Defaults to true so existing HDR users aren't regressed; users who hit
+    // the wash-out can uncheck it in Settings without disabling HDR entirely.
+    Q_PROPERTY(bool displayHdrCapability MEMBER displayHdrCapability NOTIFY displayHdrCapabilityChanged)
     Q_PROPERTY(bool enableYUV444 MEMBER enableYUV444 NOTIFY enableYUV444Changed)
     Q_PROPERTY(VideoDecoderSelection videoDecoderSelection MEMBER videoDecoderSelection NOTIFY videoDecoderSelectionChanged)
     Q_PROPERTY(WindowMode windowMode MEMBER windowMode NOTIFY windowModeChanged)
@@ -197,6 +203,8 @@ public:
     AudioConfig audioConfig;
     VideoCodecConfig videoCodecConfig;
     bool enableHdr;
+    // Vibemis: see Q_PROPERTY comment above; gates HDR request on display capability.
+    bool displayHdrCapability;
     bool enableYUV444;
     VideoDecoderSelection videoDecoderSelection;
     WindowMode windowMode;
@@ -230,6 +238,7 @@ signals:
     void audioConfigChanged();
     void videoCodecConfigChanged();
     void enableHdrChanged();
+    void displayHdrCapabilityChanged();
     void enableYUV444Changed();
     void videoDecoderSelectionChanged();
     void uiDisplayModeChanged();
