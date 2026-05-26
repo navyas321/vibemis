@@ -11,10 +11,17 @@ SOURCE_ROOT=$PWD
 BUILD_FOLDER=$BUILD_ROOT/build-$BUILD_CONFIG
 DEPLOY_FOLDER=$BUILD_ROOT/deploy-$BUILD_CONFIG
 INSTALLER_FOLDER=$BUILD_ROOT/installer-$BUILD_CONFIG
-VERSION=`cat $SOURCE_ROOT/app/version.txt`
 
-command -v qmake >/dev/null 2>&1 || fail "Unable to find 'qmake' in your PATH!"
-command -v linuxdeployqt >/dev/null 2>&1 || fail "Unable to find 'linuxdeployqt' in your PATH!"
+LINUXDEPLOY=linuxdeploy-$(uname -m).AppImage
+
+if [ -n "$CI_VERSION" ]; then
+  VERSION=$CI_VERSION
+else
+  VERSION=`cat $SOURCE_ROOT/app/version.txt`
+fi
+
+command -v qmake6 >/dev/null 2>&1 || fail "Unable to find 'qmake6' in your PATH!"
+command -v $LINUXDEPLOY >/dev/null 2>&1 || fail "Unable to find '$LINUXDEPLOY' in your PATH!"
 
 echo Cleaning output directories
 rm -rf $BUILD_FOLDER
@@ -27,14 +34,16 @@ mkdir $INSTALLER_FOLDER
 
 echo Configuring the project
 pushd $BUILD_FOLDER
-# Building with Wayland support will cause linuxdeployqt to include libwayland-client.so in the AppImage.
+# Building with Wayland support will cause linuxdeploy to include libwayland-client.so in the AppImage.
 # Since we always use the host implementation of EGL, this can cause libEGL_mesa.so to fail to load due
 # to missing symbols from the host's version of libwayland-client.so that aren't present in the older
 # version of libwayland-client.so from our AppImage build environment. When this happens, EGL fails to
 # work even in X11. To avoid this, we will disable Wayland support for the AppImage.
 #
-# We disable DRM support because linuxdeployqt doesn't bundle the appropriate libraries for Qt EGLFS.
-qmake $SOURCE_ROOT/artemis.pro CONFIG+=disable-wayland CONFIG+=disable-libdrm CONFIG+=disable-cuda PREFIX=$DEPLOY_FOLDER/usr DEFINES+=APP_IMAGE || fail "Qmake failed!"
+# We disable DRM support because linuxdeploy doesn't bundle the appropriate libraries for Qt EGLFS.
+# We disable CUDA because the AppImage targets a portable install set and we lean on VAAPI/VDPAU at runtime.
+# Vibemis: project file is artemis.pro (renamed from moonlight-qt.pro upstream).
+qmake6 $SOURCE_ROOT/artemis.pro CONFIG+=disable-wayland CONFIG+=disable-libdrm CONFIG+=disable-cuda PREFIX=$DEPLOY_FOLDER/usr DEFINES+=APP_IMAGE || fail "Qmake failed!"
 popd
 
 echo Compiling Artemis in $BUILD_CONFIG configuration
@@ -47,9 +56,15 @@ pushd $BUILD_FOLDER
 make install || fail "Make install failed!"
 popd
 
+export QML_SOURCES_PATHS=$SOURCE_ROOT/app/gui
+export QMAKE=qmake6
+
 echo Creating AppImage
 pushd $INSTALLER_FOLDER
-VERSION=$VERSION linuxdeployqt $DEPLOY_FOLDER/usr/share/applications/com.artemis_desktop.Artemis.desktop -qmldir=$SOURCE_ROOT/app/gui -appimage || fail "linuxdeployqt failed!"
+# Vibemis: take upstream's modern linuxdeploy approach (linuxdeployqt is broken on glibc >= 2.36).
+VERSION=$VERSION $LINUXDEPLOY --appdir $DEPLOY_FOLDER \
+  --library=/usr/local/lib/libSDL3.so.0 \
+  --plugin qt --output appimage || fail "linuxdeploy failed!"
 popd
 
 echo Build successful
