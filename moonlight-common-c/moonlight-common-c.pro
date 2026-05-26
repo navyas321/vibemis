@@ -50,7 +50,12 @@ SOURCES += \
     $$ENET_DIR/protocol.c \
     $$ENET_DIR/unix.c \
     $$ENET_DIR/win32.c \
-    $$COMMON_C_DIR/src/rswrapper.c \
+    # Vibemis: upstream moonlight-qt expects src/rswrapper.c (a Reed-Solomon
+    # indirection wrapper) which doesn't exist in ClassicOldSong's
+    # moonlight-common-c fork (the Apollo lineage we use). Point at the
+    # original reedsolomon/rs.c which provides reed_solomon_init/new/release/
+    # reconstruct as used by RtpAudioQueue.c and RtpVideoQueue.c.
+    $$COMMON_C_DIR/reedsolomon/rs.c \
     $$COMMON_C_DIR/src/AudioStream.c \
     $$COMMON_C_DIR/src/ByteBuffer.c \
     $$COMMON_C_DIR/src/Connection.c \
