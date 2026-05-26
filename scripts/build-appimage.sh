@@ -56,6 +56,58 @@ pushd $BUILD_FOLDER
 make install || fail "Make install failed!"
 popd
 
+# Vibemis: drop AppRun init hooks so the bundled libVA finds the HOST system's
+# VAAPI/VDPAU drivers at runtime. Without this, the AppImage ships its own
+# libva.so but no mesa-va / iHD / r600 / radeonsi backends, so hardware decode
+# silently falls back to software (and the user gets the "No functioning
+# hardware accelerated video decoder was detected" warning on launch).
+#
+# linuxdeploy's AppRun sources every $APPDIR/apprun-hooks/*.sh before exec'ing
+# the binary, so env vars set here propagate.
+mkdir -p $DEPLOY_FOLDER/apprun-hooks
+cat > $DEPLOY_FOLDER/apprun-hooks/01-libva-driver-paths.sh <<'HOOK'
+# Vibemis AppImage runtime hook — find host's VAAPI/VDPAU drivers
+# Only set if user hasn't already overridden, so power users keep control.
+if [ -z "$LIBVA_DRIVERS_PATH" ]; then
+    _vibemis_libva_candidates=(
+        # Most Linux distros (Debian/Ubuntu multi-arch)
+        "/usr/lib/x86_64-linux-gnu/dri"
+        # Fedora / RHEL / OpenSUSE
+        "/usr/lib64/dri"
+        # Arch / generic
+        "/usr/lib/dri"
+        # SteamOS / Steam Deck / Legion Go S Z2 (immutable rootfs)
+        "/usr/lib64/dri-nonfree"
+    )
+    _vibemis_libva_found=""
+    for _vibemis_d in "${_vibemis_libva_candidates[@]}"; do
+        if [ -d "$_vibemis_d" ]; then
+            if [ -z "$_vibemis_libva_found" ]; then
+                _vibemis_libva_found="$_vibemis_d"
+            else
+                _vibemis_libva_found="$_vibemis_libva_found:$_vibemis_d"
+            fi
+        fi
+    done
+    if [ -n "$_vibemis_libva_found" ]; then
+        export LIBVA_DRIVERS_PATH="$_vibemis_libva_found"
+    fi
+    unset _vibemis_libva_candidates _vibemis_libva_found _vibemis_d
+fi
+
+# Same trick for VDPAU
+if [ -z "$VDPAU_DRIVER_PATH" ]; then
+    for _vibemis_d in /usr/lib/x86_64-linux-gnu/vdpau /usr/lib64/vdpau /usr/lib/vdpau; do
+        if [ -d "$_vibemis_d" ]; then
+            export VDPAU_DRIVER_PATH="$_vibemis_d"
+            break
+        fi
+    done
+    unset _vibemis_d
+fi
+HOOK
+chmod +x $DEPLOY_FOLDER/apprun-hooks/01-libva-driver-paths.sh
+
 export QML_SOURCES_PATHS=$SOURCE_ROOT/app/gui
 export QMAKE=qmake6
 
