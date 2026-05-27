@@ -197,9 +197,7 @@ CenteredGridView {
                     font.bold: true
                     enabled: false
                 }
-                NavigableMenuItem {
-                    parentMenu: pcContextMenu
-                    text: qsTr("View All Apps")
+                NavigableMenuItem {                    text: qsTr("View All Apps")
                     onTriggered: {
                         var component = Qt.createComponent("AppView.qml")
                         var appView = component.createObject(stackView, {"computerIndex": index, "objectName": model.name, "showHiddenGames": true})
@@ -207,15 +205,11 @@ CenteredGridView {
                     }
                     visible: model.online && model.paired
                 }
-                NavigableMenuItem {
-                    parentMenu: pcContextMenu
-                    text: qsTr("Wake PC")
+                NavigableMenuItem {                    text: qsTr("Wake PC")
                     onTriggered: computerModel.wakeComputer(index)
                     visible: !model.online && model.wakeable
                 }
-                NavigableMenuItem {
-                    parentMenu: pcContextMenu
-                    text: qsTr("Pair")
+                NavigableMenuItem {                    text: qsTr("Pair")
                     onTriggered: {
                         // Use standard pairing for GeForce Experience
                         var pin = computerModel.generatePinString()
@@ -225,9 +219,7 @@ CenteredGridView {
                     }
                     visible: model.online && !model.paired
                 }
-                NavigableMenuItem {
-                    parentMenu: pcContextMenu
-                    text: qsTr("Pair using OTP")
+                NavigableMenuItem {                    text: qsTr("Pair using OTP")
                     onTriggered: {
                         // Show OTP pairing dialog
                         otpPairDialog.computerIndex = index
@@ -235,36 +227,28 @@ CenteredGridView {
                     }
                     visible: model.online && !model.paired
                 }
-                NavigableMenuItem {
-                    parentMenu: pcContextMenu
-                    text: qsTr("Test Network")
+                NavigableMenuItem {                    text: qsTr("Test Network")
                     onTriggered: {
                         computerModel.testConnectionForComputer(index)
                         testConnectionDialog.open()
                     }
                 }
 
-                NavigableMenuItem {
-                    parentMenu: pcContextMenu
-                    text: qsTr("Rename PC")
+                NavigableMenuItem {                    text: qsTr("Rename PC")
                     onTriggered: {
                         renamePcDialog.pcIndex = index
                         renamePcDialog.originalName = model.name
                         renamePcDialog.open()
                     }
                 }
-                NavigableMenuItem {
-                    parentMenu: pcContextMenu
-                    text: qsTr("Delete PC")
+                NavigableMenuItem {                    text: qsTr("Delete PC")
                     onTriggered: {
                         deletePcDialog.pcIndex = index
                         deletePcDialog.pcName = model.name
                         deletePcDialog.open()
                     }
                 }
-                NavigableMenuItem {
-                    parentMenu: pcContextMenu
-                    text: qsTr("View Details")
+                NavigableMenuItem {                    text: qsTr("View Details")
                     onTriggered: {
                         showPcDetailsDialog.pcDetails = model.details
                         showPcDetailsDialog.open()
