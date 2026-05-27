@@ -70,11 +70,13 @@ popd
 #     __vaDriverInit_1_22, returns VA_STATUS_ERROR_UNKNOWN, hardware decode
 #     dies. User sees "No functioning hardware accelerated video decoder".
 #
-# Diagnosis credit: in-repo diagnostic agent on the Legion Go S Z2, see
-# DIAGNOSTIC_REPORT_test3.md (in PR #6) §9. The agent recommended dropping
-# the bundled libva entirely; the hook below is the lower-risk option
-# (LD_LIBRARY_PATH prefer system) that preserves bundling for hosts that
-# lack a system libva while letting modern hosts use their own.
+# Diagnosis credit: in-repo diagnostic agent on the Legion Go S Z2:
+#   - DIAGNOSTIC_REPORT_test3.md (PR #6) §9 — identified __vaDriverInit_1_22
+#     ABI gap as root cause, recommended LD_LIBRARY_PATH/LD_PRELOAD fix.
+#   - testing/test4-libva-host-preference/report.md — confirmed the whole-dir
+#     LD_LIBRARY_PATH prepend was too broad (surfaced system Qt 6.9 over bundled
+#     6.4, fatal Qt version mismatch). Recommended surgical temp-dir approach.
+# The hook below uses the temp-dir approach from the test4 report §9 Option A.
 #
 # linuxdeploy's AppRun sources every $APPDIR/apprun-hooks/*.sh before exec'ing
 # the binary, so env vars set here propagate to the binary.
@@ -112,15 +114,30 @@ if [ -z "$LIBVA_DRIVERS_PATH" ]; then
 fi
 
 # (2) Prefer the HOST's libva.so.2 over our bundled one — load order matters.
-# We only prepend the host's lib dir to LD_LIBRARY_PATH if a host libva.so.2
-# is actually present. The first matching dir wins. Be surgical: a single
-# preferred dir, not the whole system library set.
+#
+# IMPORTANT — must be surgical. Prepending the whole system lib dir (e.g.
+# /usr/lib64) to LD_LIBRARY_PATH will also surface system Qt ahead of the
+# AppImage-bundled Qt, causing a fatal Qt version mismatch at startup
+# (test4 report: "Ignoring QPA plugin due to mismatching Qt versions").
+#
+# Fix: create a throwaway tmpdir containing ONLY symlinks to the three libva
+# shared objects, then prepend just that tmpdir. Only libva gets overridden;
+# Qt, SDL2, OpenSSL, and everything else still resolve from the AppImage's
+# own RUNPATH (DT_RUNPATH in the binary) as normal.
+#
+# This tmpdir lives in /tmp for the lifetime of the AppImage FUSE mount and
+# is de facto cleaned up when the mount goes away (or next reboot).
 if [ -z "$VIBEMIS_SKIP_HOST_LIBVA" ]; then
     for _vibemis_d in /usr/lib64 /usr/lib/x86_64-linux-gnu /usr/lib; do
         if [ -e "$_vibemis_d/libva.so.2" ]; then
-            export LD_LIBRARY_PATH="$_vibemis_d${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-            # Diagnostic — visible in run logs to confirm the hook chose host libva
-            echo "[vibemis-apprun-hook] preferring host libva.so.2 from $_vibemis_d" 1>&2
+            _vibemis_tmp=$(mktemp -d)
+            for _vibemis_so in libva.so.2 libva-drm.so.2 libva-x11.so.2; do
+                [ -e "$_vibemis_d/$_vibemis_so" ] && ln -sf "$_vibemis_d/$_vibemis_so" "$_vibemis_tmp/"
+            done
+            export LD_LIBRARY_PATH="$_vibemis_tmp${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+            # Diagnostic — visible in run logs to confirm the hook and which host dir won
+            echo "[vibemis-apprun-hook] preferring host libva from $_vibemis_d (via $_vibemis_tmp)" 1>&2
+            unset _vibemis_tmp _vibemis_so
             break
         fi
     done
