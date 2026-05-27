@@ -198,7 +198,6 @@ CenteredGridView {
                     enabled: false
                 }
                 NavigableMenuItem {
-                    parentMenu: pcContextMenu
                     text: qsTr("View All Apps")
                     onTriggered: {
                         var component = Qt.createComponent("AppView.qml")
@@ -208,13 +207,11 @@ CenteredGridView {
                     visible: model.online && model.paired
                 }
                 NavigableMenuItem {
-                    parentMenu: pcContextMenu
                     text: qsTr("Wake PC")
                     onTriggered: computerModel.wakeComputer(index)
                     visible: !model.online && model.wakeable
                 }
                 NavigableMenuItem {
-                    parentMenu: pcContextMenu
                     text: qsTr("Pair")
                     onTriggered: {
                         // Use standard pairing for GeForce Experience
@@ -226,7 +223,6 @@ CenteredGridView {
                     visible: model.online && !model.paired
                 }
                 NavigableMenuItem {
-                    parentMenu: pcContextMenu
                     text: qsTr("Pair using OTP")
                     onTriggered: {
                         // Show OTP pairing dialog
@@ -236,7 +232,6 @@ CenteredGridView {
                     visible: model.online && !model.paired
                 }
                 NavigableMenuItem {
-                    parentMenu: pcContextMenu
                     text: qsTr("Test Network")
                     onTriggered: {
                         computerModel.testConnectionForComputer(index)
@@ -245,7 +240,6 @@ CenteredGridView {
                 }
 
                 NavigableMenuItem {
-                    parentMenu: pcContextMenu
                     text: qsTr("Rename PC")
                     onTriggered: {
                         renamePcDialog.pcIndex = index
@@ -254,7 +248,6 @@ CenteredGridView {
                     }
                 }
                 NavigableMenuItem {
-                    parentMenu: pcContextMenu
                     text: qsTr("Delete PC")
                     onTriggered: {
                         deletePcDialog.pcIndex = index
@@ -263,7 +256,6 @@ CenteredGridView {
                     }
                 }
                 NavigableMenuItem {
-                    parentMenu: pcContextMenu
                     text: qsTr("View Details")
                     onTriggered: {
                         showPcDetailsDialog.pcDetails = model.details
