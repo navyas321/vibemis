@@ -121,10 +121,6 @@ Item {
         session.sessionFinished.connect(sessionFinished)
         session.readyForDeletion.connect(sessionReadyForDeletion)
 
-        // Ensure the SystemProperties async thread is finished,
-        // since it may currently be using the SDL video subsystem
-        SystemProperties.waitForAsyncLoad()
-
         // Kick off the stream
         spinnerTimer.start()
         streamLoader.active = true
