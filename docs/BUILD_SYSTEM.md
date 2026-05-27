@@ -1,171 +1,77 @@
-# Artemis Build System Guide
+# Vibemis — Build System
 
-## Overview
+> This file covers the Vibemis build environment. For the full development workflow (keywords, test cycles, PR process) see [WORKFLOW.md](WORKFLOW.md).
 
-The Artemis build system produces comprehensive, production-ready installers for all major platforms, including universal binaries that support multiple architectures without installation complexity.
+## Build host
 
-## Build Artifacts
+WSL2 Ubuntu 24.04 on Windows. Build tools:
 
-### Windows
-- **Universal Installer** (`artemis-windows-universal-installer-{version}.exe`)
-  - Single installer supporting both x64 and ARM64
-  - Automatic architecture detection
-  - Includes Visual C++ 2022 Redistributables for both architectures
-  - Uses WiX Toolset v5 bundle technology
+| Tool | Version | Location |
+|------|---------|----------|
+| qmake6 | Qt 6.4.2 | `/usr/bin/qmake6` |
+| make | system | `/usr/bin/make` |
+| linuxdeploy | latest | `/usr/local/bin/linuxdeploy.AppImage` |
+| linuxdeploy Qt plugin | latest | `/usr/local/bin/linuxdeploy-plugin-qt.AppImage` |
+| gh (GitHub CLI) | system | `/usr/bin/gh` |
 
-- **Individual Installers**
-  - `artemis-windows-installer-{version}.msi` (x64)
-  - `artemis-windows-arm64-installer-{version}.msi` (ARM64)
-  
-- **Portable Packages**  
-  - `artemis-windows-portable-{version}.zip` (x64)
-  - `artemis-windows-arm64-portable-{version}.zip` (ARM64)
+## Build commands
 
-### macOS
-- **Universal DMG** (`artemis-macos-universal-{version}.dmg`)
-  - Native support for Intel (x86_64) and Apple Silicon (arm64)
-  - Single installer for all Mac systems
-  - Code signed and notarized (when credentials available)
-  - Professional DMG packaging with create-dmg
+### Native binary (development / smoke test)
 
-### Linux
-- **x86_64 Packages**
-  - `artemis-linux-{version}.tar.gz` (Basic binary)
-  - `artemis-appimage-{version}-x86_64.AppImage` (Portable)
-  - `artemis-flatpak-{version}.flatpak` (Sandboxed)
-
-- **ARM64 Packages**  
-  - `artemis-raspberry-pi-arm64-{version}.tar.gz` (Raspberry Pi 4/5)
-  - Cross-compiled for optimal Raspberry Pi performance
-
-- **Specialized Builds**
-  - `artemis-steamdeck-{version}.tar.gz` (Steam Deck optimized)
-
-## Architecture Support
-
-| Platform | x86_64 | ARM64 | Universal |
-|----------|--------|--------|-----------|
-| Windows  | ✅ | ✅ | ✅ (Bundle) |
-| macOS    | ✅ | ✅ | ✅ (Fat Binary) |
-| Linux    | ✅ | ✅ (RPi) | ❌ |
-
-## Build Scripts
-
-### Windows
-- `scripts/build-artemis-arch.bat` - Architecture-specific builds
-- `scripts/generate-bundle.bat` - Universal installer generation
-- Supports cross-compilation for ARM64 from x64 host
-
-### macOS  
-- `scripts/generate-dmg.sh` - Universal DMG generation
-- Automatically builds fat binaries with both architectures
-- Handles code signing and notarization
-
-### Linux
-- `scripts/build-appimage.sh` - AppImage generation
-- Cross-compilation setup for ARM64/Raspberry Pi
-- Steam Deck specific optimizations
-
-## Local Development
-
-### Building Universal Windows Installer
-```batch
-# Build x64 version
-scripts\build-artemis-arch.bat release
-
-# Build ARM64 version (requires ARM64 Qt)
-scripts\build-artemis-arch.bat release
-
-# Generate universal bundle
-scripts\generate-bundle.bat release
-```
-
-### Building Universal macOS DMG
 ```bash
-# Single command builds universal binary and packages DMG
-./scripts/generate-dmg.sh Release
+qmake6 artemis.pro CONFIG+=release
+make -j$(nproc) release
+./app/artemis   # smoke test
 ```
 
-### Building Raspberry Pi ARM64
+### AppImage (test / release)
+
 ```bash
-# Requires cross-compilation environment
-sudo apt-get install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
-
-# Configure and build
-qmake6 artemis.pro CONFIG+=release QMAKE_CC=aarch64-linux-gnu-gcc
-make -j$(nproc)
+bash scripts/build-appimage.sh
+# Output: build/installer-release/Vibemis-<version>-x86_64.AppImage
 ```
 
-## CI/CD Pipeline
+The script:
+1. Runs `qmake6 + make install` into a staging dir
+2. Writes `apprun-hooks/01-libva-driver-paths.sh` (LIBVA_DRIVERS_PATH + surgical libva symlink fix)
+3. Runs `linuxdeploy --plugin qt --output appimage`
 
-The GitHub Actions workflow (`dev-build.yml`) automatically:
+For test-specific AppImage builds (different hook or version tag), use the per-test build scripts in `/root/build-test<N>.sh`.
 
-1. **Detects platforms** and builds appropriate artifacts
-2. **Generates universal installers** where supported  
-3. **Cross-compiles** for additional architectures
-4. **Packages professionally** with proper metadata
-5. **Creates releases** with comprehensive artifact sets
+### Disabled build options for AppImage
 
-### Build Matrix
-- **Windows**: x64, ARM64, Universal Bundle
-- **macOS**: Universal (x86_64 + arm64)  
-- **Linux**: x86_64, ARM64 (Raspberry Pi), AppImage, Flatpak
-- **Steam**: Steam Deck optimized
+| Option | Why disabled |
+|--------|-------------|
+| `CONFIG+=disable-wayland` | linuxdeploy bundles libwayland-client; mixing with host libwayland-egl breaks EGL on X11 |
+| `CONFIG+=disable-libdrm` | linuxdeploy doesn't bundle Qt EGLFS dependencies |
+| `CONFIG+=disable-cuda` | AppImage targets portable install; VAAPI/VDPAU are the runtime decode path |
 
-## Comparison with Moonlight-Qt
+## Submodule notes
 
-### What We Now Match
-✅ Universal Windows installer (WiX bundle)  
-✅ Universal macOS DMG (fat binary)  
-✅ Professional packaging and signing  
-✅ ARM64 support across platforms  
+`moonlight-common-c/moonlight-common-c` points at [ClassicOldSong's Apollo-lineage fork](https://github.com/ClassicOldSong/moonlight-common-c), **not** `moonlight-stream/moonlight-common-c`.
 
-### What We've Enhanced
-🚀 **Raspberry Pi ARM64** - Dedicated cross-compiled builds  
-🚀 **Steam Deck optimization** - Specialized gaming build  
-🚀 **Comprehensive CI/CD** - Automated universal builds  
-🚀 **Better documentation** - Clear architecture support matrix
+When syncing with upstream `moonlight-qt`, check `moonlight-common-c/moonlight-common-c.pro` for symbols that mainline uses but ClassicOldSong's fork doesn't expose:
 
-## Requirements
+- `src/rswrapper.c` → use `reedsolomon/rs.c` instead
+- `nanors/` includes → use `reedsolomon/` instead
+- `LiSendControllerTouchEvent2`, `LI_CCAP_DUAL_TOUCHPAD`, `LiGetMicroseconds` → guard with `#ifdef` or revert if absent
 
-### Development Environment
-- **Windows**: Visual Studio 2022, Qt 6.8+, WiX Toolset v5
-- **macOS**: Xcode, Qt 6.8+, create-dmg
-- **Linux**: GCC, Qt 6.8+, Cross-compilation tools for ARM64
+## AppImage apprun-hook: libva fix
 
-### Runtime Dependencies
-All builds include or automatically install required runtime components:
-- Visual C++ Redistributables (Windows)
-- Qt libraries (bundled)
-- Multimedia codecs (system-dependent)
+The hook at `apprun-hooks/01-libva-driver-paths.sh` does two things:
 
-## Performance Notes
+1. Sets `LIBVA_DRIVERS_PATH` to the host's DRI directory (finds `/usr/lib64/dri`, `/usr/lib/x86_64-linux-gnu/dri`, or `/usr/lib/dri`).
+2. Creates a `mktemp -d` temp directory with **only** symlinks to `libva.so.2`, `libva-drm.so.2`, `libva-x11.so.2` from the system, then prepends that dir to `LD_LIBRARY_PATH`. This overrides the bundled libva 1.20 with the system libva (1.22+ on SteamOS/Mesa 25.3) without surfacing other system libs (specifically system Qt) that would break platform plugin loading.
 
-- **Universal binaries** have no runtime performance penalty
-- **ARM64 builds** provide optimal performance on native hardware  
-- **Cross-compiled builds** are fully optimized for target architecture
-- **Hardware acceleration** supported where available
+Escape hatch: `VIBEMIS_SKIP_HOST_LIBVA=1` disables step 2.
 
-## Troubleshooting
+## Supported targets
 
-### Windows ARM64 Issues
-- Ensure Visual Studio ARM64 build tools installed
-- Verify Qt ARM64 binaries in PATH
-- Check cross-compilation toolchain setup
+Vibemis is Linux-first. The AppImage targets x86-64 Linux with glibc 2.17+.
 
-### macOS Universal Binary Issues
-- Verify Xcode command line tools installed  
-- Check Qt installation includes both architectures
-- Ensure proper code signing certificates (for distribution)
+| Target | Build | Tested on |
+|--------|-------|----------|
+| Linux x86-64 (generic) | AppImage | WSL2 (smoke), Legion Go S Z2 (real hardware) |
+| Steam Deck / SteamOS | AppImage | Lenovo Legion Go S Z2 (Z2 Go APU / AMD Phoenix) |
 
-### Linux Cross-Compilation Issues
-- Install complete cross-compilation toolchain
-- Verify ARM64 system libraries available
-- Check PKG_CONFIG_PATH for target architecture
-
-## Future Enhancements
-
-- **Linux Universal AppImage** - Single AppImage for multiple architectures
-- **Windows ARM64 Native Builds** - Build directly on ARM64 hardware
-- **Automated Testing** - Architecture-specific test suites
-- **Performance Profiling** - Architecture-optimized builds
+Windows and macOS are **not** targets for Vibemis. See upstream [Moonlight Qt](https://github.com/moonlight-stream/moonlight-qt) or [Artemis Qt](https://github.com/wjbeckett/artemis) for those platforms.
