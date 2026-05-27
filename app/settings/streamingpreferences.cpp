@@ -25,6 +25,11 @@
 #define SER_AUDIOCFG "audiocfg"
 #define SER_VIDEOCFG "videocfg"
 #define SER_HDR "hdr"
+// Vibemis: companion gate to SER_HDR. Defaults to true for back-compat with
+// users who already had enableHdr=true on a working HDR display. Users whose
+// display is SDR (e.g. Legion Go S Z2 LCD) can uncheck "My display supports HDR"
+// in Settings to avoid washed-out picture without disabling HDR streaming entirely.
+#define SER_DISPLAY_HDR_CAPABILITY "displayHdrCapability"
 #define SER_YUV444 "yuv444"
 #define SER_VIDEODEC "videodec"
 #define SER_WINDOWMODE "windowmode"
@@ -159,6 +164,7 @@ void StreamingPreferences::reload()
     swapFaceButtons = settings.value(SER_SWAPFACEBUTTONS, false).toBool();
     keepAwake = settings.value(SER_KEEPAWAKE, true).toBool();
     enableHdr = settings.value(SER_HDR, false).toBool();
+    displayHdrCapability = settings.value(SER_DISPLAY_HDR_CAPABILITY, true).toBool();
     captureSysKeysMode = static_cast<CaptureSysKeysMode>(settings.value(SER_CAPTURESYSKEYS,
                                                          static_cast<int>(CaptureSysKeysMode::CSK_OFF)).toInt());
     audioConfig = static_cast<AudioConfig>(settings.value(SER_AUDIOCFG,
@@ -361,6 +367,7 @@ void StreamingPreferences::save()
     settings.setValue(SER_SHOWPERFOVERLAY, showPerformanceOverlay);
     settings.setValue(SER_AUDIOCFG, static_cast<int>(audioConfig));
     settings.setValue(SER_HDR, enableHdr);
+    settings.setValue(SER_DISPLAY_HDR_CAPABILITY, displayHdrCapability);
     settings.setValue(SER_YUV444, enableYUV444);
     settings.setValue(SER_VIDEOCFG, static_cast<int>(videoCodecConfig));
     settings.setValue(SER_VIDEODEC, static_cast<int>(videoDecoderSelection));
