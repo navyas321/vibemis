@@ -56,31 +56,47 @@ pushd $BUILD_FOLDER
 make install || fail "Make install failed!"
 popd
 
-# Vibemis: drop AppRun init hooks so the bundled libVA finds the HOST system's
-# VAAPI/VDPAU drivers at runtime. Without this, the AppImage ships its own
-# libva.so but no mesa-va / iHD / r600 / radeonsi backends, so hardware decode
-# silently falls back to software (and the user gets the "No functioning
-# hardware accelerated video decoder was detected" warning on launch).
+# Vibemis: drop AppRun init hooks so the bundled libVA loader finds the HOST's
+# VAAPI/VDPAU drivers — AND uses the HOST's libva.so.2 itself when one is
+# available. We do both because, while LIBVA_DRIVERS_PATH points the loader
+# at where to find drivers like radeonsi_drv_video.so, the BUNDLED libva.so.2
+# may not be ABI-compatible with the host's drivers.
+#
+# Concrete example we hit on the Legion Go S Z2 (SteamOS 3.8.5):
+#   - linuxdeploy bundled libva.so.2 v1.20.0 alongside the binary.
+#   - Mesa 25.3 / SteamOS ships radeonsi_drv_video.so that only exports
+#     __vaDriverInit_1_22 (built against libva 1.22).
+#   - libva 1.20 walks down from __vaDriverInit_1_20, never finds
+#     __vaDriverInit_1_22, returns VA_STATUS_ERROR_UNKNOWN, hardware decode
+#     dies. User sees "No functioning hardware accelerated video decoder".
+#
+# Diagnosis credit: in-repo diagnostic agent on the Legion Go S Z2, see
+# DIAGNOSTIC_REPORT_test3.md (in PR #6) §9. The agent recommended dropping
+# the bundled libva entirely; the hook below is the lower-risk option
+# (LD_LIBRARY_PATH prefer system) that preserves bundling for hosts that
+# lack a system libva while letting modern hosts use their own.
 #
 # linuxdeploy's AppRun sources every $APPDIR/apprun-hooks/*.sh before exec'ing
-# the binary, so env vars set here propagate.
+# the binary, so env vars set here propagate to the binary.
 mkdir -p $DEPLOY_FOLDER/apprun-hooks
 cat > $DEPLOY_FOLDER/apprun-hooks/01-libva-driver-paths.sh <<'HOOK'
-# Vibemis AppImage runtime hook — find host's VAAPI/VDPAU drivers
-# Only set if user hasn't already overridden, so power users keep control.
+# Vibemis AppImage runtime hook — point bundled libVA at the host's drivers,
+# AND prefer the host's libva.so.2 over our bundled one so ABI matches the
+# host's mesa-va drivers (radeonsi, iHD, etc.).
+# Only set when not already overridden so power users keep full control.
+
+# (1) Point libva at the host's DRI driver dir.
 if [ -z "$LIBVA_DRIVERS_PATH" ]; then
-    _vibemis_libva_candidates=(
+    _vibemis_libva_dri_candidates=(
         # Most Linux distros (Debian/Ubuntu multi-arch)
         "/usr/lib/x86_64-linux-gnu/dri"
-        # Fedora / RHEL / OpenSUSE
+        # Fedora / RHEL / OpenSUSE / SteamOS (Arch-based)
         "/usr/lib64/dri"
-        # Arch / generic
+        # Arch generic / older SteamOS layouts
         "/usr/lib/dri"
-        # SteamOS / Steam Deck / Legion Go S Z2 (immutable rootfs)
-        "/usr/lib64/dri-nonfree"
     )
     _vibemis_libva_found=""
-    for _vibemis_d in "${_vibemis_libva_candidates[@]}"; do
+    for _vibemis_d in "${_vibemis_libva_dri_candidates[@]}"; do
         if [ -d "$_vibemis_d" ]; then
             if [ -z "$_vibemis_libva_found" ]; then
                 _vibemis_libva_found="$_vibemis_d"
@@ -92,10 +108,26 @@ if [ -z "$LIBVA_DRIVERS_PATH" ]; then
     if [ -n "$_vibemis_libva_found" ]; then
         export LIBVA_DRIVERS_PATH="$_vibemis_libva_found"
     fi
-    unset _vibemis_libva_candidates _vibemis_libva_found _vibemis_d
+    unset _vibemis_libva_dri_candidates _vibemis_libva_found
 fi
 
-# Same trick for VDPAU
+# (2) Prefer the HOST's libva.so.2 over our bundled one — load order matters.
+# We only prepend the host's lib dir to LD_LIBRARY_PATH if a host libva.so.2
+# is actually present. The first matching dir wins. Be surgical: a single
+# preferred dir, not the whole system library set.
+if [ -z "$VIBEMIS_SKIP_HOST_LIBVA" ]; then
+    for _vibemis_d in /usr/lib64 /usr/lib/x86_64-linux-gnu /usr/lib; do
+        if [ -e "$_vibemis_d/libva.so.2" ]; then
+            export LD_LIBRARY_PATH="$_vibemis_d${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+            # Diagnostic — visible in run logs to confirm the hook chose host libva
+            echo "[vibemis-apprun-hook] preferring host libva.so.2 from $_vibemis_d" 1>&2
+            break
+        fi
+    done
+fi
+unset _vibemis_d
+
+# (3) Same trick for VDPAU drivers.
 if [ -z "$VDPAU_DRIVER_PATH" ]; then
     for _vibemis_d in /usr/lib/x86_64-linux-gnu/vdpau /usr/lib64/vdpau /usr/lib/vdpau; do
         if [ -d "$_vibemis_d" ]; then
