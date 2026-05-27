@@ -111,7 +111,49 @@ The escape hatch still functions. The surgical hook is the sole differentiator b
 
 ---
 
-## 7. Recommendation
+## 7. Host not visible in Computers screen — root cause and fix
+
+### Root cause
+
+After all three Tier 1/2 goals passed, Navid-PC was not appearing in the Vibemis Computers screen despite mDNS discovery working correctly on every run.
+
+Both settings files (`~/.config/Vibemis Project/Vibemis.conf` and `~/.config/Artemis Desktop Project/Artemis.conf`) contained a stale pairing entry for Navid-PC (UUID `E26308EF-203E-3E27-1787-F72D0F1D44D1`) with a pinned `srvcert` from a previous pairing session.
+
+On startup, `ComputerManager::PendingAddTask::run()` finds the existing host entry and attempts an HTTPS refetch using the pinned cert. The Vibepollo server returns **HTTP 401** — the client cert is not in the server's paired-clients list (server-side pairing record was deleted or never completed). `fetchServerInfo()` catches the exception and returns an empty string:
+
+```cpp
+serverInfo = fetchServerInfo(http);   // HTTPS → 401 → exception → returns ""
+if (serverInfo.isEmpty()) {
+    return;   // silent early return — no computerStateChanged emitted
+}
+```
+
+No `computerStateChanged` signal is emitted, so the host never appears in the UI. mDNS is working; the code path that surfaces the host is not reached.
+
+Confirmed: the stored `srvcert` fingerprint matches the live server cert exactly (`SHA256: 3C:D0:73:12:54:4A:CE:60:34:3E:0A:53:71:C2:DC:13:40:7E:47:43:24:82:7F:32:8E:6D:90:13:2E:60:9D:8E`), ruling out server cert rotation as the cause. The 401 is mutual-TLS rejection of the **client** cert — the server no longer recognises this device.
+
+### Fix applied
+
+Stale `[hosts]` section cleared from both settings files (backups preserved):
+
+```bash
+# Backups
+~/.config/Vibemis Project/Vibemis.conf.bak-20260527-*
+~/.config/Artemis Desktop Project/Artemis.conf.bak-20260527-*
+```
+
+`[hosts]` reduced to `size=0` in both files. Client cert/key in `[General]` left intact.
+
+### Re-pairing steps (requires physical action on both sides)
+
+1. **Vibepollo server (Navid's PC):** Delete the stale client entry for the Legion Go S from Vibepollo's paired-clients list. This prevents the server from rejecting the re-pair handshake with a duplicate-cert error.
+2. **Launch Vibemis** — Navid-PC appears in the Computers screen within ~3 s (mDNS discovery is functional).
+3. **Click Pair** — Vibepollo displays a 4-digit PIN; enter it in Vibemis.
+4. Pairing completes; app list loads normally.
+
+---
+
+## 8. Recommendation
 
 **Merge PR #4.** All goals verified on target hardware:
 
