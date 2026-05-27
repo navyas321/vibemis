@@ -81,9 +81,11 @@ HEADERS += \
 INCLUDEPATH += \
     $$ENET_DIR/include \
     $$COMMON_C_DIR/src \
-    $$COMMON_C_DIR/nanors \
-    $$COMMON_C_DIR/nanors/deps \
-    $$COMMON_C_DIR/nanors/deps/obl
+    # Vibemis: upstream moonlight-qt now uses nanors/ (a modern Reed-Solomon
+    # implementation) which doesn't exist in ClassicOldSong's Apollo-lineage
+    # fork. Point at the original reedsolomon/ which provides the same rs.h
+    # API used by RtpAudioQueue.h / RtpVideoQueue.h.
+    $$COMMON_C_DIR/reedsolomon
 DEFINES += HAS_SOCKLEN_T
 
 CONFIG(debug, debug|release) {
