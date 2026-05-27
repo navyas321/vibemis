@@ -23,7 +23,7 @@ Test5 replaces the whole-dir prepend with a temp-dir containing **only symlinks 
 **AppImage:** `testing/test5-libva-surgical-symlink/Vibemis-0.6.7-vibemis-test5-libva-surgical-x86_64.AppImage`
 (This file will be committed to the repo on the `fix/appimage-vaapi-driver-paths` branch before this test cycle begins. Run `git pull` to receive it.)
 
-**md5:** _(build agent will fill in md5 when committing the AppImage)_
+**md5:** `db7878509c27ed7e9d76d07c08700641`
 
 Verify before running:
 ```bash
