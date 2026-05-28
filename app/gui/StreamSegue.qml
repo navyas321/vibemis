@@ -147,7 +147,7 @@ Item {
             gc()
 
             // Run the streaming session to completion
-            session.start()
+            session.exec(window)
         }
     }
 
@@ -166,13 +166,6 @@ Item {
 
             // Stop GUI gamepad usage now
             SdlGamepadKeyNavigation.disable()
-
-            // Initialize the session and probe for host/client capabilities
-            if (!session.initialize(window)) {
-                sessionFinished(0);
-                sessionReadyForDeletion();
-                return;
-            }
 
             // Don't wait unless we have toasts to display
             startSessionTimer.interval = 0
