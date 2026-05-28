@@ -1,8 +1,8 @@
 # Vibemis
 
-**Vibemis** is a Linux-first game streaming client built on top of [Vibemis Qt](https://github.com/navyas321/vibemis), tuned to pair with [Vibepollo](https://github.com/navyas321/Vibepollo) as its host. It targets desktop Linux, Steam Deck, and Linux handhelds (tested on the Lenovo Legion Go S Z2 under SteamOS), and ships as an AppImage.
+**Vibemis** is a Linux-first game streaming client built on top of [Artemis Qt](https://github.com/wjbeckett/artemis) by [wjbeckett](https://github.com/wjbeckett), tuned to pair with [Vibepollo](https://github.com/navyas321/Vibepollo) as its host. It targets desktop Linux, Steam Deck, and Linux handhelds (tested on the Lenovo Legion Go S Z2 under SteamOS), and ships as an AppImage.
 
-Vibemis inherits all of Vibemis Qt's Apollo-protocol client features — clipboard sync, server commands, OTP pairing, virtual display toggle, Quick Menu, fractional refresh rates, resolution scaling, UUID-based app launching, and a permissions viewer — then adds Linux-specific polish and Vibepollo-aware fixes on top.
+Vibemis inherits all of Artemis Qt's Apollo-protocol client features — clipboard sync, server commands, OTP pairing, virtual display toggle, Quick Menu, fractional refresh rates, resolution scaling, UUID-based app launching, and a permissions viewer — then adds Linux-specific polish and Vibepollo-aware fixes on top.
 
 > **Compatibility:** Vibemis works with Vibepollo, Apollo, and vanilla Sunshine hosts. Apollo-only features (clipboard sync, server commands, virtual display, OTP) light up automatically when connected to a compatible host and are hidden when not applicable.
 
@@ -22,7 +22,7 @@ Vibemis inherits all of Vibemis Qt's Apollo-protocol client features — clipboa
 - Pointer capture mode (games) and direct mouse mode (remote desktop)
 - System-wide keyboard shortcut passthrough (Alt+Tab, etc.)
 
-### Inherited from Vibemis Qt
+### Inherited from Artemis Qt
 
 - **Clipboard Sync** — bidirectional clipboard between client and host
 - **Server Commands** — trigger custom commands on the Apollo/Vibepollo host
@@ -142,7 +142,7 @@ bash scripts/build-appimage.sh
 
 Vibemis is built on the shoulders of several excellent projects:
 
-- **[Vibemis Qt](https://github.com/navyas321/vibemis)** by [wjbeckett](https://github.com/wjbeckett) — the C++/QML desktop port of the Vibemis-Android Apollo extensions that forms the direct base of Vibemis.
+- **[Artemis Qt](https://github.com/wjbeckett/artemis)** by [wjbeckett](https://github.com/wjbeckett) — the C++/QML desktop port of the Artemis-Android Apollo extensions that forms the direct base of Vibemis.
 - **[Moonlight Qt](https://github.com/moonlight-stream/moonlight-qt)** by the [Moonlight Team](https://github.com/moonlight-stream) — the upstream streaming client whose core decode/network/input pipeline everything builds on.
 - **[Apollo](https://github.com/ClassicOldSong/Apollo)** and **[Vibemis Android](https://github.com/ClassicOldSong/moonlight-android)** by [ClassicOldSong](https://github.com/ClassicOldSong) — the Sunshine fork and Android client whose protocol extensions Vibemis speaks.
 - **[Sunshine](https://github.com/LizardByte/Sunshine)** by [LizardByte](https://github.com/LizardByte) — the original open-source game streaming server.
