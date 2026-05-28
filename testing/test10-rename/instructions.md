@@ -39,11 +39,21 @@ ls /tmp/Artemis-*.log 2>/dev/null && echo "FAIL: old Artemis log still being cre
 
 ---
 
-## Check 3 — Device name on the host
+## Check 3 — Renamed identifiers appear in the runtime log
 
-On Navid-PC, open the Vibepollo (Apollo) web UI → look at the connected clients list while the app is running.
+The "device name" shown in Vibepollo's client list comes from the machine hostname set at pairing time — it is not the app brand name. The rename is visible in the debug log instead. Run this after the app has started (before or after streaming):
 
-**Expected:** The Legion Go S Z2 appears as **"Vibemis"** (not "Artemis", not "Moonlight").
+```bash
+grep -E "VibemisSettings|Current Vibemis version" ~/test10.log | head -5
+```
+
+**Expected output (both lines must appear):**
+```
+VibemisSettings: Initialized with config at ...
+Current Vibemis version: 0.6.7
+```
+
+These confirm the renamed class (`VibemisSettings`) and the renamed update checker string are active at runtime.
 
 ---
 
@@ -79,6 +89,6 @@ If you see output, paste the lines in the report.
 
 1. Check 1 result — did it launch? (pass/fail)
 2. Check 2 result — paste output of both `ls` commands
-3. Check 3 result — what name appeared for the Z2 on the Vibepollo host?
+3. Check 3 result — paste the output of the `grep -E "VibemisSettings|Current Vibemis version"` command
 4. Check 4 result — did the stream work? Paste the `grep "VIBEMIS: Requesting"` output
 5. Check 5 result — paste the grep output (expected: empty)
