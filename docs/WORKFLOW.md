@@ -92,11 +92,20 @@ When a fix or feature needs real-hardware verification:
 1. **Build** the AppImage (see AppImage naming convention below)
 2. **Write** `testing/<task>/instructions.md` using the template below
 3. **Commit** the AppImage to `testing/<task>/` (tracked via `!testing/**/*.AppImage` in `.gitignore`)
-4. **Push** to the feature branch
+4. **Push** to a **`test<N>-<slug>`** branch (see naming rule below — this is critical)
 5. **Tell the user** (or leave a PR comment): "Test cycle `<task>` is ready — pull the branch on the Legion Go S Z2 and run `clienttest`"
 6. **Wait** for the report PR from the Linux agent before iterating on a code fix
 
-Test task naming: `test<N>-<short-slug>` where N increments monotonically. Example: `test5-libva-surgical-symlink`.
+Test task naming: `test<N>-<short-slug>` where N increments monotonically. Example: `test7-streamsegue-fix`.
+
+**Branch naming rule — the Linux agent depends on this:**
+The branch that carries the test AppImage MUST be named `test<N>-<slug>`, not `fix/<slug>` or `feat/<slug>`. Reason: the `testing/test<N>/` directory only exists on the feature branch — `vibemis-main` does not have it. If the branch is named `fix/something`, the Linux agent has no reliable way to know which branch to check out, and will try `vibemis-main` (where the test directory doesn't exist).
+
+Procedure:
+- When a fix branch is ready for a test cycle, create a new branch named `test<N>-<slug>` from the fix branch tip.
+- Commit the AppImage + instructions on that `test<N>-<slug>` branch.
+- The instructions file's `git checkout` command must reference `test<N>-<slug>` by name.
+- The original `fix/<slug>` branch remains open as the PR target; `test<N>-<slug>` is just the delivery vehicle for the test artifacts.
 
 #### instructions.md template
 
@@ -186,17 +195,20 @@ cd ~/vibemis   # or wherever you cloned the repo
 # 1. Get the latest
 git fetch origin
 
-# 2. Find the active test branch (usually named fix/* or feat/*)
-git branch -a | grep -v HEAD | grep "remotes/origin/fix\|remotes/origin/feat" | head -10
+# 2. Find the active test branch — always named test<N>-<slug>
+git branch -a | grep "remotes/origin/test" | sort | tail -5
+# Pick the highest test number (e.g. test7-streamsegue-fix)
 
-# 3. Check out the branch that has a pending instructions.md
-git checkout <branch>
+# 3. Check out that branch — NOT vibemis-main
+git checkout test<N>-<slug>
 git pull
 
 # 4. Find the instructions
 ls testing/
-# Read the newest instructions.md in testing/<task>/
+# Read the newest instructions.md in testing/test<N>-<slug>/
 ```
+
+**Important:** test AppImages are committed to the `test<N>-<slug>` branch, NOT to `vibemis-main`. If `ls testing/` doesn't show the expected test directory, you are on the wrong branch.
 
 Read the entire instructions file before running any commands.
 Note the AppImage filename, md5, and the exact commands — do not improvise.

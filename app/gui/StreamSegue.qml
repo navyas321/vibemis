@@ -100,6 +100,18 @@ Item {
         gc()
     }
 
+    function displayLaunchWarning(text)
+    {
+        console.warn(text)
+        // Show a brief ToolTip for the warning. Warnings are emitted by
+        // Session::exec() during initialize(), so they appear just before
+        // the connection stages begin.
+        var toast = Qt.createQmlObject('import QtQuick.Controls 2.2; ToolTip {}', parent, '')
+        toast.timeout = 3000
+        toast.text = text
+        toast.visible = true
+    }
+
     StackView.onDeactivating: {
         // Show the toolbar again when popped off the stack
         toolBar.visible = true
@@ -117,13 +129,10 @@ Item {
         session.stageFailed.connect(stageFailed)
         session.connectionStarted.connect(connectionStarted)
         session.displayLaunchError.connect(displayLaunchError)
+        session.displayLaunchWarning.connect(displayLaunchWarning)
         session.quitStarting.connect(quitStarting)
         session.sessionFinished.connect(sessionFinished)
         session.readyForDeletion.connect(sessionReadyForDeletion)
-
-        // Ensure the SystemProperties async thread is finished,
-        // since it may currently be using the SDL video subsystem
-        SystemProperties.waitForAsyncLoad()
 
         // Kick off the stream
         spinnerTimer.start()
@@ -150,8 +159,10 @@ Item {
             // won't be able to GC during the stream.
             gc()
 
-            // Run the streaming session to completion
-            session.start()
+            // Run the streaming session to completion.
+            // Session::exec() calls initialize() internally and emits
+            // sessionFinished(0) + readyForDeletion() on failure.
+            session.exec(window)
         }
     }
 
@@ -171,37 +182,11 @@ Item {
             // Stop GUI gamepad usage now
             SdlGamepadKeyNavigation.disable()
 
-            // Initialize the session and probe for host/client capabilities
-            if (!session.initialize(window)) {
-                sessionFinished(0);
-                sessionReadyForDeletion();
-                return;
-            }
-
-            // Don't wait unless we have toasts to display
+            // Start the session on the next event loop tick so the spinner
+            // animation has a chance to render before Session::exec() blocks.
+            // Warnings are surfaced via the displayLaunchWarning signal (connected
+            // in StackView.onActivated) rather than via a pre-collected array.
             startSessionTimer.interval = 0
-
-            // Display the toasts together in a vertical centered arrangement
-            var yOffset = 0
-            for (var i = 0; i < session.launchWarnings.length; i++) {
-                var text = session.launchWarnings[i]
-                console.warn(text)
-
-                // Show the tooltip for 3 seconds
-                var toast = Qt.createQmlObject('import QtQuick.Controls 2.2; ToolTip {}', parent, '')
-                toast.timeout = 3000
-                toast.text = text
-                toast.y += yOffset
-                toast.visible = true
-
-                // Offset the next toast below the previous one
-                yOffset = toast.y + toast.padding + toast.height
-
-                // Allow an extra 500 ms for the tooltip's fade-out animation to finish
-                startSessionTimer.interval = toast.timeout + 500;
-            }
-
-            // Start the timer to wait for toasts (or start the session immediately)
             startSessionTimer.start()
         }
 

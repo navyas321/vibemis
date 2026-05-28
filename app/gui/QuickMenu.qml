@@ -336,13 +336,13 @@ Rectangle {
                 message = "Quitting session..."
                 break
             case "server_restart":
-                message = ServerCommandManager.hasServerCommands ? "Restarting server..." : "Server commands not available"
+                message = quickMenuManager.hasServerCommands ? "Restarting server..." : "Server commands not available"
                 break
             case "server_shutdown":
-                message = ServerCommandManager.hasServerCommands ? "Shutting down server..." : "Server commands not available"
+                message = quickMenuManager.hasServerCommands ? "Shutting down server..." : "Server commands not available"
                 break
             case "server_suspend":
-                message = ServerCommandManager.hasServerCommands ? "Suspending server..." : "Server commands not available"
+                message = quickMenuManager.hasServerCommands ? "Suspending server..." : "Server commands not available"
                 break
             case "clipboard_upload":
                 message = "Uploading clipboard to server..."
