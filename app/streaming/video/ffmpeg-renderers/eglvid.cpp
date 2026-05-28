@@ -362,7 +362,7 @@ bool EGLRenderer::compileShaders() {
 
     // XXX: TODO: other formats
     if (m_EGLImagePixelFormat == AV_PIX_FMT_NV12 || m_EGLImagePixelFormat == AV_PIX_FMT_P010) {
-        m_ShaderProgram = compileShader("egl_nv12.vert", "egl_nv12.frag");
+        m_ShaderProgram = compileShader("egl.vert", "egl_nv12.frag");
         if (!m_ShaderProgram) {
             return false;
         }
@@ -373,7 +373,7 @@ bool EGLRenderer::compileShaders() {
         m_ShaderProgramParams[NV12_PARAM_PLANE2] = glGetUniformLocation(m_ShaderProgram, "plane2");
     }
     else if (m_EGLImagePixelFormat == AV_PIX_FMT_DRM_PRIME) {
-        m_ShaderProgram = compileShader("egl_opaque.vert", "egl_opaque.frag");
+        m_ShaderProgram = compileShader("egl.vert", "egl_opaque.frag");
         if (!m_ShaderProgram) {
             return false;
         }
@@ -388,7 +388,7 @@ bool EGLRenderer::compileShaders() {
         return false;
     }
 
-    m_OverlayShaderProgram = compileShader("egl_overlay.vert", "egl_overlay.frag");
+    m_OverlayShaderProgram = compileShader("egl.vert", "egl_overlay.frag");
     if (!m_OverlayShaderProgram) {
         return false;
     }
