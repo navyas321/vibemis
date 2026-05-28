@@ -64,6 +64,9 @@ public:
     int clipboardSyncMaxSize() const { return m_clipboardSyncMaxSize; }
     void setClipboardSyncMaxSize(int maxSize);
 
+    bool clipboardSyncTextOnly() const { return m_clipboardSyncTextOnly; }
+    void setClipboardSyncTextOnly(bool textOnly);
+
     // Server commands getters/setters
     bool serverCommandsEnabled() const { return m_serverCommandsEnabled; }
     void setServerCommandsEnabled(bool enabled);
@@ -153,6 +156,7 @@ private:
     bool m_clipboardSyncEnabled;
     bool m_clipboardSyncBidirectional;
     int m_clipboardSyncMaxSize;
+    bool m_clipboardSyncTextOnly;
 
     // Server commands settings
     bool m_serverCommandsEnabled;

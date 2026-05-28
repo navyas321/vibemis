@@ -55,6 +55,7 @@ void VibemisSettings::save()
     m_settings->setValue("enabled", m_clipboardSyncEnabled);
     m_settings->setValue("bidirectional", m_clipboardSyncBidirectional);
     m_settings->setValue("maxSize", m_clipboardSyncMaxSize);
+    m_settings->setValue("textonly", m_clipboardSyncTextOnly);
     m_settings->endGroup();
 
     // Server commands settings
@@ -110,17 +111,18 @@ void VibemisSettings::load()
     m_clipboardSyncEnabled = m_settings->value("enabled", false).toBool();
     m_clipboardSyncBidirectional = m_settings->value("bidirectional", true).toBool();
     m_clipboardSyncMaxSize = m_settings->value("maxSize", 1048576).toInt(); // 1MB default
+    m_clipboardSyncTextOnly = m_settings->value("textonly", true).toBool();
     m_settings->endGroup();
 
-    // Server commands settings
+    // Server commands settings — default true for Apollo servers (hidden if no cmds)
     m_settings->beginGroup("ServerCommands");
-    m_serverCommandsEnabled = m_settings->value("enabled", false).toBool();
+    m_serverCommandsEnabled = m_settings->value("enabled", true).toBool();
     m_showAdvancedCommands = m_settings->value("showAdvanced", false).toBool();
     m_settings->endGroup();
 
-    // OTP pairing settings
+    // OTP pairing settings — default true so Apollo/Vibepollo servers use OTP flow
     m_settings->beginGroup("OTPPairing");
-    m_otpPairingEnabled = m_settings->value("enabled", false).toBool();
+    m_otpPairingEnabled = m_settings->value("enabled", true).toBool();
     m_otpPairingTimeout = m_settings->value("timeout", 120).toInt(); // 2 minutes default
     m_settings->endGroup();
 
@@ -182,13 +184,14 @@ void VibemisSettings::loadDefaults()
     m_clipboardSyncEnabled = false;
     m_clipboardSyncBidirectional = true;
     m_clipboardSyncMaxSize = 1048576; // 1MB
+    m_clipboardSyncTextOnly = true;
 
-    // Server commands defaults
-    m_serverCommandsEnabled = false;
+    // Server commands defaults — enabled by default (hidden when server has none)
+    m_serverCommandsEnabled = true;
     m_showAdvancedCommands = false;
 
-    // OTP pairing defaults
-    m_otpPairingEnabled = false;
+    // OTP pairing defaults — enabled by default for Apollo/Vibepollo servers
+    m_otpPairingEnabled = true;
     m_otpPairingTimeout = 120; // 2 minutes
 
     // Client-side display defaults
@@ -231,6 +234,15 @@ void VibemisSettings::setClipboardSyncMaxSize(int maxSize)
     if (m_clipboardSyncMaxSize != maxSize) {
         m_clipboardSyncMaxSize = maxSize;
         emit clipboardSyncMaxSizeChanged();
+    }
+}
+
+void VibemisSettings::setClipboardSyncTextOnly(bool textOnly)
+{
+    if (m_clipboardSyncTextOnly != textOnly) {
+        m_clipboardSyncTextOnly = textOnly;
+        // No separate signal needed — callers that care (ClipboardManager) read
+        // this directly. If a QML binding is added later, add a signal here.
     }
 }
 

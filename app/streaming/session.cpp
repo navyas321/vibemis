@@ -1949,9 +1949,21 @@ void Session::exec(QWindow* qtWindow)
         QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
         QCoreApplication::sendPostedEvents();
 
-        // SDL is in charge now. Wait until the streaming thread exits
-        // to further update the Qt window.
-        execThread.wait();
+        // SDL is in charge now. Keep pumping the Qt event loop at a low rate
+        // so that Qt::QueuedConnection invocations dispatched from the SDL input
+        // thread (e.g. QuickMenuManager::toggle() posted by the gamepad/keyboard
+        // handler) are actually processed during streaming. Without this loop the
+        // main thread is hard-blocked at execThread.wait() and queued events pile
+        // up silently — making the Quick Menu keyboard and gamepad shortcuts do
+        // nothing even though the event is correctly posted to the queue.
+        //
+        // 50 ms poll interval: imperceptible to the user, negligible CPU cost.
+        // ExcludeUserInputEvents: SDL retains full ownership of input; Qt only
+        // runs its own queued cross-thread calls (timers, QueuedConnection slots).
+        while (!execThread.wait(50)) {
+            QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+            QCoreApplication::sendPostedEvents();
+        }
     }
     else {
         // Run the streaming session on the main thread for Windows and macOS
