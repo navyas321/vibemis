@@ -112,12 +112,12 @@ Click Navid-PC in the computer list.
 
 **Expected:** The **OTP dialog** appears — NOT the classic PIN dialog.
 
-The OTP dialog looks like:
+The OTP dialog now shows a GENERATED PIN — no typing needed on the client side. It looks like:
 - Title bar: **"OTP Pairing"**
 - Bold header: **"Pairing with Apollo Server: Navid-PC"**
 - Text: **"Apollo servers use OTP (One-Time Password) pairing for enhanced security."**
-- A text field: **"Enter 4-digit PIN"** ← you TYPE into this
-- A second field: **"Passphrase (optional)"**
+- A large PIN displayed in teal: e.g. **4523** ← READ this, do NOT type it
+- Step-by-step instructions shown in the dialog itself
 
 **test14 result:** Classic PIN dialog appeared ("Please enter 1765 on your host PC").
 
