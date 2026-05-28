@@ -52,10 +52,10 @@ jobs:
       - name: Check for meaningful changes
         id: check-changes
         run: |
-          # Always build on main/master branch (releases)
-          if [[ "${{ github.ref_name }}" == "main" || "${{ github.ref_name }}" == "master" ]]; then
+          # Always build on integration/release branches
+          if [[ "${{ github.ref_name }}" == "main" || "${{ github.ref_name }}" == "master" || "${{ github.ref_name }}" == "vibemis-main" ]]; then
             echo "should_build=true" >> $GITHUB_OUTPUT
-            echo "Always building on main/master branch for release"
+            echo "Always building on integration branch for release"
             exit 0
           fi
           
