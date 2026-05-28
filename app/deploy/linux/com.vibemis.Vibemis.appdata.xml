@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop">
-	<id>com.artemis_desktop.Artemis</id>
+	<id>com.vibemis.Vibemis</id>
 	<metadata_license>CC0-1.0</metadata_license>
 	<project_license>GPL-3.0+</project_license>
-	<name>Artemis</name>
+	<name>Vibemis</name>
 	<summary>Stream games and other applications from another PC running Sunshine or GeForce Experience</summary>
 
 	<description>
-		<p>Artemis can stream games and other applications from another PC with Sunshine or GeForce Experience software installed.</p>
+		<p>Vibemis can stream games and other applications from another PC with Sunshine or GeForce Experience software installed.</p>
 		<p>Features include:</p>
 		<ul>
 			<li>Hardware accelerated video decoding with VAAPI, VDPAU, and NVDEC support</li>
@@ -20,9 +20,9 @@
 		</ul>
 	</description>
 
-	<url type="homepage">https://github.com/wjbeckett/artemis</url>
-	<url type="bugtracker">https://github.com/wjbeckett/artemis/issues</url>
-	<url type="help">https://github.com/wjbeckett/artemis/wiki</url>
+	<url type="homepage">https://github.com/navyas321/vibemis</url>
+	<url type="bugtracker">https://github.com/navyas321/vibemis/issues</url>
+	<url type="help">https://github.com/navyas321/vibemis/wiki</url>
 
 	<screenshots>
 		<screenshot type="default">
@@ -233,9 +233,9 @@
 				</ul>
 				<p>Behavior Changes:</p>
 				<ul>
-					<li>Artemis can now reduce the client display resolution in full-screen mode if the current display mode doesn't have a high enough refresh rate for the selected stream frame rate</li>
-					<li>When choosing a new client display resolution in full-screen mode, Artemis will pick a display mode with the closest aspect ratio to the selected stream resolution</li>
-					<li>Artemis now defaults to borderless windowed mode on Wayland systems</li>
+					<li>Vibemis can now reduce the client display resolution in full-screen mode if the current display mode doesn't have a high enough refresh rate for the selected stream frame rate</li>
+					<li>When choosing a new client display resolution in full-screen mode, Vibemis will pick a display mode with the closest aspect ratio to the selected stream resolution</li>
+					<li>Vibemis now defaults to borderless windowed mode on Wayland systems</li>
 
 				</ul>
 				<p>Bugfixes:</p>
@@ -821,13 +821,13 @@
 		<category>Qt</category>
 	</categories>
 
-	<developer_name>Artemis Desktop Project</developer_name>
-	<update_contact>will@artemis-desktop.org</update_contact>
+	<developer_name>Vibemis Project</developer_name>
+	<update_contact>will@vibemis-desktop.org</update_contact>
 
-	<launchable type="desktop-id">com.artemis_desktop.Artemis.desktop</launchable>
+	<launchable type="desktop-id">com.vibemis.Vibemis.desktop</launchable>
 
 	<provides>
-		<binary>artemis</binary>
+		<binary>vibemis</binary>
 	</provides>
 
 	<content_rating type="oars-1.0" />

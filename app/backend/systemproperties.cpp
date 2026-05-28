@@ -170,9 +170,9 @@ void SystemProperties::querySdlVideoInfoInternal()
     }
     
     // Allow environment variable override for hardware acceleration (for Flatpak and testing)
-    if (qgetenv("ARTEMIS_FORCE_HW_ACCEL") == "1") {
+    if (qgetenv("VIBEMIS_FORCE_HW_ACCEL") == "1") {
         SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                    "SystemProperties: Forcing hardware acceleration via ARTEMIS_FORCE_HW_ACCEL environment variable (was: %s)",
+                    "SystemProperties: Forcing hardware acceleration via VIBEMIS_FORCE_HW_ACCEL environment variable (was: %s)",
                     hasHardwareAcceleration ? "ENABLED" : "DISABLED");
         hasHardwareAcceleration = true;
     }

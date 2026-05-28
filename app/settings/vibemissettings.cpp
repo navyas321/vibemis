@@ -1,11 +1,11 @@
-#include "artemissettings.h"
+#include "vibemissettings.h"
 #include <QStandardPaths>
 #include <QDir>
 #include <QDebug>
 
-ArtemisSettings* ArtemisSettings::s_instance = nullptr;
+VibemisSettings* VibemisSettings::s_instance = nullptr;
 
-ArtemisSettings::ArtemisSettings(QObject *parent)
+VibemisSettings::VibemisSettings(QObject *parent)
     : QObject(parent)
     , m_settings(nullptr)
 {
@@ -17,38 +17,38 @@ ArtemisSettings::ArtemisSettings(QObject *parent)
     }
 
     // Initialize settings
-    QString settingsPath = configPath + "/artemis-settings.ini";
+    QString settingsPath = configPath + "/vibemis-settings.ini";
     m_settings = new QSettings(settingsPath, QSettings::IniFormat, this);
 
     // Load defaults first, then load saved settings
     loadDefaults();
     load();
 
-    qDebug() << "ArtemisSettings: Initialized with config at" << settingsPath;
+    qDebug() << "VibemisSettings: Initialized with config at" << settingsPath;
 }
 
-ArtemisSettings* ArtemisSettings::instance()
+VibemisSettings* VibemisSettings::instance()
 {
     if (!s_instance) {
-        s_instance = new ArtemisSettings();
+        s_instance = new VibemisSettings();
     }
     return s_instance;
 }
 
-ArtemisSettings* ArtemisSettings::create(QQmlEngine *qmlEngine, QJSEngine *jsEngine)
+VibemisSettings* VibemisSettings::create(QQmlEngine *qmlEngine, QJSEngine *jsEngine)
 {
     Q_UNUSED(qmlEngine)
     Q_UNUSED(jsEngine)
     return instance();
 }
 
-void ArtemisSettings::save()
+void VibemisSettings::save()
 {
     if (!m_settings) {
         return;
     }
 
-    qDebug() << "ArtemisSettings: Saving settings";
+    qDebug() << "VibemisSettings: Saving settings";
 
     // Clipboard sync settings
     m_settings->beginGroup("ClipboardSync");
@@ -97,13 +97,13 @@ void ArtemisSettings::save()
     m_settings->sync();
 }
 
-void ArtemisSettings::load()
+void VibemisSettings::load()
 {
     if (!m_settings) {
         return;
     }
 
-    qDebug() << "ArtemisSettings: Loading settings";
+    qDebug() << "VibemisSettings: Loading settings";
 
     // Clipboard sync settings
     m_settings->beginGroup("ClipboardSync");
@@ -150,9 +150,9 @@ void ArtemisSettings::load()
     m_settings->endGroup();
 }
 
-void ArtemisSettings::resetToDefaults()
+void VibemisSettings::resetToDefaults()
 {
-    qDebug() << "ArtemisSettings: Resetting to defaults";
+    qDebug() << "VibemisSettings: Resetting to defaults";
     
     loadDefaults();
     save();
@@ -176,7 +176,7 @@ void ArtemisSettings::resetToDefaults()
     emit inputOnlyModeEnabledChanged();
 }
 
-void ArtemisSettings::loadDefaults()
+void VibemisSettings::loadDefaults()
 {
     // Clipboard sync defaults
     m_clipboardSyncEnabled = false;
@@ -210,7 +210,7 @@ void ArtemisSettings::loadDefaults()
 }
 
 // Clipboard sync setters
-void ArtemisSettings::setClipboardSyncEnabled(bool enabled)
+void VibemisSettings::setClipboardSyncEnabled(bool enabled)
 {
     if (m_clipboardSyncEnabled != enabled) {
         m_clipboardSyncEnabled = enabled;
@@ -218,7 +218,7 @@ void ArtemisSettings::setClipboardSyncEnabled(bool enabled)
     }
 }
 
-void ArtemisSettings::setClipboardSyncBidirectional(bool bidirectional)
+void VibemisSettings::setClipboardSyncBidirectional(bool bidirectional)
 {
     if (m_clipboardSyncBidirectional != bidirectional) {
         m_clipboardSyncBidirectional = bidirectional;
@@ -226,7 +226,7 @@ void ArtemisSettings::setClipboardSyncBidirectional(bool bidirectional)
     }
 }
 
-void ArtemisSettings::setClipboardSyncMaxSize(int maxSize)
+void VibemisSettings::setClipboardSyncMaxSize(int maxSize)
 {
     if (m_clipboardSyncMaxSize != maxSize) {
         m_clipboardSyncMaxSize = maxSize;
@@ -235,7 +235,7 @@ void ArtemisSettings::setClipboardSyncMaxSize(int maxSize)
 }
 
 // Server commands setters
-void ArtemisSettings::setServerCommandsEnabled(bool enabled)
+void VibemisSettings::setServerCommandsEnabled(bool enabled)
 {
     if (m_serverCommandsEnabled != enabled) {
         m_serverCommandsEnabled = enabled;
@@ -243,7 +243,7 @@ void ArtemisSettings::setServerCommandsEnabled(bool enabled)
     }
 }
 
-void ArtemisSettings::setShowAdvancedCommands(bool show)
+void VibemisSettings::setShowAdvancedCommands(bool show)
 {
     if (m_showAdvancedCommands != show) {
         m_showAdvancedCommands = show;
@@ -252,7 +252,7 @@ void ArtemisSettings::setShowAdvancedCommands(bool show)
 }
 
 // OTP pairing setters
-void ArtemisSettings::setOtpPairingEnabled(bool enabled)
+void VibemisSettings::setOtpPairingEnabled(bool enabled)
 {
     if (m_otpPairingEnabled != enabled) {
         m_otpPairingEnabled = enabled;
@@ -260,7 +260,7 @@ void ArtemisSettings::setOtpPairingEnabled(bool enabled)
     }
 }
 
-void ArtemisSettings::setOtpPairingTimeout(int timeout)
+void VibemisSettings::setOtpPairingTimeout(int timeout)
 {
     if (m_otpPairingTimeout != timeout) {
         m_otpPairingTimeout = timeout;
@@ -269,7 +269,7 @@ void ArtemisSettings::setOtpPairingTimeout(int timeout)
 }
 
 // Client-side display setters
-void ArtemisSettings::setFractionalRefreshRateEnabled(bool enabled)
+void VibemisSettings::setFractionalRefreshRateEnabled(bool enabled)
 {
     if (m_fractionalRefreshRateEnabled != enabled) {
         m_fractionalRefreshRateEnabled = enabled;
@@ -277,7 +277,7 @@ void ArtemisSettings::setFractionalRefreshRateEnabled(bool enabled)
     }
 }
 
-void ArtemisSettings::setCustomRefreshRate(double rate)
+void VibemisSettings::setCustomRefreshRate(double rate)
 {
     if (qAbs(m_customRefreshRate - rate) > 0.01) {
         m_customRefreshRate = rate;
@@ -285,7 +285,7 @@ void ArtemisSettings::setCustomRefreshRate(double rate)
     }
 }
 
-void ArtemisSettings::setResolutionScalingEnabled(bool enabled)
+void VibemisSettings::setResolutionScalingEnabled(bool enabled)
 {
     if (m_resolutionScalingEnabled != enabled) {
         m_resolutionScalingEnabled = enabled;
@@ -293,7 +293,7 @@ void ArtemisSettings::setResolutionScalingEnabled(bool enabled)
     }
 }
 
-void ArtemisSettings::setResolutionScaleFactor(double factor)
+void VibemisSettings::setResolutionScaleFactor(double factor)
 {
     if (qAbs(m_resolutionScaleFactor - factor) > 0.01) {
         m_resolutionScaleFactor = factor;
@@ -301,7 +301,7 @@ void ArtemisSettings::setResolutionScaleFactor(double factor)
     }
 }
 
-void ArtemisSettings::setVirtualDisplayEnabled(bool enabled)
+void VibemisSettings::setVirtualDisplayEnabled(bool enabled)
 {
     if (m_virtualDisplayEnabled != enabled) {
         m_virtualDisplayEnabled = enabled;
@@ -310,7 +310,7 @@ void ArtemisSettings::setVirtualDisplayEnabled(bool enabled)
 }
 
 // App ordering setters
-void ArtemisSettings::setCustomAppOrderingEnabled(bool enabled)
+void VibemisSettings::setCustomAppOrderingEnabled(bool enabled)
 {
     if (m_customAppOrderingEnabled != enabled) {
         m_customAppOrderingEnabled = enabled;
@@ -318,7 +318,7 @@ void ArtemisSettings::setCustomAppOrderingEnabled(bool enabled)
     }
 }
 
-void ArtemisSettings::setAppOrderingMode(const QString &mode)
+void VibemisSettings::setAppOrderingMode(const QString &mode)
 {
     if (m_appOrderingMode != mode) {
         m_appOrderingMode = mode;
@@ -327,7 +327,7 @@ void ArtemisSettings::setAppOrderingMode(const QString &mode)
 }
 
 // Permission viewing setters
-void ArtemisSettings::setShowServerPermissions(bool show)
+void VibemisSettings::setShowServerPermissions(bool show)
 {
     if (m_showServerPermissions != show) {
         m_showServerPermissions = show;
@@ -336,7 +336,7 @@ void ArtemisSettings::setShowServerPermissions(bool show)
 }
 
 // Input-only mode setters
-void ArtemisSettings::setInputOnlyModeEnabled(bool enabled)
+void VibemisSettings::setInputOnlyModeEnabled(bool enabled)
 {
     if (m_inputOnlyModeEnabled != enabled) {
         m_inputOnlyModeEnabled = enabled;

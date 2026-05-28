@@ -5,12 +5,12 @@
 #include <QQmlEngine>
 
 /**
- * @brief Manages Artemis-specific settings and preferences
+ * @brief Manages Vibemis-specific settings and preferences
  * 
- * This class extends the base streaming preferences with Artemis-specific
+ * This class extends the base streaming preferences with Vibemis-specific
  * features like clipboard sync, server commands, and OTP pairing.
  */
-class ArtemisSettings : public QObject
+class VibemisSettings : public QObject
 {
     Q_OBJECT
     QML_ELEMENT
@@ -47,8 +47,8 @@ class ArtemisSettings : public QObject
     Q_PROPERTY(bool inputOnlyModeEnabled READ inputOnlyModeEnabled WRITE setInputOnlyModeEnabled NOTIFY inputOnlyModeEnabledChanged)
 
 public:
-    static ArtemisSettings* instance();
-    static ArtemisSettings* create(QQmlEngine *qmlEngine, QJSEngine *jsEngine);
+    static VibemisSettings* instance();
+    static VibemisSettings* create(QQmlEngine *qmlEngine, QJSEngine *jsEngine);
 
     Q_INVOKABLE void save();
     Q_INVOKABLE void load();
@@ -141,12 +141,12 @@ signals:
     void inputOnlyModeEnabledChanged();
 
 private:
-    explicit ArtemisSettings(QObject *parent = nullptr);
+    explicit VibemisSettings(QObject *parent = nullptr);
 
     void loadDefaults();
 
 private:
-    static ArtemisSettings* s_instance;
+    static VibemisSettings* s_instance;
     QSettings *m_settings;
 
     // Clipboard sync settings

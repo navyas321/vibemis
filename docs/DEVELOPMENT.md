@@ -57,7 +57,7 @@ vibemis/
 
 | File | What it does |
 |------|-------------|
-| `artemis.pro` | Top-level qmake project file. |
+| `vibemis.pro` | Top-level qmake project file. |
 | `moonlight-common-c/moonlight-common-c.pro` | Wrapper `.pro` for the submodule. Key fix: `SOURCES` uses `reedsolomon/rs.c` (not upstream's `src/rswrapper.c`); `INCLUDEPATH` uses `reedsolomon/` (not upstream's `nanors/`). |
 | `scripts/build-appimage.sh` | AppImage build. Contains the apprun-hook for LIBVA_DRIVERS_PATH + surgical libva symlink. |
 
@@ -78,7 +78,7 @@ vibemis/
 
 ## Vibemis vs upstream diff highlights
 
-### vs Artemis Qt (`wjbeckett/artemis develop`)
+### vs Vibemis Qt (`wjbeckett/vibemis develop`)
 - Upstream moonlight-qt sync (Phase 1.5 merge, May 2026)
 - `displayHdrCapability` preference + `effectiveHdr` gate in session.cpp (Phase 2 #13)
 - AppImage apprun-hook: LIBVA_DRIVERS_PATH + surgical libva symlink (Phase 2 #11)

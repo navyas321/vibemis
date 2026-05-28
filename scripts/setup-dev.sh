@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Artemis Qt Development Setup Script
-# This script helps set up the development environment for Artemis Qt
+# Vibemis Qt Development Setup Script
+# This script helps set up the development environment for Vibemis Qt
 
 set -e
 
-echo "🚀 Setting up Artemis Qt development environment..."
+echo "🚀 Setting up Vibemis Qt development environment..."
 
 # Detect OS
 OS="unknown"
@@ -79,7 +79,7 @@ init_submodules() {
 
 # Function to build the project
 build_project() {
-    echo "🔨 Building Artemis Qt..."
+    echo "🔨 Building Vibemis Qt..."
     
     # Clean any existing build files
     echo "🧹 Cleaning previous builds..."
@@ -120,9 +120,9 @@ create_dev_config() {
     echo "⚙️  Creating development configuration..."
     
     # Create a development settings file
-    mkdir -p ~/.config/artemis-dev
-    cat > ~/.config/artemis-dev/dev-settings.conf << EOF
-# Artemis Qt Development Settings
+    mkdir -p ~/.config/vibemis-dev
+    cat > ~/.config/vibemis-dev/dev-settings.conf << EOF
+# Vibemis Qt Development Settings
 # This file contains development-specific settings
 
 [Development]
@@ -130,14 +130,14 @@ EnableDebugLogging=true
 ShowDeveloperOptions=true
 EnableExperimentalFeatures=true
 
-[Artemis]
-# Artemis-specific settings will go here
+[Vibemis]
+# Vibemis-specific settings will go here
 ClipboardSyncEnabled=false
 ServerCommandsEnabled=false
 OTPPairingEnabled=false
 EOF
 
-    echo "📝 Development configuration created at ~/.config/artemis-dev/"
+    echo "📝 Development configuration created at ~/.config/vibemis-dev/"
 }
 
 # Function to show next steps
@@ -146,7 +146,7 @@ show_next_steps() {
     echo "✅ Development environment setup complete!"
     echo ""
     echo "🎯 Next steps:"
-    echo "   1. Start implementing Artemis features (see DEVELOPMENT.md)"
+    echo "   1. Start implementing Vibemis features (see DEVELOPMENT.md)"
     echo "   2. Run the application:"
     
     case $OS in
@@ -169,20 +169,20 @@ show_next_steps() {
     echo "📚 Documentation:"
     echo "   - Development guide: DEVELOPMENT.md"
     echo "   - Contributing: CONTRIBUTING.md"
-    echo "   - Artemis Android reference: https://github.com/ClassicOldSong/moonlight-android"
+    echo "   - Vibemis Android reference: https://github.com/ClassicOldSong/moonlight-android"
     echo ""
 }
 
 # Main execution
 main() {
-    echo "🎮 Artemis Qt Development Setup"
+    echo "🎮 Vibemis Qt Development Setup"
     echo "================================"
     echo ""
     
     # Check if we're in the right directory
     if [[ ! -f "moonlight-qt.pro" ]]; then
         echo "❌ Error: moonlight-qt.pro not found."
-        echo "   Please run this script from the root of the Artemis Qt repository."
+        echo "   Please run this script from the root of the Vibemis Qt repository."
         exit 1
     fi
     

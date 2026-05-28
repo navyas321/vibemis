@@ -162,7 +162,7 @@ public:
     Q_PROPERTY(Language language MEMBER language NOTIFY languageChanged)
     Q_PROPERTY(RendererBackend rendererBackend MEMBER rendererBackend NOTIFY rendererBackendChanged)
     
-    // Artemis client-side streaming enhancements
+    // Vibemis client-side streaming enhancements
     Q_PROPERTY(bool useVirtualDisplay MEMBER useVirtualDisplay NOTIFY useVirtualDisplayChanged)
     Q_PROPERTY(bool enableFractionalRefreshRate MEMBER enableFractionalRefreshRate NOTIFY enableFractionalRefreshRateChanged)
     Q_PROPERTY(double customRefreshRate MEMBER customRefreshRate NOTIFY customRefreshRateChanged)
@@ -214,7 +214,7 @@ public:
     CaptureSysKeysMode captureSysKeysMode;
     RendererBackend rendererBackend;
     
-    // Artemis client-side streaming enhancements
+    // Vibemis client-side streaming enhancements
     bool useVirtualDisplay;
     bool enableFractionalRefreshRate;
     double customRefreshRate;
@@ -260,7 +260,7 @@ signals:
     void languageChanged();
     void rendererBackendChanged();
     
-    // Artemis client-side streaming enhancement signals
+    // Vibemis client-side streaming enhancement signals
     void useVirtualDisplayChanged();
     void enableFractionalRefreshRateChanged();
     void customRefreshRateChanged();

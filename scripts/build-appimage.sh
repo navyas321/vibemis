@@ -42,11 +42,11 @@ pushd $BUILD_FOLDER
 #
 # We disable DRM support because linuxdeploy doesn't bundle the appropriate libraries for Qt EGLFS.
 # We disable CUDA because the AppImage targets a portable install set and we lean on VAAPI/VDPAU at runtime.
-# Vibemis: project file is artemis.pro (renamed from moonlight-qt.pro upstream).
-qmake6 $SOURCE_ROOT/artemis.pro CONFIG+=disable-wayland CONFIG+=disable-libdrm CONFIG+=disable-cuda PREFIX=$DEPLOY_FOLDER/usr DEFINES+=APP_IMAGE || fail "Qmake failed!"
+# Vibemis: project file is vibemis.pro (renamed from moonlight-qt.pro upstream).
+qmake6 $SOURCE_ROOT/vibemis.pro CONFIG+=disable-wayland CONFIG+=disable-libdrm CONFIG+=disable-cuda PREFIX=$DEPLOY_FOLDER/usr DEFINES+=APP_IMAGE || fail "Qmake failed!"
 popd
 
-echo Compiling Artemis in $BUILD_CONFIG configuration
+echo Compiling Vibemis in $BUILD_CONFIG configuration
 pushd $BUILD_FOLDER
 make -j$(nproc) $(echo "$BUILD_CONFIG" | tr '[:upper:]' '[:lower:]') || fail "Make failed!"
 popd

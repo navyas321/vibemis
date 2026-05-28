@@ -840,7 +840,7 @@ void PlVkRenderer::renderFrame(AVFrame *frame)
     dst.w = targetFrame.crop.x1 - targetFrame.crop.x0;
     dst.h = targetFrame.crop.y1 - targetFrame.crop.y0;
 
-    // Use libplacebo's "Fit" scaling to prevent aspect ratio squashing (Android Artemis solution)
+    // Use libplacebo's "Fit" scaling to prevent aspect ratio squashing (Android Vibemis solution)
     const char* aspectScalingMode = SDL_getenv("ASPECT_SCALING_MODE");
     bool useFitScaling = aspectScalingMode ? (strcmp(aspectScalingMode, "fit") == 0) : true; // Default to "fit"
     

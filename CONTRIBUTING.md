@@ -1,4 +1,4 @@
-# Contributing to Artemis Qt
+# Contributing to Vibemis Qt
 
 ## Git Workflow
 
@@ -125,7 +125,7 @@ docs(readme): update installation instructions
 ## Feature Implementation Guidelines
 
 ### Research Phase
-1. **Study Android implementation** - Check `artemis-android` for reference
+1. **Study Android implementation** - Check `vibemis-android` for reference
 2. **Understand protocol** - Review how Apollo/Sunshine handle the feature
 3. **Plan Qt integration** - Consider Qt-specific APIs and patterns
 
@@ -150,4 +150,4 @@ docs(readme): update installation instructions
 
 ---
 
-Thank you for contributing to Artemis Qt! 🚀
+Thank you for contributing to Vibemis Qt! 🚀

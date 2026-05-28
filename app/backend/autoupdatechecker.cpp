@@ -20,7 +20,7 @@ AutoUpdateChecker::AutoUpdateChecker(QObject *parent) :
             this, &AutoUpdateChecker::handleUpdateCheckRequestFinished);
 
     QString currentVersion(VERSION_STR);
-    qDebug() << "Current Artemis version:" << currentVersion;
+    qDebug() << "Current Vibemis version:" << currentVersion;
     parseStringToVersionQuad(currentVersion, m_CurrentVersionQuad);
 
     // Should at least have a 1.0-style version number
@@ -43,9 +43,9 @@ void AutoUpdateChecker::start()
     QT_WARNING_POP
 #endif
 
-    // Point to Artemis GitHub releases (all releases including prereleases)
+    // Point to Vibemis GitHub releases (all releases including prereleases)
     // Using /releases instead of /releases/latest because we only have prereleases
-    QUrl url("https://api.github.com/repos/wjbeckett/artemis/releases");
+    QUrl url("https://api.github.com/repos/navyas321/vibemis/releases");
     QNetworkRequest request(url);
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
     request.setAttribute(QNetworkRequest::Http2AllowedAttribute, true);
@@ -156,7 +156,7 @@ void AutoUpdateChecker::handleUpdateCheckRequestFinished(QNetworkReply* reply)
             return;
         }
 
-        qDebug() << "Latest version of Artemis from GitHub (including prereleases):" << version;
+        qDebug() << "Latest version of Vibemis from GitHub (including prereleases):" << version;
 
         QVector<int> latestVersionQuad;
         parseStringToVersionQuad(version, latestVersionQuad);
