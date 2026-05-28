@@ -520,6 +520,18 @@ jobs:
                 fi
             done
         fi
+        # When host VAAPI drivers are available, force Moonlight to use them.
+        # Without this, the upstream moonlight-qt code deprioritises VAAPI on
+        # Mesa Gallium drivers (AMD/Intel) — causing it to fall through to
+        # hevc_cuvid, which then crashes (SEGV) when libnvcuvid.so.1 is absent
+        # on non-NVIDIA hardware. FORCE_VAAPI=1 bypasses that deprioritisation.
+        # Safe: if VAAPI subsequently fails (e.g. no hardware support), Moonlight
+        # still falls through to software decoding — the flag only prevents the
+        # premature Gallium bail-out in vaapi.cpp:407.
+        if [ -z "$FORCE_VAAPI" ] && [ -n "$LIBVA_DRIVERS_PATH" ]; then
+            export FORCE_VAAPI=1
+            echo "[vibemis-apprun] FORCE_VAAPI=1 (host DRI: $LIBVA_DRIVERS_PATH)" 1>&2
+        fi
         if [ -z "$VDPAU_DRIVER_PATH" ]; then
             for _d in /usr/lib/x86_64-linux-gnu/vdpau /usr/lib64/vdpau /usr/lib/vdpau; do
                 [ -d "$_d" ] && { export VDPAU_DRIVER_PATH="$_d"; break; }
