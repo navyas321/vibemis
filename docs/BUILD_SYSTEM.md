@@ -19,9 +19,9 @@ WSL2 Ubuntu 24.04 on Windows. Build tools:
 ### Native binary (development / smoke test)
 
 ```bash
-qmake6 artemis.pro CONFIG+=release
+qmake6 vibemis.pro CONFIG+=release
 make -j$(nproc) release
-./app/artemis   # smoke test
+./app/vibemis   # smoke test
 ```
 
 ### AppImage (test / release)
@@ -74,4 +74,4 @@ Vibemis is Linux-first. The AppImage targets x86-64 Linux with glibc 2.17+.
 | Linux x86-64 (generic) | AppImage | WSL2 (smoke), Legion Go S Z2 (real hardware) |
 | Steam Deck / SteamOS | AppImage | Lenovo Legion Go S Z2 (Z2 Go APU / AMD Phoenix) |
 
-Windows and macOS are **not** targets for Vibemis. See upstream [Moonlight Qt](https://github.com/moonlight-stream/moonlight-qt) or [Artemis Qt](https://github.com/wjbeckett/artemis) for those platforms.
+Windows and macOS are **not** targets for Vibemis. See upstream [Moonlight Qt](https://github.com/moonlight-stream/moonlight-qt) or [Vibemis Qt](https://github.com/navyas321/vibemis) for those platforms.

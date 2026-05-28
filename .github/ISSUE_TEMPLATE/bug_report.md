@@ -4,9 +4,9 @@ about: Follow the troubleshooting guide before reporting a bug
 
 ---
 **READ ME FIRST!**
-If you're here because something basic is not working (like gamepad input, video, or similar), it's probably something specific to your setup, so make sure you've gone through the Troubleshooting Guide first: https://github.com/wjbeckett/artemis/wiki/Troubleshooting
+If you're here because something basic is not working (like gamepad input, video, or similar), it's probably something specific to your setup, so make sure you've gone through the Troubleshooting Guide first: https://github.com/navyas321/vibemis
 
-If you still have trouble with basic functionality after following the guide, join our Discord server where there are volunteers who can help (or direct you back here if it looks like an Artemis bug after all).
+If you still have trouble with basic functionality after following the guide, join our Discord server where there are volunteers who can help (or direct you back here if it looks like an Vibemis bug after all).
 
 **Describe the bug**
 A clear and concise description of what the bug is.
@@ -18,12 +18,12 @@ Any special steps that are required for the bug to appear.
 If applicable, add screenshots to help explain your problem. If the issue is related to video glitching or poor quality, please include screenshots.
 
 **Affected games**
-List the games you've tried that exhibit the issue. To see if the issue is game-specific, try streaming Steam Big Picture with Artemis and see if the issue persists there.
+List the games you've tried that exhibit the issue. To see if the issue is game-specific, try streaming Steam Big Picture with Vibemis and see if the issue persists there.
 
-**Other Artemis clients**
-- Does the issue occur when using Artemis on other platforms?
+**Other Vibemis clients**
+- Does the issue occur when using Vibemis on other platforms?
 
-**Artemis settings (please complete the following information)**
+**Vibemis settings (please complete the following information)**
 - Have any settings been adjusted from defaults?
 - If so, which settings have been changed?
 - Does the problem still occur after reverting settings back to default?
@@ -31,11 +31,11 @@ List the games you've tried that exhibit the issue. To see if the issue is game-
 **Gamepad-related issues (please complete if problem is gamepad-related)**
 - Do you have any gamepads connected to your host PC directly?
 - Does the problem still remain if you stream the desktop and use https://html5gamepad.com to test your gamepad?
-  - Instructions for streaming the desktop can be found here: https://github.com/wjbeckett/artemis/wiki/Setup-Guide
+  - Instructions for streaming the desktop can be found here: https://github.com/navyas321/vibemis
 
 **Client PC details (please complete the following information)**
  - OS: [e.g. Windows 10 1809]
- - Artemis Version: [e.g. v1.0.0]
+ - Vibemis Version: [e.g. v1.0.0]
  - GPU: [e.g. Intel HD Graphics 520]
  - Linux package type (if applicable): [e.g. Flatpak]
 
@@ -45,9 +45,9 @@ List the games you've tried that exhibit the issue. To see if the issue is game-
  - GPU: [e.g. AMD Radeon RX 7900 XT]
  - GPU driver: [e.g. 24.1.1]
 
-**Artemis Logs (please attach)**
-- On Windows, `Artemis-###.log` files can be found in `%TEMP%`. Simply type that into the File Explorer path field to navigate there.
-- On macOS, `Artemis-###.log` files can be found in `/tmp`. In Finder, press Cmd+Shift+G, then type `/tmp` to navigate there.
+**Vibemis Logs (please attach)**
+- On Windows, `Vibemis-###.log` files can be found in `%TEMP%`. Simply type that into the File Explorer path field to navigate there.
+- On macOS, `Vibemis-###.log` files can be found in `/tmp`. In Finder, press Cmd+Shift+G, then type `/tmp` to navigate there.
 - On Linux with the Flatpak, logs print to the terminal when running with the command: `flatpak run com.moonlight_stream.Moonlight`
 - On Linux with the Snap, logs print to the terminal when running with the command: `moonlight`
 

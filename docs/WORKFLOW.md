@@ -39,7 +39,7 @@ Then pick up the highest-priority unblocked work from the plan.
 
 1. **Branch** off `vibemis-main`: `feat/<slug>`, `fix/<slug>`, `docs/<slug>`, `chore/<slug>`
 2. **Plan mode** for non-trivial changes — explain each step before running it
-3. **Build**: `qmake6 artemis.pro CONFIG+=release && make -j$(nproc) release`
+3. **Build**: `qmake6 vibemis.pro CONFIG+=release && make -j$(nproc) release`
 4. **AppImage**: use `bash /root/build-test<N>.sh` (build scripts live in `/root/`) or `scripts/build-appimage.sh` if linuxdeploy is in PATH
 5. **Commit, push, open PR** — see conventions below
 6. **Start a test cycle** if the change needs real-hardware verification (see below)

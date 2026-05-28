@@ -298,7 +298,7 @@ ApplicationWindow {
 
             NavigableToolButton {
                 id: discordButton
-                visible: false // Temporarily disabled for Artemis
+                visible: false // Temporarily disabled for Vibemis
 
                 iconSource: "qrc:/res/discord.svg"
 
@@ -364,7 +364,7 @@ ApplicationWindow {
 
                 function updateAvailable(version, url)
                 {
-                    ToolTip.text = qsTr("Update available for Artemis: Version %1").arg(version)
+                    ToolTip.text = qsTr("Update available for Vibemis: Version %1").arg(version)
                     updateButton.browserUrl = url
                     updateButton.visible = true
                 }
@@ -397,7 +397,7 @@ ApplicationWindow {
                 }
 
                 // TODO need to make sure browser is brought to foreground.
-                onClicked: Qt.openUrlExternally("https://github.com/wjbeckett/artemis/wiki/Setup-Guide");
+                onClicked: Qt.openUrlExternally("https://github.com/navyas321/vibemis");
 
                 Keys.onDownPressed: {
                     stackView.currentItem.forceActiveFocus(Qt.TabFocus)
@@ -449,10 +449,10 @@ ApplicationWindow {
 
     ErrorMessageDialog {
         id: noHwDecoderDialog
-        text: qsTr("No functioning hardware accelerated video decoder was detected by Artemis. " +
+        text: qsTr("No functioning hardware accelerated video decoder was detected by Vibemis. " +
                    "Your streaming performance may be severely degraded in this configuration.")
         helpText: qsTr("Click the Help button for more information on solving this problem.")
-        helpUrl: "https://github.com/wjbeckett/artemis/wiki/Fixing-Hardware-Decoding-Problems"
+        helpUrl: "https://github.com/navyas321/vibemis"
     }
 
     ErrorMessageDialog {
@@ -460,25 +460,25 @@ ApplicationWindow {
         text: qsTr("Hardware acceleration doesn't work on XWayland. Continuing on XWayland may result in poor streaming performance. " +
                    "Try running with QT_QPA_PLATFORM=wayland or switch to X11.")
         helpText: qsTr("Click the Help button for more information.")
-        helpUrl: "https://github.com/wjbeckett/artemis/wiki/Fixing-Hardware-Decoding-Problems"
+        helpUrl: "https://github.com/navyas321/vibemis"
     }
 
     NavigableMessageDialog {
         id: wow64Dialog
         standardButtons: Dialog.Ok | Dialog.Cancel
-        text: qsTr("This version of Artemis isn't optimized for your PC. Please download the '%1' version of Artemis for the best streaming performance.").arg(SystemProperties.friendlyNativeArchName)
+        text: qsTr("This version of Vibemis isn't optimized for your PC. Please download the '%1' version of Vibemis for the best streaming performance.").arg(SystemProperties.friendlyNativeArchName)
         onAccepted: {
-            Qt.openUrlExternally("https://github.com/wjbeckett/artemis/releases");
+            Qt.openUrlExternally("https://github.com/navyas321/vibemis/releases");
         }
     }
 
     ErrorMessageDialog {
         id: unmappedGamepadDialog
         property string unmappedGamepads : ""
-        text: qsTr("Artemis detected gamepads without a mapping:") + "\n" + unmappedGamepads
+        text: qsTr("Vibemis detected gamepads without a mapping:") + "\n" + unmappedGamepads
         helpTextSeparator: "\n\n"
         helpText: qsTr("Click the Help button for information on how to map your gamepads.")
-        helpUrl: "https://github.com/wjbeckett/artemis/wiki/Gamepad-Mapping"
+        helpUrl: "https://github.com/navyas321/vibemis"
     }
 
     // This dialog appears when quitting via keyboard or gamepad button

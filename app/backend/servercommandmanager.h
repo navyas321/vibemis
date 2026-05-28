@@ -24,7 +24,7 @@ Q_DECLARE_OPAQUE_POINTER(NvHTTP*)
 /**
  * @brief Manages server commands functionality with Apollo servers
  * 
- * This class implements server commands as used in Artemis Android.
+ * This class implements server commands as used in Vibemis Android.
  * It requires the server_cmd permission from Apollo servers.
  * Based on GameMenu.java implementation.
  */

@@ -1,7 +1,7 @@
 #include "clipboardmanager.h"
 #include "nvcomputer.h"
 #include "nvhttp.h"
-#include "settings/artemissettings.h"
+#include "settings/vibemissettings.h"
 #include <QGuiApplication>
 #include <QMimeData>
 #include <QDebug>
@@ -42,7 +42,7 @@ ClipboardManager::ClipboardManager(QObject *parent)
 
 void ClipboardManager::loadSettings()
 {
-    auto settings = ArtemisSettings::instance();
+    auto settings = VibemisSettings::instance();
     
     // Load clipboard sync settings
     m_enabled = settings->clipboardSyncEnabled();
@@ -193,7 +193,7 @@ bool ClipboardManager::isClipboardSyncSupported() const
         return false;
     }
 
-    // Based on Artemis Android implementation, we don't need complex Apollo detection.
+    // Based on Vibemis Android implementation, we don't need complex Apollo detection.
     // Just return true and let the HTTP calls succeed or fail naturally.
     // The clipboard sync endpoints work with any server that supports them.
     return true;
@@ -239,7 +239,7 @@ void ClipboardManager::setBidirectionalSync(bool enabled)
         m_bidirectionalSync = enabled;
         
         // Save to persistent settings
-        auto settings = ArtemisSettings::instance();
+        auto settings = VibemisSettings::instance();
         settings->setClipboardSyncBidirectional(enabled);
         settings->save();
         
@@ -441,7 +441,7 @@ void ClipboardManager::setEnabled(bool enabled)
         enableSmartSync(enabled);
         
         // Save to persistent settings
-        auto settings = ArtemisSettings::instance();
+        auto settings = VibemisSettings::instance();
         settings->setClipboardSyncEnabled(enabled);
         settings->save();
         
@@ -466,7 +466,7 @@ void ClipboardManager::setMaxContentSizeMB(int sizeMB)
         m_maxClipboardSize = sizeMB * 1024 * 1024; // Convert to bytes
         
         // Save to persistent settings
-        auto settings = ArtemisSettings::instance();
+        auto settings = VibemisSettings::instance();
         settings->setClipboardSyncMaxSize(m_maxClipboardSize);
         settings->save();
         

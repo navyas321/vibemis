@@ -1,6 +1,6 @@
 #include "computermodel.h"
 #include "backend/serverpermissions.h"
-#include "settings/artemissettings.h"
+#include "settings/vibemissettings.h"
 
 #include <QThreadPool>
 

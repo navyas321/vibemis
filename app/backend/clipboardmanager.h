@@ -24,7 +24,7 @@ Q_DECLARE_OPAQUE_POINTER(NvHTTP*)
  * @brief Manages clipboard synchronization between client and server
  * 
  * This class handles bidirectional clipboard sync with Apollo/Sunshine servers
- * using the /actions/clipboard HTTP endpoint. Based on Artemis Android implementation.
+ * using the /actions/clipboard HTTP endpoint. Based on Vibemis Android implementation.
  */
 class ClipboardManager : public QObject
 {

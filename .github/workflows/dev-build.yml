@@ -209,7 +209,7 @@ jobs:
       - name: Build (qmake + make)
         run: |
           export PATH="$Qt6_DIR/bin:$PATH"
-          qmake6 artemis.pro CONFIG+=release "QMAKE_CXXFLAGS+=-fPIC"
+          qmake6 vibemis.pro CONFIG+=release "QMAKE_CXXFLAGS+=-fPIC"
           make -j$(nproc)
 
   build-linux-dev:
@@ -268,7 +268,7 @@ jobs:
       run: |
         export PATH="$Qt6_DIR/bin:$PATH"
         export QMAKE="$Qt6_DIR/bin/qmake6"
-        qmake6 artemis.pro CONFIG+=release "QMAKE_CXXFLAGS+=-fPIC"
+        qmake6 vibemis.pro CONFIG+=release "QMAKE_CXXFLAGS+=-fPIC"
         make -j$(nproc)
     
     
@@ -279,12 +279,12 @@ jobs:
         mkdir -p linux-package/bin
         
         # Copy the main binary
-        cp app/artemis linux-package/bin/
+        cp app/vibemis linux-package/bin/
         
         # Bundle critical shared libraries that may not be available on all systems
         # Include SDL2 main library and SDL2_ttf which are commonly missing
         echo "Bundling SDL2 libraries..."
-        ldd app/artemis | grep -E "(libSDL2-2\.0|libSDL2_ttf|libopus|libssl)" | while read -r line; do
+        ldd app/vibemis | grep -E "(libSDL2-2\.0|libSDL2_ttf|libopus|libssl)" | while read -r line; do
           lib_path=$(echo "$line" | grep -o '/[^[:space:]]*')
           if [ -n "$lib_path" ] && [ -f "$lib_path" ]; then
             lib_name=$(basename "$lib_path")
@@ -304,12 +304,12 @@ jobs:
         fi
         
         # Create launch script that sets library path
-        cat > linux-package/artemis << 'EOF'
+        cat > linux-package/vibemis << 'EOF'
         #!/bin/bash
-        # Artemis Desktop launcher script
+        # Vibemis launcher script
         
         # Resolve the actual directory where this script is located
-        # This handles symlinks properly (e.g., ~/.local/bin/artemis -> ~/.local/share/artemis-desktop/artemis)
+        # This handles symlinks properly (e.g., ~/.local/bin/vibemis -> ~/.local/share/vibemis-desktop/vibemis)
         if [ -L "${BASH_SOURCE[0]}" ]; then
             # Script is a symlink, resolve to actual location
             SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
@@ -320,17 +320,17 @@ jobs:
         
         # Set library path and execute binary
         export LD_LIBRARY_PATH="$SCRIPT_DIR/lib:$LD_LIBRARY_PATH"
-        exec "$SCRIPT_DIR/bin/artemis" "$@"
+        exec "$SCRIPT_DIR/bin/vibemis" "$@"
         EOF
-        chmod +x linux-package/artemis
+        chmod +x linux-package/vibemis
         
         # Create installation script
         cat > linux-package/install.sh << 'EOF'
         #!/bin/bash
-        echo "Installing Artemis Desktop..."
+        echo "Installing Vibemis..."
         
         # Install to local directory
-        INSTALL_DIR="$HOME/.local/share/artemis-desktop"
+        INSTALL_DIR="$HOME/.local/share/vibemis-desktop"
         BIN_DIR="$HOME/.local/bin"
         
         mkdir -p "$INSTALL_DIR" "$BIN_DIR"
@@ -339,28 +339,28 @@ jobs:
         cp -r * "$INSTALL_DIR/"
         
         # Create symlink to launcher
-        ln -sf "$INSTALL_DIR/artemis" "$BIN_DIR/artemis"
+        ln -sf "$INSTALL_DIR/vibemis" "$BIN_DIR/vibemis"
         
         # Create desktop entry
         mkdir -p "$HOME/.local/share/applications"
-        cat > "$HOME/.local/share/applications/artemis-desktop.desktop" << 'EOD'
+        cat > "$HOME/.local/share/applications/vibemis-desktop.desktop" << 'EOD'
         [Desktop Entry]
         Type=Application
-        Name=Artemis Desktop
+        Name=Vibemis
         Comment=Game streaming client
-        Exec=artemis
-        Icon=artemis-desktop
+        Exec=vibemis
+        Icon=vibemis-desktop
         Categories=Game;Network;
         EOD
         
         echo "Installation complete!"
-        echo "You can run 'artemis' from terminal or find it in your applications menu."
-        echo "If 'artemis' command is not found, add ~/.local/bin to your PATH"
+        echo "You can run 'vibemis' from terminal or find it in your applications menu."
+        echo "If 'vibemis' command is not found, add ~/.local/bin to your PATH"
         EOF
         chmod +x linux-package/install.sh
         
         # Copy library info for debugging
-        ldd app/artemis > linux-package/library_dependencies.txt || echo "ldd failed" > linux-package/library_dependencies.txt
+        ldd app/vibemis > linux-package/library_dependencies.txt || echo "ldd failed" > linux-package/library_dependencies.txt
         
         echo "=== Linux package contents ==="
         ls -la linux-package/
@@ -372,7 +372,7 @@ jobs:
       run: |
         # Create info file with semantic versioning
         cat > linux-package/build_info.txt << EOF
-        Artemis Desktop Development Build (Linux)
+        Vibemis Development Build (Linux)
         Version: $VERSION
         Numeric Version: ${{ needs.setup-version.outputs.numeric_version }}
         Is Prerelease: ${{ needs.setup-version.outputs.is_prerelease }}
@@ -383,7 +383,7 @@ jobs:
         Installation:
         1. Extract this archive
         2. Run: ./install.sh (installs to ~/.local/)
-        3. Or run directly: ./artemis
+        3. Or run directly: ./vibemis
         
         Manual dependencies (if needed):
         - SDL2_ttf: sudo apt install libsdl2-ttf-2.0-0
@@ -393,17 +393,17 @@ jobs:
         
         # Create README for users
         cat > linux-package/README.md << 'EOF'
-        # Artemis Desktop - Linux Build
+        # Vibemis - Linux Build
         
         ## Quick Installation
         
         1. Extract this archive
         2. Run the installer: `./install.sh`
-        3. Launch from terminal: `artemis`
+        3. Launch from terminal: `vibemis`
         
         ## Manual Installation
         
-        1. Run directly: `./artemis`
+        1. Run directly: `./vibemis`
         2. If you get library errors, install missing dependencies:
         
         ```bash
@@ -424,16 +424,16 @@ jobs:
           - Install SDL2_ttf: `sudo apt install libsdl2-ttf-2.0-0`
         
         - Check library_dependencies.txt for full dependency list
-        - Run with debugging: `LD_DEBUG=libs ./artemis`
+        - Run with debugging: `LD_DEBUG=libs ./vibemis`
         EOF
         
         # Package with semantic version
-        tar -czf artemis-linux-$VERSION.tar.gz -C linux-package .
+        tar -czf vibemis-linux-$VERSION.tar.gz -C linux-package .
     - name: Upload Development Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: artemis-linux-${{ needs.setup-version.outputs.version }}
-        path: artemis-linux-${{ needs.setup-version.outputs.version }}.tar.gz
+        name: vibemis-linux-${{ needs.setup-version.outputs.version }}
+        path: vibemis-linux-${{ needs.setup-version.outputs.version }}.tar.gz
         retention-days: 30
 
   build-appimage-dev:
@@ -603,7 +603,7 @@ jobs:
         
         echo "$HOME/bin" >> $GITHUB_PATH
     
-    - name: Build Artemis with Qt 6 for AppImage
+    - name: Build Vibemis with Qt 6 for AppImage
       run: |
         # Set Qt 6 environment (variables are set from jurplel/install-qt-action)
         export PATH="$Qt6_DIR/bin:$PATH"
@@ -619,11 +619,11 @@ jobs:
         rm -f .qmake.stash .qmake.cache
         find . -name "Makefile*" -delete || true
         
-        # Build with Qt 6 (similar to Artemis but without Moonlight-specific dependencies)
+        # Build with Qt 6 (similar to Vibemis but without Moonlight-specific dependencies)
         git -c submodule.libs.update=none submodule update --init --recursive
         
         # Build the project using Qt 6
-        qmake6 artemis.pro CONFIG+=release "QMAKE_CXXFLAGS+=-fPIC"
+        qmake6 vibemis.pro CONFIG+=release "QMAKE_CXXFLAGS+=-fPIC"
         make -j$(nproc)
         
         # Create AppImage directory structure
@@ -634,28 +634,28 @@ jobs:
         mkdir -p build/build-release/usr/share/icons/hicolor/scalable/apps
         
         # Copy the binary
-        cp app/artemis build/build-release/usr/bin/
+        cp app/vibemis build/build-release/usr/bin/
         
-        # Copy existing Artemis icons
-        if [ -f "app/artemis.png" ]; then
-          cp app/artemis.png build/build-release/usr/share/icons/hicolor/256x256/apps/artemis.png
+        # Copy existing Vibemis icons
+        if [ -f "app/vibemis.png" ]; then
+          cp app/vibemis.png build/build-release/usr/share/icons/hicolor/256x256/apps/vibemis.png
         fi
-        if [ -f "app/res/artemis.svg" ]; then
-          cp app/res/artemis.svg build/build-release/usr/share/icons/hicolor/scalable/apps/artemis.svg
+        if [ -f "app/res/vibemis.svg" ]; then
+          cp app/res/vibemis.svg build/build-release/usr/share/icons/hicolor/scalable/apps/vibemis.svg
         fi
         
         # Create a desktop file
-        cat > build/build-release/usr/share/applications/artemis.desktop << 'EOF'
+        cat > build/build-release/usr/share/applications/vibemis.desktop << 'EOF'
         [Desktop Entry]
         Type=Application
-        Name=Artemis Desktop
+        Name=Vibemis
         Comment=Game streaming client for NVIDIA GameStream and Sunshine
-        Exec=artemis
-        Icon=artemis
+        Exec=vibemis
+        Icon=vibemis
         Categories=Game;Network;
         Keywords=gaming;streaming;nvidia;gamestream;sunshine;
         StartupNotify=true
-        MimeType=x-scheme-handler/artemis;
+        MimeType=x-scheme-handler/vibemis;
         EOF
         
         # Build an AppDir with linuxdeployqt, then package with our own AppRun (fixes path issues on Steam Deck)
@@ -669,9 +669,9 @@ jobs:
         which appimagetool && appimagetool --version || echo "appimagetool not found"
         
         echo "=== Preparing AppDir with linuxdeployqt ==="
-        linuxdeployqt usr/share/applications/artemis.desktop -unsupported-allow-new-glibc -verbose=2 2>&1 | tee linuxdeployqt.log
+        linuxdeployqt usr/share/applications/vibemis.desktop -unsupported-allow-new-glibc -verbose=2 2>&1 | tee linuxdeployqt.log
         
-        if [ ! -d "usr" ] || [ ! -f "usr/bin/artemis" ]; then
+        if [ ! -d "usr" ] || [ ! -f "usr/bin/vibemis" ]; then
           echo "ERROR: AppDir not prepared correctly"
           exit 1
         fi
@@ -682,24 +682,24 @@ jobs:
         HERE="$(dirname "$(readlink -f "${0}")")"
         export LD_LIBRARY_PATH="${HERE}/usr/lib:${HERE}/lib:${LD_LIBRARY_PATH}"
         export QT_PLUGIN_PATH="${HERE}/usr/lib/qt6/plugins:${QT_PLUGIN_PATH}"
-        exec "${HERE}/usr/bin/artemis" "$@"
+        exec "${HERE}/usr/bin/vibemis" "$@"
         APPRUN_EOF
         chmod +x AppRun
         
         # Ensure a desktop file is at the AppDir root for appimagetool
-        cp -f usr/share/applications/artemis.desktop . || true
+        cp -f usr/share/applications/vibemis.desktop . || true
         
         # Ensure an application icon is available at AppDir root for appimagetool
-        if [ -f "usr/share/icons/hicolor/256x256/apps/artemis.png" ]; then
-          cp -f usr/share/icons/hicolor/256x256/apps/artemis.png ./artemis.png
-        elif [ -f "usr/share/icons/hicolor/scalable/apps/artemis.svg" ]; then
-          cp -f usr/share/icons/hicolor/scalable/apps/artemis.svg ./artemis.svg
+        if [ -f "usr/share/icons/hicolor/256x256/apps/vibemis.png" ]; then
+          cp -f usr/share/icons/hicolor/256x256/apps/vibemis.png ./vibemis.png
+        elif [ -f "usr/share/icons/hicolor/scalable/apps/vibemis.svg" ]; then
+          cp -f usr/share/icons/hicolor/scalable/apps/vibemis.svg ./vibemis.svg
         fi
         
         echo "=== Creating AppImage with appimagetool ==="
-        ARCH=x86_64 appimagetool . "../installer-release/Artemis-${{ needs.setup-version.outputs.version }}-x86_64.AppImage" 2>&1 | tee appimagetool.log
+        ARCH=x86_64 appimagetool . "../installer-release/Vibemis-${{ needs.setup-version.outputs.version }}-x86_64.AppImage" 2>&1 | tee appimagetool.log
         
-        if [ ! -f "../installer-release/Artemis-${{ needs.setup-version.outputs.version }}-x86_64.AppImage" ]; then
+        if [ ! -f "../installer-release/Vibemis-${{ needs.setup-version.outputs.version }}-x86_64.AppImage" ]; then
           echo "ERROR: appimagetool failed"
           tail -50 appimagetool.log || true
           exit 1
@@ -731,8 +731,8 @@ jobs:
     - name: Upload AppImage
       uses: actions/upload-artifact@v4
       with:
-        name: artemis-appimage-${{ needs.setup-version.outputs.version }}
-        path: build/installer-release/Artemis-${{ needs.setup-version.outputs.version }}-x86_64.AppImage
+        name: vibemis-appimage-${{ needs.setup-version.outputs.version }}
+        path: build/installer-release/Vibemis-${{ needs.setup-version.outputs.version }}-x86_64.AppImage
         retention-days: 30
 
   build-flatpak-dev:
@@ -760,12 +760,12 @@ jobs:
 
     - name: Create Flatpak manifest with libplacebo for Steam Deck compatibility
       run: |
-        cat > com.artemisdesktop.ArtemisDesktopDev.yml << 'EOF'
-        app-id: com.artemisdesktop.ArtemisDesktopDev
+        cat > com.vibemis.VibemisDesktopDev.yml << 'EOF'
+        app-id: com.vibemis.VibemisDesktopDev
         runtime: org.kde.Platform
         runtime-version: '6.6'
         sdk: org.kde.Sdk
-        command: artemis-dev
+        command: vibemis-dev
         finish-args:
           - --share=ipc
           - --socket=x11
@@ -903,7 +903,7 @@ jobs:
                     branch: main
                     dest: third_party/spirv-tools/external/spirv-headers
           
-          - name: artemis-desktop-dev
+          - name: vibemis-desktop-dev
             buildsystem: simple
             build-commands:
               - install -d /app/lib/GL # Workaround for NVIDIA driver issue
@@ -917,31 +917,31 @@ jobs:
               - rm -rf AntiHooking/ || true
               - rm -rf config.tests/SL/ || true
               - rm -f app/test_*.cpp || true
-              - qmake6 artemis.pro CONFIG+=release "QMAKE_CXXFLAGS+=-fPIC"
+              - qmake6 vibemis.pro CONFIG+=release "QMAKE_CXXFLAGS+=-fPIC"
               - make -j$(nproc)
-              - install -Dm755 app/artemis /app/bin/artemis-dev
+              - install -Dm755 app/vibemis /app/bin/vibemis-dev
             sources:
               - type: dir
                 path: .
             post-install:
               - |
-                install -Dm644 /dev/stdin /app/share/applications/com.artemisdesktop.ArtemisDesktopDev.desktop << 'EOD'
+                install -Dm644 /dev/stdin /app/share/applications/com.vibemis.VibemisDesktopDev.desktop << 'EOD'
                 [Desktop Entry]
                 Type=Application
-                Name=Artemis Desktop (Dev)
-                Comment=Artemis Desktop Development Build - Steam Deck Compatible
-                Exec=artemis-dev
-                Icon=com.artemisdesktop.ArtemisDesktopDev
+                Name=Vibemis (Dev)
+                Comment=Vibemis Development Build - Steam Deck Compatible
+                Exec=vibemis-dev
+                Icon=com.vibemis.VibemisDesktopDev
                 Categories=Game;Network;
                 Keywords=gaming;streaming;nvidia;gamestream;sunshine;steam;deck;
                 EOD
               # Copy icon files if they exist
               - |
-                if [ -f app/artemis.png ]; then
-                  install -Dm644 app/artemis.png /app/share/icons/hicolor/256x256/apps/com.artemisdesktop.ArtemisDesktopDev.png
+                if [ -f app/vibemis.png ]; then
+                  install -Dm644 app/vibemis.png /app/share/icons/hicolor/256x256/apps/com.vibemis.VibemisDesktopDev.png
                 fi
-                if [ -f app/res/artemis.svg ]; then
-                  install -Dm644 app/res/artemis.svg /app/share/icons/hicolor/scalable/apps/com.artemisdesktop.ArtemisDesktopDev.svg
+                if [ -f app/res/vibemis.svg ]; then
+                  install -Dm644 app/res/vibemis.svg /app/share/icons/hicolor/scalable/apps/com.vibemis.VibemisDesktopDev.svg
                 fi
         EOF
     
@@ -949,14 +949,14 @@ jobs:
       env:
         VERSION: ${{ needs.setup-version.outputs.version }}
       run: |
-        flatpak-builder --force-clean --repo=repo build-dir com.artemisdesktop.ArtemisDesktopDev.yml
-        flatpak build-bundle repo artemis-flatpak-$VERSION.flatpak com.artemisdesktop.ArtemisDesktopDev
+        flatpak-builder --force-clean --repo=repo build-dir com.vibemis.VibemisDesktopDev.yml
+        flatpak build-bundle repo vibemis-flatpak-$VERSION.flatpak com.vibemis.VibemisDesktopDev
     
     - name: Upload Flatpak Development Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: artemis-flatpak-${{ needs.setup-version.outputs.version }}
-        path: artemis-flatpak-${{ needs.setup-version.outputs.version }}.flatpak
+        name: vibemis-flatpak-${{ needs.setup-version.outputs.version }}
+        path: vibemis-flatpak-${{ needs.setup-version.outputs.version }}.flatpak
         retention-days: 30
 
   build-raspberry-pi-dev:
@@ -1000,55 +1000,55 @@ jobs:
     - name: Build for Raspberry Pi ARM64
       run: |
         # Simple native ARM64 build - no cross-compilation needed!
-        qmake6 artemis.pro CONFIG+=release "QMAKE_CXXFLAGS+=-fPIC"
+        qmake6 vibemis.pro CONFIG+=release "QMAKE_CXXFLAGS+=-fPIC"
         make -j$(nproc)
 
     - name: Verify ARM64 binary
       run: |
         echo "Verifying ARM64 binary:"
-        file app/artemis
-        readelf -h app/artemis | grep Machine || true
+        file app/vibemis
+        readelf -h app/vibemis | grep Machine || true
 
     - name: Create installation package
       env:
         SEMANTIC_VERSION: ${{ needs.setup-version.outputs.version }}
       run: |
-        mkdir -p artemis-package
-        cp app/artemis artemis-package/
+        mkdir -p vibemis-package
+        cp app/vibemis vibemis-package/
         
         # Create simple install script
-        cat > artemis-package/install.sh << 'EOF'
+        cat > vibemis-package/install.sh << 'EOF'
         #!/bin/bash
-        echo "Installing Artemis Desktop for Raspberry Pi..."
+        echo "Installing Vibemis for Raspberry Pi..."
         
         # Make binary executable
-        chmod +x artemis
+        chmod +x vibemis
         
         # Copy to local bin directory
         mkdir -p ~/.local/bin
-        cp artemis ~/.local/bin/
+        cp vibemis ~/.local/bin/
         
         # Create desktop entry
         mkdir -p ~/.local/share/applications
-        cat > ~/.local/share/applications/artemis-desktop.desktop << 'EOD'
+        cat > ~/.local/share/applications/vibemis-desktop.desktop << 'EOD'
         [Desktop Entry]
         Type=Application
-        Name=Artemis Desktop
+        Name=Vibemis
         Comment=Game streaming client
-        Exec=artemis
-        Icon=artemis-desktop
+        Exec=vibemis
+        Icon=vibemis-desktop
         Categories=Game;Network;
         EOD
         
         echo "Installation complete!"
-        echo "You can now run 'artemis' from terminal or find it in applications menu"
+        echo "You can now run 'vibemis' from terminal or find it in applications menu"
         EOF
         
-        chmod +x artemis-package/install.sh
+        chmod +x vibemis-package/install.sh
         
         # Create build info
-        cat > artemis-package/build_info.txt << EOF
-        Artemis Desktop Raspberry Pi ARM64 Build
+        cat > vibemis-package/build_info.txt << EOF
+        Vibemis Raspberry Pi ARM64 Build
         Version: $SEMANTIC_VERSION
         Built: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
         Architecture: ARM64 (native build)
@@ -1058,19 +1058,19 @@ jobs:
         Quick Start:
         1. Extract this archive
         2. Run: ./install.sh
-        3. Launch from terminal: artemis
+        3. Launch from terminal: vibemis
         EOF
 
         # Create the zip file
-        cd artemis-package
-        zip -r "../artemis-raspberry-pi-arm64-$SEMANTIC_VERSION.zip" .
+        cd vibemis-package
+        zip -r "../vibemis-raspberry-pi-arm64-$SEMANTIC_VERSION.zip" .
         cd ..
 
     - name: Upload Raspberry Pi Development Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: artemis-raspberry-pi-arm64-${{ needs.setup-version.outputs.version }}
-        path: artemis-raspberry-pi-arm64-${{ needs.setup-version.outputs.version }}.zip
+        name: vibemis-raspberry-pi-arm64-${{ needs.setup-version.outputs.version }}
+        path: vibemis-raspberry-pi-arm64-${{ needs.setup-version.outputs.version }}.zip
         retention-days: 30
   create-dev-release:
     name: Create Development Release
@@ -1226,7 +1226,7 @@ jobs:
         body: |
           ${{ (github.ref_name == 'main' || github.ref_name == 'master') && '🚀 **Production Release** 🚀
 
-          This is an official production release of Artemis Desktop.
+          This is an official production release of Vibemis.
 
           **✅ Stable**: This release has been tested and is recommended for general use.' || '🚧 **Development Build** 🚧
           
@@ -1258,7 +1258,7 @@ jobs:
           artifacts/**/*.tar.gz
           artifacts/**/*.AppImage
           artifacts/**/*.flatpak
-          artifacts/**/artemis
+          artifacts/**/vibemis
           artifacts/**/build_info.txt
           artifacts/**/install.sh
         prerelease: ${{ needs.setup-version.outputs.is_prerelease }}

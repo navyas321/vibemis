@@ -2,10 +2,10 @@ QT += core quick network quickcontrols2 svg
 CONFIG += c++17
 
 unix:!macx {
-    TARGET = artemis
+    TARGET = vibemis
 } else {
     # On macOS, this is the name displayed in the global menu bar
-    TARGET = Artemis
+    TARGET = Vibemis
 }
 
 include(../globaldefs.pri)
@@ -209,7 +209,7 @@ SOURCES += \
     backend/serverpermissions.cpp \
     backend/quickmenumanager.cpp \
     backend/otppairingmanager.cpp \
-    settings/artemissettings.cpp \
+    settings/vibemissettings.cpp \
     wm.cpp
 
 HEADERS += \
@@ -253,7 +253,7 @@ HEADERS += \
     backend/serverpermissions.h \
     backend/quickmenumanager.h \
     backend/otppairingmanager.h \
-    settings/artemissettings.h
+    settings/vibemissettings.h
 
 # Platform-specific renderers and decoders
 ffmpeg {
@@ -543,25 +543,25 @@ unix:!macx: {
 
     target.path = $$PREFIX/$$BINDIR/
 
-    desktop.files = deploy/linux/com.artemis_desktop.Artemis.desktop
+    desktop.files = deploy/linux/com.vibemis.Vibemis.desktop
     desktop.path = $$PREFIX/$$DATADIR/applications/
 
-    icons.files = res/artemis.svg
+    icons.files = res/vibemis.svg
     icons.path = $$PREFIX/$$DATADIR/icons/hicolor/scalable/apps/
 
-    appstream.files = deploy/linux/com.artemis_desktop.Artemis.appdata.xml
+    appstream.files = deploy/linux/com.vibemis.Vibemis.appdata.xml
     appstream.path = $$PREFIX/$$DATADIR/metainfo/
 
     INSTALLS += target desktop icons appstream
 }
 win32 {
-    RC_ICONS = artemis.ico
-    QMAKE_TARGET_COMPANY = Artemis Desktop Project
-    QMAKE_TARGET_DESCRIPTION = Artemis Game Streaming Client
-    QMAKE_TARGET_PRODUCT = Artemis
+    RC_ICONS = vibemis.ico
+    QMAKE_TARGET_COMPANY = Vibemis Project
+    QMAKE_TARGET_DESCRIPTION = Vibemis Game Streaming Client
+    QMAKE_TARGET_PRODUCT = Vibemis
 
     CONFIG -= embed_manifest_exe
-    QMAKE_LFLAGS += /MANIFEST:embed /MANIFESTINPUT:$${PWD}/Artemis.exe.manifest
+    QMAKE_LFLAGS += /MANIFEST:embed /MANIFESTINPUT:$${PWD}/Vibemis.exe.manifest
 }
 macx {
     # Create Info.plist in object dir with the correct version string
@@ -570,7 +570,7 @@ macx {
 
     QMAKE_INFO_PLIST = $$OUT_PWD/Info.plist
 
-    APP_BUNDLE_RESOURCES.files = artemis.icns
+    APP_BUNDLE_RESOURCES.files = vibemis.icns
     APP_BUNDLE_RESOURCES.path = Contents/Resources
 
     APP_BUNDLE_PLIST.files = $$OUT_PWD/Info.plist

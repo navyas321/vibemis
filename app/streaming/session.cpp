@@ -688,7 +688,7 @@ bool Session::initialize()
                 "(Settings -> Basic -> change if this doesn't match your display)",
                 m_StreamConfig.width, m_StreamConfig.height, m_Preferences->fps);
 
-    // Artemis Apollo integration: Apply resolution scaling if enabled
+    // Vibemis Apollo integration: Apply resolution scaling if enabled
     if (m_Preferences->enableResolutionScaling && m_Preferences->resolutionScaleFactor != 100) {
         // Apply scaling factor to resolution
         m_StreamConfig.width = (m_StreamConfig.width * m_Preferences->resolutionScaleFactor) / 100;
@@ -731,7 +731,7 @@ bool Session::initialize()
     m_StreamConfig.fps = m_Preferences->fps;
     m_StreamConfig.bitrate = m_Preferences->bitrateKbps;
 
-    // Artemis Apollo integration: Apply fractional refresh rate if enabled
+    // Vibemis Apollo integration: Apply fractional refresh rate if enabled
     if (m_Preferences->enableFractionalRefreshRate) {
         // Convert fractional refresh rate to integer (multiply by 1000 for precision)
         // This matches Apollo's internal representation: fps * 1000
@@ -2112,7 +2112,7 @@ void Session::execInternal()
                     "QuickMenuManager is null when trying to set geometry");
     }
 
-    QSvgRenderer svgIconRenderer(QString(":/res/artemis.svg"));
+    QSvgRenderer svgIconRenderer(QString(":/res/vibemis.svg"));
     QImage svgImage(ICON_SIZE, ICON_SIZE, QImage::Format_RGBA8888);
     svgImage.fill(0);
 

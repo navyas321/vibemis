@@ -1,9 +1,0 @@
-[Desktop Entry]
-Name=Vibemis
-Comment=Linux-focused Artemis Qt fork tuned for pairing with Vibepollo. Streams games and applications from a Sunshine / Apollo / Vibepollo host.
-Exec=artemis
-Icon=artemis
-Terminal=false
-Type=Application
-Categories=Qt;Game;Network;RemoteAccess;
-Keywords=nvidia;gamestream;stream;sunshine;remote play;

@@ -16,7 +16,7 @@ Q_DECLARE_OPAQUE_POINTER(NvComputer*)
 /**
  * @brief Manages OTP (One-Time Password) pairing with Apollo servers
  * 
- * This class implements OTP pairing functionality as used in Artemis Android.
+ * This class implements OTP pairing functionality as used in Vibemis Android.
  * It extends the standard PIN pairing with SHA-256 hash authentication.
  * Based on PairingManager.java implementation.
  */

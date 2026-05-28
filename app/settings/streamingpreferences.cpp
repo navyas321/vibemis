@@ -58,7 +58,7 @@
 #define SER_LANGUAGE "language"
 #define SER_RENDERERBACKEND "rendererbackend"
 
-// Artemis client-side streaming enhancements
+// Vibemis client-side streaming enhancements
 #define SER_VIRTUALDISPLAY "virtualdisplay"
 #define SER_FRACTIONALREFRESHRATE "fractionalrefreshrate"
 #define SER_CUSTOMREFRESHRATE "customrefreshrate"
@@ -185,7 +185,7 @@ void StreamingPreferences::reload()
     rendererBackend = static_cast<RendererBackend>(settings.value(SER_RENDERERBACKEND,
                                                     static_cast<int>(RendererBackend::RB_AUTO)).toInt());
 
-    // Artemis client-side streaming enhancements
+    // Vibemis client-side streaming enhancements
     useVirtualDisplay = settings.value(SER_VIRTUALDISPLAY, true).toBool();
     enableFractionalRefreshRate = settings.value(SER_FRACTIONALREFRESHRATE, false).toBool();
     customRefreshRate = settings.value(SER_CUSTOMREFRESHRATE, 59.94).toDouble();
@@ -384,7 +384,7 @@ void StreamingPreferences::save()
     settings.setValue(SER_CAPTURESYSKEYS, captureSysKeysMode);
     settings.setValue(SER_KEEPAWAKE, keepAwake);
     
-    // Artemis client-side streaming enhancements
+    // Vibemis client-side streaming enhancements
     settings.setValue(SER_VIRTUALDISPLAY, useVirtualDisplay);
     settings.setValue(SER_FRACTIONALREFRESHRATE, enableFractionalRefreshRate);
     settings.setValue(SER_CUSTOMREFRESHRATE, customRefreshRate);

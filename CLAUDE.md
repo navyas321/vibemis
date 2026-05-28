@@ -15,10 +15,10 @@ Full procedures, templates, and conventions are in [`docs/WORKFLOW.md`](docs/WOR
 
 ## What this repo is
 
-**Vibemis** is a Linux-focused fork of [Artemis Qt](https://github.com/wjbeckett/artemis) (which is itself a fork of [Moonlight Qt](https://github.com/moonlight-stream/moonlight-qt)). It's a desktop / Steam Deck / handheld streaming client tuned to pair with **Vibepollo** (a Sunshine fork). C++ / Qt 6 / QML, built with qmake6.
+**Vibemis** is a Linux-focused fork of [Vibemis Qt](https://github.com/navyas321/vibemis) (which is itself a fork of [Moonlight Qt](https://github.com/moonlight-stream/moonlight-qt)). It's a desktop / Steam Deck / handheld streaming client tuned to pair with **Vibepollo** (a Sunshine fork). C++ / Qt 6 / QML, built with qmake6.
 
 - **Default branch:** `vibemis-main` — long-running integration branch where work lands.
-- **Original upstream mirror:** `develop` — mirror of wjbeckett's Artemis Qt `develop` at the time of fork. Don't push to it.
+- **Original upstream mirror:** `develop` — mirror of wjbeckett's Vibemis Qt `develop` at the time of fork. Don't push to it.
 - **Submodule of note:** `moonlight-common-c/moonlight-common-c` points at [ClassicOldSong's Apollo-lineage fork](https://github.com/ClassicOldSong/moonlight-common-c), NOT mainline `moonlight-stream/moonlight-common-c`. Whenever upstream moonlight-qt rebase happens, the wrapper `.pro` must be checked for upstream's new symbols that ClassicOldSong's fork doesn't expose (e.g. `src/rswrapper.c`, `nanors/`, `LiSendControllerTouchEvent2`, `LI_CCAP_DUAL_TOUCHPAD`, `LiGetMicroseconds`).
 
 ## The plan
