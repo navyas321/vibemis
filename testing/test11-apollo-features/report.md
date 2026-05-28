@@ -1,12 +1,24 @@
 # Test11 Report — Apollo Feature Verification (BLOCKED by stream-launch SEGV)
 
-**Artifact tested:** `Vibemis-0.6.7-alpha.vibemis-main.20260528.0657+7c4a2db-x86_64.AppImage`
-**md5:** `4cbd20f916b6888c7aee13786760ca13` (latest pre-release at test time)
-**Source:** GitHub Releases — `0.6.7-alpha.vibemis-main.20260528.0657+7c4a2db` (published 2026-05-28 07:02 UTC)
-**Branch:** `verify/apollo-features`
+**Branch tested:** `verify/apollo-features`
 **Device:** Lenovo Legion Go S Z2, SteamOS 3.8.5, Mesa 25.3.0, AMD Ryzen Z2 Go (radeonsi, no NVIDIA hardware)
 **Test date:** 2026-05-28
 **Stream host:** Navid-PC running Vibepollo (Apollo 7.1.431)
+
+### Exact AppImages tested
+
+| | Newer (primary) | Older |
+|---|---|---|
+| **Release tag** | `0.6.7-alpha.vibemis-main.20260528.0657+7c4a2db` | `0.6.7-alpha.vibemis-main.20260528.0639+33cadd7` |
+| **Filename** | `Vibemis-0.6.7-alpha.vibemis-main.20260528.0657+7c4a2db-x86_64.AppImage` | `Vibemis-0.6.7-alpha.vibemis-main.20260528.0639+33cadd7-x86_64.AppImage` |
+| **Commit SHA** | `7c4a2dbe06d5a07483cab6005c7475429257c6de` (PR #26 — "remove Windows/macOS/SteamLink platform files") | `33cadd7955d74bb2dd6237d49106c90726578bd3` (PR #25 — "remove flatpak/rpi CI, fix release 403") |
+| **Built** | 2026-05-28 07:02 UTC | 2026-05-28 06:39 UTC |
+| **MD5** | `4cbd20f916b6888c7aee13786760ca13` | `c7ce9ef85c4218afd0ffa7df97f191b9` |
+| **Size** | 87 MB | 87 MB |
+| **`--version`** | `Vibemis 0.6.7` | `Vibemis 0.6.7` |
+| **Result** | SEGV (1 coredump, PID 6394) | SEGV (3 coredumps, PIDs 3148/3347/5239) |
+
+Both builds came from GitHub Releases on this branch via `gh release download`. Verified by md5sum and by `--version` against the running binary. Both crashed identically — see §2 fingerprint.
 
 ---
 
