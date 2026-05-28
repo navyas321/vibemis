@@ -17,9 +17,9 @@
 | **#3 — Controller input** | **PASS (Game Mode) / FAIL (Desktop Mode)** | In Game Mode, Legion Go physical pads route through Steam Input → Steam Virtual Gamepad → Vibemis → Apollo as designed. In Desktop Mode the Steam Virtual Gamepad is detected with full mapping but receives no events. Mode-dependent, not a Vibemis code issue. |
 | **#4 — Resolution requested matches user setting** | **PASS** | User set 1920x1200 @ 120 in Settings → Basic; log shows `VIBEMIS: Requesting 1920x1200 @ 120 fps from host` and launch URL has `mode=1920x1200x120`. |
 | **#4b — Host display restore on disconnect** | **PASS (Game Mode) / FAIL (Desktop Mode)** | Re-test in Game Mode confirms Navid-PC display does return to its original resolution after disconnect. The Desktop Mode failure is also session/mode-specific, not a Vibepollo bug as initially suspected. |
-| **#5 — HDR mis-state (NEW)** | **FAIL** | When the host has HDR enabled but the Z2 client does NOT support HDR, Vibemis still streams in HDR mode and the picture is washed out / desaturated. The HDR-capability gate (PR #11) appears not to be reached on this path. See §6. |
+| **#5 — HDR gating (PR #11)** | **PASS** | User verified the HDR display-capability gate is working correctly. No client-side HDR request when the local panel isn't HDR-capable. |
 
-Two clean stream launches in one session, both at user-selected 1920×1200×120, no QML TypeErrors — the test8 fixes remain regression-free. Re-testing in Game Mode resolved both Issue #3 (controller) and Issue #4b (host restore) — the originally observed Desktop Mode behaviour is environment-dependent.
+Two clean stream launches in one session, both at user-selected 1920×1200×120, no QML TypeErrors — the test8 fixes remain regression-free. Re-testing in Game Mode resolved Issue #3 (controller) and Issue #4b (host restore) — the originally observed Desktop Mode behaviour is environment-dependent.
 
 ---
 
@@ -94,25 +94,13 @@ Not a Vibemis bug for the common Steam Deck / Legion Go S Z2 workflow (Game Mode
 
 ---
 
-## 6. Issue #5 — HDR mis-state (NEW)
+## 6. Issue #5 — HDR gating (PR #11) — PASS
 
-**Symptom (Game Mode):** Host (Navid-PC) has HDR **enabled** on its display. The Legion Go S Z2's panel does **not** support HDR. Vibemis still streams in HDR mode, producing washed-out / desaturated colours on the Z2.
-
-**Why this is unexpected:** PR #11 ("HDR display capability gate") landed on `vibemis-main` (commit `79d2b921`) specifically to prevent the client from requesting HDR when the local display doesn't advertise it. The gate appears to either:
-1. Not be reached on this code path (e.g. virtual-display flow bypasses the check), or
-2. Be reached but the Z2's panel is mis-reported as HDR-capable to the gate, or
-3. Be a gate on whether to *render* HDR but not on the SDP/stream config sent to Apollo, so the host still encodes 10-bit BT.2020 and the client receives it without tone-mapping.
-
-**Suggested log captures for the next test cycle:**
-- `grep -i "HDR\|hdr\|bt2020\|bt.2020\|10-bit\|hdrcapable\|supportsHdr" <log>` during a stream where the host has HDR on.
-- The serverinfo response on this run shows `<ServerCodecModeSupport>2032385</ServerCodecModeSupport>` — that's the host advertising HEVC Main10 + AV1 support; not necessarily a request for HDR but does say the host can encode it.
-- Check whether the SDP / Launch HTTP includes any HDR mode hint (e.g. `mode=1920x1200x120x10` or an HDR query param).
-
-This is the most actionable new finding from this test cycle — it surfaces only when the host has HDR on, which the previous tests against Navid-PC didn't have.
+User confirmed the HDR display-capability gate from PR #11 is working correctly. The Legion Go S Z2 panel's lack of HDR support is correctly detected and Vibemis does not request HDR from the host; picture renders with the right colour space. PR #11 is doing its job.
 
 ---
 
-## 8. Other findings
+## 7. Other findings
 
 - **Second stream ended with `Connection terminated: -1` + `Qt Critical: Connection terminated`** at 00:02:50 (Desktop Mode session). The first stream's clean `Connection terminated: 0` did not produce the Critical line. Could be the user closing differently, or an actual error on the second session — worth a closer look if it recurs.
 - **No QML TypeErrors anywhere** — the test8 cleanup (waitForAsyncLoad / session.initialize / launchWarnings / session.start / hasServerCommands) remains clean.
@@ -120,11 +108,13 @@ This is the most actionable new finding from this test cycle — it surfaces onl
 
 ---
 
-## 9. Recommendation
+## 8. Recommendation
 
-**ITERATE — one open code-side issue (HDR), two resolved as Game-Mode-only environmental.**
+**MERGE.** Everything tested PASSES on the supported workflow (Game Mode / launch-from-Steam).
 
-- **Merge** the Issue #1 + Issue #4 changes in this branch — both verified working in both modes.
-- **Issue #3 (controller):** **Resolved.** Game Mode works. Document the "Game Mode / launch-from-Steam" workflow as the supported controller path on handhelds. No Vibemis code change needed.
-- **Issue #4b (host restore):** **Resolved in Game Mode.** Apollo's restore path works correctly; the Desktop Mode failure is the unsupported workflow. No client-side change needed for the supported path.
-- **Issue #5 (HDR mis-state):** **Open and actionable.** Either PR #11's HDR gate isn't reached on this code path, the panel is mis-reported, or the gate only governs render — not the request sent to the host. Next test cycle should grep the log for HDR / 10-bit / BT.2020 markers in a Game Mode session against an HDR-enabled host, and trace the call path that picks the stream codec/bit-depth.
+- **Issues #1 and #4** — verified working in both modes; merge as-is.
+- **Issue #3 (controller)** — works in Game Mode. Optional follow-up: document "Game Mode / launch-from-Steam" as the supported handheld controller workflow.
+- **Issue #4b (host restore)** — works in Game Mode. Apollo's restore path is fine.
+- **Issue #5 (HDR gating, PR #11)** — verified working. The capability gate correctly suppresses HDR when the client panel isn't HDR-capable.
+
+No code-side issues open from this cycle.
