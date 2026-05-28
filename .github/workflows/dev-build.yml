@@ -589,7 +589,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    if: (github.ref == 'refs/heads/vibemis-main' || github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && needs.setup-version.outputs.should_build == 'true'  # Create releases for vibemis-main/develop/main branches when builds ran
+    if: (github.ref == 'refs/heads/vibemis-main' || github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/fix/') || startsWith(github.ref, 'refs/heads/hotfix/')) && needs.setup-version.outputs.should_build == 'true'  # Create releases for integration branches and fix/* branches (fix branches become prereleases)
     
     steps:
     - name: Checkout
