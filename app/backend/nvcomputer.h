@@ -118,6 +118,14 @@ public:
     // Remember to update isEqualSerialized() when adding fields here!
     QString apolloVersion;
 
+    // Returns true for Apollo/Sunshine/Vibepollo servers.
+    // Detection uses any Apollo-specific indicator: an explicit ApolloVersion
+    // string OR non-zero server permissions (which Apollo sets but GFE never does).
+    // Vibepollo sets permissions but does not always set ApolloVersion.
+    bool isApolloServer() const {
+        return !apolloVersion.isEmpty() || serverPermissions != 0;
+    }
+
     // Synchronization
     mutable CopySafeReadWriteLock lock;
 

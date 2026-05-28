@@ -46,6 +46,8 @@ QVariant ComputerModel::data(const QModelIndex& index, int role) const
         return computer->isSupportedServerVersion;
     case ApolloVersionRole:
         return computer->apolloVersion;
+    case IsApolloServerRole:
+        return computer->isApolloServer();
     case DetailsRole: {
         QString state, pairState;
 
@@ -145,6 +147,7 @@ QHash<int, QByteArray> ComputerModel::roleNames() const
     names[ServerSupportedRole] = "serverSupported";
     names[DetailsRole] = "details";
     names[ApolloVersionRole] = "apolloVersion";
+    names[IsApolloServerRole] = "isApolloServer";
 
     return names;
 }

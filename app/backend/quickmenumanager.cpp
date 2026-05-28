@@ -231,8 +231,10 @@ void QuickMenuManager::executeServerCommand(const QString &command)
     if (m_serverCommandManager) {
         // First check if the server command manager has permission (thread-safe property access)
         bool hasPermission = false;
-        QMetaObject::invokeMethod(m_serverCommandManager, "hasPermission", 
-                                  Qt::BlockingQueuedConnection,
+        // DirectConnection: QuickMenuManager and ServerCommandManager both live on
+        // the main thread (Qt singletons), so BlockingQueuedConnection would deadlock.
+        QMetaObject::invokeMethod(m_serverCommandManager, "hasPermission",
+                                  Qt::DirectConnection,
                                   Q_RETURN_ARG(bool, hasPermission));
                                   
         if (hasPermission) {

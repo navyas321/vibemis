@@ -534,7 +534,10 @@ Session::getDecoderAvailability(SDL_Window* window,
 void Session::toggleQuickMenu()
 {
     if (m_QuickMenuManager) {
-        m_QuickMenuManager->toggle();
+        // toggle() creates a QQuickView, which must happen on the Qt main thread.
+        // This is called from the SDL input thread (gamepad/keyboard handlers), so
+        // we must dispatch via QueuedConnection rather than calling directly.
+        QMetaObject::invokeMethod(m_QuickMenuManager, "toggle", Qt::QueuedConnection);
     }
 }
 
@@ -1048,25 +1051,49 @@ bool Session::initialize()
         }
     }
 
-    // Initialize ServerCommandManager and ClipboardManager after everything is configured
+    // Initialize ServerCommandManager and ClipboardManager after everything is configured.
+    //
+    // IMPORTANT: NvHTTP internally creates a QNetworkAccessManager. On Linux/Wayland,
+    // initialize() runs on ExecThread (a background thread), so a QNetworkAccessManager
+    // created here would live on that background thread. ClipboardManager and
+    // ServerCommandManager are Qt singletons accessed from the Qt main thread via QML,
+    // so their NvHTTP instances must also live on the main thread to satisfy Qt's
+    // QObject thread-affinity rules. Without this, QNAM's post()/get() calls from the
+    // main thread crash with a SIGABRT (Qt detects the cross-thread QObject access).
+    //
+    // Fix: dispatch the NvHTTP creation and setConnection() calls to the main thread
+    // using BlockingQueuedConnection so we wait for them to complete before proceeding.
     if (m_ServerCommandManager && m_QuickMenuManager && m_ClipboardManager) {
-        // Set up the ServerCommandManager with the computer and HTTP client
-        NvHTTP* httpClient = new NvHTTP(m_Computer);
-        m_ServerCommandManager->setConnection(m_Computer, httpClient);
-        
-        // Set up the ClipboardManager with the same HTTP client
-        m_ClipboardManager->setConnection(m_Computer, httpClient);
-        
-        // Connect the ServerCommandManager to the QuickMenuManager
-        m_QuickMenuManager->setServerCommandManager(m_ServerCommandManager);
-        
-        // Connect the ClipboardManager to the QuickMenuManager
-        m_QuickMenuManager->setClipboardManager(m_ClipboardManager);
-        
-        // Connect signals for permission updates
-        connect(m_ServerCommandManager, &ServerCommandManager::permissionChanged,
-                m_QuickMenuManager, &QuickMenuManager::serverCommandsChanged);
-        
+        NvComputer* computer = m_Computer;
+        ServerCommandManager* scm = m_ServerCommandManager;
+        ClipboardManager* cm = m_ClipboardManager;
+        QuickMenuManager* qmm = m_QuickMenuManager;
+
+        auto initOnMainThread = [computer, scm, cm, qmm]() {
+            // NvHTTP and its QNetworkAccessManager are created here on the main thread.
+            NvHTTP* httpClient = new NvHTTP(computer);
+            scm->setConnection(computer, httpClient);
+            // ClipboardManager owns its own NvHTTP; give it a separate instance so
+            // each manager's QNAM lives entirely on the main thread.
+            NvHTTP* clipHttpClient = new NvHTTP(computer);
+            cm->setConnection(computer, clipHttpClient);
+            qmm->setServerCommandManager(scm);
+            qmm->setClipboardManager(cm);
+            connect(scm, &ServerCommandManager::permissionChanged,
+                    qmm, &QuickMenuManager::serverCommandsChanged);
+        };
+
+        if (QThread::currentThread() == QCoreApplication::instance()->thread()) {
+            // Already on the main thread (Windows/macOS path).
+            initOnMainThread();
+        } else {
+            // Background ExecThread (Linux/Wayland/X11 path) — dispatch to main thread
+            // and block until done so initialization is complete before streaming starts.
+            QMetaObject::invokeMethod(QCoreApplication::instance(),
+                                      initOnMainThread,
+                                      Qt::BlockingQueuedConnection);
+        }
+
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                     "ServerCommandManager and ClipboardManager initialized and connected to QuickMenuManager");
     } else {

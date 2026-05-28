@@ -279,8 +279,10 @@ CenteredGridView {
                     stackView.push(appView)
                 }
                 else {
-                    // If we know this is an Apollo server, use OTP. Otherwise, use PIN.
-                    if (model.apolloVersion) {
+                    // Use OTP for any Apollo-lineage server (Apollo/Sunshine/Vibepollo).
+                    // apolloVersion alone is insufficient — Vibepollo sets permissions
+                    // but not necessarily <ApolloVersion>. isApolloServer covers both.
+                    if (model.isApolloServer) {
                         otpPairDialog.computerIndex = index
                         otpPairDialog.open()
                     } else {
