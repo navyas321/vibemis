@@ -437,29 +437,18 @@ jobs:
         retention-days: 30
 
   build-appimage-dev:
-    name: AppImage Development Build (Moonlight Compatible Dependencies)
+    name: AppImage Build
     needs: setup-version
-    runs-on: ubuntu-22.04  # Use Ubuntu 22.04 since 20.04 is deprecated
-    if: false  # Temporarily disabled
-    # if: needs.setup-version.outputs.should_build == 'true'
-    
-    env:
-      FFMPEG_CONFIGURE_ARGS: --enable-pic --disable-static --enable-shared --disable-all --enable-avcodec --enable-avformat --enable-swscale --enable-decoder=h264 --enable-decoder=hevc --enable-decoder=av1 --enable-hwaccel=h264_vaapi --enable-hwaccel=hevc_vaapi --enable-hwaccel=av1_vaapi --enable-hwaccel=h264_vdpau --enable-hwaccel=hevc_vdpau --enable-hwaccel=av1_vdpau --enable-hwaccel=h264_vulkan --enable-hwaccel=hevc_vulkan --enable-hwaccel=av1_vulkan --enable-libdav1d --enable-decoder=libdav1d
-    
+    runs-on: ubuntu-22.04
+    if: needs.setup-version.outputs.should_build == 'true'
+
     steps:
     - name: Checkout
       uses: actions/checkout@v4
       with:
         submodules: 'recursive'
         fetch-depth: 0
-    
-    - name: Get version
-      id: version
-      run: |
-        VERSION=${{ needs.setup-version.outputs.version }}
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
-        echo "Using version: $VERSION"
-    
+
     - name: Setup Qt 6
       uses: jurplel/install-qt-action@v3
       with:
@@ -467,273 +456,113 @@ jobs:
         host: 'linux'
         target: 'desktop'
         modules: 'qtmultimedia'
-      continue-on-error: true
-      id: qt_install
-        
-    - name: Retry Qt Installation (if failed)
-      if: steps.qt_install.outcome == 'failure'
-      uses: jurplel/install-qt-action@v3
-      with:
-        version: ${{ env.QT_VERSION }}
-        host: 'linux'
-        target: 'desktop'
-        modules: 'qtmultimedia'
-    
-    - name: Install FUSE and build dependencies (matching Moonlight)
+
+    - name: Install system dependencies
       run: |
-        # Use the correct Vulkan SDK repository for Ubuntu 22.04 (Jammy)
-        wget -qO - https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
-        sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.3.280-jammy.list https://packages.lunarg.com/vulkan/1.3.280/lunarg-vulkan-1.3.280-jammy.list
-        sudo apt update || true
-        
-        # Install FUSE first (required for AppImage creation)
-        sudo apt install -y libfuse2 fuse
-        
-        # Install AppImage creation tools
-        sudo apt install -y squashfs-tools
-        
-        # Try to install appimagetool from GitHub releases
-        wget -O /tmp/appimagetool.AppImage https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
-        chmod +x /tmp/appimagetool.AppImage
-        sudo mv /tmp/appimagetool.AppImage /usr/local/bin/appimagetool
-        
-        # Install build dependencies (without Vulkan SDK to avoid conflicts)
-        sudo apt install -y python3-pip nasm libgbm-dev libdrm-dev libfreetype6-dev libasound2-dev libdbus-1-dev libegl1-mesa-dev libgl1-mesa-dev libgles2-mesa-dev libglu1-mesa-dev libibus-1.0-dev libpulse-dev libudev-dev libx11-dev libxcursor-dev libxext-dev libxi-dev libxinerama-dev libxkbcommon-dev libxrandr-dev libxss-dev libxt-dev libxv-dev libxxf86vm-dev libxcb-dri3-dev libx11-xcb-dev wayland-protocols libopus-dev libvdpau-dev libwayland-dev libwayland-client0 libwayland-cursor0 libwayland-server0 libwayland-egl1-mesa libplacebo-dev || echo "libplacebo-dev not available, will build from source"
-        
-        # Try to install Vulkan SDK, but don't fail the build if it has dependency issues
-        sudo apt install -y vulkan-sdk || echo "Vulkan SDK installation had conflicts, proceeding without it"
-        
-        sudo pip3 install meson
-    
-    - name: Build SDL2 from source (exact version used by Moonlight)
-      run: |
-        export SDL2_REV=86fd4ed83cdcf71fef6a57766b126e88f923acd3
-        git clone https://github.com/libsdl-org/SDL.git SDL2
-        cd SDL2
-        git checkout $SDL2_REV
-        ./configure
-        make -j$(nproc)
-        sudo make install
-        cd ..
-    
-    - name: Build SDL2_ttf from source (exact version used by Moonlight)
-      run: |
-        export SDL2_TTF_VER=2.22.0
-        wget https://github.com/libsdl-org/SDL_ttf/releases/download/release-$SDL2_TTF_VER/SDL2_ttf-$SDL2_TTF_VER.tar.gz
-        tar -xf SDL2_ttf-$SDL2_TTF_VER.tar.gz
-        cd SDL2_ttf-$SDL2_TTF_VER
-        ./configure
-        make -j$(nproc)
-        sudo make install
-        cd ..
-    
-    - name: Build libva from source (exact version used by Moonlight)
-      run: |
-        export LIBVA_VER=2.22.0
-        git clone --branch $LIBVA_VER --depth 1 https://github.com/intel/libva.git
-        cd libva
-        ./autogen.sh
-        ./configure --enable-x11 --enable-wayland
-        make -j$(nproc)
-        sudo make install
-        cd ..
-    
-    - name: Build dav1d from source (exact version used by Moonlight)
-      run: |
-        export DAV1D_VER=1.5.0
-        git clone --branch $DAV1D_VER --depth 1 https://code.videolan.org/videolan/dav1d.git
-        cd dav1d
-        meson setup build -Ddefault_library=static -Dbuildtype=release -Denable_tools=false -Denable_tests=false
-        ninja -C build
-        sudo ninja install -C build
-        sudo ldconfig
-        cd ..
-    
-    - name: Build libplacebo from source with patches (exact version used by Moonlight)
-      run: |
-        export LIBPLACEBO_REV=v7.349.0
-        git clone https://code.videolan.org/videolan/libplacebo.git
-        cd libplacebo
-        git checkout $LIBPLACEBO_REV
-        # Apply the same patch that Moonlight uses
-        if [ -f "../app/deploy/linux/appimage/*.patch" ]; then
-          git apply ../app/deploy/linux/appimage/*.patch || echo "No patches to apply"
-        fi
-        git submodule update --init --recursive
-        meson setup build -Dvulkan=enabled -Dopengl=disabled -Ddemos=false
-        ninja -C build
-        sudo ninja install -C build
-        sudo ldconfig
-        cd ..
-    
-    - name: Build FFmpeg from source (exact version and config used by Moonlight)
-      run: |
-        export FFMPEG_REV=87ccf995cb855f0baced9916928b7b48d8b6ed9d
-        git clone https://github.com/FFmpeg/FFmpeg.git FFmpeg
-        cd FFmpeg
-        git checkout $FFMPEG_REV
-        ./configure $FFMPEG_CONFIGURE_ARGS
-        make -j$(nproc)
-        sudo make install
-        sudo ldconfig
-        cd ..
-    
-    - name: Download and extract linuxdeployqt
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          libegl1-mesa-dev libgl1-mesa-dev \
+          libopus-dev libsdl2-dev libsdl2-ttf-dev \
+          libssl-dev libavcodec-dev libavformat-dev libavutil-dev libswscale-dev \
+          libxkbcommon-dev wayland-protocols libdrm-dev libgbm-dev \
+          libplacebo-dev libva-dev \
+          librsvg2-bin fuse libfuse2
+
+    - name: Download linuxdeploy + Qt plugin
       run: |
         mkdir -p $HOME/bin
-        wget -O $HOME/linuxdeployqt.AppImage https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage
-        chmod a+x $HOME/linuxdeployqt.AppImage
-        
-        # Try to run the AppImage normally first
-        if $HOME/linuxdeployqt.AppImage --version > /dev/null 2>&1; then
-          echo "AppImage works directly"
-          mv $HOME/linuxdeployqt.AppImage $HOME/bin/linuxdeployqt
-        else
-          echo "AppImage needs extraction, extracting..."
-          cd $HOME
-          # Extract the AppImage
-          $HOME/linuxdeployqt.AppImage --appimage-extract
-          # Move the executable to bin and make it available
-          mv squashfs-root/AppRun $HOME/bin/linuxdeployqt
-          chmod +x $HOME/bin/linuxdeployqt
-          # Clean up
-          rm -rf squashfs-root
-          rm $HOME/linuxdeployqt.AppImage
-        fi
-        
+        wget -q -O $HOME/bin/linuxdeploy.AppImage \
+          https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+        wget -q -O $HOME/bin/linuxdeploy-plugin-qt.AppImage \
+          https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
+        chmod +x $HOME/bin/linuxdeploy.AppImage $HOME/bin/linuxdeploy-plugin-qt.AppImage
         echo "$HOME/bin" >> $GITHUB_PATH
-    
-    - name: Build Vibemis with Qt 6 for AppImage
+
+    - name: Build and install
       run: |
-        # Set Qt 6 environment (variables are set from jurplel/install-qt-action)
         export PATH="$Qt6_DIR/bin:$PATH"
-        export QMAKE="$Qt6_DIR/bin/qmake6"
-        
-        # Verify Qt installation
-        which qmake6 || echo "qmake6 not found in PATH"
-        echo "Qt6_DIR: $Qt6_DIR"
-        ls -la "$Qt6_DIR/bin/" || echo "Qt6 bin directory not found"
-        
-        # Clean any existing build
-        rm -rf build/
-        rm -f .qmake.stash .qmake.cache
-        find . -name "Makefile*" -delete || true
-        
-        # Build with Qt 6 (similar to Vibemis but without Moonlight-specific dependencies)
-        git -c submodule.libs.update=none submodule update --init --recursive
-        
-        # Build the project using Qt 6
-        qmake6 vibemis.pro CONFIG+=release "QMAKE_CXXFLAGS+=-fPIC"
+        DEPLOY=$PWD/deploy
+        rm -rf "$DEPLOY" build/installer-release
+        mkdir -p "$DEPLOY" build/installer-release
+        find . -name "Makefile*" -not -path "./.git/*" -delete 2>/dev/null || true
+        rm -f .qmake.stash .qmake.cache app/.qmake.stash
+
+        qmake6 vibemis.pro CONFIG+=release \
+          CONFIG+=disable-wayland CONFIG+=disable-libdrm CONFIG+=disable-cuda \
+          PREFIX=/usr DEFINES+=APP_IMAGE "QMAKE_CXXFLAGS+=-fPIC"
         make -j$(nproc)
-        
-        # Create AppImage directory structure
-        mkdir -p build/installer-release
-        mkdir -p build/build-release/usr/bin
-        mkdir -p build/build-release/usr/share/applications
-        mkdir -p build/build-release/usr/share/icons/hicolor/256x256/apps
-        mkdir -p build/build-release/usr/share/icons/hicolor/scalable/apps
-        
-        # Copy the binary
-        cp app/vibemis build/build-release/usr/bin/
-        
-        # Copy existing Vibemis icons
-        if [ -f "app/vibemis.png" ]; then
-          cp app/vibemis.png build/build-release/usr/share/icons/hicolor/256x256/apps/vibemis.png
+        make INSTALL_ROOT="$DEPLOY" install
+
+    - name: Install VAAPI apprun hook
+      run: |
+        DEPLOY=$PWD/deploy
+        mkdir -p "$DEPLOY/apprun-hooks"
+        cat > "$DEPLOY/apprun-hooks/01-libva-driver-paths.sh" << 'HOOK'
+        # Vibemis AppImage — VAAPI/VDPAU host-library hook
+        if [ -z "$LIBVA_DRIVERS_PATH" ]; then
+            for _d in /usr/lib/x86_64-linux-gnu/dri /usr/lib64/dri /usr/lib/dri; do
+                [ -d "$_d" ] && { export LIBVA_DRIVERS_PATH="$_d"; break; }
+            done
         fi
-        if [ -f "app/res/vibemis.svg" ]; then
-          cp app/res/vibemis.svg build/build-release/usr/share/icons/hicolor/scalable/apps/vibemis.svg
+        if [ -z "$VIBEMIS_SKIP_HOST_LIBVA" ]; then
+            for _d in /usr/lib64 /usr/lib/x86_64-linux-gnu /usr/lib; do
+                if [ -e "$_d/libva.so.2" ]; then
+                    _tmp=$(mktemp -d)
+                    for _so in libva.so.2 libva-drm.so.2 libva-x11.so.2; do
+                        [ -e "$_d/$_so" ] && ln -sf "$_d/$_so" "$_tmp/"
+                    done
+                    export LD_LIBRARY_PATH="$_tmp${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+                    break
+                fi
+            done
         fi
-        
-        # Create a desktop file
-        cat > build/build-release/usr/share/applications/vibemis.desktop << 'EOF'
-        [Desktop Entry]
-        Type=Application
-        Name=Vibemis
-        Comment=Game streaming client for NVIDIA GameStream and Sunshine
-        Exec=vibemis
-        Icon=vibemis
-        Categories=Game;Network;
-        Keywords=gaming;streaming;nvidia;gamestream;sunshine;
-        StartupNotify=true
-        MimeType=x-scheme-handler/vibemis;
-        EOF
-        
-        # Build an AppDir with linuxdeployqt, then package with our own AppRun (fixes path issues on Steam Deck)
-        export PATH=$HOME/bin:$PATH
-        cd build/build-release
-        
-        echo "=== Environment Check ==="
-        echo "PWD: $(pwd)"
-        echo "PATH: $PATH"
-        which linuxdeployqt && linuxdeployqt --version || echo "linuxdeployqt not found"
-        which appimagetool && appimagetool --version || echo "appimagetool not found"
-        
-        echo "=== Preparing AppDir with linuxdeployqt ==="
-        linuxdeployqt usr/share/applications/vibemis.desktop -unsupported-allow-new-glibc -verbose=2 2>&1 | tee linuxdeployqt.log
-        
-        if [ ! -d "usr" ] || [ ! -f "usr/bin/vibemis" ]; then
-          echo "ERROR: AppDir not prepared correctly"
-          exit 1
+        if [ -z "$VDPAU_DRIVER_PATH" ]; then
+            for _d in /usr/lib/x86_64-linux-gnu/vdpau /usr/lib64/vdpau /usr/lib/vdpau; do
+                [ -d "$_d" ] && { export VDPAU_DRIVER_PATH="$_d"; break; }
+            done
         fi
-        
-        echo "=== Inject custom AppRun ==="
-        cat > AppRun << 'APPRUN_EOF'
-        #!/bin/bash
-        HERE="$(dirname "$(readlink -f "${0}")")"
-        export LD_LIBRARY_PATH="${HERE}/usr/lib:${HERE}/lib:${LD_LIBRARY_PATH}"
-        export QT_PLUGIN_PATH="${HERE}/usr/lib/qt6/plugins:${QT_PLUGIN_PATH}"
-        exec "${HERE}/usr/bin/vibemis" "$@"
-        APPRUN_EOF
-        chmod +x AppRun
-        
-        # Ensure a desktop file is at the AppDir root for appimagetool
-        cp -f usr/share/applications/vibemis.desktop . || true
-        
-        # Ensure an application icon is available at AppDir root for appimagetool
-        if [ -f "usr/share/icons/hicolor/256x256/apps/vibemis.png" ]; then
-          cp -f usr/share/icons/hicolor/256x256/apps/vibemis.png ./vibemis.png
-        elif [ -f "usr/share/icons/hicolor/scalable/apps/vibemis.svg" ]; then
-          cp -f usr/share/icons/hicolor/scalable/apps/vibemis.svg ./vibemis.svg
-        fi
-        
-        echo "=== Creating AppImage with appimagetool ==="
-        ARCH=x86_64 appimagetool . "../installer-release/Vibemis-${{ needs.setup-version.outputs.version }}-x86_64.AppImage" 2>&1 | tee appimagetool.log
-        
-        if [ ! -f "../installer-release/Vibemis-${{ needs.setup-version.outputs.version }}-x86_64.AppImage" ]; then
-          echo "ERROR: appimagetool failed"
-          tail -50 appimagetool.log || true
-          exit 1
-        fi
-    
-    - name: Verify AppImage was created successfully
+        HOOK
+        chmod +x "$DEPLOY/apprun-hooks/01-libva-driver-paths.sh"
+
+    - name: Render icon PNG from SVG
+      run: |
+        DEPLOY=$PWD/deploy
+        mkdir -p "$DEPLOY/usr/share/icons/hicolor/256x256/apps"
+        rsvg-convert -w 256 -h 256 \
+          "$DEPLOY/usr/share/icons/hicolor/scalable/apps/vibemis.svg" \
+          -o "$DEPLOY/usr/share/icons/hicolor/256x256/apps/vibemis.png"
+
+    - name: Bundle AppImage with linuxdeploy
+      run: |
+        export PATH="$Qt6_DIR/bin:$PATH"
+        DEPLOY=$PWD/deploy
+        VERSION=${{ needs.setup-version.outputs.version }}
+        export OUTPUT="$PWD/build/installer-release/Vibemis-${VERSION}-x86_64.AppImage"
+        export QML_SOURCES_PATHS=$PWD/app/gui
+
+        linuxdeploy.AppImage \
+          --appdir "$DEPLOY" \
+          --executable "$DEPLOY/usr/bin/vibemis" \
+          --desktop-file "$DEPLOY/usr/share/applications/com.vibemis.Vibemis.desktop" \
+          --icon-file "$DEPLOY/usr/share/icons/hicolor/256x256/apps/vibemis.png" \
+          --plugin qt \
+          --output appimage
+
+    - name: Verify AppImage
       run: |
         ls -lh build/installer-release/
-        APPIMAGE_FILE=$(ls build/installer-release/*.AppImage | head -n1)
-        if [ -f "$APPIMAGE_FILE" ]; then
-          echo "AppImage created: $APPIMAGE_FILE"
-          file "$APPIMAGE_FILE"
-          echo "Size: $(du -h "$APPIMAGE_FILE" | cut -f1)"
-          
-          # Extract and check contents
-          chmod +x "$APPIMAGE_FILE"
-          "$APPIMAGE_FILE" --appimage-extract >/dev/null 2>&1 || echo "Extraction failed"
-          if [ -d "squashfs-root" ]; then
-            echo "AppImage contents size:"
-            du -sh squashfs-root/
-            echo "Key libraries bundled:"
-            find squashfs-root -name "*.so*" -type f | grep -E "(Qt|SDL|ffmpeg|av|codec|va|vdpau)" | sort
-          fi
-        else
-          echo "ERROR: No AppImage file found!"
-          exit 1
-        fi
-    
-    - name: Upload AppImage
+        APP=$(ls build/installer-release/*.AppImage | head -1)
+        echo "AppImage: $APP"
+        md5sum "$APP"
+        file "$APP"
+
+    - name: Upload AppImage artifact
       uses: actions/upload-artifact@v4
       with:
         name: vibemis-appimage-${{ needs.setup-version.outputs.version }}
         path: build/installer-release/Vibemis-${{ needs.setup-version.outputs.version }}-x86_64.AppImage
-        retention-days: 30
+        retention-days: 90
 
   build-flatpak-dev:
     name: Flatpak Development Build
@@ -1074,9 +903,9 @@ jobs:
         retention-days: 30
   create-dev-release:
     name: Create Development Release
-    needs: [setup-version, build-linux-dev, build-flatpak-dev, build-raspberry-pi-dev]
+    needs: [setup-version, build-linux-dev, build-appimage-dev, build-flatpak-dev, build-raspberry-pi-dev]
     runs-on: ubuntu-latest
-    if: (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && needs.setup-version.outputs.should_build == 'true'  # Create releases for develop/main branches when builds ran
+    if: (github.ref == 'refs/heads/vibemis-main' || github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && needs.setup-version.outputs.should_build == 'true'  # Create releases for vibemis-main/develop/main branches when builds ran
     
     steps:
     - name: Checkout
