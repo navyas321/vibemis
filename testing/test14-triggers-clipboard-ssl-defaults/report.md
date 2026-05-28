@@ -19,6 +19,7 @@
 | D — OTPPairing default `true` | PARTIAL | INI has `enabled=true`; code still uses classic `phrase=getservercert` PIN flow |
 | E — ServerCommands default `true` | PARTIAL | INI has `enabled=true`; Bubbles loaded from serverinfo; inaccessible (invisible menu) |
 | F — No regression on video | PASS | VAAPI hook active, EGL pixel format 181, stream at 1920×1200×120 |
+| G — Clipboard image support (post-test) | FAIL | Image copies from client arrive on host as raw text data, not as renderable image |
 
 ---
 
@@ -195,6 +196,21 @@ showAdvanced=false
   one gets `Connection closed (Error 2)`, the other proceeds. Not a new regression, but worth tracking.
 - **Desktop Mode environmental:** Steam Input is present (`Steam Virtual Gamepad` mapped at
   `00:01:24`), so the controller mapping isn't the issue — the QML bug would affect Game Mode equally.
+- **Stream drops: ENet `Transaction failed: 11` pattern.** Post-report streaming sessions consistently
+  terminated after 30–60 seconds with `Connection terminated: -1` / `Loss Stats: Transaction failed: 11`.
+  The Vibemis app survives (returns to the PC list) — this is a network-level ENet drop, not a Vibemis
+  crash. Likely Wi-Fi interference or the host retaining a stale session. Not a code regression; flagged
+  for awareness.
+- **Image clipboard: data arrives as text, not as image (post-report finding).** With `textOnly=false`
+  and max size raised to 60 MB+, copying an image on the Z2 client does transmit data to the host via
+  the Moonlight control-stream clipboard protocol — but the host renders it as raw text (binary/base64
+  garbage) rather than as a pasteable image. The MIME type or format metadata is not being preserved in
+  the clipboard payload. **Build agent: check whether upstream Artemis Qt / Moonlight Qt ever supported
+  non-text MIME types (image/png, image/jpeg, etc.) in the clipboard sync protocol, and match that
+  behaviour. If Artemis never supported images, document the limitation explicitly and consider whether
+  to strip or properly encode non-text payloads rather than passing raw binary through the text path.**
+- **Client→Host text clipboard confirmed working** (control-stream path, independent of the Apollo
+  HTTP endpoint). The 403 Forbidden on `/actions/clipboard` only affects the host→client fetch path.
 
 ---
 
@@ -217,3 +233,8 @@ Three distinct issues remain open; they are independent enough to fix in paralle
 3. **OTP code path not wired** — `OTPPairing.enabled` is now stored and defaulted correctly, but
    the pairing function still always calls `phrase=getservercert`. The settings flag needs to branch
    into an OTP-specific dialog and exchange rather than being a no-op.
+
+4. **Image clipboard MIME handling** — non-text clipboard content (images, files) transmits raw binary
+   through the text clipboard path, arriving on the host as unrenderable text data. Audit upstream
+   Artemis Qt / Moonlight Qt for `image/*` MIME type support in the clipboard protocol; either match
+   it or explicitly clamp non-text payloads (don't silently corrupt them).
