@@ -467,6 +467,8 @@ jobs:
           libssl-dev libavcodec-dev libavformat-dev libavutil-dev libswscale-dev \
           libxkbcommon-dev wayland-protocols libdrm-dev libgbm-dev \
           libplacebo-dev libva-dev \
+          libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+          libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 \
           librsvg2-bin fuse libfuse2
 
     - name: Download linuxdeploy + Qt plugin
