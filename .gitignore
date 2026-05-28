@@ -24,10 +24,8 @@ debug/
 *.AppImage
 *.zip
 *.tar.gz
-# Vibemis: AppImages under testing/<task>/ are intentional artifacts that the
-# Linux test agent picks up via `git pull`. The wildcard above ignores root-level
-# build outputs; the unignore below opts in just the testing tree.
-!testing/**/*.AppImage
+# Test AppImages live in GitHub Releases / CI artifacts, not in the repo.
+# Do not un-ignore *.AppImage — they are large binaries and should never be committed.
 
 # Qt Creator
 *.pro.user
