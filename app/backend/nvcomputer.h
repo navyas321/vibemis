@@ -118,12 +118,21 @@ public:
     // Remember to update isEqualSerialized() when adding fields here!
     QString apolloVersion;
 
-    // Returns true for Apollo/Sunshine/Vibepollo servers.
-    // Detection uses any Apollo-specific indicator: an explicit ApolloVersion
-    // string OR non-zero server permissions (which Apollo sets but GFE never does).
-    // Vibepollo sets permissions but does not always set ApolloVersion.
+    // Returns true for any non-GFE server (Apollo/Sunshine/Vibepollo).
+    //
+    // Prior approach — checking apolloVersion or serverPermissions — broke for
+    // Vibepollo: apolloVersion is never set by Vibepollo, and serverPermissions
+    // is only non-zero for already-PAIRED clients. After unpairing, a fresh
+    // serverinfo probe from an unpaired client returns no <Permission> tag, so
+    // serverPermissions resets to 0, isApolloServer() returns false, and the
+    // OTP dialog is bypassed in favour of the classic PIN dialog.
+    //
+    // The reliable signal: isNvidiaServerSoftware is set by the presence of
+    // "MJOLNIR" in the server state field, which only Nvidia GFE uses. Any
+    // server that is NOT GFE (Sunshine, Apollo, Vibepollo, …) returns false
+    // for isNvidiaServerSoftware regardless of pairing status.
     bool isApolloServer() const {
-        return !apolloVersion.isEmpty() || serverPermissions != 0;
+        return !isNvidiaServerSoftware;
     }
 
     // Synchronization

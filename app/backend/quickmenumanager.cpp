@@ -425,11 +425,18 @@ void QuickMenuManager::createQuickView()
             qDebug() << "Failed to create root object";
         }
         
-        // Make it a popup overlay
-        m_quickView->setFlags(Qt::WindowStaysOnTopHint | Qt::FramelessWindowHint | Qt::Tool);
-        
-        // Set transparent background
-        m_quickView->setColor(QColor(Qt::transparent));
+        // Overlay window flags.
+        // Qt::Tool on Wayland/SteamOS causes the window to render visually
+        // transparent even though the QML Rectangle has a solid colour —
+        // the compositor treats Tool windows differently and the QML Scene
+        // Graph content is not composited correctly. Dropping Qt::Tool and
+        // using a plain frameless stay-on-top window fixes this.
+        // We also do NOT call setColor(transparent): the QML root Rectangle
+        // already provides the dark opaque background; making the QQuickView
+        // background transparent just creates compositing problems on some
+        // Wayland setups where the result is an invisible-but-input-capturing
+        // window.
+        m_quickView->setFlags(Qt::WindowStaysOnTopHint | Qt::FramelessWindowHint);
         
         // Position the view to center the menu on screen
         int centerX, centerY;

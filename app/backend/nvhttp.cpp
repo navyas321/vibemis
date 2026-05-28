@@ -662,6 +662,27 @@ NvHTTP::openConnection(QUrl baseUrl,
     return reply;
 }
 
+// Returns "uniqueid=...&uuid=..." — the auth fragment every Moonlight/Apollo
+// HTTPS request must carry. Replicates the logic inside openConnectionToString
+// so manually-built requests (e.g. clipboard) get the same authentication.
+QString NvHTTP::getAuthParams()
+{
+    static QString machineUniqueId;
+    if (machineUniqueId.isEmpty()) {
+        QString hostname = QSysInfo::machineHostName();
+        if (hostname.isEmpty()) hostname = "vibemis";
+        QString hostPart = hostname.left(8).toUpper();
+        while (hostPart.length() < 8)
+            hostPart += QString("%1").arg(QRandomGenerator::global()->bounded(16), 1, 16).toUpper();
+        QString randomPart;
+        for (int i = 0; i < 8; i++)
+            randomPart += QString("%1").arg(QRandomGenerator::global()->bounded(16), 1, 16).toUpper();
+        machineUniqueId = hostPart + randomPart;
+    }
+    return "uniqueid=" + machineUniqueId +
+           "&uuid=" + QUuid::createUuid().toString(QUuid::WithoutBraces);
+}
+
 // Vibemis clipboard sync methods (Apollo servers only)
 QString
 NvHTTP::getClipboardContent()
@@ -672,7 +693,7 @@ NvHTTP::getClipboardContent()
         // the clipboard endpoint connects by IP but the cert is issued to hostname.
         QUrl getUrl(m_BaseUrlHttps);
         getUrl.setPath("/actions/clipboard");
-        getUrl.setQuery("type=text");
+        getUrl.setQuery(getAuthParams() + "&type=text");
         QNetworkRequest getRequest(getUrl);
         QSslConfiguration getSslConfig = IdentityManager::get()->getSslConfig();
         getSslConfig.setPeerVerifyMode(QSslSocket::VerifyNone);
@@ -714,7 +735,7 @@ NvHTTP::sendClipboardContent(const QString& content)
         // Build a URL for the POST request
         QUrl url(m_BaseUrlHttps);
         url.setPath("/actions/clipboard");
-        url.setQuery("type=text");
+        url.setQuery(getAuthParams() + "&type=text");
 
         QNetworkRequest request(url);
         request.setHeader(QNetworkRequest::ContentTypeHeader, "text/plain; charset=utf-8");
