@@ -9,7 +9,7 @@ When the user's first message is one of these keywords, follow the corresponding
 | Keyword | Role | What to do |
 |---------|------|-----------|
 | **`hostdevelop`** | Build agent on WSL2 (Windows host) | Read plan → `git fetch` → `gh pr list` → check `testing/` for unread reports → pick up highest-priority work from the task list / plan |
-| **`clienttest`** | Test agent on Legion Go S Z2 (SteamOS Desktop Mode) | `git fetch` → checkout the feature branch → find the latest `testing/<task>/instructions.md` → run the test tiers → write and commit `testing/<task>/report.md` on `diagnostic/<task>-report` → open PR |
+| **`clienttest`** | Test agent on Legion Go S Z2 (SteamOS Desktop Mode) | `git fetch` → checkout the **`test<N>-<slug>`** branch (NOT `vibemis-main`) → find `testing/test<N>-<slug>/instructions.md` → run the test tiers → write and commit `testing/<task>/report.md` on `diagnostic/<task>-report` → open PR |
 
 Full procedures, templates, and conventions are in [`docs/WORKFLOW.md`](docs/WORKFLOW.md).
 
@@ -38,6 +38,11 @@ If the plan and this CLAUDE.md disagree, the plan wins. If you can't see the pla
 - Linux test agent (on the Legion Go S Z2) pulls the branch, runs the instructions, commits `testing/<task>/report.md` (or top-level `DIAGNOSTIC_REPORT_<task>.md` if short) on a separate `diagnostic/<task>-report` branch, opens a PR.
 - Build agent pulls the report PR and acts on it.
 - See `pure-purring-pillow.md` "Test-handoff workflow" section for the canonical version.
+
+**Branch naming for test cycles — IMPORTANT:**
+The feature branch carrying a test AppImage MUST be named `test<N>-<slug>` (e.g. `test7-streamsegue-fix`), NOT `fix/<slug>` or `feat/<slug>`. The Linux test agent looks for the newest `test<N>-*` branch when running `clienttest`. Using `fix/` or `feat/` branches confuses the agent because `vibemis-main` doesn't have the `testing/test<N>/` directory — the artifacts only exist on the feature branch, and the agent won't know which branch to check out without this convention.
+
+Build agent rule: before starting a test cycle, rename (or create fresh from) the feature branch as `test<N>-<slug>`, commit the AppImage + instructions there, and target that branch in the instructions' `git checkout` command.
 
 ## Working agreement
 
