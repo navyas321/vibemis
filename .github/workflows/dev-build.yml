@@ -536,6 +536,10 @@ jobs:
     - name: Bundle AppImage with linuxdeploy
       run: |
         export PATH="$Qt6_DIR/bin:$PATH"
+        # Tell linuxdeploy-plugin-qt where Qt 6's qmake lives
+        export QMAKE="$Qt6_DIR/bin/qmake6"
+        # Run AppImages without FUSE (extract-and-run mode) — required in CI
+        export APPIMAGE_EXTRACT_AND_RUN=1
         DEPLOY=$PWD/deploy
         VERSION=${{ needs.setup-version.outputs.version }}
         export OUTPUT="$PWD/build/installer-release/Vibemis-${VERSION}-x86_64.AppImage"
