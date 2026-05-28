@@ -26,6 +26,7 @@ on:
       - 'feature/**'
       - 'feat/**'
       - 'fix/**'
+      - 'chore/**'
       - 'test**'
       - 'vibemis-**'
   workflow_dispatch:  # Allow manual triggering
