@@ -186,7 +186,7 @@ void StreamingPreferences::reload()
                                                     static_cast<int>(RendererBackend::RB_AUTO)).toInt());
 
     // Artemis client-side streaming enhancements
-    useVirtualDisplay = settings.value(SER_VIRTUALDISPLAY, false).toBool();
+    useVirtualDisplay = settings.value(SER_VIRTUALDISPLAY, true).toBool();
     enableFractionalRefreshRate = settings.value(SER_FRACTIONALREFRESHRATE, false).toBool();
     customRefreshRate = settings.value(SER_CUSTOMREFRESHRATE, 59.94).toDouble();
     enableResolutionScaling = settings.value(SER_RESOLUTIONSCALING, false).toBool();

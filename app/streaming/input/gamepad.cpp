@@ -782,23 +782,32 @@ void SdlInputHandler::handleJoystickArrivalEvent(SDL_JoyDeviceEvent* event)
         SDL_JoystickGetGUIDString(SDL_JoystickGetDeviceGUID(event->which),
                                   guidStr, sizeof(guidStr));
         const char* name = SDL_JoystickNameForIndex(event->which);
-        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                    "Joystick discovered with no mapping: %s %s",
-                    name ? name : "<UNKNOWN>",
+        // VIBEMIS: Joystick has no SDL GameController mapping — it will NOT be
+        // forwarded to the host. The GUID below is needed to add a mapping.
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                    "CONTROLLER NOT MAPPED — will not be forwarded to host!");
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                    "  Device name: %s",
+                    name ? name : "<UNKNOWN>");
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                    "  GUID for gamecontrollerdb.txt: %s",
                     guidStr);
         SDL_Joystick* joy = SDL_JoystickOpen(event->which);
         if (joy != nullptr) {
-            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                        "Number of axes: %d | Number of buttons: %d | Number of hats: %d",
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                        "  Axes: %d | Buttons: %d | Hats: %d",
                         SDL_JoystickNumAxes(joy), SDL_JoystickNumButtons(joy),
                         SDL_JoystickNumHats(joy));
             SDL_JoystickClose(joy);
         }
         else {
-            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                        "Unable to open joystick for query: %s",
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                        "  Unable to open joystick for query: %s",
                         SDL_GetError());
         }
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                    "  To fix: add a mapping line with GUID '%s' to gamecontrollerdb.txt",
+                    guidStr);
     }
 }
 

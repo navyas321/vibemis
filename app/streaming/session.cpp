@@ -679,6 +679,15 @@ bool Session::initialize()
     m_StreamConfig.width = m_Preferences->width;
     m_StreamConfig.height = m_Preferences->height;
 
+    // VIBEMIS: Log the stream resolution being requested so users can diagnose
+    // display-restore and resolution-mismatch issues.
+    // The Z2's native display is 1920x1200 at 144Hz. If the numbers below don't
+    // match your device, go to Settings and update the resolution/FPS to match.
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "VIBEMIS: Requesting %dx%d @ %d fps from host "
+                "(Settings -> Basic -> change if this doesn't match your display)",
+                m_StreamConfig.width, m_StreamConfig.height, m_Preferences->fps);
+
     // Artemis Apollo integration: Apply resolution scaling if enabled
     if (m_Preferences->enableResolutionScaling && m_Preferences->resolutionScaleFactor != 100) {
         // Apply scaling factor to resolution
