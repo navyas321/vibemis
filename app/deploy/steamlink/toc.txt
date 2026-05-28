@@ -1,3 +1,0 @@
-name=Moonlight
-icon=moonlight.png
-run=moonlight.sh
