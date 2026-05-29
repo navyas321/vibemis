@@ -11,6 +11,18 @@ whole Quick Menu group depends on its render path.
 > Keep this file the single source of truth for test order. When a cycle is verified, change ☐ →
 > ☑ (or ✗) in the same commit as the report, and note the report path.
 
+### ▶ START HERE (first time on the device)
+1. `git fetch origin` (gets all `test*` branches + this checklist).
+2. **Smoke-test the tooling first:** `./testing/run-cycle.sh test52-selftest-cli` — it downloads the
+   alpha, verifies md5, runs `selftest --json`, and captures a launch log. If that PASSes, the
+   harness works and you can trust `selftest` for later cycles.
+3. Then take the **topmost unchecked (☐) row whose deps are satisfied** (start with **test22** — it
+   has a committed AppImage in `testing/test22-quickmenu-overlay/`). `run-cycle.sh <slug>` fetches
+   the artifact for any row; then follow that row's `testing/<slug>/instructions.md` for the tiers.
+4. **One cycle per session.** File `report.md`, tick the box here, open the report PR. Details below
+   and in [`../docs/personas/test-agent.md`](../docs/personas/test-agent.md) +
+   [`../docs/TEST_AUTOMATION.md`](../docs/TEST_AUTOMATION.md).
+
 ---
 
 ## 1. Quick Menu foundation + content (verify in this sub-order — the rest stack on test22)
@@ -36,6 +48,7 @@ whole Quick Menu group depends on its render path.
 
 - [ ] **test26** — Configurable Quick Menu gamepad shortcut — **PR #48** — base `vibemis-main` — ☐
 - [ ] **test36** — Back-paddle Quick Menu combos — **PR #56** — base `test26` — ☐
+- [ ] **test57** — Disable controller rumble (P3.13) — **PR #77** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs controller + stream)*
 
 ## 4. UI / onboarding
 

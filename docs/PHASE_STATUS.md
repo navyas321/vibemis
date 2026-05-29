@@ -56,6 +56,42 @@ comment so it's greppable: `grep -rn "TODO(P3" app/`.
   polish for Desktop Mode.
 - Not blocked.
 
+## P3.12 — Adaptive bitrate (network-aware)  🔵 NEW (research-led)
+On the upstream Moonlight-Qt roadmap ("adaptive bit-rate"). Dynamically lower/raise the requested
+bitrate in response to observed packet loss / queue depth during a stream, instead of a fixed value.
+- **Value:** the single biggest quality win on flaky Wi-Fi / remote (Tailscale) — fewer stutters.
+- **Approach:** read the per-frame network stats already surfaced in `ffmpeg.cpp`/connection
+  callbacks; when sustained loss exceeds a threshold, step bitrate down (and recover slowly). Gate
+  behind a setting `adaptiveBitrate` (default off initially).
+- **BLOCKER / risk:** touches the live streaming/control path; correctness needs real network
+  conditions to validate. Start with a **client-side estimator + setting + `// TODO(P3.12)`** and a
+  conservative step policy; full tuning deferred to on-device testing.
+- First slice candidate: the setting + the stats hook (no behavior change yet), then the step logic.
+
+## P3.13 — Apollo-aware client features  🟡 NEW (research-led, in progress)
+Apollo (our host) has capabilities mainline Sunshine lacks; surface/expose them client-side.
+- **Done:** suppress controller rumble (test57) — client-side switch complementing Apollo's
+  host-side rumble disable.
+- **Remaining:** show the client's **permission level** (Apollo grants first-paired full perms,
+  others view/input only) in the host details; **virtual-display resolution-match** UX hint
+  (Apollo auto-creates a per-client virtual display at the client's res/fps — we already have
+  `useVirtualDisplay`/resolution-scaling prefs, so add a clear explanation + recommended toggle);
+  optional **per-app save-sync** awareness (host feature — just document it).
+- Sources: Apollo README + XDA Apollo coverage (see bottom).
+
+## P3.14 — Codec / renderer modernization  🟡 NEW (research-led)
+- **AV1:** `VCC_FORCE_AV1` exists; add a clearer "Prefer AV1 (if host supports)" UX + a note that it
+  needs Apollo/Sunshine + a compatible host GPU. AV1 gives better quality-per-bit on the handheld.
+- **Vulkan renderer + HDR:** `RB_VULKAN` exists; validate the Vulkan video-decode + HDR path on the
+  Legion Go S Z2 and document when to prefer it over EGL. (Device-gated — needs the test agent.)
+- **Hardware-decode assurance:** partially shipped via test53's software-decode advisory.
+
+## P3.15 — Custom overlay plug-in API  🔵 NEW (research-led, ambitious / later)
+Upstream Moonlight lists a "plug-in API for custom overlays" as planned. Vibemis already has an
+OverlayManager surface (test22) + Quick Menu; a small scripting/JSON hook to add user overlays
+(clock, battery, custom text) would be a differentiator. Large; revisit after the Quick Menu stack
+is hardware-verified.
+
 ## P4.0 — Repo hygiene (DEFERRED to post-1.0 / first stable release)  ⏸️
 Hide the Claude/agent development files from GitHub. **Decision: deferred** until after the first
 stable release — do NOT start early. Recommended approach when we do it: **two-repo split** — keep
