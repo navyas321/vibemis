@@ -957,6 +957,29 @@ Flickable {
                     ToolTip.text: qsTr("Creates a virtual display on the Apollo server for streaming. Requires Apollo server - not available with Sunshine/GeForce Experience.")
                 }
 
+                // Vibemis (P3.13): clarify the virtual-display behavior, which commonly confuses
+                // new users. Apollo auto-creates a per-client virtual display matching the
+                // resolution/refresh you select above — ideal on a handheld so you don't have to
+                // change the host's physical display. Shown contextually based on the toggle.
+                Label {
+                    width: parent.width
+                    visible: virtualDisplayCheck.checked
+                    text: qsTr("✓ Apollo will create a virtual display matching your selected resolution and refresh rate — recommended on a handheld (the host's physical monitor is left untouched).")
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                    color: "#80C080"
+                    leftPadding: 8
+                }
+                Label {
+                    width: parent.width
+                    visible: !virtualDisplayCheck.checked
+                    text: qsTr("Without a virtual display, the stream uses the host's current physical display resolution. Enable this with an Apollo host to match this device's resolution automatically.")
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                    color: "#aaaaaa"
+                    leftPadding: 8
+                }
+
                 // Resolution Scaling
                 CheckBox {
                     id: resolutionScalingCheck
