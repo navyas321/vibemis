@@ -112,6 +112,20 @@ Flickable {
                 anchors.fill: parent
                 spacing: 5
 
+                // Vibemis: recommend this device's native resolution so users pick the sharpest
+                // option without guesswork. Reads SystemProperties.maximumResolution (the panel's
+                // resolution on a handheld). Hidden if the value is unavailable/zero.
+                Label {
+                    width: parent.width
+                    visible: SystemProperties.maximumResolution.width > 0
+                    text: "💡 " + qsTr("This device's native resolution is %1×%2 — matching it gives the sharpest image (use a lower resolution only if you need more performance).")
+                          .arg(SystemProperties.maximumResolution.width).arg(SystemProperties.maximumResolution.height)
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                    color: "#aaaaaa"
+                    bottomPadding: 4
+                }
+
                 Label {
                     width: parent.width
                     id: resFPStitle
