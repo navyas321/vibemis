@@ -624,6 +624,21 @@ void SdlInputHandler::handleControllerDeviceEvent(SDL_ControllerDeviceEvent* eve
         state->controller = controller;
         state->jsId = SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(state->controller));
 
+        // Vibemis (P3.16): when motion forwarding is enabled, report whether this controller exposes
+        // gyro/accelerometer sensors. This is the observation-only first slice.
+        // TODO(P3.16): if sensors are present and host support is confirmed, enable them with
+        // SDL_GameControllerSetSensorEnabled() and forward samples via LiSendControllerMotionEvent().
+#if SDL_VERSION_ATLEAST(2, 0, 14)
+        if (StreamingPreferences::get()->forwardMotionControls) {
+            bool hasGyro = SDL_GameControllerHasSensor(controller, SDL_SENSOR_GYRO);
+            bool hasAccel = SDL_GameControllerHasSensor(controller, SDL_SENSOR_ACCEL);
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                        "[motion] Controller '%s' sensors: gyro=%s accel=%s (forwarding pending host support — TODO P3.16)",
+                        SDL_GameControllerName(controller) ? SDL_GameControllerName(controller) : "?",
+                        hasGyro ? "yes" : "no", hasAccel ? "yes" : "no");
+        }
+#endif
+
         hapticCaps = 0;
 #if SDL_VERSION_ATLEAST(2, 0, 18)
         hapticCaps |= SDL_GameControllerHasRumble(controller) ? ML_HAPTIC_GC_RUMBLE : 0;

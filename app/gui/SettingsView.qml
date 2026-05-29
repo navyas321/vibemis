@@ -1672,6 +1672,22 @@ Flickable {
                     ToolTip.visible: hovered
                     ToolTip.text: qsTr("Allows Vibemis to capture gamepad inputs even if it's not the current window in focus")
                 }
+
+                CheckBox {
+                    id: forwardMotionCheck
+                    width: parent.width
+                    text: qsTr("Forward motion controls (gyro) — experimental")
+                    font.pointSize: 12
+                    checked: StreamingPreferences.forwardMotionControls
+                    onCheckedChanged: {
+                        StreamingPreferences.forwardMotionControls = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Experimental: detect this device's gyro/accelerometer for forwarding to the host (motion/gyro aim). Sensor forwarding is still in development; enabling this currently logs the detected sensors.")
+                }
             }
         }
 
