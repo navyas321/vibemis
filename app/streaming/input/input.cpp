@@ -139,6 +139,27 @@ SdlInputHandler::SdlInputHandler(StreamingPreferences& prefs, int streamWidth, i
     m_SpecialKeyCombos[KeyComboZoomReset].scanCode = SDL_SCANCODE_0;
     m_SpecialKeyCombos[KeyComboZoomReset].enabled = true;
 
+    // Vibemis video pan (Ctrl+Alt+Shift + arrow keys) — only effective while zoomed
+    m_SpecialKeyCombos[KeyComboPanLeft].keyCombo = KeyComboPanLeft;
+    m_SpecialKeyCombos[KeyComboPanLeft].keyCode = SDLK_LEFT;
+    m_SpecialKeyCombos[KeyComboPanLeft].scanCode = SDL_SCANCODE_LEFT;
+    m_SpecialKeyCombos[KeyComboPanLeft].enabled = true;
+
+    m_SpecialKeyCombos[KeyComboPanRight].keyCombo = KeyComboPanRight;
+    m_SpecialKeyCombos[KeyComboPanRight].keyCode = SDLK_RIGHT;
+    m_SpecialKeyCombos[KeyComboPanRight].scanCode = SDL_SCANCODE_RIGHT;
+    m_SpecialKeyCombos[KeyComboPanRight].enabled = true;
+
+    m_SpecialKeyCombos[KeyComboPanUp].keyCombo = KeyComboPanUp;
+    m_SpecialKeyCombos[KeyComboPanUp].keyCode = SDLK_UP;
+    m_SpecialKeyCombos[KeyComboPanUp].scanCode = SDL_SCANCODE_UP;
+    m_SpecialKeyCombos[KeyComboPanUp].enabled = true;
+
+    m_SpecialKeyCombos[KeyComboPanDown].keyCombo = KeyComboPanDown;
+    m_SpecialKeyCombos[KeyComboPanDown].keyCode = SDLK_DOWN;
+    m_SpecialKeyCombos[KeyComboPanDown].scanCode = SDL_SCANCODE_DOWN;
+    m_SpecialKeyCombos[KeyComboPanDown].enabled = true;
+
     m_OldIgnoreDevices = SDL_GetHint(SDL_HINT_GAMECONTROLLER_IGNORE_DEVICES);
     m_OldIgnoreDevicesExcept = SDL_GetHint(SDL_HINT_GAMECONTROLLER_IGNORE_DEVICES_EXCEPT);
 

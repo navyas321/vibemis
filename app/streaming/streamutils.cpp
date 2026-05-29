@@ -93,17 +93,31 @@ void StreamUtils::scaleSourceToDestinationSurface(SDL_Rect* src, SDL_Rect* dst)
 
 void StreamUtils::scaleSourceToDestinationSurface(SDL_Rect* src, SDL_Rect* dst, int scaleMode)
 {
-    // Vibemis zoom: crop the source to a centered sub-region so the visible area is
-    // magnified. Applied here (shared by video render AND input mapping) so the cursor
-    // stays aligned with the zoomed image. zoom == 1.0 is a no-op (default).
+    // Vibemis zoom + pan: crop the source to a sub-region so the visible area is magnified,
+    // and shift that region by the pan offset. Applied here (shared by video render AND input
+    // mapping) so the cursor stays aligned with the zoomed image. zoom == 1.0 is a no-op.
     if (auto prefs = StreamingPreferences::get()) {
         double zoom = prefs->videoZoomFactor;
         if (zoom > 1.001 && src->w > 0 && src->h > 0) {
             if (zoom > 4.0) zoom = 4.0;
             int zw = (int)(src->w / zoom);
             int zh = (int)(src->h / zoom);
-            src->x += (src->w - zw) / 2;
-            src->y += (src->h - zh) / 2;
+            int marginX = src->w - zw;
+            int marginY = src->h - zh;
+
+            // pan in [-1,1]: -1 = far left/top, 0 = centered, +1 = far right/bottom.
+            double panX = prefs->videoPanX;
+            double panY = prefs->videoPanY;
+            if (panX < -1.0) panX = -1.0; if (panX > 1.0) panX = 1.0;
+            if (panY < -1.0) panY = -1.0; if (panY > 1.0) panY = 1.0;
+
+            int offX = (int)(marginX * (0.5 + panX * 0.5));
+            int offY = (int)(marginY * (0.5 + panY * 0.5));
+            if (offX < 0) offX = 0; if (offX > marginX) offX = marginX;
+            if (offY < 0) offY = 0; if (offY > marginY) offY = marginY;
+
+            src->x += offX;
+            src->y += offY;
             src->w = zw;
             src->h = zh;
         }
