@@ -490,6 +490,31 @@ ApplicationWindow {
         onAccepted: Qt.quit()
     }
 
+    // Vibemis: one-time welcome hint with key SteamOS / handheld onboarding tips.
+    // Self-contained: opens from its own onCompleted and persists a "seen" flag, so it
+    // shows exactly once and does not affect the main startup logic.
+    NavigableMessageDialog {
+        id: welcomeDialog
+        standardButtons: Dialog.Ok
+        text: qsTr("Welcome to Vibemis!") + "\n\n" +
+              qsTr("• In-stream Quick Menu: Select + L1 + R1 + Y (gamepad), or Ctrl+Alt+Shift+\\ (keyboard).") + "\n" +
+              qsTr("• On Steam Deck / SteamOS, add Vibemis to Steam from Desktop Mode so it appears in Game Mode.") + "\n" +
+              qsTr("• Set resolution, FPS, video scaling and more in Settings.")
+
+        function markSeen() {
+            StreamingPreferences.seenWelcomeHint = true
+            StreamingPreferences.save()
+        }
+        onAccepted: markSeen()
+        onRejected: markSeen()
+
+        Component.onCompleted: {
+            if (!StreamingPreferences.seenWelcomeHint) {
+                welcomeDialog.open()
+            }
+        }
+    }
+
     // HACK: This belongs in StreamSegue but keeping a dialog around after the parent
     // dies can trigger bugs in Qt 5.12 that cause the app to crash. For now, we will
     // host this dialog in a QML component that is never destroyed.
