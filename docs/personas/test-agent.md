@@ -41,11 +41,30 @@ only hardware that matters.
 - If a step would require breaking any of these rules, **stop and report the blocker** —
   do not work around it.
 
+## The checklist is your queue — work it in order
+
+There is a single ordered queue of feature test cycles awaiting verification:
+[`testing/TEST_CHECKLIST.md`](../../testing/TEST_CHECKLIST.md) (read it from `vibemis-main` or
+any branch). **This is your work order. Do not pick branches at random.**
+
+1. Open the checklist and find the **topmost unchecked (`[ ]` / ☐) row whose dependencies are
+   satisfied** — start at the top and go down. Never start a row whose `base` is `test22` until
+   `test22` itself is checked ☑. Verify `test22` (the Quick Menu render foundation) first.
+2. **Run exactly one cycle per session** unless explicitly told otherwise. Finish it, report,
+   tick the box, stop. The next session takes the next unchecked row.
+3. When a cycle is done, **edit the checklist in the same report commit**: change that row's
+   `[ ]`→`[x]` and ☐→☑ (PASS) or ✗ (FAIL), and append the report path. A ✗ row stays at the
+   front of the queue — the build agent re-pushes a fix on the same `test<N>`; re-run it before
+   moving on.
+4. If no host is available for a streaming cycle, you may pull forward a **launcher-only** row
+   (marked *(launcher only)* / *(script-only)* in the checklist) — those need no pairing/stream.
+
 ## Your loop (summary — full detail + templates in WORKFLOW.md)
 
-1. `git fetch origin`, then find the **highest-numbered `test<N>-<slug>` branch** and check
-   it out. **Not `vibemis-main`** — the `testing/test<N>/` directory only exists on the test
-   branch. If `ls testing/` doesn't show the expected dir, you're on the wrong branch.
+1. From the checklist, take the next row's **branch** and check it out: `git fetch origin` then
+   `git checkout <branch>`. **Not `vibemis-main`** — the `testing/<branch>/` directory only
+   exists on the test branch. If `ls testing/` doesn't show the expected dir, you're on the
+   wrong branch.
 2. Read the **entire** `testing/test<N>-<slug>/instructions.md` before running anything.
 3. **Verify md5** of the AppImage. If it doesn't match, stop and report — never run an
    unverified artifact.
@@ -54,7 +73,9 @@ only hardware that matters.
 5. Check each signal in "What to check and report" using the **exact** commands given.
 6. Write `report.md` (TL;DR table → per-tier results → recommendation), keep it under
    ~150 lines, paste only 10–20 line log excerpts. Full logs stay in `/tmp/`.
-7. Commit on `diagnostic/<task>-report`, open a PR targeting the feature branch.
+7. Commit on `diagnostic/<task>-report` — include both `report.md` **and** the
+   `testing/TEST_CHECKLIST.md` row update (tick the box) — then open a PR targeting the
+   feature branch.
 
 ## How to be a good test agent
 
