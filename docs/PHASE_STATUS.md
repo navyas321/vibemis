@@ -70,13 +70,11 @@ bitrate in response to observed packet loss / queue depth during a stream, inste
 
 ## P3.13 — Apollo-aware client features  🟡 NEW (research-led, in progress)
 Apollo (our host) has capabilities mainline Sunshine lacks; surface/expose them client-side.
-- **Done:** suppress controller rumble (test57) — client-side switch complementing Apollo's
-  host-side rumble disable.
-- **Remaining:** show the client's **permission level** (Apollo grants first-paired full perms,
-  others view/input only) in the host details; **virtual-display resolution-match** UX hint
-  (Apollo auto-creates a per-client virtual display at the client's res/fps — we already have
-  `useVirtualDisplay`/resolution-scaling prefs, so add a clear explanation + recommended toggle);
-  optional **per-app save-sync** awareness (host feature — just document it).
+- **Done:** suppress controller rumble (test57); host software version in PC details (test58);
+  per-client **permission level** in the PC context menu (test60); **virtual-display
+  resolution-match** clarifying notes (test61).
+- **Remaining:** optional **per-app save-sync** awareness (Apollo host feature — document it in
+  the host details / a help note). Largely complete otherwise.
 - Sources: Apollo README + XDA Apollo coverage (see bottom).
 
 ## P3.14 — Codec / renderer modernization  🟡 NEW (research-led)
