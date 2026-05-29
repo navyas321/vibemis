@@ -70,6 +70,22 @@ release mirror; cosmetic rename + trailer strip; authorship-only history scrub (
 - Backlog (research-led): per-game profiles, on-screen text send, mic passthrough (protocol-gated),
   HDR tone-map toggle, custom resolution entry, connection retry/timeout tuning.
 
+### Research-led candidate test PRs (queue; sourced from Moonlight/Sunshine 2025 feature set)
+Ideas grounded in current Moonlight-Qt / Sunshine capabilities and handheld needs. Each is sized to
+a single test PR; pick the next when continuing.
+- **On-screen text-send** (extends test47 special-keys): a Quick Menu "type text" field → `LiSendUtf8TextEvent`.
+  Mirrors Moonlight mobile's on-screen keyboard toolbar. Stacks on test22.
+- **UI accent color choice (P3.9)**: let the user pick the Material accent (teal default) — read in
+  main.cpp at startup. Launcher-verifiable.
+- **Auto-reconnect on stream drop**: bounded retry when the connection drops mid-stream. Needs care
+  around session teardown; medium risk.
+- **Per-game stream profiles (P3.8)**: persist resolution/fps/bitrate/HDR per app id; the headline
+  Android-parity gap. Larger; design the QSettings keying first.
+- **Hardware-decode assurance hint**: warn in the launcher if software decoding is selected (decode
+  latency ~8ms vs ~2ms hw) — pairs with existing videoDecoderSelection.
+- **Low-latency profile toggle**: one-tap "competitive" preset (vsync off + frame pacing tuned).
+  Builds on test23 presets.
+
 ---
 
 ## Why PR numbers "jump" phases (and aren't sequential per phase)
