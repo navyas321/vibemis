@@ -313,15 +313,10 @@ void SdlInputHandler::handleControllerButtonEvent(SDL_ControllerButtonEvent* eve
             default: break;
             }
             if (qtKey != Qt::Key_unknown) {
-                QMetaObject::invokeMethod(QCoreApplication::instance(), [qtKey]() {
-                    QWindow* w = QGuiApplication::focusWindow();
-                    if (w) {
-                        QKeyEvent press(QEvent::KeyPress, qtKey, Qt::NoModifier);
-                        QKeyEvent release(QEvent::KeyRelease, qtKey, Qt::NoModifier);
-                        QCoreApplication::sendEvent(w, &press);
-                        QCoreApplication::sendEvent(w, &release);
-                    }
-                }, Qt::QueuedConnection);
+                // The Quick Menu is rendered offscreen and never holds OS focus, so we
+                // inject the navigation key straight into it on the Qt main thread.
+                QMetaObject::invokeMethod(sess->getQuickMenuManager(), "injectKey",
+                                          Qt::QueuedConnection, Q_ARG(int, (int)qtKey));
                 return; // consumed — don't update game controller state
             }
             return; // any other button: also swallow while menu is open

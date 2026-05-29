@@ -11,6 +11,7 @@ enum OverlayType {
     OverlayDebug,
     OverlayStatusUpdate,
     OverlayServerCommands,
+    OverlayQuickMenu,
     OverlayMax
 };
 
@@ -37,6 +38,12 @@ public:
     SDL_Color getOverlayColor(OverlayType type);
     int getOverlayFontSize(OverlayType type);
     SDL_Surface* getUpdatedOverlaySurface(OverlayType type);
+
+    // Publish an externally-rendered RGBA surface for an overlay (e.g. the Quick Menu
+    // rendered offscreen from QML). Unlike the text overlays, the pixels are produced
+    // by the caller rather than by TTF. Takes ownership of 'surface'; the renderer
+    // consuming it via getUpdatedOverlaySurface() will free it. Thread-safe.
+    void updateOverlaySurface(OverlayType type, SDL_Surface* surface);
 
     void setOverlayRenderer(IOverlayRenderer* renderer);
 

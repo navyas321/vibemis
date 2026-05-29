@@ -239,12 +239,15 @@ void EGLRenderer::renderOverlay(Overlay::OverlayType type, int viewportWidth, in
             overlayRect.x = 0;
             overlayRect.y = viewportHeight - newSurface->h;
         }
-        else if (type == Overlay::OverlayServerCommands) {
+        else if (type == Overlay::OverlayServerCommands || type == Overlay::OverlayQuickMenu) {
             // Center
             overlayRect.x = (viewportWidth - newSurface->w) / 2;
             overlayRect.y = (viewportHeight - newSurface->h) / 2;
         } else {
-            SDL_assert(false);
+            // Unknown overlay type — center it rather than asserting, so new overlay
+            // types degrade gracefully instead of crashing in debug builds.
+            overlayRect.x = (viewportWidth - newSurface->w) / 2;
+            overlayRect.y = (viewportHeight - newSurface->h) / 2;
         }
 
         overlayRect.w = newSurface->w;
