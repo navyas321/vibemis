@@ -791,6 +791,19 @@ Flickable {
                     }
                 }
 
+                // Vibemis: rough data-usage estimate for the chosen bitrate. Helps users on
+                // metered connections or marginal Wi-Fi gauge cost/feasibility. Video only
+                // (audio/overhead excluded). GB/hour = kbps * 3600 / 8 / 1e6 = kbps * 0.00045.
+                Label {
+                    width: parent.width
+                    text: qsTr("Uses roughly %1 GB/hour of data at this bitrate (video only).")
+                          .arg((StreamingPreferences.bitrateKbps * 0.00045).toFixed(1))
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                    color: "#aaaaaa"
+                    topPadding: 2
+                }
+
                 Label {
                     width: parent.width
                     id: windowModeTitle
