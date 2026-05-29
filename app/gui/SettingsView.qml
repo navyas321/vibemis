@@ -1792,6 +1792,19 @@ Flickable {
                     }
                 }
 
+                // Vibemis (P3.6 codec): contextual guidance when AV1 is forced. AV1 gives better
+                // quality-per-bit (great on a bandwidth-limited handheld) but needs a host + GPU that
+                // can encode it; otherwise the stream falls back or fails. Shown only for AV1.
+                Label {
+                    width: parent.width
+                    visible: StreamingPreferences.videoCodecConfig === StreamingPreferences.VCC_FORCE_AV1
+                    text: qsTr("AV1 offers better quality at the same bitrate, but requires an Apollo/Sunshine host with an AV1-capable GPU (e.g. NVIDIA RTX 40, AMD RX 7000, Intel Arc). If streaming fails or falls back, choose \"Automatic\".")
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                    color: "#80A0C0"
+                    topPadding: 4
+                }
+
                 // Preferred renderer backend
                 Label {
                     width: parent.width
