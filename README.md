@@ -17,15 +17,24 @@ Standard Moonlight doesn't support Apollo's extended protocol features. Apollo a
 
 ## Installation
 
-### Quick start (recommended)
+No building, no installer, no dependencies to install. Vibemis ships as a single
+self-contained AppImage — **download it and run it.**
 
 1. Download the latest AppImage from **[GitHub Releases](https://github.com/navyas321/vibemis/releases/latest)**
-2. Make it executable and run:
+2. Make it executable — in your file manager: right-click → Properties → *"Allow executing as program"*, or in a terminal:
    ```bash
    chmod +x Vibemis-*.AppImage
+   ```
+3. Run it — double-click the file, or:
+   ```bash
    ./Vibemis-*.AppImage
    ```
-   That's it — no installation required, no dependencies to install.
+
+> **If it doesn't start with a FUSE error** (common on Steam Deck / SteamOS, which has no
+> `libfuse2`), run it in extract mode — no installation needed:
+> ```bash
+> ./Vibemis-*.AppImage --appimage-extract-and-run
+> ```
 
 ### Add to Steam (SteamOS / Steam Deck)
 
@@ -33,7 +42,7 @@ To launch Vibemis from Game Mode:
 
 1. In **Desktop Mode**, right-click the AppImage and select **Add to Steam**
 2. Open the shortcut's **Properties** and set the name to `Vibemis`
-3. Switch to Game Mode — Vibemis will appear in your library under Non-Steam Games
+3. Switch to Game Mode — Vibemis appears in your library under Non-Steam Games
 
 > **Note:** Quick Menu is currently only functional in Desktop Mode. Game Mode (Gamescope) support is in active development (P3.1).
 

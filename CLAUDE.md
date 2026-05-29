@@ -6,12 +6,12 @@ This file is read at the start of every Claude session in this repo. Keep it sho
 
 When the user's first message is one of these keywords, follow the corresponding SOP in [`docs/WORKFLOW.md`](docs/WORKFLOW.md) — do the session startup checklist, then continue work without asking what to do:
 
-| Keyword | Role | What to do |
-|---------|------|-----------|
-| **`hostdevelop`** | Build agent on WSL2 (Windows host) | Read plan → `git fetch` → `gh pr list` → check `testing/` for unread reports → pick up highest-priority work from the task list / plan |
-| **`clienttest`** | Test agent on Legion Go S Z2 (SteamOS Desktop Mode) | `git fetch` → checkout the **`test<N>-<slug>`** branch (NOT `vibemis-main`) → find `testing/test<N>-<slug>/instructions.md` → run the test tiers → write and commit `testing/<task>/report.md` on `diagnostic/<task>-report` → open PR |
+| Keyword | Role | Persona | What to do |
+|---------|------|---------|-----------|
+| **`hostdevelop`** | Build agent on WSL2 (Windows host) | [`docs/personas/build-agent.md`](docs/personas/build-agent.md) | Read plan → `git fetch` → `gh pr list` → check `testing/` for unread reports → pick up highest-priority work from the task list / plan |
+| **`clienttest`** | Test agent on Legion Go S Z2 (SteamOS) | [`docs/personas/test-agent.md`](docs/personas/test-agent.md) | `git fetch` → checkout the **`test<N>-<slug>`** branch (NOT `vibemis-main`) → find `testing/test<N>-<slug>/instructions.md` → run the test tiers → write and commit `testing/<task>/report.md` on `diagnostic/<task>-report` → open PR |
 
-Full procedures, templates, and conventions are in [`docs/WORKFLOW.md`](docs/WORKFLOW.md).
+Read your **persona file** first (who you are), then the SOP in [`docs/WORKFLOW.md`](docs/WORKFLOW.md) (step-by-step procedures, templates, conventions).
 
 ## What this repo is
 
