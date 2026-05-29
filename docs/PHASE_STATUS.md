@@ -20,10 +20,17 @@ comment so it's greppable: `grep -rn "TODO(P3" app/`.
 - Done: Paste test29 (#51), Stream Info test33 (#55), Special Keys test47 (#67).
 - Remaining (low priority): in-stream "disconnect" / "toggle stats" menu actions.
   - BLOCKER: `Session::toggleFullscreen()` is private (hit this on test29). NOTE in quickmenumanager.cpp.
+- **Stretch (absorbed former P3.15):** a custom-overlay plug-in hook (user clock/battery/text
+  overlays) on the OverlayManager surface — revisit only after the test22 Quick Menu stack is
+  hardware-verified.
 
-## P3.6 — Display/scaling polish  ✅ mostly implemented
+## P3.6 — Display / scaling / codec / renderer  ✅ mostly implemented  (absorbed former P3.14)
 - Done: compact overlay test24 (#46); scale mode test25 (#47); zoom test31 (#53); pan test32 (#54);
-  perf-overlay corner test49 (#69); perf-overlay text size test50 (#70).
+  perf-overlay corner test49 (#69); perf-overlay text size test50 (#70); data-usage estimate
+  test59 (#79); software-decode advisory test53 (#73).
+- **Codec/renderer (merged from P3.14), remaining:** clearer "Prefer AV1 (if host supports)" UX
+  (`VCC_FORCE_AV1` already exists); validate the Vulkan video-decode + HDR path (`RB_VULKAN`) on the
+  Legion Go S Z2 and document when to prefer it over EGL (device-gated — needs the test agent).
 
 ## Phase 4 / Input  ✅ implemented
 - Done: configurable QM gamepad combo test26 (#48); back-paddle combos test36 (#56).
@@ -38,11 +45,22 @@ comment so it's greppable: `grep -rn "TODO(P3" app/`.
   own test PR with a launcher-only Tier-1 (setting persists) + a "needs remote network" Tier-2 the
   test agent marks N/A until a remote host exists.
 
-## P3.8 — Artemis-Android parity  🟡 needs audit, then incremental
-- Remaining (parity gaps to confirm against Artemis-Android): on-screen touch controls overlay,
-  per-game stream profiles, richer gamepad mapping UI, on-screen keyboard.
-- BLOCKER: no formal feature spec yet. **Plan:** land a parity-matrix doc (Android feature → Vibemis
-  status), then pick the highest-value gap (likely per-game profiles) as the next test PR.
+## P3.8 — Feature parity & researched features  🟢 ongoing  (absorbed former P3.11)
+The combined backlog for Android-parity gaps and research-led new features (the two overlapped
+heavily, so they're now one phase).
+- **Done (researched features):** battery-saver bitrate test40 (#60); settings export/import
+  test41 (#61); special keys test47 (#67); perf-overlay corner/size test49/50; data estimate
+  test59; adaptive-bitrate slice test62.
+- **Backlog / parity gaps (pick the next as a single test PR):**
+  - **Per-game stream profiles** — persist resolution/fps/bitrate/HDR per app id, applied at launch.
+    The headline Android-parity gap. Larger; design the QSettings keying first.
+  - **On-screen text-send** — Quick Menu "type text" field → `LiSendUtf8TextEvent` (stacks on test22).
+  - **Auto-reconnect on stream drop** — bounded retry; medium risk (session teardown).
+  - **Low-latency "competitive" preset** — vsync off + frame pacing tuned (builds on test23 presets).
+  - On-screen touch controls overlay; richer gamepad-mapping UI; mic passthrough (protocol-gated);
+    HDR tone-map toggle; custom resolution entry.
+- BLOCKER (parity audit): no formal Android feature spec yet — confirm gaps against Artemis-Android
+  before deep work; the launcher-verifiable items above can proceed now.
 
 ## P3.9 — UI modernization (Material)  🟡 partial
 - Done: brand accent test27 (#49); About section test37 (#57); first-run hint test39 (#59).
@@ -66,7 +84,9 @@ bitrate in response to observed packet loss / queue depth during a stream, inste
 - **BLOCKER / risk:** touches the live streaming/control path; correctness needs real network
   conditions to validate. Start with a **client-side estimator + setting + `// TODO(P3.12)`** and a
   conservative step policy; full tuning deferred to on-device testing.
-- First slice candidate: the setting + the stats hook (no behavior change yet), then the step logic.
+- **Done (first slice):** test62 (#82) — `adaptiveBitrate` setting + a `CONN_STATUS_POOR`
+  observation log in `Session::clConnectionStatusUpdate`. Runtime bitrate stepping remains
+  `TODO(P3.12)` (gated on moonlight-common-c runtime-bitrate support).
 
 ## P3.13 — Apollo-aware client features  🟡 NEW (research-led, in progress)
 Apollo (our host) has capabilities mainline Sunshine lacks; surface/expose them client-side.
@@ -77,18 +97,24 @@ Apollo (our host) has capabilities mainline Sunshine lacks; surface/expose them 
   the host details / a help note). Largely complete otherwise.
 - Sources: Apollo README + XDA Apollo coverage (see bottom).
 
-## P3.14 — Codec / renderer modernization  🟡 NEW (research-led)
-- **AV1:** `VCC_FORCE_AV1` exists; add a clearer "Prefer AV1 (if host supports)" UX + a note that it
-  needs Apollo/Sunshine + a compatible host GPU. AV1 gives better quality-per-bit on the handheld.
-- **Vulkan renderer + HDR:** `RB_VULKAN` exists; validate the Vulkan video-decode + HDR path on the
-  Legion Go S Z2 and document when to prefer it over EGL. (Device-gated — needs the test agent.)
-- **Hardware-decode assurance:** partially shipped via test53's software-decode advisory.
+## P3.14 / P3.15 — merged (plan pruned)
+- **P3.14 (codec/renderer)** → folded into **P3.6** above.
+- **P3.15 (custom overlay plug-in API)** → folded into **P3.4** as a post-verification stretch
+  goal (it builds directly on the test22 OverlayManager surface + Quick Menu).
 
-## P3.15 — Custom overlay plug-in API  🔵 NEW (research-led, ambitious / later)
-Upstream Moonlight lists a "plug-in API for custom overlays" as planned. Vibemis already has an
-OverlayManager surface (test22) + Quick Menu; a small scripting/JSON hook to add user overlays
-(clock, battery, custom text) would be a differentiator. Large; revisit after the Quick Menu stack
-is hardware-verified.
+## P3.16 — Motion (gyro) & touch passthrough  🔵 NEW (research-led)
+Actively-requested Moonlight-Qt handheld feature (issues #960, #1123): forward the handheld's
+**gyro/accelerometer** and **touchscreen** to the host so the client acts like a DS4 (gyro aim,
+touchpad). High value on the Legion Go S Z2 (it has a gyro + touchscreen) and a clear differentiator.
+- **Approach:** SDL exposes `SDL_CONTROLLER_SENSOR_GYRO/ACCEL` (via `SDL_GameControllerGetSensorData`)
+  and touch events; moonlight-common-c exposes `LiSendControllerMotionEvent` / `LiSendTouchEvent`
+  (ClassicOldSong's fork — verify symbols). Gate behind a setting `forwardMotionControls`.
+- **BLOCKER / risk:** touches the input hot path; needs the host (Apollo/Sunshine) to map the client
+  as a DS4-with-sensors, and real hardware to validate. **Plan:** first slice = the setting +
+  capability detection (does this controller report a gyro?) surfaced in System Info / a log line,
+  with `// TODO(P3.16)` at the send site; wire the actual sensor forwarding after the symbols and
+  host behaviour are confirmed on-device.
+- Sources: moonlight-qt issues #960 / #1123; Moonlight-Switch gyro-as-DS4.
 
 ## P4.0 — Repo hygiene (DEFERRED to post-1.0 / first stable release)  ⏸️
 Hide the Claude/agent development files from GitHub. **Decision: deferred** until after the first
@@ -98,27 +124,9 @@ docs/personas, docs/ROUTINE_PROMPT.md, docs/WORKFLOW.md, docs/PHASE_STATUS.md, t
 separate private repo that the agents also clone. Alternatives considered: private-dev + public
 release mirror; cosmetic rename + trailer strip; authorship-only history scrub (git-filter-repo).
 
-## P3.11 — Newer researched features  🟢 ongoing
-- Done: battery-saver bitrate test40 (#60); settings export/import test41 (#61); special keys
-  test47 (#67); perf-overlay corner/size test49/test50.
-- Backlog (research-led): per-game profiles, on-screen text send, mic passthrough (protocol-gated),
-  HDR tone-map toggle, custom resolution entry, connection retry/timeout tuning.
-
-### Research-led candidate test PRs (queue; sourced from Moonlight/Sunshine 2025 feature set)
-Ideas grounded in current Moonlight-Qt / Sunshine capabilities and handheld needs. Each is sized to
-a single test PR; pick the next when continuing.
-- **On-screen text-send** (extends test47 special-keys): a Quick Menu "type text" field → `LiSendUtf8TextEvent`.
-  Mirrors Moonlight mobile's on-screen keyboard toolbar. Stacks on test22.
-- **UI accent color choice (P3.9)**: let the user pick the Material accent (teal default) — read in
-  main.cpp at startup. Launcher-verifiable.
-- **Auto-reconnect on stream drop**: bounded retry when the connection drops mid-stream. Needs care
-  around session teardown; medium risk.
-- **Per-game stream profiles (P3.8)**: persist resolution/fps/bitrate/HDR per app id; the headline
-  Android-parity gap. Larger; design the QSettings keying first.
-- **Hardware-decode assurance hint**: warn in the launcher if software decoding is selected (decode
-  latency ~8ms vs ~2ms hw) — pairs with existing videoDecoderSelection.
-- **Low-latency profile toggle**: one-tap "competitive" preset (vsync off + frame pacing tuned).
-  Builds on test23 presets.
+## P3.11 — merged into P3.8
+"Newer researched features" overlapped P3.8 (Android parity) — the two are now the single combined
+backlog under **P3.8** above. (Hardware-decode hint shipped as test53; UI accent stays under P3.9.)
 
 ---
 
