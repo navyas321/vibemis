@@ -44,6 +44,31 @@ The feature branch carrying a test AppImage MUST be named `test<N>-<slug>` (e.g.
 
 Build agent rule: before starting a test cycle, rename (or create fresh from) the feature branch as `test<N>-<slug>`, commit the AppImage + instructions there, and target that branch in the instructions' `git checkout` command.
 
+## Development priority: Game Mode over Desktop Mode
+
+**Primary target is SteamOS Game Mode (Gamescope), not Desktop Mode (KDE Plasma).**
+
+Game Mode uses Gamescope — Valve's micro-compositor that runs games in a nested Wayland
+session with a single Vulkan surface. Key implications:
+
+- **Separate OS windows do not work in Gamescope.** A `QQuickView` with
+  `Qt::WindowStaysOnTopHint` will not appear in Game Mode. Gamescope owns all z-ordering
+  through its own Vulkan surface.
+- **SDL-internal overlay rendering is the only correct approach for Game Mode.** This is
+  exactly what moonlight-qt does: it renders overlays (stats, warnings) as SDL textures
+  composited inside `sdlvid.cpp` via `SDL_RenderCopy` after the video frame. No separate
+  window; no focus or z-order issues.
+- The current Quick Menu QQuickView approach is a Desktop Mode workaround. It works
+  tolerably in KDE Plasma windowed mode but is architecturally wrong for Game Mode.
+
+**Long-term Quick Menu architecture:** Migrate to SDL-internal overlay rendered as a
+texture in `sdlvid.cpp`, driven by a `QOffscreenSurface` + `QQuickRenderControl` pipeline
+(render QML offscreen → upload as SDL texture → composite into stream frame). This will
+work in both Game Mode and Desktop Mode without any window management hacks.
+
+**When testing:** prioritise Game Mode. Desktop Mode results are informative but secondary.
+If a feature works only in Desktop Mode, it's not ready.
+
 ## CI / AppImage release rules — READ BEFORE PUSHING
 
 The CI smart-build check (`setup-version` → `check-changes`) sets `should_build=false`

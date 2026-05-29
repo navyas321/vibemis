@@ -1,8 +1,16 @@
 # Test21 Instructions — Quick Menu Input + Geometry
 
 **Branch:** `fix/quickmenu-triggers-clipboard-ssl-defaults` (PR #36)
-**Device:** Lenovo Legion Go S Z2, SteamOS Desktop Mode
+**Device:** Lenovo Legion Go S Z2, SteamOS **— test in Game Mode first, then Desktop Mode**
 **Host:** Navid-PC running Vibepollo 7.1.431
+
+> ⚠️ **Test in Game Mode (Gamescope) if possible.**
+>
+> Game Mode is the primary target. Gamescope is a separate micro-compositor — a
+> `QQuickView` separate window will NOT appear in Game Mode (Gamescope owns all
+> z-ordering). If the Quick Menu doesn't appear in Game Mode, that confirms the
+> QQuickView architecture needs to move to SDL-internal overlay rendering (see CLAUDE.md).
+> Desktop Mode results are secondary. Please note which mode you tested in.
 
 ## What changed since test20
 
