@@ -14,6 +14,8 @@
 #include <QCryptographicHash>
 #include <QRandomGenerator>
 #include <QXmlStreamReader>
+#include <QSemaphore>
+#include <QAtomicPointer>
 #include <QRegularExpression>
 
 // Vibemis: keep wjbeckett's OpenSSL + crypto includes for OTP pairing handshake.
@@ -668,14 +670,26 @@ public:
         : m_ComputerManager(computerManager),
           m_Computer(computer),
           m_Pin(pin),
-          m_Passphrase(passphrase)
+          m_Passphrase(passphrase),
+          m_Gate(0) // starts locked; released by resume()
     {
-        connect(this, &PendingOTPPairingTask::pairingCompleted,
-                computerManager, &ComputerManager::pairingCompleted);
+        // Do NOT connect pairingCompleted in the constructor — connections are
+        // set up in pairHostWithOTP() so we can also null m_ActiveOTPTask there.
+        setAutoDelete(false); // we manage lifetime via deleteLater()
+    }
+
+    // Called from the UI thread when the user confirms they have entered the
+    // PIN in the host web UI. Unblocks phase 2 (challenge exchange).
+    void resume()
+    {
+        m_Gate.release(1);
     }
 
 signals:
     void pairingCompleted(NvComputer* computer, QString error);
+    // Emitted after phase 1 (getservercert) succeeds; UI should show
+    // Continue button at this point.
+    void stage1Completed();
 
 private:
     // Helper functions for crypto operations
@@ -1070,7 +1084,25 @@ qDebug() << "PendingOTPPairingTask: Generated AES key from salt+PIN";
                         m_Computer->serverCert = serverCert;
                         http.setServerCert(serverCert);
                         
-                        qDebug() << "PendingOTPPairingTask: Server certificate obtained, preparing for full handshake";
+                        qDebug() << "PendingOTPPairingTask: Phase 1 complete — emitting stage1Completed, waiting for user";
+                        // Tell the UI that phase 1 succeeded so it can show the
+                        // Continue button. The challenge exchange (phase 2) must not
+                        // start until the user confirms they have entered the PIN in
+                        // the host's web UI — Vibepollo cannot decrypt the AES
+                        // challenge until it knows the PIN.
+                        emit stage1Completed();
+
+                        // Block this thread until resume() is called (user clicks
+                        // Continue) or the 2-minute timeout expires.
+                        const int kTimeoutMs = 120000;
+                        if (!m_Gate.tryAcquire(1, kTimeoutMs)) {
+                            qWarning() << "PendingOTPPairingTask: Timed out waiting for user confirmation";
+                            emit pairingCompleted(m_Computer,
+                                tr("OTP pairing timed out. Enter the PIN in the host web UI "
+                                   "and click Continue within 2 minutes."));
+                            return;
+                        }
+                        qDebug() << "PendingOTPPairingTask: User confirmed — starting challenge exchange";
                         
                         qDebug() << "PendingOTPPairingTask: Server certificate obtained, performing full pairing handshake";
                         
@@ -1144,14 +1176,36 @@ qDebug() << "PendingOTPPairingTask: Generated AES key from salt+PIN";
     NvComputer* m_Computer;
     QString m_Pin;
     QString m_Passphrase;
+    QSemaphore m_Gate; // initialized to 0 in constructor; released by resume()
 };
 
 void ComputerManager::pairHostWithOTP(NvComputer* computer, QString pin, QString passphrase)
 {
-    // Punt to a worker thread to avoid stalling the
-    // UI while waiting for OTP pairing to complete
-    PendingOTPPairingTask* pairing = new PendingOTPPairingTask(this, computer, pin, passphrase);
-    QThreadPool::globalInstance()->start(pairing);
+    PendingOTPPairingTask* task = new PendingOTPPairingTask(this, computer, pin, passphrase);
+    m_ActiveOTPTask.storeRelaxed(task);
+
+    // Forward stage1Completed to the manager's own signal (picked up by QML).
+    connect(task, &PendingOTPPairingTask::stage1Completed,
+            this, &ComputerManager::otpStage1Completed,
+            Qt::QueuedConnection);
+
+    // Forward pairingCompleted and clear the task pointer atomically.
+    connect(task, &PendingOTPPairingTask::pairingCompleted,
+            this, [this, task](NvComputer* comp, QString err) {
+                m_ActiveOTPTask.storeRelaxed(nullptr);
+                emit pairingCompleted(comp, err);
+                task->deleteLater();
+            }, Qt::QueuedConnection);
+
+    QThreadPool::globalInstance()->start(task);
+}
+
+void ComputerManager::resumeOTPPairing()
+{
+    PendingOTPPairingTask* task = m_ActiveOTPTask.loadRelaxed();
+    if (task) {
+        task->resume();
+    }
 }
 
 class PendingQuitTask : public QObject, public QRunnable

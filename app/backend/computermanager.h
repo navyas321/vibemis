@@ -236,6 +236,10 @@ public:
 
     void pairHostWithOTP(NvComputer* computer, QString pin, QString passphrase);
 
+    // Called from the UI after the user has entered the PIN in the host web UI.
+    // Releases the semaphore that blocks the OTP task between phase 1 and phase 2.
+    void resumeOTPPairing();
+
     void quitRunningApp(NvComputer* computer);
 
     QVector<NvComputer*> getComputers();
@@ -251,6 +255,11 @@ signals:
     void computerStateChanged(NvComputer* computer);
 
     void pairingCompleted(NvComputer* computer, QString error);
+
+    // Emitted after OTP phase 1 (getservercert) succeeds and the cert has been
+    // received. The UI should show a Continue button at this point and wait for
+    // the user to enter the PIN in the host's web UI before proceeding.
+    void otpStage1Completed();
 
     void computerAddCompleted(QVariant success, QVariant detectedPortBlocking);
 
@@ -271,6 +280,11 @@ private:
     QHostAddress getBestGlobalAddressV6(QVector<QHostAddress>& addresses);
 
     void startPollingComputer(NvComputer* computer);
+
+    // Pointer to the active OTP pairing task so resumeOTPPairing() can wake it.
+    // Raw pointer is safe here: the task sets this to nullptr in its completion
+    // handler (connected in pairHostWithOTP) before any deletion can occur.
+    QAtomicPointer<class PendingOTPPairingTask> m_ActiveOTPTask;
 
     StreamingPreferences* m_Prefs;
     int m_PollingRef;

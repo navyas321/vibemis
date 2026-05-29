@@ -14,6 +14,8 @@ void ComputerModel::initialize(ComputerManager* computerManager)
             this, &ComputerModel::handleComputerStateChanged);
     connect(m_ComputerManager, &ComputerManager::pairingCompleted,
             this, &ComputerModel::handlePairingCompleted);
+    connect(m_ComputerManager, &ComputerManager::otpStage1Completed,
+            this, &ComputerModel::otpStage1Completed);
 
     m_Computers = m_ComputerManager->getComputers();
 }
@@ -263,6 +265,11 @@ void ComputerModel::pairComputerWithOTP(int computerIndex, QString pin, QString 
     Q_ASSERT(computerIndex < m_Computers.count());
 
     m_ComputerManager->pairHostWithOTP(m_Computers[computerIndex], pin, passphrase);
+}
+
+void ComputerModel::resumeOTPPairing()
+{
+    m_ComputerManager->resumeOTPPairing();
 }
 
 bool ComputerModel::isOTPSupported(int computerIndex)
