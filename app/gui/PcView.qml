@@ -621,7 +621,7 @@ CenteredGridView {
                     font.bold: true
                 }
                 Label {
-                    text: qsTr("3.  Submit on the host, then click Continue ↓")
+                    text: qsTr("3.  Click Submit on Vibepollo.\n    Then click Continue ↓ here.")
                     Layout.fillWidth: true
                     wrapMode: Text.Wrap
                 }

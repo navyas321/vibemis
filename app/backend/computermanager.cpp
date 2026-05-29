@@ -814,7 +814,7 @@ qCritical() << "Failed to sign message";
     }
     
     // Perform the complete pairing handshake after OTP authentication, matching Android client behavior
-    bool performFullPairingHandshake(NvHTTP& http, const QString& saltStr, const QString& otpHash, const QString& pin)
+    bool performFullPairingHandshake(NvHTTP& http, const QString& saltStr, const QString& pin)
     {
         qDebug() << "PendingOTPPairingTask: Starting full pairing handshake";
         
@@ -997,31 +997,41 @@ qDebug() << "PendingOTPPairingTask: Generated AES key from salt+PIN";
             qDebug() << "PendingOTPPairingTask: Passphrase from user:" << m_Passphrase;
             
             // Generate a 16-byte salt
+            // Generate a random 16-byte salt. This salt is sent to the server in
+            // phrase=getservercert and used by both sides to derive the AES key for
+            // the phase 2 challenge: AES_key = SHA256(salt_bytes + PIN_utf8).left(16).
+            // The server stores the salt when it receives getservercert, then uses it
+            // once the user submits the PIN via Vibepollo's "Pair Client" web form.
             QByteArray saltBytes(16, 0);
             for (int i = 0; i < 16; i++) {
                 saltBytes[i] = QRandomGenerator::global()->bounded(256);
             }
             QString saltStr = saltBytes.toHex();
-            
-            // Generate the OTP hash
-            QString plainText = m_Pin + saltStr + m_Passphrase;
-            QCryptographicHash hash(QCryptographicHash::Sha256);
-            hash.addData(plainText.toUtf8());
-            QString otpHash = hash.result().toHex().toUpper();
-            
-            qDebug() << "PendingOTPPairingTask: Generated OTP hash:" << otpHash;
-            qDebug() << "PendingOTPPairingTask: Using salt:" << saltStr;
-            
-            // Build the pairing parameters - use consistent device name
+
+            // Do NOT include otpauth in this request.
+            //
+            // Apollo's otpauth=SHA256(otp+salt+passphrase) extension requires the
+            // server to have a live OTP generated via POST /api/otp. Without that,
+            // Vibepollo falls back to deriving the AES key from a random PIN and
+            // returning status_message="OTP auth not available." — even though it
+            // sends paired=1+plaincert as an anti-timing-attack decoy. Phase 2
+            // (clientchallenge) then always fails because neither side shares the
+            // same PIN.
+            //
+            // Using the standard getservercert (no otpauth) puts Vibepollo into its
+            // normal pairing mode: it waits for the user to submit the "Pair Client"
+            // form with the client-generated PIN, then stores that PIN and uses it
+            // to decrypt the phase 2 AES challenge. The two-stage gate in this task
+            // ensures phase 2 only fires after the user confirms they have entered
+            // the PIN on Vibepollo.
             QString deviceName = QSysInfo::machineHostName();
             if (deviceName.isEmpty()) {
                 deviceName = "Vibemis";
             }
-            QString pairingParams = QString("devicename=%1&updateState=1&phrase=getservercert&salt=%2&clientcert=%3&otpauth=%4")
+            QString pairingParams = QString("devicename=%1&updateState=1&phrase=getservercert&salt=%2&clientcert=%3")
                 .arg(deviceName)
                 .arg(saltStr)
-                .arg(QString(IdentityManager::get()->getCertificate().toHex()))
-                .arg(otpHash);
+                .arg(QString(IdentityManager::get()->getCertificate().toHex()));
             
             qDebug() << "PendingOTPPairingTask: Sending OTP pairing request";
             
@@ -1080,10 +1090,16 @@ qDebug() << "PendingOTPPairingTask: Generated AES key from salt+PIN";
                     QSslCertificate serverCert(serverCertBytes);
                     
                     if (!serverCert.isNull()) {
-                        // Set the server certificate for HTTPS requests
-                        m_Computer->serverCert = serverCert;
+                        // Give the local NvHTTP instance the cert so phase 2-4
+                        // requests go over HTTPS. Do NOT write it to m_Computer
+                        // yet — the polling thread watches m_Computer->serverCert
+                        // and will immediately try HTTPS; with a fresh uniqueid
+                        // the server hasn't authorized the client yet and returns
+                        // 401, causing the host to appear offline until phase 4
+                        // completes. The cert is written to m_Computer only after
+                        // the full handshake succeeds (see below).
                         http.setServerCert(serverCert);
-                        
+
                         qDebug() << "PendingOTPPairingTask: Phase 1 complete — emitting stage1Completed, waiting for user";
                         // Tell the UI that phase 1 succeeded so it can show the
                         // Continue button. The challenge exchange (phase 2) must not
@@ -1107,7 +1123,7 @@ qDebug() << "PendingOTPPairingTask: Generated AES key from salt+PIN";
                         qDebug() << "PendingOTPPairingTask: Server certificate obtained, performing full pairing handshake";
                         
                         // Complete the full pairing process like Android client does
-                        if (performFullPairingHandshake(http, saltStr, otpHash, m_Pin)) {
+                        if (performFullPairingHandshake(http, saltStr, m_Pin)) {
                             // Lock the computer manager to update the computer's state atomically
                             QWriteLocker lock(&m_ComputerManager->m_Lock);
 
