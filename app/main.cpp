@@ -52,6 +52,9 @@
 #include "backend/quickmenumanager.h"
 
 #include <cstdio>
+#include <QSettings>
+#include <QJsonObject>
+#include <QJsonDocument>
 
 #if defined(Q_OS_WIN32)
 #define IS_UNSPECIFIED_HANDLE(x) ((x) == INVALID_HANDLE_VALUE || (x) == NULL)
@@ -631,20 +634,21 @@ int main(int argc, char *argv[])
         break;
     }
 
-    // Vibemis: `vibemis selftest` — a scriptable, non-destructive launcher smoke test for the
-    // Legion Go test agent. Runs read-only sanity checks on the preferences subsystem (no host,
-    // stream, GUI window, or SDL video required) and exits 0 (all PASS) / 1 (any FAIL). Each
-    // check prints "SELFTEST <name>: PASS|FAIL" so the agent can grep the result. See
-    // docs/TEST_AUTOMATION.md. Runs before SDL/GUI init so it works headlessly in any session.
+    // Vibemis: `vibemis selftest [--json]` — a scriptable, non-destructive launcher smoke test for
+    // the Legion Go test agent. Runs sanity checks on the preferences subsystem (no host, stream,
+    // GUI window, or SDL video required) and exits 0 (all PASS) / 1 (any FAIL). Runs before SDL/GUI
+    // init so it works headlessly in any session. See docs/TEST_AUTOMATION.md.
+    //   default : one "SELFTEST <name>: PASS|FAIL" line per check + a "SELFTEST RESULT: …" summary
+    //   --json  : a single compact JSON object {"result","failures","checks":{…}} for parsing
     if (commandLineParserResult == GlobalCommandLineParser::SelfTestRequested) {
+        const bool jsonOutput = app.arguments().contains("--json");
         StreamingPreferences* p = StreamingPreferences::get();
-        int failures = 0;
+
+        QVector<QPair<QString, bool>> results;
         auto check = [&](const char* name, bool ok) {
-            fprintf(stdout, "SELFTEST %s: %s\n", name, ok ? "PASS" : "FAIL");
-            if (!ok) {
-                failures++;
-            }
+            results.append(qMakePair(QString::fromLatin1(name), ok));
         };
+
         check("prefs-load", p != nullptr);
         check("default-bitrate", StreamingPreferences::getDefaultBitrate(1920, 1080, 60, false) > 0);
         check("display-mode", p->width > 0 && p->height > 0 && p->fps > 0);
@@ -652,8 +656,52 @@ int main(int argc, char *argv[])
         check("audio-config-range",
               p->audioConfig >= StreamingPreferences::AC_STEREO &&
               p->audioConfig <= StreamingPreferences::AC_71_SURROUND);
-        fprintf(stdout, "SELFTEST RESULT: %s (%d failure(s))\n",
-                failures == 0 ? "PASS" : "FAIL", failures);
+
+        // Non-destructive QSettings round-trip in an isolated group so we never touch real
+        // preferences or paired-host data: write a probe, read it back, then delete the group.
+        bool settingsWritable = false;
+        bool settingsRoundTrip = false;
+        {
+            QSettings st;
+            st.beginGroup("vibemis-selftest");
+            st.setValue("probe", 0x5A5A);
+            st.sync();
+            settingsWritable = (st.status() == QSettings::NoError);
+            settingsRoundTrip = (st.value("probe").toInt() == 0x5A5A);
+            st.remove(""); // clear only this probe group
+            st.endGroup();
+            st.sync();
+        }
+        check("settings-writable", settingsWritable);
+        check("settings-roundtrip", settingsRoundTrip);
+
+        int failures = 0;
+        for (const auto& r : results) {
+            if (!r.second) {
+                failures++;
+            }
+        }
+
+        if (jsonOutput) {
+            QJsonObject checksObj;
+            for (const auto& r : results) {
+                checksObj.insert(r.first, r.second);
+            }
+            QJsonObject root;
+            root.insert("result", failures == 0 ? "PASS" : "FAIL");
+            root.insert("failures", failures);
+            root.insert("checks", checksObj);
+            fprintf(stdout, "%s\n",
+                    QJsonDocument(root).toJson(QJsonDocument::Compact).constData());
+        }
+        else {
+            for (const auto& r : results) {
+                fprintf(stdout, "SELFTEST %s: %s\n",
+                        r.first.toUtf8().constData(), r.second ? "PASS" : "FAIL");
+            }
+            fprintf(stdout, "SELFTEST RESULT: %s (%d failure(s))\n",
+                    failures == 0 ? "PASS" : "FAIL", failures);
+        }
         fflush(stdout);
         return failures == 0 ? 0 : 1;
     }
