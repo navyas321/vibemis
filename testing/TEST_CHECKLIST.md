@@ -41,6 +41,7 @@ whole Quick Menu group depends on its render path.
 - [ ] **test32** — In-stream video pan — **PR #54** — base `test31` — ☐
 - [ ] **test40** — Battery-saver bitrate — **PR #60** — base `vibemis-main` — ☐
 - [ ] **test53** — Settings performance-guidance advisories (sw-decode / high-bitrate) — **PR #73** — base `vibemis-main` — ☐  *(launcher only)*
+- [ ] **test59** — Data-usage estimate under the bitrate slider — **PR #79** — base `vibemis-main` — ☐  *(launcher only)*
 - [ ] **test49** — Configurable performance-overlay corner (TL/TR/BL/BR) — **PR #69** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a stream — auto-publishes 🔬 alpha)*
 - [ ] **test50** — Configurable performance-overlay text size (Small/Normal/Large) — **PR #70** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a stream — auto-publishes 🔬 alpha)*
 
