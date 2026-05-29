@@ -51,6 +51,7 @@ whole Quick Menu group depends on its render path.
 - [ ] **test26** — Configurable Quick Menu gamepad shortcut — **PR #48** — base `vibemis-main` — ☐
 - [ ] **test36** — Back-paddle Quick Menu combos — **PR #56** — base `test26` — ☐
 - [ ] **test57** — Disable controller rumble (P3.13) — **PR #77** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs controller + stream)*
+- [ ] **test64** — Motion-control (gyro) capability detection (P3.16) — **PR #84** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a controller)*
 
 ## 4. UI / onboarding
 
