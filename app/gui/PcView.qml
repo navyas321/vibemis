@@ -530,16 +530,15 @@ CenteredGridView {
         property int computerIndex: -1
         property string computerName: computerIndex >= 0 ? (computerModel.data(computerModel.index(computerIndex, 0), ComputerModel.NameRole) || "") : ""
         property string generatedPin: ""
-        // Two-stage pairing:
-        //   Stage 1 (fires on open): client sends getservercert + otpauth hash.
-        //                            Server replies paired=1 + plaincert.
-        //   << USER gate >>          Dialog shows Continue button. User goes to
-        //                            host web UI, enters PIN in "Pair Client"
-        //                            form + device name, submits.
-        //   Stage 2 (on Continue):   Client sends AES-encrypted challenge.
-        //                            Server can now decrypt it because it knows
-        //                            the PIN from the "Pair Client" submission.
-        property bool stage1Complete: false
+        // Pairing flow (standard Moonlight, no otpauth extension):
+        //   1. Dialog opens → client sends getservercert with a 2-minute timeout.
+        //      Vibepollo holds the HTTP connection open until the user submits the
+        //      "Pair Client" web form with the PIN (same mechanism as Sunshine).
+        //   2. User enters PIN + device name in Vibepollo's web UI → submits.
+        //      Vibepollo stores the cipher key and unblocks the HTTP response.
+        //   3. Client receives paired=1+plaincert → fires phases 2-4 immediately.
+        //      Vibepollo already has the cipher key → challenge succeeds.
+        //   4. Dialog closes automatically when pairing completes.
 
         title: qsTr("Pairing — %1").arg(otpPairDialog.computerName)
         standardButtons: Dialog.Cancel
@@ -549,8 +548,8 @@ CenteredGridView {
         onOpened: {
             var n = Math.floor(Math.random() * 10000)
             generatedPin = ("000" + n).slice(-4)
-            stage1Complete = false
-            // Start stage 1: sends getservercert to host, triggers notification.
+            // Send getservercert — Vibepollo holds the connection open until the
+            // user submits the "Pair Client" form. Phases 2-4 fire automatically.
             computerModel.pairComputerWithOTP(computerIndex, generatedPin, "")
         }
 
@@ -593,72 +592,40 @@ CenteredGridView {
                 }
             }
 
-            // ── Stage 1: waiting for host notification ───────────────────────
+            // ── Instructions ─────────────────────────────────────────────────
             ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 4
-                visible: !otpPairDialog.stage1Complete
 
                 Label {
-                    text: qsTr("Sending pairing request to host…")
+                    text: qsTr("Steps:")
                     font.bold: true
-                    Layout.fillWidth: true
                 }
                 Label {
-                    text: qsTr("1.  Wait for the \"Incoming Pairing Request\"\n    notification on %1.").arg(otpPairDialog.computerName)
-                    Layout.fillWidth: true
-                    wrapMode: Text.Wrap
-                }
-                Label {
-                    text: qsTr("2.  Click the notification → go to Vibepollo\n    web UI → \"Pair Client\" section.")
+                    text: qsTr("1.  On %1 — click the\n    \"Incoming Pairing Request\" notification.").arg(otpPairDialog.computerName)
                     Layout.fillWidth: true
                     wrapMode: Text.Wrap
                 }
                 Label {
-                    text: qsTr("       PIN: %1\n       Device name: anything (e.g. LegionGo)").arg(otpPairDialog.generatedPin)
+                    text: qsTr("2.  In Vibepollo web UI → \"Pair Client\" section:")
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                }
+                Label {
+                    text: qsTr("       PIN: %1\n       Device name: anything (e.g. LegionGo)\n       Click Submit").arg(otpPairDialog.generatedPin)
                     Layout.fillWidth: true
                     wrapMode: Text.Wrap
                     font.bold: true
                 }
                 Label {
-                    text: qsTr("3.  Click Submit on Vibepollo web UI.\n    Then click Continue ↓ here.")
+                    text: qsTr("3.  This dialog closes automatically.")
                     Layout.fillWidth: true
                     wrapMode: Text.Wrap
-                }
-            }
-
-            // ── Stage 2: Continue button (shown after host cert received) ────
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: 8
-                visible: otpPairDialog.stage1Complete
-
-                Label {
-                    text: qsTr("✓  Host accepted the pairing request.")
-                    color: "#00cc66"
-                    font.bold: true
-                    Layout.fillWidth: true
-                    wrapMode: Text.Wrap
-                }
-                Label {
-                    text: qsTr("Enter PIN %1 in Vibepollo's \"Pair Client\" form\n(if you haven't already), then click Continue.").arg(otpPairDialog.generatedPin)
-                    Layout.fillWidth: true
-                    wrapMode: Text.Wrap
-                }
-
-                Button {
-                    text: qsTr("Continue — I've entered the PIN on the host")
-                    Layout.fillWidth: true
-                    onClicked: {
-                        computerModel.resumeOTPPairing()
-                    }
                 }
             }
 
             Label {
-                text: otpPairDialog.stage1Complete
-                    ? qsTr("Click Continue once you have submitted the PIN on the host.")
-                    : qsTr("This dialog will close automatically when pairing completes.")
+                text: qsTr("Waiting for PIN entry on host… (up to 2 minutes)")
                 Layout.fillWidth: true
                 wrapMode: Text.Wrap
                 color: "#aaaaaa"

@@ -1033,13 +1033,20 @@ qDebug() << "PendingOTPPairingTask: Generated AES key from salt+PIN";
                 .arg(saltStr)
                 .arg(QString(IdentityManager::get()->getCertificate().toHex()));
             
-            qDebug() << "PendingOTPPairingTask: Sending OTP pairing request";
-            
+            qDebug() << "PendingOTPPairingTask: Sending getservercert — waiting for PIN entry on host (up to 2 min)";
+
+            // Vibepollo holds this connection OPEN until the user submits the
+            // 'Pair Client' form in its web UI (the server calls fg.disable() and
+            // stores the response object). The 5-second default timeout kills the
+            // connection before the user has time to submit. Use a 2-minute timeout
+            // to match the server's OTP_EXPIRE_DURATION and give the user enough
+            // time to enter the PIN.
+            const int kPairRequestTimeoutMs = 120000; // 2 minutes
             QString pairingRequest = http.openConnectionToString(
                 http.m_BaseUrlHttp,
                 "pair",
                 pairingParams,
-                5000
+                kPairRequestTimeoutMs
             );
             
             qDebug() << "PendingOTPPairingTask: Received response:" << pairingRequest;
@@ -1100,25 +1107,12 @@ qDebug() << "PendingOTPPairingTask: Generated AES key from salt+PIN";
                         // the full handshake succeeds (see below).
                         http.setServerCert(serverCert);
 
-                        qDebug() << "PendingOTPPairingTask: Phase 1 complete — emitting stage1Completed, waiting for user";
-                        // Tell the UI that phase 1 succeeded so it can show the
-                        // Continue button. The challenge exchange (phase 2) must not
-                        // start until the user confirms they have entered the PIN in
-                        // the host's web UI — Vibepollo cannot decrypt the AES
-                        // challenge until it knows the PIN.
-                        emit stage1Completed();
-
-                        // Block this thread until resume() is called (user clicks
-                        // Continue) or the 2-minute timeout expires.
-                        const int kTimeoutMs = 120000;
-                        if (!m_Gate.tryAcquire(1, kTimeoutMs)) {
-                            qWarning() << "PendingOTPPairingTask: Timed out waiting for user confirmation";
-                            emit pairingCompleted(m_Computer,
-                                tr("OTP pairing timed out. Enter the PIN in the host web UI "
-                                   "and click Continue within 2 minutes."));
-                            return;
-                        }
-                        qDebug() << "PendingOTPPairingTask: User clicked Continue — starting challenge exchange (phase 2)";
+                        // Phase 1 returned — the user already submitted the 'Pair
+                        // Client' form on Vibepollo (that's what unblocked the HTTP
+                        // response). Vibepollo stored the cipher key derived from
+                        // the PIN during that submission. Phases 2-4 can fire
+                        // immediately; no user confirmation gate is needed.
+                        qDebug() << "PendingOTPPairingTask: Phase 1 complete, firing challenge exchange immediately";
 
                         qDebug() << "PendingOTPPairingTask: Server certificate obtained, performing full pairing handshake";
                         
