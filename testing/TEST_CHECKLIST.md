@@ -45,6 +45,7 @@ whole Quick Menu group depends on its render path.
 - [ ] **test37** — Settings "About" section — **PR #57** — base `vibemis-main` — ☐  *(launcher only)*
 - [ ] **test39** — First-run welcome hint — **PR #59** — base `vibemis-main` — ☐  *(launcher only)*
 - [ ] **test55** — System Information panel in Settings — **PR #75** — base `vibemis-main` — ☐  *(launcher only)*
+- [ ] **test56** — Help & Links section in Settings (GitHub / README / Tailscale) — **PR #76** — base `vibemis-main` — ☐  *(launcher only; needs a browser)*
 
 ## 5. Tooling / test automation
 
