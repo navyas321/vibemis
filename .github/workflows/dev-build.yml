@@ -61,6 +61,11 @@ jobs:
       
       - name: Check for meaningful changes
         id: check-changes
+        env:
+          # Pass the commit message via env, NOT inline ${{ }} interpolation. A commit body with
+          # backticks/parens/quotes injected directly into the shell caused a parse error here and
+          # failed the whole job (e.g. test62). Reading it from an env var is injection-safe.
+          HEAD_COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
           # Always build on true release branches and workflow_dispatch.
           if [[ "${{ github.ref_name }}" == "main" || \
@@ -98,7 +103,7 @@ jobs:
           fi
 
           # Skip builds if commit message contains [skip ci] or [ci skip]
-          if echo "${{ github.event.head_commit.message }}" | grep -E "\[(skip ci|ci skip)\]" > /dev/null; then
+          if echo "$HEAD_COMMIT_MSG" | grep -E "\[(skip ci|ci skip)\]" > /dev/null; then
             echo "should_build=false" >> $GITHUB_OUTPUT
             echo "Build skipped due to [skip ci] in commit message"
             exit 0
