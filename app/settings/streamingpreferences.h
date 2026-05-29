@@ -69,6 +69,16 @@ public:
     };
     Q_ENUM(RendererBackend)
 
+    // Vibemis: which gamepad button combo opens the in-stream Quick Menu.
+    enum QuickMenuGamepadCombo
+    {
+        QMGC_SELECT_LB_RB_Y,  // default — Select + L1 + R1 + Y
+        QMGC_SELECT_LB_RB_B,  // Select + L1 + R1 + B
+        QMGC_L3_R3,           // click both analog sticks (L3 + R3)
+        QMGC_SELECT_START,    // Select + Start
+    };
+    Q_ENUM(QuickMenuGamepadCombo)
+
     // New entries must go at the end of the enum
     // to avoid renumbering existing entries (which
     // would affect existing user preferences).
@@ -161,7 +171,8 @@ public:
     Q_PROPERTY(CaptureSysKeysMode captureSysKeysMode MEMBER captureSysKeysMode NOTIFY captureSysKeysModeChanged)
     Q_PROPERTY(Language language MEMBER language NOTIFY languageChanged)
     Q_PROPERTY(RendererBackend rendererBackend MEMBER rendererBackend NOTIFY rendererBackendChanged)
-    
+    Q_PROPERTY(QuickMenuGamepadCombo quickMenuGamepadCombo MEMBER quickMenuGamepadCombo NOTIFY quickMenuGamepadComboChanged)
+
     // Vibemis client-side streaming enhancements
     Q_PROPERTY(bool useVirtualDisplay MEMBER useVirtualDisplay NOTIFY useVirtualDisplayChanged)
     Q_PROPERTY(bool enableFractionalRefreshRate MEMBER enableFractionalRefreshRate NOTIFY enableFractionalRefreshRateChanged)
@@ -213,7 +224,8 @@ public:
     Language language;
     CaptureSysKeysMode captureSysKeysMode;
     RendererBackend rendererBackend;
-    
+    QuickMenuGamepadCombo quickMenuGamepadCombo;
+
     // Vibemis client-side streaming enhancements
     bool useVirtualDisplay;
     bool enableFractionalRefreshRate;
@@ -259,7 +271,8 @@ signals:
     void keepAwakeChanged();
     void languageChanged();
     void rendererBackendChanged();
-    
+    void quickMenuGamepadComboChanged();
+
     // Vibemis client-side streaming enhancement signals
     void useVirtualDisplayChanged();
     void enableFractionalRefreshRateChanged();
