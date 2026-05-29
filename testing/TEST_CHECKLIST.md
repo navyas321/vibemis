@@ -94,3 +94,17 @@ whole Quick Menu group depends on its render path.
 6. If a row is ✗, the build agent fixes it and re-pushes the same testN; re-run that row before moving on.
 
 Launcher-only rows (no stream/host) are the safest to knock out quickly if a host isn't available.
+
+### Batching (why the cycles are NOT merged into fewer PRs)
+The branches are deliberately kept **separate** — they are not combined into mega-PRs. Merging them
+would (a) collide (many edit `streamingpreferences`/`SettingsView` at the same anchors) and (b) lose
+per-feature regression isolation (a combined failure is ambiguous). Sequential, one-branch-at-a-time
+verification stays the rule.
+
+**But you may batch the *launcher-only* cycles in a single session** (they need no host/stream):
+run several in a row with `testing/run-cycle.sh <branch>` + their Tier-1 checks, then file each
+report (or one combined report that ticks several rows, clearly per-cycle). Stream-required tiers
+(marked "needs a stream/controller/tailnet") stay one-at-a-time when a host is available.
+Rough split today: **launcher-only** (batchable) = test27/28/37/39/41/48/49/50/52/53/54/55/56/58/59/
+60/61/62/63/64; **needs host/controller/stream** = test22/23/24/25/26/29/31/32/33/36/40/47/51/57
+(+ the Tier-2/3 of several launcher-only ones).
