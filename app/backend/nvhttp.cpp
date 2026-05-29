@@ -564,25 +564,12 @@ NvHTTP::openConnection(QUrl baseUrl,
     QUrl url(baseUrl);
     url.setPath("/" + command);
 
-    // Use a machine-specific UID to match Apollo server expectations
-    // Generate a uniqueid based on hostname + timestamp for uniqueness
-    static QString machineUniqueId;
-    if (machineUniqueId.isEmpty()) {
-        QString hostname = QSysInfo::machineHostName();
-        if (hostname.isEmpty()) hostname = "vibemis";
-        // Take first 8 chars of hostname and pad with random hex
-        QString hostPart = hostname.left(8).toUpper();
-        while (hostPart.length() < 8) {
-            hostPart += QString("%1").arg(QRandomGenerator::global()->bounded(16), 1, 16).toUpper();
-        }
-        // Add 8 random hex chars
-        QString randomPart;
-        for (int i = 0; i < 8; i++) {
-            randomPart += QString("%1").arg(QRandomGenerator::global()->bounded(16), 1, 16).toUpper();
-        }
-        machineUniqueId = hostPart + randomPart;
-    }
-    url.setQuery("uniqueid=" + machineUniqueId + "&uuid=" +
+    // Use the persistent uniqueid from IdentityManager. This ID is generated once
+    // and stored in QSettings, so it survives app restarts. Pairing on Vibepollo
+    // (and Apollo) is tied to the client cert+uniqueid pair — using a new random
+    // uniqueid on every launch causes 403 Forbidden on all HTTPS endpoints after
+    // the first session because the server has only authorized the original id.
+    url.setQuery("uniqueid=" + IdentityManager::get()->getUniqueId() + "&uuid=" +
                  QUuid::createUuid().toString(QUuid::WithoutBraces) +
                  ((arguments != nullptr) ? ("&" + arguments) : ""));
 
@@ -663,23 +650,12 @@ NvHTTP::openConnection(QUrl baseUrl,
 }
 
 // Returns "uniqueid=...&uuid=..." — the auth fragment every Moonlight/Apollo
-// HTTPS request must carry. Replicates the logic inside openConnectionToString
-// so manually-built requests (e.g. clipboard) get the same authentication.
+// HTTPS request must carry. Uses the persistent uniqueid from IdentityManager
+// so clipboard and other manually-built requests use the same stable id as
+// openConnectionToString (which was fixed to do the same).
 QString NvHTTP::getAuthParams()
 {
-    static QString machineUniqueId;
-    if (machineUniqueId.isEmpty()) {
-        QString hostname = QSysInfo::machineHostName();
-        if (hostname.isEmpty()) hostname = "vibemis";
-        QString hostPart = hostname.left(8).toUpper();
-        while (hostPart.length() < 8)
-            hostPart += QString("%1").arg(QRandomGenerator::global()->bounded(16), 1, 16).toUpper();
-        QString randomPart;
-        for (int i = 0; i < 8; i++)
-            randomPart += QString("%1").arg(QRandomGenerator::global()->bounded(16), 1, 16).toUpper();
-        machineUniqueId = hostPart + randomPart;
-    }
-    return "uniqueid=" + machineUniqueId +
+    return "uniqueid=" + IdentityManager::get()->getUniqueId() +
            "&uuid=" + QUuid::createUuid().toString(QUuid::WithoutBraces);
 }
 

@@ -101,13 +101,23 @@ void QuickMenuManager::setVisible(bool visible)
     }
     
     m_isVisible = visible;
-    
+
     if (visible) {
+        // Release SDL mouse capture so the overlay buttons can receive clicks.
+        // In streaming mode SDL often holds relative-mouse mode or window grab;
+        // either prevents the Qt overlay from getting mouse press events.
+        // SDL_ShowCursor also makes the cursor visible so the user can aim at items.
+        SDL_ShowCursor(SDL_ENABLE);
+        SDL_SetRelativeMouseMode(SDL_FALSE);
+
         createQuickView();
     } else {
         if (m_quickView) {
             m_quickView->hide();
         }
+        // Note: we do NOT re-grab the mouse here — the user's intent when
+        // dismissing the menu may be to stay in desktop/pointer mode. The
+        // "Toggle Mouse Capture" item in the menu handles re-enabling capture.
     }
     
     emit visibilityChanged();
