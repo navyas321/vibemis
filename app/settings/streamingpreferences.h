@@ -69,6 +69,15 @@ public:
     };
     Q_ENUM(RendererBackend)
 
+    // Vibemis: how the video frame is fit to the window.
+    enum VideoScaleMode
+    {
+        SCALE_FIT,      // letterbox / pillarbox, preserve aspect (default — original behaviour)
+        SCALE_FILL,     // cover: fill the window and crop overflow, preserve aspect
+        SCALE_STRETCH,  // stretch to fill, ignore aspect ratio
+    };
+    Q_ENUM(VideoScaleMode)
+
     // New entries must go at the end of the enum
     // to avoid renumbering existing entries (which
     // would affect existing user preferences).
@@ -161,6 +170,7 @@ public:
     Q_PROPERTY(CaptureSysKeysMode captureSysKeysMode MEMBER captureSysKeysMode NOTIFY captureSysKeysModeChanged)
     Q_PROPERTY(Language language MEMBER language NOTIFY languageChanged)
     Q_PROPERTY(RendererBackend rendererBackend MEMBER rendererBackend NOTIFY rendererBackendChanged)
+    Q_PROPERTY(VideoScaleMode videoScaleMode MEMBER videoScaleMode NOTIFY videoScaleModeChanged)
     
     // Vibemis client-side streaming enhancements
     Q_PROPERTY(bool useVirtualDisplay MEMBER useVirtualDisplay NOTIFY useVirtualDisplayChanged)
@@ -213,7 +223,8 @@ public:
     Language language;
     CaptureSysKeysMode captureSysKeysMode;
     RendererBackend rendererBackend;
-    
+    VideoScaleMode videoScaleMode;
+
     // Vibemis client-side streaming enhancements
     bool useVirtualDisplay;
     bool enableFractionalRefreshRate;
@@ -259,6 +270,7 @@ signals:
     void keepAwakeChanged();
     void languageChanged();
     void rendererBackendChanged();
+    void videoScaleModeChanged();
     
     // Vibemis client-side streaming enhancement signals
     void useVirtualDisplayChanged();

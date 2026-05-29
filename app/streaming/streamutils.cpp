@@ -1,4 +1,5 @@
 #include "streamutils.h"
+#include "settings/streamingpreferences.h"
 
 #include <Qt>
 #include <QDir>
@@ -82,9 +83,41 @@ Uint32 StreamUtils::getPlatformWindowFlags()
 
 void StreamUtils::scaleSourceToDestinationSurface(SDL_Rect* src, SDL_Rect* dst)
 {
-    int dstH = SDL_ceilf((float)dst->w * src->h / src->w);
-    int dstW = SDL_ceilf((float)dst->h * src->w / src->h);
+    // Apply the user's configured scale mode (default SCALE_FIT == original behaviour).
+    int mode = StreamingPreferences::SCALE_FIT;
+    if (auto prefs = StreamingPreferences::get()) {
+        mode = prefs->videoScaleMode;
+    }
+    scaleSourceToDestinationSurface(src, dst, mode);
+}
 
+void StreamUtils::scaleSourceToDestinationSurface(SDL_Rect* src, SDL_Rect* dst, int scaleMode)
+{
+    if (scaleMode == StreamingPreferences::SCALE_STRETCH) {
+        // Fill the whole destination, ignoring aspect ratio — leave dst unchanged.
+        return;
+    }
+
+    int dstH = SDL_ceilf((float)dst->w * src->h / src->w); // height if scaled to dst width
+    int dstW = SDL_ceilf((float)dst->h * src->w / src->h); // width if scaled to dst height
+
+    if (scaleMode == StreamingPreferences::SCALE_FILL) {
+        // Cover: pick the larger scale so the destination is fully covered; the overflowing
+        // dimension extends past the window and is cropped by the renderer's clipping.
+        if (dstH > dst->h) {
+            // Scaling to width overflows height — take it; center vertically (crops top/bottom).
+            dst->y += (dst->h - dstH) / 2;
+            dst->h = dstH;
+        }
+        else {
+            // Scaling to height overflows width — take it; center horizontally (crops sides).
+            dst->x += (dst->w - dstW) / 2;
+            dst->w = dstW;
+        }
+        return;
+    }
+
+    // SCALE_FIT (default): pick the smaller scale so the whole frame is visible (letterbox).
     if (dstH > dst->h) {
         dst->x += (dst->w - dstW) / 2;
         dst->w = dstW;

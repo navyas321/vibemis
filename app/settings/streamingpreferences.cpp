@@ -57,6 +57,7 @@
 #define SER_KEEPAWAKE "keepawake"
 #define SER_LANGUAGE "language"
 #define SER_RENDERERBACKEND "rendererbackend"
+#define SER_VIDEOSCALEMODE "videoscalemode"
 
 // Vibemis client-side streaming enhancements
 #define SER_VIRTUALDISPLAY "virtualdisplay"
@@ -184,6 +185,8 @@ void StreamingPreferences::reload()
                                                     static_cast<int>(Language::LANG_AUTO)).toInt());
     rendererBackend = static_cast<RendererBackend>(settings.value(SER_RENDERERBACKEND,
                                                     static_cast<int>(RendererBackend::RB_AUTO)).toInt());
+    videoScaleMode = static_cast<VideoScaleMode>(settings.value(SER_VIDEOSCALEMODE,
+                                                 static_cast<int>(VideoScaleMode::SCALE_FIT)).toInt());
 
     // Vibemis client-side streaming enhancements
     useVirtualDisplay = settings.value(SER_VIRTUALDISPLAY, true).toBool();
@@ -375,6 +378,7 @@ void StreamingPreferences::save()
     settings.setValue(SER_UIDISPLAYMODE, static_cast<int>(uiDisplayMode));
     settings.setValue(SER_LANGUAGE, static_cast<int>(language));
     settings.setValue(SER_RENDERERBACKEND, static_cast<int>(rendererBackend));
+    settings.setValue(SER_VIDEOSCALEMODE, static_cast<int>(videoScaleMode));
     settings.setValue(SER_DEFAULTVER, CURRENT_DEFAULT_VER);
     settings.setValue(SER_SWAPMOUSEBUTTONS, swapMouseButtons);
     settings.setValue(SER_MUTEONFOCUSLOSS, muteOnFocusLoss);
