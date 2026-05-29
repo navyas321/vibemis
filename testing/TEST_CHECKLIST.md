@@ -46,6 +46,7 @@ whole Quick Menu group depends on its render path.
 - [ ] **test65** — AV1 codec guidance note (P3.6) — **PR #85** — base `vibemis-main` — ☐  *(launcher only)*
 - [ ] **test66** — Live stream-config summary line — **PR #86** — base `vibemis-main` — ☐  *(launcher only)*
 - [ ] **test67** — Low-latency "competitive" preset button (P3.8) — **PR #87** — base `vibemis-main` — ☐  *(launcher only)*
+- [ ] **test68** — Native-resolution recommendation hint — **PR #88** — base `vibemis-main` — ☐  *(launcher only)*
 - [ ] **test49** — Configurable performance-overlay corner (TL/TR/BL/BR) — **PR #69** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a stream — auto-publishes 🔬 alpha)*
 - [ ] **test50** — Configurable performance-overlay text size (Small/Normal/Large) — **PR #70** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a stream — auto-publishes 🔬 alpha)*
 
