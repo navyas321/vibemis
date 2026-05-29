@@ -1983,6 +1983,55 @@ Flickable {
                                   qsTr("You can toggle it at any time while streaming using Ctrl+Alt+Shift+S or Select+L1+R1+X.") + "\n\n" +
                                   qsTr("The performance overlay is not supported on Steam Link or Raspberry Pi.")
                 }
+
+                Label {
+                    width: parent.width
+                    id: perfOverlayTextSizeTitle
+                    text: qsTr("Performance overlay text size")
+                    font.pointSize: 12
+                    wrapMode: Text.Wrap
+                    visible: showPerformanceOverlay.checked
+                }
+
+                AutoResizingComboBox {
+                    id: perfOverlayTextSizeComboBox
+                    visible: showPerformanceOverlay.checked
+                    textRole: "text"
+                    model: ListModel {
+                        id: perfOverlayTextSizeListModel
+                        ListElement {
+                            text: qsTr("Small")
+                            val: StreamingPreferences.PERF_TEXT_SMALL
+                        }
+                        ListElement {
+                            text: qsTr("Normal")
+                            val: StreamingPreferences.PERF_TEXT_NORMAL
+                        }
+                        ListElement {
+                            text: qsTr("Large")
+                            val: StreamingPreferences.PERF_TEXT_LARGE
+                        }
+                    }
+                    Component.onCompleted: {
+                        var saved = StreamingPreferences.perfOverlayTextSize
+                        currentIndex = 0
+                        for (var i = 0; i < perfOverlayTextSizeListModel.count; i++) {
+                            if (perfOverlayTextSizeListModel.get(i).val === saved) {
+                                currentIndex = i
+                                break
+                            }
+                        }
+                    }
+                    // ::onActivated only fires on human-driven index changes
+                    onActivated: {
+                        StreamingPreferences.perfOverlayTextSize = perfOverlayTextSizeListModel.get(currentIndex).val
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Adjust the size of the performance overlay text. Takes effect the next time you start a stream.")
+                }
             }
         }
 

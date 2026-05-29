@@ -1,5 +1,6 @@
 #include "overlaymanager.h"
 #include "path.h"
+#include "settings/streamingpreferences.h"
 
 using namespace Overlay;
 
@@ -9,8 +10,25 @@ OverlayManager::OverlayManager() :
 {
     memset(m_Overlays, 0, sizeof(m_Overlays));
 
+    // Vibemis: the debug/performance overlay font size is user-configurable so the
+    // stats HUD is legible on small handheld panels. Map the preference onto point
+    // sizes; PERF_TEXT_NORMAL (20) preserves the historical default.
+    int debugFontSize;
+    switch (StreamingPreferences::get()->perfOverlayTextSize) {
+    case StreamingPreferences::PERF_TEXT_SMALL:
+        debugFontSize = 16;
+        break;
+    case StreamingPreferences::PERF_TEXT_LARGE:
+        debugFontSize = 28;
+        break;
+    case StreamingPreferences::PERF_TEXT_NORMAL:
+    default:
+        debugFontSize = 20;
+        break;
+    }
+
     m_Overlays[OverlayType::OverlayDebug].color = {0xD0, 0xD0, 0x00, 0xFF};
-    m_Overlays[OverlayType::OverlayDebug].fontSize = 20;
+    m_Overlays[OverlayType::OverlayDebug].fontSize = debugFontSize;
 
     m_Overlays[OverlayType::OverlayStatusUpdate].color = {0xCC, 0x00, 0x00, 0xFF};
     m_Overlays[OverlayType::OverlayStatusUpdate].fontSize = 36;
