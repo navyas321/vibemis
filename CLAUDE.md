@@ -234,6 +234,24 @@ Candidate features (each its own testable PR; helper scripts are device-independ
 Guardrail: shortcuts.vdf is a binary format — for anything that writes Steam shortcuts directly,
 research the format and test carefully; prefer `.desktop` + manual "Add to Steam" until proven.
 
+### P3.11 — Newer features (research-led, May 2026)
+Gaps vs. competitors (Parsec/Steam Remote Play) and long-standing community requests
+([Parsec mic passthrough](https://parsec.app/blog/now-available-microphone-passthrough),
+[Apollo mic discussion #591](https://github.com/ClassicOldSong/Apollo/discussions/591),
+[Moonlight OSK request](https://ideas.moonlight-stream.org/posts/129/ios-android-on-screen-keyboard)):
+
+1. **Settings export / import** — back up or share a full config (resolution, codec, presets,
+   shortcuts) as a portable file; great for handheld users with multiple devices. Independent,
+   launcher-testable. ← implementing first (safest, no streaming/connection logic).
+2. **Send special keys to host** — Quick Menu items for Ctrl+Alt+Del, Win/Super, Alt+F4, Esc via
+   `LiSendKeyboardEvent` — fills the remote-desktop control gap. (Stacks on test22.)
+3. **On-screen text input / send-text** — type into a small QML field in the Quick Menu and send
+   via `LiSendUtf8TextEvent` (the OSK gap on handhelds with no keyboard). (Stacks on test22.)
+4. **Per-game settings profiles** — remember resolution/codec/bitrate per host+app. Architectural;
+   design first.
+5. **Microphone passthrough** — **protocol-gated**: needs moonlight-common-c / Apollo host support
+   (Apollo #591 open). Not client-only; track upstream, don't attempt blind.
+
 ## Development priority: Game Mode over Desktop Mode
 
 **Primary target is SteamOS Game Mode (Gamescope), not Desktop Mode (KDE Plasma).**
