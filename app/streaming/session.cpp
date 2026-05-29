@@ -184,6 +184,7 @@ void Session::clRumble(unsigned short controllerNumber, unsigned short lowFreqMo
 
 void Session::clConnectionStatusUpdate(int connectionStatus)
 {
+    // NB: callback runs on the moonlight-common-c connection thread.
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                 "Connection status update: %d",
                 connectionStatus);
