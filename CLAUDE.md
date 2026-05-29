@@ -85,7 +85,12 @@ test agent's excerpts. Currently WSL2 cannot reach Windows filesystem paths.
 by reading Vibepollo's side of the handshake. Currently we only see what Vibemis logs.
 
 ### P3.6 — Video scale mode, pan/zoom, compact perf overlay (from original plan)
-Phases 3–7 from the original plan (see pure-purring-pillow.md)
+Phases 3–7 from the original plan (see pure-purring-pillow.md).
+- **Compact perf overlay** — DONE (IN TEST, test24/PR pending): `compactPerformanceOverlay`
+  pref + one-line branch in `FFmpegVideoDecoder::stringifyVideoStats` + Settings checkbox.
+  Uses the working `OverlayDebug` path, independent of P3.1.
+- Video scale mode + pan/zoom: still pending — these touch the renderers, so do them
+  **on top of test22** (P3.1) once it's verified, to avoid conflicts.
 
 ### P3.7 — Cross-network connectivity (Tailscale / remote play)
 Stream over the internet when client and host are not on the same LAN.
