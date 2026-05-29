@@ -2002,6 +2002,37 @@ Flickable {
                     width: parent.width
                 }
 
+                // Vibemis (P3.7): in-app entry point to set up Tailscale for remote play. One click
+                // opens the setup guide; the one-command script scripts/setup-tailscale.sh does the
+                // install + login. Pair with Settings -> "Prefer Tailscale addresses".
+                Label {
+                    width: parent.width
+                    text: qsTr("Remote play (stream from anywhere): set up Tailscale, then enable \"Prefer Tailscale addresses\" above.")
+                    font.pointSize: 10
+                    wrapMode: Text.Wrap
+                    topPadding: 6
+                }
+                Row {
+                    spacing: 8
+                    Button {
+                        text: qsTr("Set up Tailscale")
+                        onClicked: Qt.openUrlExternally("https://tailscale.com/kb/installation")
+                        visible: SystemProperties.hasBrowser
+                    }
+                    Button {
+                        text: qsTr("One-command setup (guide)")
+                        onClicked: Qt.openUrlExternally("https://github.com/navyas321/vibemis/blob/vibemis-main/scripts/setup-tailscale.sh")
+                        visible: SystemProperties.hasBrowser
+                    }
+                }
+                Label {
+                    width: parent.width
+                    text: qsTr("Tip: on SteamOS, run scripts/setup-tailscale.sh for a one-command, no-sudo setup.")
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                    color: "#aaaaaa"
+                }
+
                 // Note about Server Commands
                 Label {
                     width: parent.width
