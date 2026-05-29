@@ -13,9 +13,16 @@
 
 ## Setup
 
+> ⚠️ **DO NOT delete `settings.ini` before this test.**
+>
+> Every previous test started with `rm -f ~/.config/"Vibemis Project"/Vibemis/vibemis-settings.ini`.
+> **Do NOT run that command here.** Check 1 verifies that the uniqueid survives an app restart —
+> that only works if the existing settings file (from test19's pairing) is still on disk.
+> Deleting it would generate a new uniqueid and silently invalidate the test.
+
 ```bash
 pkill -f Vibemis || true
-# Do NOT delete settings.ini this time — uniqueid persistence test needs it to survive
+# settings.ini intentionally NOT deleted — see warning above
 
 wget -O ~/Vibemis-test20.AppImage \
   "$(curl -s https://api.github.com/repos/navyas321/vibemis/releases \
