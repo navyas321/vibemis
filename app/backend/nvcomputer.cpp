@@ -11,7 +11,8 @@
 #include <algorithm>
 
 // Vibemis (P3.7): a host address belongs to a Tailscale tailnet if it falls in the
-// CGNAT range Tailscale hands out (100.64.0.0/10) or is a MagicDNS name (*.ts.net).
+// IPv4 CGNAT range (100.64.0.0/10), the IPv6 ULA range (fd7a:115c:a1e0::/48), or is a
+// MagicDNS name (*.ts.net).
 // When the user enables "prefer Tailscale", such addresses are tried first so remote
 // play over the tailnet connects without waiting for LAN probes to time out.
 // NOTE(P3.7): this only reorders existing candidates — it can't conjure a tailnet
@@ -27,8 +28,15 @@ static bool isTailscaleAddress(const NvAddress& addr)
         return true;
     }
     QHostAddress parsed(host);
-    return parsed.protocol() == QAbstractSocket::IPv4Protocol &&
-           parsed.isInSubnet(QHostAddress(QStringLiteral("100.64.0.0")), 10);
+    if (parsed.protocol() == QAbstractSocket::IPv4Protocol) {
+        // Tailscale CGNAT range 100.64.0.0/10.
+        return parsed.isInSubnet(QHostAddress(QStringLiteral("100.64.0.0")), 10);
+    }
+    if (parsed.protocol() == QAbstractSocket::IPv6Protocol) {
+        // Tailscale ULA range fd7a:115c:a1e0::/48 (review fix: IPv6 tailnets were missed before).
+        return parsed.isInSubnet(QHostAddress(QStringLiteral("fd7a:115c:a1e0::")), 48);
+    }
+    return false;
 }
 
 #define SER_NAME "hostname"
