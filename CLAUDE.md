@@ -122,6 +122,35 @@ reference for what Apollo-aware clients can do. High-value candidates for Vibemi
 Review the Artemis Android README at https://github.com/MobinYengejehi/Artemis for the full feature
 list before implementing each item — some are touch/mobile-specific and should be skipped.
 
+### P3.9 — UI modernization (research-led)
+Modernize the launcher/settings UI so Vibemis looks current and is comfortable on a handheld
+(big touch targets, controller-first navigation, clean typography), not just a reskinned
+Moonlight Qt. **Do focused research before committing to a direction** — this is a design
+phase, so prototype and get sign-off rather than mass-restyling blind.
+
+Research starting points (gathered May 2026):
+- **Qt Quick Controls Material style** is the supported modern-look path
+  (https://doc.qt.io/qt-6/qtquickcontrols-material.html); Qt 6.8 has Material 3 support
+  (https://ekkesapps.wordpress.com/qt-6-in-action/material-3/material-design-3/). Set via
+  `QQuickStyle::setStyle("Material")` / `QT_QUICK_CONTROLS_STYLE`, dark variant, an accent
+  colour, and rounded controls.
+- **Best practice** (https://doc.qt.io/qt-6/qtquick-bestpractices.html): keep the C++ backend
+  separate from QML; theme via a single style config rather than per-control overrides.
+
+Candidate work (each its own testable PR, low-risk first):
+1. **Theme pass** — adopt Material dark + a Vibemis accent colour; consistent spacing/typography
+   tokens in one place (a `Theme.qml` singleton). Lowest-risk, biggest visual payoff.
+2. **PcView / AppView polish** — larger card tiles, hover/focus states tuned for controller
+   navigation, clearer connection status.
+3. **Settings readability** — group headers, section icons, better use of the two-column layout
+   on a 1280-wide handheld screen.
+4. **Quick Menu visual alignment** — once P3.1 lands, match the Quick Menu styling to the new theme.
+5. **App icon / branding** — a distinct Vibemis icon and splash.
+
+Guardrails: don't regress controller/keyboard navigability (SdlGamepadKeyNavigation); verify
+each change in **both** Desktop Mode and Game Mode; ship incrementally (a theme PR, then view
+PRs) so each is independently testable rather than one giant restyle.
+
 ## Development priority: Game Mode over Desktop Mode
 
 **Primary target is SteamOS Game Mode (Gamescope), not Desktop Mode (KDE Plasma).**
