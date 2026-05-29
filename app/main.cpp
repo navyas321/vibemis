@@ -753,9 +753,11 @@ int main(int argc, char *argv[])
     // Our icons are styled for a dark theme, so we do not allow the user to override this
     qputenv("QT_QUICK_CONTROLS_MATERIAL_THEME", "Dark");
 
-    // These are defaults that we allow the user to override
+    // These are defaults that we allow the user to override.
+    // Vibemis brand accent: teal/cyan (#00CCCC), matching the in-stream Quick Menu accent,
+    // for a consistent identity distinct from upstream's purple. Still overridable via env.
     if (!qEnvironmentVariableIsSet("QT_QUICK_CONTROLS_MATERIAL_ACCENT")) {
-        qputenv("QT_QUICK_CONTROLS_MATERIAL_ACCENT", "Purple");
+        qputenv("QT_QUICK_CONTROLS_MATERIAL_ACCENT", "#00CCCC");
     }
     if (!qEnvironmentVariableIsSet("QT_QUICK_CONTROLS_MATERIAL_VARIANT")) {
         qputenv("QT_QUICK_CONTROLS_MATERIAL_VARIANT", "Dense");
