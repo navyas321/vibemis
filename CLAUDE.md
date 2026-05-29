@@ -61,10 +61,28 @@ session with a single Vulkan surface. Key implications:
 - The current Quick Menu QQuickView approach is a Desktop Mode workaround. It works
   tolerably in KDE Plasma windowed mode but is architecturally wrong for Game Mode.
 
-**Long-term Quick Menu architecture:** Migrate to SDL-internal overlay rendered as a
-texture in `sdlvid.cpp`, driven by a `QOffscreenSurface` + `QQuickRenderControl` pipeline
-(render QML offscreen → upload as SDL texture → composite into stream frame). This will
-work in both Game Mode and Desktop Mode without any window management hacks.
+**Long-term Quick Menu architecture (confirmed needed — Game Mode test failed):**
+Migrate to SDL-internal overlay rendered as a texture in `sdlvid.cpp`:
+
+```
+QML scene (QuickMenu.qml)
+  → QQuickRenderControl (renders to QOpenGLFramebufferObject, offscreen)
+  → FBO colour attachment (GL texture ID)
+  → SDL_CreateTextureFromSurface / GL texture binding
+  → SDL_RenderCopy() after video frame in sdlvid.cpp render loop
+  → SDL_RenderPresent() — overlay composited into the stream
+```
+
+Key implementation steps (branch: feat/quickmenu-sdl-overlay):
+1. `QuickMenuSdlRenderer` class — owns QOffscreenSurface, QOpenGLContext (shared
+   with SDL GL context), QQuickRenderControl, QQuickWindow, SDL_Texture*
+2. SDL GL context sharing: call `SDL_GL_GetCurrentContext()` before Qt GL context
+   creation, pass as share context to QOpenGLContext
+3. Render on demand: when menu is visible + SDL frame is about to present,
+   render QML to FBO, copy pixels to SDL_Texture, SDL_RenderCopy
+4. Input: inject QMouseEvent/QKeyEvent/touch events from SDL event handler
+   into the QQuickWindow directly (no OS window focus involved)
+5. Remove QQuickView and all the SDL capture release hacks
 
 **When testing:** prioritise Game Mode. Desktop Mode results are informative but secondary.
 If a feature works only in Desktop Mode, it's not ready.
