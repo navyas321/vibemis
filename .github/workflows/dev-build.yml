@@ -850,3 +850,38 @@ jobs:
         draft: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    # ── Keep the Releases page tidy ─────────────────────────────────────────
+    # Without this, every vibemis-main push leaves its 🧪 beta behind forever and
+    # every test-branch push leaves another 🔬 alpha — the Releases list balloons.
+    # Policy:
+    #   • beta    → keep ONLY the newest beta (the one we just published); delete the rest.
+    #   • alpha   → keep ONLY the newest alpha FOR THIS test branch; other branches untouched.
+    #   • release → never pruned (production history is permanent).
+    - name: Prune superseded releases
+      if: needs.setup-version.outputs.release_tier == 'beta' || needs.setup-version.outputs.release_tier == 'alpha'
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        TIER: ${{ needs.setup-version.outputs.release_tier }}
+        KEEP_TAG: ${{ needs.setup-version.outputs.version }}
+        BRANCH: ${{ github.ref_name }}
+      run: |
+        set -u
+        if [ "$TIER" = "beta" ]; then
+          PATTERN='-beta\.'
+          echo "Pruning all betas except $KEEP_TAG"
+        else
+          SANITIZED=$(echo "$BRANCH" | sed 's/[^a-zA-Z0-9._-]/-/g')
+          PATTERN="-alpha\.${SANITIZED}\."
+          echo "Pruning alphas for branch '$SANITIZED' except $KEEP_TAG"
+        fi
+        # gh release list is newest-first; we keep KEEP_TAG and delete the rest that match.
+        gh release list --limit 200 --json tagName --jq '.[].tagName' \
+          | grep -E -- "$PATTERN" \
+          | grep -v -x -F "$KEEP_TAG" \
+          | while read -r tag; do
+              [ -z "$tag" ] && continue
+              echo "  deleting superseded release: $tag"
+              gh release delete "$tag" --yes --cleanup-tag || echo "    (delete failed for $tag, continuing)"
+            done
+        echo "Prune complete."
