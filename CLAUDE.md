@@ -13,6 +13,17 @@ When the user's first message is one of these keywords, follow the corresponding
 
 Read your **persona file** first (who you are), then the SOP in [`docs/WORKFLOW.md`](docs/WORKFLOW.md) (step-by-step procedures, templates, conventions).
 
+## Working style (Code w/ Claude best practices)
+
+- **Self-verify before surfacing.** Never hand the test agent (or a PR) a broken build —
+  compile clean (`qmake6 + make release`, 0 errors) first. The owner should never see a red X.
+- **Success criteria upfront.** Every test cycle ships a numbered, command-level scorecard
+  (exact commands + expected output), not "make it better".
+- **Claude-prompting-Claude.** The build↔test handoff (`hostdevelop` ↔ `clienttest`) is the
+  autonomous loop; acting on a test report PR takes priority over starting new features.
+- **Routine-friendly.** Unattended development runs via [`docs/ROUTINE_PROMPT.md`](docs/ROUTINE_PROMPT.md):
+  one self-verified, test-ready PR per run, bounded to respect usage limits.
+
 ## What this repo is
 
 **Vibemis** is a Linux-focused fork of [Vibemis Qt](https://github.com/navyas321/vibemis) (which is itself a fork of [Moonlight Qt](https://github.com/moonlight-stream/moonlight-qt)). It's a desktop / Steam Deck / handheld streaming client tuned to pair with **Vibepollo** (a Sunshine fork). C++ / Qt 6 / QML, built with qmake6.
