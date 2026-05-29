@@ -35,8 +35,12 @@ comment so it's greppable: `grep -rn "TODO(P3" app/`.
 ## Phase 4 / Input  ✅ implemented
 - Done: configurable QM gamepad combo test26 (#48); back-paddle combos test36 (#56).
 
-## P3.7 — Tailscale remote play  🟡 partial
-- Done: Add-PC Tailscale hint test28 (#50).
+## P3.7 — Tailscale remote play  🟢 core complete
+- Done: Add-PC Tailscale hint test28 (#50); prefer-tailnet-address ordering test51 (#71, +IPv6 fix);
+  **one-command setup `scripts/setup-tailscale.sh` test69 (#89)** — install/up with a single login,
+  no-sudo userspace fallback for SteamOS, `--check` status mode. Set up → prefer address → stream.
+- Remaining (nice-to-have): an in-app "Set up Tailscale" button that shells out to the script /
+  shows `--check` status; a short remote-play how-to doc.
 - Remaining: prefer Tailscale (100.64.0.0/10 CGNAT) addresses when reaching a host; MagicDNS name
   support; a "remote play over Tailscale" doc.
 - BLOCKER: can't validate NAT traversal / real remote latency without a live Tailscale network +
