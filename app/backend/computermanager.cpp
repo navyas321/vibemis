@@ -13,6 +13,7 @@
 #include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QRandomGenerator>
+#include <QXmlStreamReader>
 #include <QRegularExpression>
 
 // Vibemis: keep wjbeckett's OpenSSL + crypto includes for OTP pairing handshake.
@@ -1018,32 +1019,50 @@ qDebug() << "PendingOTPPairingTask: Generated AES key from salt+PIN";
             );
             
             qDebug() << "PendingOTPPairingTask: Received response:" << pairingRequest;
-            
-            // Parse the response
+
             if (pairingRequest.isEmpty()) {
                 qDebug() << "PendingOTPPairingTask: OTP pairing failed - no response";
-                emit pairingCompleted(m_Computer, "No response from Apollo server. Please check the server is running and OTP is active.");
+                emit pairingCompleted(m_Computer, "No response from server.");
                 return;
             }
-            
-            // Check for specific error cases
-            if (pairingRequest.contains("status_message=\"OTP auth not available.\"")) {
-                qDebug() << "PendingOTPPairingTask: OTP pairing failed - OTP not available";
-                emit pairingCompleted(m_Computer, "OTP is not available or has expired. Please generate a new OTP on the Apollo server.");
-                return;
+
+            // Parse the response properly using QXmlStreamReader.
+            //
+            // Do NOT gate on status_message text. Vibepollo (and servers that
+            // implement classic Moonlight pairing without the Apollo otpauth
+            // extension) return status_code=200, paired=1, a full plaincert,
+            // AND status_message="OTP auth not available." simultaneously —
+            // the message is informational, not an error. The authoritative
+            // signals are status_code=200 + paired=1 + plaincert present.
+            int  rootStatusCode = 0;
+            QString pairedValue;
+            QString plaincertValue;
+            {
+                QXmlStreamReader xml(pairingRequest);
+                while (!xml.atEnd()) {
+                    xml.readNext();
+                    if (xml.isStartElement()) {
+                        if (xml.name() == QStringLiteral("root")) {
+                            rootStatusCode = (int)xml.attributes().value("status_code").toUInt();
+                        } else if (xml.name() == QStringLiteral("paired")) {
+                            pairedValue = xml.readElementText();
+                        } else if (xml.name() == QStringLiteral("plaincert")) {
+                            plaincertValue = xml.readElementText();
+                        }
+                    }
+                }
             }
-            
-            // Check if pairing was successful
-            if (pairingRequest.contains("<root status_code=\"200\">") && pairingRequest.contains("<paired>1</paired>")) {
-                qDebug() << "PendingOTPPairingTask: OTP pairing successful, extracting server certificate";
-                
-                // Extract the server certificate from the response
-                QRegularExpression certRegex(R"(<plaincert>([A-Fa-f0-9]+)</plaincert>)");
-                QRegularExpressionMatch certMatch = certRegex.match(pairingRequest);
-                
-                if (certMatch.hasMatch()) {
-                    QString serverCertHex = certMatch.captured(1);
-                    QByteArray serverCertBytes = QByteArray::fromHex(serverCertHex.toUtf8());
+
+            qDebug() << "PendingOTPPairingTask: Parsed response — status_code:" << rootStatusCode
+                     << "paired:" << pairedValue
+                     << "plaincert present:" << !plaincertValue.isEmpty();
+
+            if (rootStatusCode == 200 && pairedValue == QStringLiteral("1") && !plaincertValue.isEmpty()) {
+                qDebug() << "PendingOTPPairingTask: Pairing accepted, extracting server certificate";
+
+                // plaincertValue was already extracted by the XML parser above.
+                {
+                    QByteArray serverCertBytes = QByteArray::fromHex(plaincertValue.toUtf8());
                     QSslCertificate serverCert(serverCertBytes);
                     
                     if (!serverCert.isNull()) {
@@ -1088,17 +1107,18 @@ qDebug() << "PendingOTPPairingTask: Generated AES key from salt+PIN";
                         }
                     } else {
                         qDebug() << "PendingOTPPairingTask: Invalid server certificate received";
-                        emit pairingCompleted(m_Computer, "Invalid server certificate received from Apollo server");
+                        emit pairingCompleted(m_Computer, "Invalid server certificate received from server");
                         return;
                     }
-                } else {
-                    qDebug() << "PendingOTPPairingTask: No server certificate found in response";
-                    emit pairingCompleted(m_Computer, "Server certificate not found in Apollo response");
-                    return;
                 }
             } else {
-                qDebug() << "PendingOTPPairingTask: OTP pairing failed with response:" << pairingRequest;
-                emit pairingCompleted(m_Computer, "Apollo OTP pairing failed: " + pairingRequest);
+                // paired != 1, or no cert, or non-200 status.
+                // Log the raw response to aid future diagnostics.
+                qDebug() << "PendingOTPPairingTask: Pairing rejected — status_code:" << rootStatusCode
+                         << "paired:" << pairedValue;
+                emit pairingCompleted(m_Computer,
+                    QString("Pairing failed (status %1). Check that the PIN was entered correctly "
+                            "in the host web UI.").arg(rootStatusCode));
                 return;
             }
             
