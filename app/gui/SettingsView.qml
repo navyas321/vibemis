@@ -2013,5 +2013,41 @@ Flickable {
                 }
             }
         }
+
+        GroupBox {
+            id: aboutGroupBox
+            width: (parent.width - (parent.leftPadding + parent.rightPadding))
+            padding: 12
+            title: "<font color=\"skyblue\">" + qsTr("About") + "</font>"
+            font.pointSize: 12
+
+            Column {
+                anchors.fill: parent
+                spacing: 6
+
+                Label {
+                    width: parent.width
+                    text: qsTr("Vibemis %1").arg(SystemProperties.versionString)
+                    font.pointSize: 12
+                    font.bold: true
+                    wrapMode: Text.Wrap
+                }
+                Label {
+                    width: parent.width
+                    text: qsTr("The actively maintained Apollo / Vibepollo game-streaming client for Linux and SteamOS.")
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                    color: "#aaaaaa"
+                }
+                Label {
+                    width: parent.width
+                    text: "<a href=\"https://github.com/navyas321/vibemis\">github.com/navyas321/vibemis</a>"
+                    onLinkActivated: Qt.openUrlExternally(link)
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                    color: "#aaaaaa"
+                }
+            }
+        }
     }
 }
