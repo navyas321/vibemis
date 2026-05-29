@@ -16,6 +16,12 @@ public:
 
     Q_INVOKABLE void save();
 
+    // Vibemis: export all settings to a portable .ini and import them back (config backup /
+    // sharing across devices). exportSettings() returns the written path ("" on failure);
+    // importSettings() returns true and reloads on success.
+    Q_INVOKABLE QString exportSettings();
+    Q_INVOKABLE bool importSettings();
+
     void reload();
 
     enum AudioConfig
