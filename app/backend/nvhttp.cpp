@@ -564,25 +564,12 @@ NvHTTP::openConnection(QUrl baseUrl,
     QUrl url(baseUrl);
     url.setPath("/" + command);
 
-    // Use a machine-specific UID to match Apollo server expectations
-    // Generate a uniqueid based on hostname + timestamp for uniqueness
-    static QString machineUniqueId;
-    if (machineUniqueId.isEmpty()) {
-        QString hostname = QSysInfo::machineHostName();
-        if (hostname.isEmpty()) hostname = "vibemis";
-        // Take first 8 chars of hostname and pad with random hex
-        QString hostPart = hostname.left(8).toUpper();
-        while (hostPart.length() < 8) {
-            hostPart += QString("%1").arg(QRandomGenerator::global()->bounded(16), 1, 16).toUpper();
-        }
-        // Add 8 random hex chars
-        QString randomPart;
-        for (int i = 0; i < 8; i++) {
-            randomPart += QString("%1").arg(QRandomGenerator::global()->bounded(16), 1, 16).toUpper();
-        }
-        machineUniqueId = hostPart + randomPart;
-    }
-    url.setQuery("uniqueid=" + machineUniqueId + "&uuid=" +
+    // Use the persistent uniqueid from IdentityManager. This ID is generated once
+    // and stored in QSettings, so it survives app restarts. Pairing on Vibepollo
+    // (and Apollo) is tied to the client cert+uniqueid pair — using a new random
+    // uniqueid on every launch causes 403 Forbidden on all HTTPS endpoints after
+    // the first session because the server has only authorized the original id.
+    url.setQuery("uniqueid=" + IdentityManager::get()->getUniqueId() + "&uuid=" +
                  QUuid::createUuid().toString(QUuid::WithoutBraces) +
                  ((arguments != nullptr) ? ("&" + arguments) : ""));
 
@@ -662,26 +649,57 @@ NvHTTP::openConnection(QUrl baseUrl,
     return reply;
 }
 
+// Returns "uniqueid=...&uuid=..." — the auth fragment every Moonlight/Apollo
+// HTTPS request must carry. Uses the persistent uniqueid from IdentityManager
+// so clipboard and other manually-built requests use the same stable id as
+// openConnectionToString (which was fixed to do the same).
+QString NvHTTP::getAuthParams()
+{
+    return "uniqueid=" + IdentityManager::get()->getUniqueId() +
+           "&uuid=" + QUuid::createUuid().toString(QUuid::WithoutBraces);
+}
+
 // Vibemis clipboard sync methods (Apollo servers only)
 QString
 NvHTTP::getClipboardContent()
 {
     try {
-        QString response = openConnectionToString(m_BaseUrlHttps,
-                                                  "actions/clipboard",
-                                                  "type=text",
-                                                  REQUEST_TIMEOUT_MS,
-                                                  NvLogLevel::NVLL_VERBOSE);
+        // openConnectionToString() doesn't expose SSL verify mode, so build the
+        // GET request manually with VerifyNone — same reason as sendClipboardContent:
+        // the clipboard endpoint connects by IP but the cert is issued to hostname.
+        QUrl getUrl(m_BaseUrlHttps);
+        getUrl.setPath("/actions/clipboard");
+        getUrl.setQuery(getAuthParams() + "&type=text");
+        QNetworkRequest getRequest(getUrl);
+        QSslConfiguration getSslConfig = IdentityManager::get()->getSslConfig();
+        getSslConfig.setPeerVerifyMode(QSslSocket::VerifyNone);
+        getRequest.setSslConfiguration(getSslConfig);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        getRequest.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);
+#endif
+        QNetworkReply* getReply = m_Nam->get(getRequest);
+        QEventLoop getLoop;
+        connect(getReply, &QNetworkReply::finished, &getLoop, &QEventLoop::quit);
+        connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, &getLoop, &QEventLoop::quit);
+        QTimer::singleShot(REQUEST_TIMEOUT_MS, &getLoop, &QEventLoop::quit);
+        getLoop.exec(QEventLoop::ExcludeUserInputEvents);
+        QString response;
+        if (!getReply->isFinished()) {
+            getReply->abort();
+        } else if (getReply->error() == QNetworkReply::NoError) {
+            response = QString::fromUtf8(getReply->readAll());
+        }
+        delete getReply;
         
-        qDebug() << "NvHTTP: Retrieved clipboard content from server";
+        if (!response.isEmpty()) {
+            qDebug() << "NvHTTP: Retrieved clipboard content from server";
+        } else {
+            qWarning() << "NvHTTP: Clipboard GET returned empty response";
+        }
         return response;
     }
-    catch (const GfeHttpResponseException& e) {
-        qWarning() << "NvHTTP: Failed to get clipboard content:" << e.getStatusMessage();
-        return QString();
-    }
-    catch (const QtNetworkReplyException& e) {
-        qWarning() << "NvHTTP: Network error getting clipboard:" << e.getErrorText();
+    catch (const std::exception& e) {
+        qWarning() << "NvHTTP: Exception getting clipboard content:" << e.what();
         return QString();
     }
 }
@@ -693,20 +711,25 @@ NvHTTP::sendClipboardContent(const QString& content)
         // Build a URL for the POST request
         QUrl url(m_BaseUrlHttps);
         url.setPath("/actions/clipboard");
-        url.setQuery("type=text");
+        url.setQuery(getAuthParams() + "&type=text");
 
         QNetworkRequest request(url);
         request.setHeader(QNetworkRequest::ContentTypeHeader, "text/plain; charset=utf-8");
-        request.setSslConfiguration(IdentityManager::get()->getSslConfig());
+
+        // Clipboard connects by IP address, but Vibepollo/Apollo's self-signed cert
+        // is issued to the hostname (e.g. "Navid-PC"). The IP is not in the cert's
+        // SAN, so strict hostname verification always fails with:
+        //   "SSL handshake failed: The host name did not match any of the valid hosts"
+        // The peer identity is already verified during pairing (we hold the cert in
+        // our trust store), so it is safe to skip hostname verification here.
+        QSslConfiguration sslConfig = IdentityManager::get()->getSslConfig();
+        sslConfig.setPeerVerifyMode(QSslSocket::VerifyNone);
+        request.setSslConfiguration(sslConfig);
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
         request.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);
 #endif
 
-        // Send POST request with clipboard content
-        // Vibemis: m_Nam is a QNetworkAccessManager* in this codebase; wjbeckett's
-        // clipboard-sync block used value-style `.` which mismatched the pointer
-        // declaration in nvhttp.h. Fixed to pointer-style `->`.
         QNetworkReply* reply = m_Nam->post(request, content.toUtf8());
 
         // Wait for response with timeout

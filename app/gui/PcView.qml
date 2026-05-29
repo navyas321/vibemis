@@ -48,8 +48,9 @@ CenteredGridView {
     {
         console.log("PcView.pairingComplete called with error:", error)
         
-        // Close both PIN dialogs
+        // Close all pairing dialogs
         pairDialog.close()
+        otpPairDialog.close()
         otpProgressDialog.close()
 
         // Display a failed dialog if we got an error
@@ -192,6 +193,7 @@ CenteredGridView {
             asynchronous: true
             sourceComponent: NavigableMenu {
                 id: pcContextMenu
+                initiator: pcContextMenuLoader.parent
                 MenuItem {
                     text: qsTr("PC Status: %1").arg(model.online ? qsTr("Online") : qsTr("Offline"))
                     font.bold: true
@@ -225,11 +227,11 @@ CenteredGridView {
                 NavigableMenuItem {
                     text: qsTr("Pair using OTP")
                     onTriggered: {
-                        // Show OTP pairing dialog
+                        // Pairing starts in otpPairDialog.onOpened
                         otpPairDialog.computerIndex = index
                         otpPairDialog.open()
                     }
-                    visible: model.online && !model.paired
+                    visible: model.online && !model.paired && model.isApolloServer
                 }
                 NavigableMenuItem {
                     text: qsTr("Test Network")
@@ -279,10 +281,13 @@ CenteredGridView {
                     stackView.push(appView)
                 }
                 else {
-                    // If we know this is an Apollo server, use OTP. Otherwise, use PIN.
-                    if (model.apolloVersion) {
+                    // OTP pairing for any non-GFE server (Vibepollo / Apollo / Sunshine).
+                    // The dialog generates the PIN, starts the handshake immediately
+                    // (via onOpened), then shows the PIN and instructions.
+                    if (model.isApolloServer) {
                         otpPairDialog.computerIndex = index
                         otpPairDialog.open()
+                        // pairing is started inside otpPairDialog.onOpened
                     } else {
                         // Default to standard PIN pairing on click
                         var pin = computerModel.generatePinString()
@@ -511,104 +516,119 @@ CenteredGridView {
         }
     }
 
+    // Receive stage1Completed from ComputerManager (via ComputerModel) and
+    // flip the dialog into "ready to continue" mode.
+    Connections {
+        target: computerModel
+        function onOtpStage1Completed() {
+            otpPairDialog.stage1Complete = true
+        }
+    }
+
     NavigableDialog {
         id: otpPairDialog
         property int computerIndex: -1
         property string computerName: computerIndex >= 0 ? (computerModel.data(computerModel.index(computerIndex, 0), ComputerModel.NameRole) || "") : ""
-        
-        title: qsTr("OTP Pairing")
-        standardButtons: Dialog.Ok | Dialog.Cancel
+        property string generatedPin: ""
+        // Pairing flow (standard Moonlight, no otpauth extension):
+        //   1. Dialog opens → client sends getservercert with a 2-minute timeout.
+        //      Vibepollo holds the HTTP connection open until the user submits the
+        //      "Pair Client" web form with the PIN (same mechanism as Sunshine).
+        //   2. User enters PIN + device name in Vibepollo's web UI → submits.
+        //      Vibepollo stores the cipher key and unblocks the HTTP response.
+        //   3. Client receives paired=1+plaincert → fires phases 2-4 immediately.
+        //      Vibepollo already has the cipher key → challenge succeeds.
+        //   4. Dialog closes automatically when pairing completes.
+
+        title: qsTr("Pairing — %1").arg(otpPairDialog.computerName)
+        standardButtons: Dialog.Cancel
         modal: true
         closePolicy: Popup.CloseOnEscape
-        
+
         onOpened: {
-            // Clear previous values and focus on PIN field
-            pinField.text = ""
-            passphraseField.text = ""
-            pinField.forceActiveFocus()
+            var n = Math.floor(Math.random() * 10000)
+            generatedPin = ("000" + n).slice(-4)
+            // Send getservercert — Vibepollo holds the connection open until the
+            // user submits the "Pair Client" form. Phases 2-4 fire automatically.
+            computerModel.pairComputerWithOTP(computerIndex, generatedPin, "")
         }
-        
-        onAccepted: {
-            if (pinField.text.length === 4) {
-                // Start OTP pairing
-                computerModel.pairComputerWithOTP(computerIndex, pinField.text, passphraseField.text)
-                
-                // Show progress dialog
-                otpProgressDialog.open()
-            } else {
-                // Show error for invalid PIN
-                errorDialog.text = qsTr("PIN must be exactly 4 digits")
-                errorDialog.helpText = ""
-                errorDialog.open()
-            }
+
+        onRejected: {
+            // FIXME: interrupt in-progress pairing if the API ever exposes it
         }
-        
+
         ColumnLayout {
             width: parent.width
-            spacing: 15
-            
-            Label {
-                text: qsTr("Pairing with Apollo Server: %1").arg(otpPairDialog.computerName)
-                font.bold: true
-                Layout.fillWidth: true
-                wrapMode: Text.Wrap
-            }
-            
-            Label {
-                text: qsTr("Apollo servers use OTP (One-Time Password) pairing for enhanced security.")
-                Layout.fillWidth: true
-                wrapMode: Text.Wrap
-            }
-            
+            spacing: 12
+
+            // ── PIN display ──────────────────────────────────────────────────
             ColumnLayout {
                 Layout.fillWidth: true
-                
+                spacing: 4
+
                 Label {
-                    text: qsTr("PIN (4 digits):")
+                    text: qsTr("Enter this PIN on your host PC:")
                     font.bold: true
-                }
-                
-                TextField {
-                    id: pinField
-                    placeholderText: qsTr("Enter 4-digit PIN")
                     Layout.fillWidth: true
-                    maximumLength: 4
-                    inputMethodHints: Qt.ImhDigitsOnly
-                    
-                    Keys.onReturnPressed: {
-                        if (pinField.text.length === 4) {
-                            passphraseField.forceActiveFocus()
-                        }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: pinLabel.implicitHeight + 16
+                    color: "#1a1a2e"
+                    radius: 6
+                    border.color: "#00cccc"
+                    border.width: 2
+
+                    Label {
+                        id: pinLabel
+                        anchors.centerIn: parent
+                        text: otpPairDialog.generatedPin
+                        font.pointSize: 36
+                        font.bold: true
+                        font.letterSpacing: 12
+                        color: "#00cccc"
                     }
                 }
             }
-            
+
+            // ── Instructions ─────────────────────────────────────────────────
             ColumnLayout {
                 Layout.fillWidth: true
-                
+                spacing: 4
+
                 Label {
-                    text: qsTr("Passphrase (optional):")
+                    text: qsTr("Steps:")
                     font.bold: true
                 }
-                
-                TextField {
-                    id: passphraseField
-                    placeholderText: qsTr("Enter passphrase (leave blank for default)")
+                Label {
+                    text: qsTr("1.  On %1 — click the\n    \"Incoming Pairing Request\" notification.").arg(otpPairDialog.computerName)
                     Layout.fillWidth: true
-                    
-                    Keys.onReturnPressed: {
-                        if (pinField.text.length === 4) {
-                            otpPairDialog.accept()
-                        }
-                    }
+                    wrapMode: Text.Wrap
+                }
+                Label {
+                    text: qsTr("2.  In Vibepollo web UI → \"Pair Client\" section:")
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                }
+                Label {
+                    text: qsTr("       PIN: %1\n       Device name: anything (e.g. LegionGo)\n       Click Submit").arg(otpPairDialog.generatedPin)
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                    font.bold: true
+                }
+                Label {
+                    text: qsTr("3.  This dialog closes automatically.")
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
                 }
             }
-            
+
             Label {
-                text: qsTr("Enter the PIN from your Apollo server's web interface. Apollo generates this PIN for you.")
+                text: qsTr("Waiting for PIN entry on host… (up to 2 minutes)")
                 Layout.fillWidth: true
                 wrapMode: Text.Wrap
-                color: "gray"
+                color: "#aaaaaa"
                 font.pointSize: 9
             }
         }

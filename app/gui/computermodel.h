@@ -17,7 +17,8 @@ class ComputerModel : public QAbstractListModel
         StatusUnknownRole,
         ServerSupportedRole,
         DetailsRole,
-        ApolloVersionRole
+        ApolloVersionRole,
+        IsApolloServerRole
     };
 
 public:
@@ -40,6 +41,10 @@ public:
 
     Q_INVOKABLE void pairComputerWithOTP(int computerIndex, QString pin, QString passphrase);
 
+    // Called from QML when the user confirms they have entered the PIN in the
+    // host web UI. Releases the semaphore that gates phase 2 of OTP pairing.
+    Q_INVOKABLE void resumeOTPPairing();
+
     Q_INVOKABLE bool isOTPSupported(int computerIndex);
 
     Q_INVOKABLE void testConnectionForComputer(int computerIndex);
@@ -53,6 +58,8 @@ public:
 signals:
     void pairingCompleted(QVariant error);
     void connectionTestCompleted(int result, QString blockedPorts);
+    // Forwarded from ComputerManager::otpStage1Completed — UI shows Continue button
+    void otpStage1Completed();
 
 private slots:
     void handleComputerStateChanged(NvComputer* computer);

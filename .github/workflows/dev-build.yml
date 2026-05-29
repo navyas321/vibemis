@@ -18,7 +18,7 @@ name: Development Build
 
 on:
   push:
-    branches: 
+    branches:
       - develop
       - dev
       - main
@@ -29,7 +29,15 @@ on:
       - 'chore/**'
       - 'test**'
       - 'vibemis-**'
-  workflow_dispatch:  # Allow manual triggering
+      - 'release/**'   # production release branch — builds stable AppImage
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Set to "stable" to publish a production release (prerelease=false, shown as latest)'
+        required: false
+        type: choice
+        options: ['', 'stable']
+        default: ''
 
 env:
   QT_VERSION: '6.8.3'
@@ -42,6 +50,7 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       numeric_version: ${{ steps.version.outputs.numeric_version }}
       is_prerelease: ${{ steps.version.outputs.is_prerelease }}
+      release_tier: ${{ steps.version.outputs.release_tier }}
       should_build: ${{ steps.check-changes.outputs.should_build }}
     steps:
       - name: Checkout
@@ -52,13 +61,19 @@ jobs:
       - name: Check for meaningful changes
         id: check-changes
         run: |
-          # Always build on integration/release branches
-          if [[ "${{ github.ref_name }}" == "main" || "${{ github.ref_name }}" == "master" || "${{ github.ref_name }}" == "vibemis-main" ]]; then
+          # Always build on integration branches, release branches, and workflow_dispatch.
+          # release/** triggers a stable production release; workflow_dispatch with
+          # release_type=stable does the same from any branch.
+          if [[ "${{ github.ref_name }}" == "main" || \
+                "${{ github.ref_name }}" == "master" || \
+                "${{ github.ref_name }}" == "vibemis-main" || \
+                "${{ github.ref_name }}" =~ ^release/ || \
+                "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "should_build=true" >> $GITHUB_OUTPUT
-            echo "Always building on integration branch for release"
+            echo "Always building on integration/release branch or workflow_dispatch"
             exit 0
           fi
-          
+
           # Skip builds if commit message contains [skip ci] or [ci skip]
           if echo "${{ github.event.head_commit.message }}" | grep -E "\[(skip ci|ci skip)\]" > /dev/null; then
             echo "should_build=false" >> $GITHUB_OUTPUT
@@ -134,32 +149,45 @@ jobs:
           TIMESTAMP=$(date +"%Y%m%d")
           BUILD_NUMBER=$(date +"%H%M")
           
-          # Determine if this is a prerelease
+          # ── Release tier determination ─────────────────────────────────────
+          # Tier       Branch / trigger               Prerelease  Latest  Label
+          # release    release/** OR workflow_dispatch  false       true   ✅ Release
+          # beta       vibemis-main, develop            false       true   🧪 Beta  ← shown as latest until explicit release
+          # alpha      fix/**, feat/**                  true        false  🔬 Alpha
+          # dev        anything else                    true        false  🔧 Dev
+
           IS_PRERELEASE="true"
-          PRERELEASE_SUFFIX=""
-          
-          if [[ "$BRANCH_NAME" == "main" || "$BRANCH_NAME" == "master" ]]; then
-            # Main branch = stable release
+          RELEASE_TIER="dev"
+
+          if [[ "$BRANCH_NAME" =~ ^release/ || \
+                "${{ github.event.inputs.release_type }}" == "stable" || \
+                "$BRANCH_NAME" == "main" || \
+                "$BRANCH_NAME" == "master" ]]; then
+            # ✅ Production release — explicit stable ship
             VERSION="$BASE_VERSION"
             IS_PRERELEASE="false"
-          elif [[ "$BRANCH_NAME" == "develop" ]]; then
-            # Develop branch = development prerelease
-            VERSION="$BASE_VERSION-dev.$TIMESTAMP.$BUILD_NUMBER+$COMMIT_SHORT"
-            PRERELEASE_SUFFIX="dev"
-          elif [[ "$BRANCH_NAME" =~ ^(feature|feat)/ ]]; then
-            # Feature branch = feature prerelease
-            FEATURE_NAME=$(echo "$BRANCH_NAME" | sed 's|^.*/||' | sed 's/[^a-zA-Z0-9._-]/-/g')
-            VERSION="$BASE_VERSION-feature.$FEATURE_NAME.$TIMESTAMP.$BUILD_NUMBER+$COMMIT_SHORT"
-            PRERELEASE_SUFFIX="feature"
-          elif [[ "$BRANCH_NAME" =~ ^(hotfix|fix)/ ]]; then
-            # Hotfix branch = hotfix prerelease
-            VERSION="$BASE_VERSION-hotfix.$TIMESTAMP.$BUILD_NUMBER+$COMMIT_SHORT"
-            PRERELEASE_SUFFIX="hotfix"
+            RELEASE_TIER="release"
+
+          elif [[ "$BRANCH_NAME" == "vibemis-main" || "$BRANCH_NAME" == "develop" ]]; then
+            # 🧪 Beta — merged and integrated; NOT a prerelease so it appears as
+            # "latest" on GitHub Releases and is downloadable via /releases/latest.
+            # This is the current recommended build until an explicit release lands.
+            VERSION="$BASE_VERSION-beta.$TIMESTAMP.$BUILD_NUMBER+$COMMIT_SHORT"
+            IS_PRERELEASE="false"
+            RELEASE_TIER="beta"
+
+          elif [[ "$BRANCH_NAME" =~ ^(fix|hotfix|feat|feature)/ ]]; then
+            # 🔬 Alpha — work-in-progress fix/feature branch, test before merging
+            VERSION="$BASE_VERSION-alpha.$TIMESTAMP.$BUILD_NUMBER+$COMMIT_SHORT"
+            RELEASE_TIER="alpha"
+
           else
-            # Other branches = alpha prerelease
-            VERSION="$BASE_VERSION-alpha.$BRANCH_SANITIZED.$TIMESTAMP.$BUILD_NUMBER+$COMMIT_SHORT"
-            PRERELEASE_SUFFIX="alpha"
+            # 🔧 Dev — any other branch (chore, test, etc.)
+            VERSION="$BASE_VERSION-dev.$BRANCH_SANITIZED.$TIMESTAMP.$BUILD_NUMBER+$COMMIT_SHORT"
+            RELEASE_TIER="dev"
           fi
+
+          echo "release_tier=$RELEASE_TIER" >> $GITHUB_OUTPUT
           
           # Create numeric version for Windows RC files (extract major.minor.patch + build number)
           IFS='.' read -r MAJOR MINOR PATCH <<< "$BASE_VERSION"
@@ -589,7 +617,19 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    if: (github.ref == 'refs/heads/vibemis-main' || github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && needs.setup-version.outputs.should_build == 'true'  # Create releases for vibemis-main/develop/main branches when builds ran
+    if: >-
+      needs.setup-version.outputs.should_build == 'true' && (
+        github.ref == 'refs/heads/vibemis-main' ||
+        github.ref == 'refs/heads/develop' ||
+        github.ref == 'refs/heads/main' ||
+        github.ref == 'refs/heads/master' ||
+        startsWith(github.ref, 'refs/heads/fix/') ||
+        startsWith(github.ref, 'refs/heads/hotfix/') ||
+        startsWith(github.ref, 'refs/heads/feat/') ||
+        startsWith(github.ref, 'refs/heads/feature/') ||
+        startsWith(github.ref, 'refs/heads/release/') ||
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.release_type == 'stable')
+      )
     
     steps:
     - name: Checkout
@@ -735,17 +775,28 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ needs.setup-version.outputs.version }}
-        name: "${{ (github.ref_name == 'main' || github.ref_name == 'master') && '🚀 Production Release' || '🚧 Development Build' }} ${{ needs.setup-version.outputs.version }}"
+        name: >-
+          ${{
+            needs.setup-version.outputs.release_tier == 'release' && '✅ Vibemis Release' ||
+            needs.setup-version.outputs.release_tier == 'beta'    && '🧪 Vibemis Beta'    ||
+            needs.setup-version.outputs.release_tier == 'alpha'   && '🔬 Vibemis Alpha'   ||
+            '🔧 Vibemis Dev'
+          }} ${{ needs.setup-version.outputs.version }}
         body: |
-          ${{ (github.ref_name == 'main' || github.ref_name == 'master') && '🚀 **Production Release** 🚀
+          ${{
+            needs.setup-version.outputs.release_tier == 'release' && '✅ **Production Release**
 
-          This is an official production release of Vibemis.
+          Verified and tested. Recommended for general use.' ||
+            needs.setup-version.outputs.release_tier == 'beta' && '🧪 **Beta Build**
 
-          **✅ Stable**: This release has been tested and is recommended for general use.' || '🚧 **Development Build** 🚧
-          
-          This is an automated development build from the `develop` branch.
-          
-          **⚠️ Warning**: Development builds are unstable and intended for testing purposes only. Use at your own risk!' }}
+          Merged into `vibemis-main`. Functionally complete; broader smoke testing welcome.
+          Not yet a production release.' ||
+            needs.setup-version.outputs.release_tier == 'alpha' && '🔬 **Alpha Build**
+
+          In-progress fix/feature branch. For targeted test cycles only.
+          **Do not use as a daily driver.**' ||
+            '🔧 **Dev Build** — automated build from a non-standard branch.'
+          }}
           
           ---
           
@@ -774,6 +825,7 @@ jobs:
           artifacts/**/build_info.txt
           artifacts/**/install.sh
         prerelease: ${{ needs.setup-version.outputs.is_prerelease }}
+        make_latest: ${{ (needs.setup-version.outputs.release_tier == 'release' || needs.setup-version.outputs.release_tier == 'beta') && 'true' || 'false' }}
         draft: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

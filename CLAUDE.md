@@ -44,6 +44,117 @@ The feature branch carrying a test AppImage MUST be named `test<N>-<slug>` (e.g.
 
 Build agent rule: before starting a test cycle, rename (or create fresh from) the feature branch as `test<N>-<slug>`, commit the AppImage + instructions there, and target that branch in the instructions' `git checkout` command.
 
+## Phase 3 — plan
+
+Phase 2 merged. Phase 3 priorities in order:
+
+### P3.1 — Quick Menu (SDL overlay, Game Mode) ← PRIMARY
+The QQuickView window approach is confirmed broken in Gamescope (Game Mode test failed).
+Full rearchitecture to SDL-internal overlay required (see SDL overlay note below).
+This also unblocks Server Commands (Bubbles) which is only accessible via Quick Menu.
+
+### P3.2 — Steam library display name (AppImage shown without extension)
+XDG desktop integration hook was added to AppRun but didn't work on first test.
+Need to investigate: AppImageLauncher integration, steam-shortcut script, or
+direct `~/.config/systemd/user/` approach. Research proper method for SteamOS Game Mode.
+
+### P3.3 — Vibepollo presets (Phase 2.5)
+Resolution/quality profiles pre-tuned for Vibepollo on the Legion Go S Z2:
+one-click presets for common scenarios (1920×1200@120 / HEVC / VAAPI, etc.)
+
+### P3.4 — Quick Menu content (take inspiration from Artemis Qt + moonlight-qt)
+Once Quick Menu renders correctly in Game Mode, review and expand the menu items:
+- Artemis Qt reference: clipboard, server commands, virtual display toggle,
+  OTP status, resolution scaling, fractional refresh, permissions viewer
+- moonlight-qt reference: stats overlay, fullscreen, mouse/keyboard capture,
+  quit, paste clipboard (keyboard shortcut only in upstream)
+- Ensure all Artemis Apollo-protocol features are surfaced in the menu
+
+### P3.5 — Video scale mode, pan/zoom, compact perf overlay (from original plan)
+Phases 3–7 from the original plan (see pure-purring-pillow.md)
+
+## Development priority: Game Mode over Desktop Mode
+
+**Primary target is SteamOS Game Mode (Gamescope), not Desktop Mode (KDE Plasma).**
+
+Game Mode uses Gamescope — Valve's micro-compositor that runs games in a nested Wayland
+session with a single Vulkan surface. Key implications:
+
+- **Separate OS windows do not work in Gamescope.** A `QQuickView` with
+  `Qt::WindowStaysOnTopHint` will not appear in Game Mode. Gamescope owns all z-ordering
+  through its own Vulkan surface.
+- **SDL-internal overlay rendering is the only correct approach for Game Mode.** This is
+  exactly what moonlight-qt does: it renders overlays (stats, warnings) as SDL textures
+  composited inside `sdlvid.cpp` via `SDL_RenderCopy` after the video frame. No separate
+  window; no focus or z-order issues.
+- The current Quick Menu QQuickView approach is a Desktop Mode workaround. It works
+  tolerably in KDE Plasma windowed mode but is architecturally wrong for Game Mode.
+
+**Long-term Quick Menu architecture (confirmed needed — Game Mode test failed):**
+Migrate to SDL-internal overlay rendered as a texture in `sdlvid.cpp`:
+
+```
+QML scene (QuickMenu.qml)
+  → QQuickRenderControl (renders to QOpenGLFramebufferObject, offscreen)
+  → FBO colour attachment (GL texture ID)
+  → SDL_CreateTextureFromSurface / GL texture binding
+  → SDL_RenderCopy() after video frame in sdlvid.cpp render loop
+  → SDL_RenderPresent() — overlay composited into the stream
+```
+
+Key implementation steps (branch: feat/quickmenu-sdl-overlay):
+1. `QuickMenuSdlRenderer` class — owns QOffscreenSurface, QOpenGLContext (shared
+   with SDL GL context), QQuickRenderControl, QQuickWindow, SDL_Texture*
+2. SDL GL context sharing: call `SDL_GL_GetCurrentContext()` before Qt GL context
+   creation, pass as share context to QOpenGLContext
+3. Render on demand: when menu is visible + SDL frame is about to present,
+   render QML to FBO, copy pixels to SDL_Texture, SDL_RenderCopy
+4. Input: inject QMouseEvent/QKeyEvent/touch events from SDL event handler
+   into the QQuickWindow directly (no OS window focus involved)
+5. Remove QQuickView and all the SDL capture release hacks
+
+**When testing:** prioritise Game Mode. Desktop Mode results are informative but secondary.
+If a feature works only in Desktop Mode, it's not ready.
+
+## CI / AppImage release rules — READ BEFORE PUSHING
+
+The CI smart-build check (`setup-version` → `check-changes`) sets `should_build=false`
+when the HEAD commit only touches `.md` files. When `should_build=false`, the AppImage
+build and `create-dev-release` jobs are **skipped entirely** — no AppImage is produced.
+
+**This trips us constantly.** The pattern that breaks things:
+
+```
+git commit -m "fix: real code change"        ← code touches .cpp/.h/.qml
+git commit -m "test: add testN instructions" ← only .md files
+git push                                     ← CI sees HEAD = .md only → skips
+```
+
+The test agent downloads from GitHub Releases and finds the OLD AppImage (from the
+commit before the fix), not the new one.
+
+**Rules:**
+
+1. **The last commit before a push that is meant to produce a new release MUST touch a
+   code file** (`.cpp`, `.h`, `.qml`, `.yml`, `.pro`). `.md`-only commits set
+   `should_build=false` and no AppImage is built.
+
+2. **When you want the test agent to pick up a build:** make sure the code fix commit
+   (`fix: ...`) is the LAST commit in the push, or bundle test instructions into the
+   same commit as the code change.
+
+3. **Test instruction commits (`test: ...`) should come BEFORE the fix commit**, not after.
+   Order matters because CI evaluates the HEAD commit only.
+
+4. **If you've already pushed a docs-only commit and need to force a new build:** make a
+   trivial meaningful code change (e.g. add/update a comment in a `.cpp` file) with
+   `fix:` in the commit title and push it. Do NOT use `workflow_dispatch` alone —
+   it still goes through the smart-build check and will skip if HEAD is docs-only.
+
+5. **The `create-dev-release` job only runs on `fix/**` and `vibemis-main`.** Other branch
+   prefixes (`test**`, `verify/**`, `chore/**`) build the AppImage as a CI artifact but
+   do NOT publish it to GitHub Releases. Test agents can only download from Releases.
+
 ## Working agreement
 
 - Plan mode for non-trivial changes — explain each step before running it.

@@ -157,6 +157,51 @@ fi
 HOOK
 chmod +x $DEPLOY_FOLDER/apprun-hooks/01-libva-driver-paths.sh
 
+# Hook 2: XDG desktop integration
+# Creates ~/.local/share/applications/Vibemis.desktop on first launch so that
+# Steam Game Mode (and any XDG-compliant launcher) shows "Vibemis" in the
+# library without the ".AppImage" filename suffix.
+# The desktop file is re-written on each launch to keep the Exec= path current
+# (the AppImage might be moved or renamed between updates).
+cat > $DEPLOY_FOLDER/apprun-hooks/02-desktop-integration.sh << 'DESKHOOK'
+# Vibemis AppRun hook — register XDG desktop entry so Steam Game Mode
+# shows "Vibemis" instead of "Vibemis AppImage" in the library.
+_vibemis_appimage_path="${APPIMAGE:-$ARGV0}"
+_vibemis_desktop_dir="${HOME}/.local/share/applications"
+_vibemis_icon_dir="${HOME}/.local/share/icons/hicolor/scalable/apps"
+_vibemis_desktop="${_vibemis_desktop_dir}/Vibemis.desktop"
+
+mkdir -p "${_vibemis_desktop_dir}" "${_vibemis_icon_dir}"
+
+# Write the desktop entry.  We do this unconditionally (not just on first run)
+# so the Exec= path stays accurate if the AppImage is moved.
+cat > "${_vibemis_desktop}" << DESKEOF
+[Desktop Entry]
+Type=Application
+Name=Vibemis
+Comment=Linux game streaming client — pairs with Vibepollo
+Exec=${_vibemis_appimage_path} %U
+Icon=vibemis
+Categories=Game;Network;
+Keywords=streaming;gaming;moonlight;vibepollo;
+StartupNotify=true
+DESKEOF
+
+# Install the SVG icon if not already present (icon rarely changes)
+_vibemis_icon_src="${APPDIR}/usr/share/icons/hicolor/scalable/apps/vibemis.svg"
+_vibemis_icon_dst="${_vibemis_icon_dir}/vibemis.svg"
+if [ -f "${_vibemis_icon_src}" ] && [ ! -f "${_vibemis_icon_dst}" ]; then
+    cp "${_vibemis_icon_src}" "${_vibemis_icon_dst}"
+    # Notify the icon cache if xdg-icon-resource is available
+    command -v xdg-icon-resource >/dev/null 2>&1 && \
+        xdg-icon-resource forceupdate --noupdate 2>/dev/null || true
+fi
+
+unset _vibemis_appimage_path _vibemis_desktop_dir _vibemis_icon_dir \
+      _vibemis_desktop _vibemis_icon_src _vibemis_icon_dst
+DESKHOOK
+chmod +x $DEPLOY_FOLDER/apprun-hooks/02-desktop-integration.sh
+
 export QML_SOURCES_PATHS=$SOURCE_ROOT/app/gui
 export QMAKE=qmake6
 

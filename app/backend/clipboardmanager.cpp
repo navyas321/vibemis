@@ -50,10 +50,12 @@ void ClipboardManager::loadSettings()
     m_bidirectionalSync = settings->clipboardSyncBidirectional();
     m_maxClipboardSize = settings->clipboardSyncMaxSize();
     m_maxContentSizeMB = m_maxClipboardSize / (1024 * 1024); // Convert bytes to MB
-    
-    qDebug() << "ClipboardManager: Loaded settings - enabled:" << m_enabled 
-             << "bidirectional:" << m_bidirectionalSync 
-             << "maxSize:" << m_maxClipboardSize << "bytes";
+    m_textOnlyMode = settings->clipboardSyncTextOnly();
+
+    qDebug() << "ClipboardManager: Loaded settings - enabled:" << m_enabled
+             << "bidirectional:" << m_bidirectionalSync
+             << "maxSize:" << m_maxClipboardSize << "bytes"
+             << "textOnly:" << m_textOnlyMode;
 }
 
 ClipboardManager::~ClipboardManager()
@@ -454,6 +456,11 @@ void ClipboardManager::setTextOnlyMode(bool textOnly)
 {
     if (m_textOnlyMode != textOnly) {
         m_textOnlyMode = textOnly;
+
+        auto settings = VibemisSettings::instance();
+        settings->setClipboardSyncTextOnly(textOnly);
+        settings->save();
+
         emit textOnlyModeChanged();
         qDebug() << "ClipboardManager: Text-only mode changed to" << textOnly;
     }

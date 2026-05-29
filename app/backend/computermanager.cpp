@@ -13,6 +13,9 @@
 #include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QRandomGenerator>
+#include <QXmlStreamReader>
+#include <QSemaphore>
+#include <QAtomicPointer>
 #include <QRegularExpression>
 
 // Vibemis: keep wjbeckett's OpenSSL + crypto includes for OTP pairing handshake.
@@ -667,14 +670,26 @@ public:
         : m_ComputerManager(computerManager),
           m_Computer(computer),
           m_Pin(pin),
-          m_Passphrase(passphrase)
+          m_Passphrase(passphrase),
+          m_Gate(0) // starts locked; released by resume()
     {
-        connect(this, &PendingOTPPairingTask::pairingCompleted,
-                computerManager, &ComputerManager::pairingCompleted);
+        // Do NOT connect pairingCompleted in the constructor — connections are
+        // set up in pairHostWithOTP() so we can also null m_ActiveOTPTask there.
+        setAutoDelete(false); // we manage lifetime via deleteLater()
+    }
+
+    // Called from the UI thread when the user confirms they have entered the
+    // PIN in the host web UI. Unblocks phase 2 (challenge exchange).
+    void resume()
+    {
+        m_Gate.release(1);
     }
 
 signals:
     void pairingCompleted(NvComputer* computer, QString error);
+    // Emitted after phase 1 (getservercert) succeeds; UI should show
+    // Continue button at this point.
+    void stage1Completed();
 
 private:
     // Helper functions for crypto operations
@@ -799,7 +814,7 @@ qCritical() << "Failed to sign message";
     }
     
     // Perform the complete pairing handshake after OTP authentication, matching Android client behavior
-    bool performFullPairingHandshake(NvHTTP& http, const QString& saltStr, const QString& otpHash, const QString& pin)
+    bool performFullPairingHandshake(NvHTTP& http, const QString& saltStr, const QString& pin)
     {
         qDebug() << "PendingOTPPairingTask: Starting full pairing handshake";
         
@@ -982,81 +997,127 @@ qDebug() << "PendingOTPPairingTask: Generated AES key from salt+PIN";
             qDebug() << "PendingOTPPairingTask: Passphrase from user:" << m_Passphrase;
             
             // Generate a 16-byte salt
+            // Generate a random 16-byte salt. This salt is sent to the server in
+            // phrase=getservercert and used by both sides to derive the AES key for
+            // the phase 2 challenge: AES_key = SHA256(salt_bytes + PIN_utf8).left(16).
+            // The server stores the salt when it receives getservercert, then uses it
+            // once the user submits the PIN via Vibepollo's "Pair Client" web form.
             QByteArray saltBytes(16, 0);
             for (int i = 0; i < 16; i++) {
                 saltBytes[i] = QRandomGenerator::global()->bounded(256);
             }
             QString saltStr = saltBytes.toHex();
-            
-            // Generate the OTP hash
-            QString plainText = m_Pin + saltStr + m_Passphrase;
-            QCryptographicHash hash(QCryptographicHash::Sha256);
-            hash.addData(plainText.toUtf8());
-            QString otpHash = hash.result().toHex().toUpper();
-            
-            qDebug() << "PendingOTPPairingTask: Generated OTP hash:" << otpHash;
-            qDebug() << "PendingOTPPairingTask: Using salt:" << saltStr;
-            
-            // Build the pairing parameters - use consistent device name
+
+            // Do NOT include otpauth in this request.
+            //
+            // Apollo's otpauth=SHA256(otp+salt+passphrase) extension requires the
+            // server to have a live OTP generated via POST /api/otp. Without that,
+            // Vibepollo falls back to deriving the AES key from a random PIN and
+            // returning status_message="OTP auth not available." — even though it
+            // sends paired=1+plaincert as an anti-timing-attack decoy. Phase 2
+            // (clientchallenge) then always fails because neither side shares the
+            // same PIN.
+            //
+            // Using the standard getservercert (no otpauth) puts Vibepollo into its
+            // normal pairing mode: it waits for the user to submit the "Pair Client"
+            // form with the client-generated PIN, then stores that PIN and uses it
+            // to decrypt the phase 2 AES challenge. The two-stage gate in this task
+            // ensures phase 2 only fires after the user confirms they have entered
+            // the PIN on Vibepollo.
             QString deviceName = QSysInfo::machineHostName();
             if (deviceName.isEmpty()) {
                 deviceName = "Vibemis";
             }
-            QString pairingParams = QString("devicename=%1&updateState=1&phrase=getservercert&salt=%2&clientcert=%3&otpauth=%4")
+            QString pairingParams = QString("devicename=%1&updateState=1&phrase=getservercert&salt=%2&clientcert=%3")
                 .arg(deviceName)
                 .arg(saltStr)
-                .arg(QString(IdentityManager::get()->getCertificate().toHex()))
-                .arg(otpHash);
+                .arg(QString(IdentityManager::get()->getCertificate().toHex()));
             
-            qDebug() << "PendingOTPPairingTask: Sending OTP pairing request";
-            
+            qDebug() << "PendingOTPPairingTask: Sending getservercert — waiting for PIN entry on host (up to 2 min)";
+
+            // Vibepollo holds this connection OPEN until the user submits the
+            // 'Pair Client' form in its web UI (the server calls fg.disable() and
+            // stores the response object). The 5-second default timeout kills the
+            // connection before the user has time to submit. Use a 2-minute timeout
+            // to match the server's OTP_EXPIRE_DURATION and give the user enough
+            // time to enter the PIN.
+            const int kPairRequestTimeoutMs = 120000; // 2 minutes
             QString pairingRequest = http.openConnectionToString(
                 http.m_BaseUrlHttp,
                 "pair",
                 pairingParams,
-                5000
+                kPairRequestTimeoutMs
             );
             
             qDebug() << "PendingOTPPairingTask: Received response:" << pairingRequest;
-            
-            // Parse the response
+
             if (pairingRequest.isEmpty()) {
                 qDebug() << "PendingOTPPairingTask: OTP pairing failed - no response";
-                emit pairingCompleted(m_Computer, "No response from Apollo server. Please check the server is running and OTP is active.");
+                emit pairingCompleted(m_Computer, "No response from server.");
                 return;
             }
-            
-            // Check for specific error cases
-            if (pairingRequest.contains("status_message=\"OTP auth not available.\"")) {
-                qDebug() << "PendingOTPPairingTask: OTP pairing failed - OTP not available";
-                emit pairingCompleted(m_Computer, "OTP is not available or has expired. Please generate a new OTP on the Apollo server.");
-                return;
+
+            // Parse the response properly using QXmlStreamReader.
+            //
+            // Do NOT gate on status_message text. Vibepollo (and servers that
+            // implement classic Moonlight pairing without the Apollo otpauth
+            // extension) return status_code=200, paired=1, a full plaincert,
+            // AND status_message="OTP auth not available." simultaneously —
+            // the message is informational, not an error. The authoritative
+            // signals are status_code=200 + paired=1 + plaincert present.
+            int  rootStatusCode = 0;
+            QString pairedValue;
+            QString plaincertValue;
+            {
+                QXmlStreamReader xml(pairingRequest);
+                while (!xml.atEnd()) {
+                    xml.readNext();
+                    if (xml.isStartElement()) {
+                        if (xml.name() == QStringLiteral("root")) {
+                            rootStatusCode = (int)xml.attributes().value("status_code").toUInt();
+                        } else if (xml.name() == QStringLiteral("paired")) {
+                            pairedValue = xml.readElementText();
+                        } else if (xml.name() == QStringLiteral("plaincert")) {
+                            plaincertValue = xml.readElementText();
+                        }
+                    }
+                }
             }
-            
-            // Check if pairing was successful
-            if (pairingRequest.contains("<root status_code=\"200\">") && pairingRequest.contains("<paired>1</paired>")) {
-                qDebug() << "PendingOTPPairingTask: OTP pairing successful, extracting server certificate";
-                
-                // Extract the server certificate from the response
-                QRegularExpression certRegex(R"(<plaincert>([A-Fa-f0-9]+)</plaincert>)");
-                QRegularExpressionMatch certMatch = certRegex.match(pairingRequest);
-                
-                if (certMatch.hasMatch()) {
-                    QString serverCertHex = certMatch.captured(1);
-                    QByteArray serverCertBytes = QByteArray::fromHex(serverCertHex.toUtf8());
+
+            qDebug() << "PendingOTPPairingTask: Parsed response — status_code:" << rootStatusCode
+                     << "paired:" << pairedValue
+                     << "plaincert present:" << !plaincertValue.isEmpty();
+
+            if (rootStatusCode == 200 && pairedValue == QStringLiteral("1") && !plaincertValue.isEmpty()) {
+                qDebug() << "PendingOTPPairingTask: Pairing accepted, extracting server certificate";
+
+                // plaincertValue was already extracted by the XML parser above.
+                {
+                    QByteArray serverCertBytes = QByteArray::fromHex(plaincertValue.toUtf8());
                     QSslCertificate serverCert(serverCertBytes);
                     
                     if (!serverCert.isNull()) {
-                        // Set the server certificate for HTTPS requests
-                        m_Computer->serverCert = serverCert;
+                        // Give the local NvHTTP instance the cert so phase 2-4
+                        // requests go over HTTPS. Do NOT write it to m_Computer
+                        // yet — the polling thread watches m_Computer->serverCert
+                        // and will immediately try HTTPS; with a fresh uniqueid
+                        // the server hasn't authorized the client yet and returns
+                        // 401, causing the host to appear offline until phase 4
+                        // completes. The cert is written to m_Computer only after
+                        // the full handshake succeeds (see below).
                         http.setServerCert(serverCert);
-                        
-                        qDebug() << "PendingOTPPairingTask: Server certificate obtained, preparing for full handshake";
-                        
+
+                        // Phase 1 returned — the user already submitted the 'Pair
+                        // Client' form on Vibepollo (that's what unblocked the HTTP
+                        // response). Vibepollo stored the cipher key derived from
+                        // the PIN during that submission. Phases 2-4 can fire
+                        // immediately; no user confirmation gate is needed.
+                        qDebug() << "PendingOTPPairingTask: Phase 1 complete, firing challenge exchange immediately";
+
                         qDebug() << "PendingOTPPairingTask: Server certificate obtained, performing full pairing handshake";
                         
                         // Complete the full pairing process like Android client does
-                        if (performFullPairingHandshake(http, saltStr, otpHash, m_Pin)) {
+                        if (performFullPairingHandshake(http, saltStr, m_Pin)) {
                             // Lock the computer manager to update the computer's state atomically
                             QWriteLocker lock(&m_ComputerManager->m_Lock);
 
@@ -1088,17 +1149,18 @@ qDebug() << "PendingOTPPairingTask: Generated AES key from salt+PIN";
                         }
                     } else {
                         qDebug() << "PendingOTPPairingTask: Invalid server certificate received";
-                        emit pairingCompleted(m_Computer, "Invalid server certificate received from Apollo server");
+                        emit pairingCompleted(m_Computer, "Invalid server certificate received from server");
                         return;
                     }
-                } else {
-                    qDebug() << "PendingOTPPairingTask: No server certificate found in response";
-                    emit pairingCompleted(m_Computer, "Server certificate not found in Apollo response");
-                    return;
                 }
             } else {
-                qDebug() << "PendingOTPPairingTask: OTP pairing failed with response:" << pairingRequest;
-                emit pairingCompleted(m_Computer, "Apollo OTP pairing failed: " + pairingRequest);
+                // paired != 1, or no cert, or non-200 status.
+                // Log the raw response to aid future diagnostics.
+                qDebug() << "PendingOTPPairingTask: Pairing rejected — status_code:" << rootStatusCode
+                         << "paired:" << pairedValue;
+                emit pairingCompleted(m_Computer,
+                    QString("Pairing failed (status %1). Check that the PIN was entered correctly "
+                            "in the host web UI.").arg(rootStatusCode));
                 return;
             }
             
@@ -1124,14 +1186,36 @@ qDebug() << "PendingOTPPairingTask: Generated AES key from salt+PIN";
     NvComputer* m_Computer;
     QString m_Pin;
     QString m_Passphrase;
+    QSemaphore m_Gate; // initialized to 0 in constructor; released by resume()
 };
 
 void ComputerManager::pairHostWithOTP(NvComputer* computer, QString pin, QString passphrase)
 {
-    // Punt to a worker thread to avoid stalling the
-    // UI while waiting for OTP pairing to complete
-    PendingOTPPairingTask* pairing = new PendingOTPPairingTask(this, computer, pin, passphrase);
-    QThreadPool::globalInstance()->start(pairing);
+    PendingOTPPairingTask* task = new PendingOTPPairingTask(this, computer, pin, passphrase);
+    m_ActiveOTPTask.storeRelaxed(task);
+
+    // Forward stage1Completed to the manager's own signal (picked up by QML).
+    connect(task, &PendingOTPPairingTask::stage1Completed,
+            this, &ComputerManager::otpStage1Completed,
+            Qt::QueuedConnection);
+
+    // Forward pairingCompleted and clear the task pointer atomically.
+    connect(task, &PendingOTPPairingTask::pairingCompleted,
+            this, [this, task](NvComputer* comp, QString err) {
+                m_ActiveOTPTask.storeRelaxed(nullptr);
+                emit pairingCompleted(comp, err);
+                task->deleteLater();
+            }, Qt::QueuedConnection);
+
+    QThreadPool::globalInstance()->start(task);
+}
+
+void ComputerManager::resumeOTPPairing()
+{
+    PendingOTPPairingTask* task = m_ActiveOTPTask.loadRelaxed();
+    if (task) {
+        task->resume();
+    }
 }
 
 class PendingQuitTask : public QObject, public QRunnable

@@ -14,6 +14,8 @@ void ComputerModel::initialize(ComputerManager* computerManager)
             this, &ComputerModel::handleComputerStateChanged);
     connect(m_ComputerManager, &ComputerManager::pairingCompleted,
             this, &ComputerModel::handlePairingCompleted);
+    connect(m_ComputerManager, &ComputerManager::otpStage1Completed,
+            this, &ComputerModel::otpStage1Completed);
 
     m_Computers = m_ComputerManager->getComputers();
 }
@@ -46,6 +48,8 @@ QVariant ComputerModel::data(const QModelIndex& index, int role) const
         return computer->isSupportedServerVersion;
     case ApolloVersionRole:
         return computer->apolloVersion;
+    case IsApolloServerRole:
+        return computer->isApolloServer();
     case DetailsRole: {
         QString state, pairState;
 
@@ -145,6 +149,7 @@ QHash<int, QByteArray> ComputerModel::roleNames() const
     names[ServerSupportedRole] = "serverSupported";
     names[DetailsRole] = "details";
     names[ApolloVersionRole] = "apolloVersion";
+    names[IsApolloServerRole] = "isApolloServer";
 
     return names;
 }
@@ -260,6 +265,11 @@ void ComputerModel::pairComputerWithOTP(int computerIndex, QString pin, QString 
     Q_ASSERT(computerIndex < m_Computers.count());
 
     m_ComputerManager->pairHostWithOTP(m_Computers[computerIndex], pin, passphrase);
+}
+
+void ComputerModel::resumeOTPPairing()
+{
+    m_ComputerManager->resumeOTPPairing();
 }
 
 bool ComputerModel::isOTPSupported(int computerIndex)

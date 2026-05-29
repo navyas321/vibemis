@@ -101,13 +101,29 @@ void QuickMenuManager::setVisible(bool visible)
     }
     
     m_isVisible = visible;
-    
+
     if (visible) {
+        // Release ALL SDL pointer capture before showing the overlay.
+        // moonlight-qt renders overlays as SDL textures inside the stream window —
+        // the architecturally correct approach on Linux. We use a separate QQuickView
+        // which requires three SDL calls to hand mouse control back to the OS/Qt:
+        //  SDL_SetRelativeMouseMode(FALSE) — exits relative/locked cursor mode
+        //  SDL_CaptureMouse(FALSE)         — releases SDL's soft mouse capture
+        //  SDL_ShowCursor(ENABLE)          — makes the cursor visible on screen
+        // Without all three, the Qt overlay receives no mouse press events in
+        // KDE Plasma / SteamOS Desktop Mode even with Qt::WindowStaysOnTopHint.
+        SDL_SetRelativeMouseMode(SDL_FALSE);
+        SDL_CaptureMouse(SDL_FALSE);
+        SDL_ShowCursor(SDL_ENABLE);
+
         createQuickView();
     } else {
         if (m_quickView) {
             m_quickView->hide();
         }
+        // Note: we do NOT re-grab the mouse here — the user's intent when
+        // dismissing the menu may be to stay in desktop/pointer mode. The
+        // "Toggle Mouse Capture" item in the menu handles re-enabling capture.
     }
     
     emit visibilityChanged();
@@ -231,8 +247,10 @@ void QuickMenuManager::executeServerCommand(const QString &command)
     if (m_serverCommandManager) {
         // First check if the server command manager has permission (thread-safe property access)
         bool hasPermission = false;
-        QMetaObject::invokeMethod(m_serverCommandManager, "hasPermission", 
-                                  Qt::BlockingQueuedConnection,
+        // DirectConnection: QuickMenuManager and ServerCommandManager both live on
+        // the main thread (Qt singletons), so BlockingQueuedConnection would deadlock.
+        QMetaObject::invokeMethod(m_serverCommandManager, "hasPermission",
+                                  Qt::DirectConnection,
                                   Q_RETURN_ARG(bool, hasPermission));
                                   
         if (hasPermission) {
@@ -423,23 +441,34 @@ void QuickMenuManager::createQuickView()
             qDebug() << "Failed to create root object";
         }
         
-        // Make it a popup overlay
-        m_quickView->setFlags(Qt::WindowStaysOnTopHint | Qt::FramelessWindowHint | Qt::Tool);
+        // Overlay window flags.
+        // Qt::Tool on Wayland/SteamOS causes the window to render visually
+        // transparent even though the QML Rectangle has a solid colour —
+        // the compositor treats Tool windows differently and the QML Scene
+        // Graph content is not composited correctly. Dropping Qt::Tool and
+        // using a plain frameless stay-on-top window fixes this.
+        // We also do NOT call setColor(transparent): the QML root Rectangle
+        // already provides the dark opaque background; making the QQuickView
+        // background transparent just creates compositing problems on some
+        // Wayland setups where the result is an invisible-but-input-capturing
+        // window.
+        m_quickView->setFlags(Qt::WindowStaysOnTopHint | Qt::FramelessWindowHint);
         
-        // Set transparent background
-        m_quickView->setColor(QColor(Qt::transparent));
-        
-        // Position the view to center the menu on screen
-        int centerX, centerY;
-        if (m_hasWindowGeometry) {
-            centerX = m_windowX + (m_windowWidth - 500) / 2;
-            centerY = m_windowY + (m_windowHeight - 400) / 2;
-            qDebug() << "Centering menu at:" << centerX << centerY;
-            m_quickView->setGeometry(centerX, centerY, 500, 400);
-        } else {
-            qDebug() << "Using default centered position";
-            m_quickView->setGeometry(400, 300, 500, 400);
-        }
+        // Centre the overlay on the primary screen using Qt logical coordinates.
+        // SDL window coordinates (m_windowX/Y) come from SDL_GetWindowPosition()
+        // which returns X11 physical pixels. On high-DPI displays or when KDE
+        // Plasma applies fractional scaling, physical pixels != Qt logical pixels,
+        // causing the overlay to appear at the wrong position. Using
+        // QGuiApplication::primaryScreen()->geometry() gives us Qt-native coords
+        // that are always correct regardless of DPI scaling.
+        QRect screen = QGuiApplication::primaryScreen()
+                       ? QGuiApplication::primaryScreen()->geometry()
+                       : QRect(0, 0, 1920, 1080);
+        const int menuW = 500, menuH = 400;
+        int centerX = screen.x() + (screen.width()  - menuW) / 2;
+        int centerY = screen.y() + (screen.height() - menuH) / 2;
+        qDebug() << "Centering menu on screen" << screen << "at" << centerX << centerY;
+        m_quickView->setGeometry(centerX, centerY, menuW, menuH);
     }
     
     if (m_quickView) {

@@ -146,6 +146,11 @@ public:
                            int timeoutMs,
                            NvLogLevel logLevel = NvLogLevel::NVLL_VERBOSE);
 
+    // Returns the "uniqueid=...&uuid=..." auth query fragment that every
+    // Moonlight/Apollo request must include. Used by clipboard endpoints
+    // which build their requests manually instead of via openConnectionToString.
+    static QString getAuthParams();
+
     void setServerCert(QSslCertificate serverCert);
 
     void setAddress(NvAddress address);
