@@ -1629,6 +1629,8 @@ Flickable {
                         ListElement { text: qsTr("Select + L1 + R1 + B"); val: 1 }
                         ListElement { text: qsTr("L3 + R3 (click both sticks)"); val: 2 }
                         ListElement { text: qsTr("Select + Start"); val: 3 }
+                        ListElement { text: qsTr("Both back paddles (P1 + P2)"); val: 4 }
+                        ListElement { text: qsTr("Select + back paddle 1"); val: 5 }
                     }
 
                     function reinitialize() {

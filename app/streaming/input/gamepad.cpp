@@ -20,6 +20,10 @@ static int quickMenuComboMask()
         return LS_CLK_FLAG | RS_CLK_FLAG;
     case StreamingPreferences::QMGC_SELECT_START:
         return BACK_FLAG | PLAY_FLAG;
+    case StreamingPreferences::QMGC_PADDLE1_2:
+        return PADDLE1_FLAG | PADDLE2_FLAG;
+    case StreamingPreferences::QMGC_SELECT_PADDLE1:
+        return BACK_FLAG | PADDLE1_FLAG;
     case StreamingPreferences::QMGC_SELECT_LB_RB_Y:
     default:
         return BACK_FLAG | LB_FLAG | RB_FLAG | Y_FLAG;

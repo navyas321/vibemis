@@ -76,6 +76,8 @@ public:
         QMGC_SELECT_LB_RB_B,  // Select + L1 + R1 + B
         QMGC_L3_R3,           // click both analog sticks (L3 + R3)
         QMGC_SELECT_START,    // Select + Start
+        QMGC_PADDLE1_2,       // both back paddles (P1 + P2) — handhelds/Steam-style paddles
+        QMGC_SELECT_PADDLE1,  // Select + back paddle 1
     };
     Q_ENUM(QuickMenuGamepadCombo)
 
