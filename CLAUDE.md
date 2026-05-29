@@ -84,6 +84,12 @@ test agent's excerpts. Currently WSL2 cannot reach Windows filesystem paths.
 **Why it matters:** in test16–19 the pairing failures could have been diagnosed in minutes
 by reading Vibepollo's side of the handshake. Currently we only see what Vibemis logs.
 
+**Status:** build-host helper shipped — `scripts/vibepollo-log.sh` auto-detects the newest
+Vibepollo/Apollo/Sunshine log under `/mnt/c/Users/*/AppData/Roaming/{Vibepollo,Apollo,Sunshine}/`
+(and Program Files variants) and `tail -f`s it; override with `VIBEPOLLO_LOG=/mnt/c/...`.
+**Remaining:** confirm the exact Windows path on this machine (run `bash scripts/vibepollo-log.sh --list`;
+if empty, the C: drive may need mounting in WSL2), then record it here for future sessions.
+
 ### P3.6 — Video scale mode, pan/zoom, compact perf overlay (from original plan)
 Phases 3–7 from the original plan (see pure-purring-pillow.md)
 
