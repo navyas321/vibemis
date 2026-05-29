@@ -55,6 +55,45 @@ The feature branch carrying a test AppImage MUST be named `test<N>-<slug>` (e.g.
 
 Build agent rule: before starting a test cycle, rename (or create fresh from) the feature branch as `test<N>-<slug>`, commit the AppImage + instructions there, and target that branch in the instructions' `git checkout` command.
 
+## Current state — session handoff (read this to continue from where work left off)
+
+**Highest test branch: `test38`. Next new test cycle = `test39`.** `gh pr list --state open` is the
+source of truth; this is the snapshot as of the last build session.
+
+**Open feature test PRs (all compile-clean, awaiting Legion Go hardware verification):**
+
+| Test | Feature | Base (stacks on) | PR |
+|------|---------|------------------|----|
+| test22 | Quick Menu in Game Mode (OverlayManager surface) — PRIMARY | vibemis-main | #44 |
+| test23 | Vibepollo quality presets | vibemis-main | #45 |
+| test24 | Compact performance overlay | vibemis-main | #46 |
+| test25 | Video scale mode (Fit/Fill/Stretch) | vibemis-main | #47 |
+| test26 | Configurable Quick Menu gamepad shortcut | vibemis-main | #48 |
+| test27 | Vibemis brand accent (UI) | vibemis-main | #49 |
+| test28 | Tailscale Add-PC hint | vibemis-main | #50 |
+| test29 | Quick Menu Paste Clipboard | **test22** | #51 |
+| test30 | Steam/desktop install script (P3.2) | vibemis-main | #52 |
+| test31 | In-stream video zoom | **test25** | #53 |
+| test32 | In-stream video pan | **test31** | #54 |
+| test33 | Quick Menu Stream Info | **test29** | #55 |
+| test36 | Back-paddle Quick Menu combos | **test26** | #56 |
+| test37 | Settings About section | vibemis-main | #57 |
+| test38 | Per-game direct-launch Steam shortcut (P3.10) | vibemis-main | #58 |
+
+**Already on `vibemis-main`:** P3.5 `scripts/vibepollo-log.sh`, P3.2 `scripts/install-vibemis-desktop.sh`,
+P3.10 `scripts/add-game-to-steam.sh`, the routine (`docs/ROUTINE_PROMPT.md`), personas, README, CI fix.
+
+**Stacking rule to avoid conflicts:** Quick-Menu features stack on `test22`; zoom/pan/scale on the
+`test25→test31→test32` chain; configurable-combo features on `test26`. Independent features branch
+off `vibemis-main`.
+
+**Next pickup priority (for the routine and for solo work):**
+1. **Act on any `diagnostic/test*-report` PR first** (fix → rebuild → push → comment; merge the
+   feature PR if the report is PASS). This is the highest-value loop.
+2. Else continue **P3.10** (#3 first-run SteamOS hint, #4 battery-aware bitrate), then **P3.4** more
+   Quick Menu items (stack on test22), then **P3.9** deeper UI.
+3. Skip device-gated items (Phase 8.5 suspend/resume) and anything needing user input (P3.5 log path).
+
 ## Phase 3 — plan
 
 Phase 2 merged. Phase 3 priorities in order:
