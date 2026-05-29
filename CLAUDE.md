@@ -169,6 +169,20 @@ commit before the fix), not the new one.
    prefixes (`test**`, `verify/**`, `chore/**`) build the AppImage as a CI artifact but
    do NOT publish it to GitHub Releases. Test agents can only download from Releases.
 
+## README update rule — required at every phase completion
+
+After each phase merges to `vibemis-main`, update `README.md` before closing the phase.
+The README is NOT a changelog — it describes what Vibemis IS and DOES right now:
+
+- **Features section** — add any new user-visible features under the right heading
+  (Inherited from Moonlight Qt / Artemis Qt / Added by Vibemis)
+- **Known Issues table** — list current confirmed bugs with workaround and P3.x status
+- **Downloads section** — reflect current release tier model if it changed
+- **Keyboard/Gamepad shortcuts** — update if anything changed
+
+Do NOT list "what was fixed in this phase" — that belongs in commit messages and PRs.
+The README is always the present-tense description of the current build.
+
 ## Working agreement
 
 - Plan mode for non-trivial changes — explain each step before running it.
