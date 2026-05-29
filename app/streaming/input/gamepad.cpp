@@ -1,9 +1,14 @@
 #include "streaming/session.h"
+#include "backend/quickmenumanager.h"
 
 #include <Limelight.h>
 #include "SDL_compat.h"
 #include "settings/mappingmanager.h"
 
+#include <QCoreApplication>
+#include <QGuiApplication>
+#include <QKeyEvent>
+#include <QWindow>
 #include <QtMath>
 
 // How long the Start button must be pressed to toggle mouse emulation
@@ -280,6 +285,46 @@ void SdlInputHandler::handleControllerButtonEvent(SDL_ControllerButtonEvent* eve
         case SDL_CONTROLLER_BUTTON_Y:
             event->button = SDL_CONTROLLER_BUTTON_X;
             break;
+        }
+    }
+
+    // When the Quick Menu is visible, intercept D-pad / A / B button DOWN events
+    // and route them to the Qt overlay as keyboard events.
+    //
+    // moonlight-qt renders overlays as SDL textures inside the SDL window (the
+    // correct approach on Linux — no separate OS window). Our Quick Menu uses a
+    // separate QQuickView which cannot receive SDL controller events directly.
+    // We bridge this by injecting Qt key events onto the Qt main thread.
+    // handleControllerButtonEvent gives us discrete press events, making it the
+    // right place (vs sendGamepadStateUpdate which sees held state).
+    if (event->state == SDL_PRESSED) {
+        Session* sess = Session::get();
+        if (sess && sess->getQuickMenuManager() &&
+            sess->getQuickMenuManager()->isVisible())
+        {
+            Qt::Key qtKey = Qt::Key_unknown;
+            switch (event->button) {
+            case SDL_CONTROLLER_BUTTON_DPAD_UP:    qtKey = Qt::Key_Up;     break;
+            case SDL_CONTROLLER_BUTTON_DPAD_DOWN:  qtKey = Qt::Key_Down;   break;
+            case SDL_CONTROLLER_BUTTON_DPAD_LEFT:  qtKey = Qt::Key_Left;   break;
+            case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: qtKey = Qt::Key_Right;  break;
+            case SDL_CONTROLLER_BUTTON_A:          qtKey = Qt::Key_Return; break;
+            case SDL_CONTROLLER_BUTTON_B:          qtKey = Qt::Key_Escape; break;
+            default: break;
+            }
+            if (qtKey != Qt::Key_unknown) {
+                QMetaObject::invokeMethod(QCoreApplication::instance(), [qtKey]() {
+                    QWindow* w = QGuiApplication::focusWindow();
+                    if (w) {
+                        QKeyEvent press(QEvent::KeyPress, qtKey, Qt::NoModifier);
+                        QKeyEvent release(QEvent::KeyRelease, qtKey, Qt::NoModifier);
+                        QCoreApplication::sendEvent(w, &press);
+                        QCoreApplication::sendEvent(w, &release);
+                    }
+                }, Qt::QueuedConnection);
+                return; // consumed — don't update game controller state
+            }
+            return; // any other button: also swallow while menu is open
         }
     }
 

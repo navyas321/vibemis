@@ -143,6 +143,11 @@ public:
         return m_OverlayManager;
     }
 
+    QuickMenuManager* getQuickMenuManager()
+    {
+        return m_QuickMenuManager;
+    }
+
     void flushWindowEvents();
 
     void setShouldExitAfterQuit();
