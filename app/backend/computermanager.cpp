@@ -1102,8 +1102,8 @@ qDebug() << "PendingOTPPairingTask: Generated AES key from salt+PIN";
                                    "and click Continue within 2 minutes."));
                             return;
                         }
-                        qDebug() << "PendingOTPPairingTask: User confirmed — starting challenge exchange";
-                        
+                        qDebug() << "PendingOTPPairingTask: User clicked Continue — starting challenge exchange (phase 2)";
+
                         qDebug() << "PendingOTPPairingTask: Server certificate obtained, performing full pairing handshake";
                         
                         // Complete the full pairing process like Android client does

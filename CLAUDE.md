@@ -44,6 +44,45 @@ The feature branch carrying a test AppImage MUST be named `test<N>-<slug>` (e.g.
 
 Build agent rule: before starting a test cycle, rename (or create fresh from) the feature branch as `test<N>-<slug>`, commit the AppImage + instructions there, and target that branch in the instructions' `git checkout` command.
 
+## CI / AppImage release rules — READ BEFORE PUSHING
+
+The CI smart-build check (`setup-version` → `check-changes`) sets `should_build=false`
+when the HEAD commit only touches `.md` files. When `should_build=false`, the AppImage
+build and `create-dev-release` jobs are **skipped entirely** — no AppImage is produced.
+
+**This trips us constantly.** The pattern that breaks things:
+
+```
+git commit -m "fix: real code change"        ← code touches .cpp/.h/.qml
+git commit -m "test: add testN instructions" ← only .md files
+git push                                     ← CI sees HEAD = .md only → skips
+```
+
+The test agent downloads from GitHub Releases and finds the OLD AppImage (from the
+commit before the fix), not the new one.
+
+**Rules:**
+
+1. **The last commit before a push that is meant to produce a new release MUST touch a
+   code file** (`.cpp`, `.h`, `.qml`, `.yml`, `.pro`). `.md`-only commits set
+   `should_build=false` and no AppImage is built.
+
+2. **When you want the test agent to pick up a build:** make sure the code fix commit
+   (`fix: ...`) is the LAST commit in the push, or bundle test instructions into the
+   same commit as the code change.
+
+3. **Test instruction commits (`test: ...`) should come BEFORE the fix commit**, not after.
+   Order matters because CI evaluates the HEAD commit only.
+
+4. **If you've already pushed a docs-only commit and need to force a new build:** make a
+   trivial meaningful code change (e.g. add/update a comment in a `.cpp` file) with
+   `fix:` in the commit title and push it. Do NOT use `workflow_dispatch` alone —
+   it still goes through the smart-build check and will skip if HEAD is docs-only.
+
+5. **The `create-dev-release` job only runs on `fix/**` and `vibemis-main`.** Other branch
+   prefixes (`test**`, `verify/**`, `chore/**`) build the AppImage as a CI artifact but
+   do NOT publish it to GitHub Releases. Test agents can only download from Releases.
+
 ## Working agreement
 
 - Plan mode for non-trivial changes — explain each step before running it.
