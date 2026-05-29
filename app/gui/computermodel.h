@@ -18,7 +18,8 @@ class ComputerModel : public QAbstractListModel
         ServerSupportedRole,
         DetailsRole,
         ApolloVersionRole,
-        IsApolloServerRole
+        IsApolloServerRole,
+        PermissionSummaryRole
     };
 
 public:
