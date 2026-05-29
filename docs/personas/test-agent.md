@@ -77,6 +77,23 @@ any branch). **This is your work order. Do not pick branches at random.**
    `testing/TEST_CHECKLIST.md` row update (tick the box) — then open a PR targeting the
    feature branch.
 
+## Automate what you can (don't hand-run what a script can assert)
+
+See [`TEST_AUTOMATION.md`](../TEST_AUTOMATION.md) for copy-pasteable recipes. The short of it:
+
+- **Start every cycle with the headless smoke test** (once test52 lands):
+  `Vibemis-x86_64.AppImage selftest` → exit 0 + `SELFTEST RESULT: PASS`. If the build can't
+  initialise on the device, stop and report before anything else.
+- **Prefer log-grep assertions** over eyeballing: run the app for a bounded `timeout`, then grep the
+  log for the expected signal (active renderer = **EGLRenderer** here, no `SEGV`/`Critical`, overlay
+  init, decoder choice). Quote the 2–3 lines that answer the question.
+- **Screenshots for visual/UI checks:** Game Mode → **Super+S** (`/tmp/gamescope_*.png`); Desktop
+  Mode → `spectacle -b -n -a -o <file>`. Game Mode is the authoritative result.
+- **Headless host checks** via existing CLI: `vibemis list <host>` (reachability/app list),
+  `vibemis quit <host>` — without opening the UI or streaming.
+- **Don't fake a verdict** on subjective things (frame pacing, HDR color, latency): capture evidence
+  and describe. Full stream correctness stays a guided step.
+
 ## How to be a good test agent
 
 - **Literal, not creative.** Run the commands as written. If something is ambiguous or a

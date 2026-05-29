@@ -44,7 +44,11 @@ whole Quick Menu group depends on its render path.
 - [ ] **test37** — Settings "About" section — **PR #57** — base `vibemis-main` — ☐  *(launcher only)*
 - [ ] **test39** — First-run welcome hint — **PR #59** — base `vibemis-main` — ☐  *(launcher only)*
 
-## 5. Config / SteamOS helpers
+## 5. Tooling / test automation
+
+- [ ] **test52** — `vibemis selftest` headless smoke test (automation enabler) — **PR #72** — base `vibemis-main` — ☐  *(launcher-only / headless; do this FIRST each visit — see docs/TEST_AUTOMATION.md)*
+
+## 6. Config / SteamOS helpers
 
 - [ ] **test41** — Settings export / import — **PR #61** — base `vibemis-main` — ☐  *(launcher only)*
 - [ ] **test48** — SteamOS helper scripts bundle (install / update / add-game / add-all / pair / uninstall / doctor) — **PR #68** — base `vibemis-main` — ☐  *(script-only)*
