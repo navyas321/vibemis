@@ -1,50 +1,40 @@
 # Vibemis
 
-**Vibemis** is a Linux-first game streaming client built on top of [Artemis Qt](https://github.com/wjbeckett/artemis) by [wjbeckett](https://github.com/wjbeckett), tuned to pair with [Vibepollo](https://github.com/navyas321/Vibepollo) as its host. It targets desktop Linux, Steam Deck, and Linux handhelds (tested on the Lenovo Legion Go S Z2 under SteamOS), and ships as an AppImage.
+**Vibemis** is a Linux game streaming client that brings the full [Apollo](https://github.com/ClassicOldSong/Apollo) / [Vibepollo](https://github.com/navyas321/Vibepollo) feature set to SteamOS and Linux handhelds. It is a fork of [Artemis Qt](https://github.com/wjbeckett/artemis) by [wjbeckett](https://github.com/wjbeckett), actively maintained for current SteamOS/Mesa/AMD hardware while the upstream has been dormant since August 2025.
 
-Vibemis inherits all of Artemis Qt's Apollo-protocol client features — clipboard sync, server commands, OTP pairing, virtual display toggle, Quick Menu, fractional refresh rates, resolution scaling, UUID-based app launching, and a permissions viewer — then adds Linux-specific polish and Vibepollo-aware fixes on top.
+## Why Vibemis?
 
-> **Compatibility:** Vibemis works with Vibepollo, Apollo, and vanilla Sunshine hosts. Apollo-only features (clipboard sync, server commands, virtual display, OTP) light up automatically when connected to a compatible host and are hidden when not applicable.
+The Apollo ecosystem extends Sunshine with features mainstream Moonlight doesn't have: clipboard sync, server command execution, OTP pairing, virtual display control, in-stream Quick Menu, and per-client permission management. [Artemis Qt](https://github.com/wjbeckett/artemis) ported these features to desktop, but it hasn't been updated in roughly a year and its AppImage build is broken on current Mesa/glibc. Vibemis picks up where it left off:
+
+- **Works on current SteamOS** — VAAPI/Mesa compatibility fixes for AMD hardware (tested on the Lenovo Legion Go S Z2)
+- **Tuned for Vibepollo** — Vibepollo-specific pairing flow, clipboard auth, and SSL handling that the generic Artemis Qt build doesn't account for
+- **Kept current** — merged with `moonlight-stream/moonlight-qt:master` (May 2026), nine months of upstream fixes, CI pipeline with every push
+
+> **Compatibility:** Vibemis works with Vibepollo, Apollo, and vanilla Sunshine hosts. Apollo-only features light up automatically when connected to a compatible host.
 
 ---
 
 ## Features
 
-### Inherited from Moonlight Qt
+### From Moonlight Qt
 
 - Hardware-accelerated video decoding (VAAPI, VDPAU, NVDEC, CUDA)
-- H.264, HEVC, and AV1 codec support (AV1 requires Sunshine/Apollo host + supported GPU)
-- YUV 4:4:4 chroma support (Sunshine/Apollo only)
-- HDR streaming support
-- 7.1 surround sound audio
-- 10-point multitouch (Sunshine/Apollo only)
-- Gamepad support with force feedback and motion controls, up to 16 players
-- Pointer capture mode (games) and direct mouse mode (remote desktop)
-- System-wide keyboard shortcut passthrough (Alt+Tab, etc.)
+- H.264, HEVC, and AV1 codec support
+- YUV 4:4:4 chroma, HDR streaming, 7.1 surround sound
+- 10-point multitouch, gamepad with force feedback and motion controls (up to 16 players)
+- Pointer capture / direct mouse mode, system-wide keyboard shortcut passthrough
 
-### Inherited from Artemis Qt
+### From Artemis Qt (Apollo protocol features)
 
 - **Clipboard Sync** — bidirectional clipboard between client and host
 - **Server Commands** — trigger custom commands on the Apollo/Vibepollo host
-- **OTP Pairing** — one-time-password pairing for enhanced security
-- **Quick Menu** — in-stream overlay for controls without leaving your game
+- **OTP Pairing** — secure pairing via Vibepollo's "Pair Client" web UI
+- **Quick Menu** — in-stream overlay for clipboard, commands, and stream controls
 - **Fractional Refresh Rates** — client-side custom refresh (e.g. 90 Hz, 120 Hz)
 - **Resolution Scaling** — client-side scale factor for performance tuning
-- **Virtual Display Control** — choose whether to request a virtual display on the host
-- **UUID-Based App Launching** — modern app identification with automatic fallback to legacy IDs
-- **Permissions Viewer** — inspect host-side client permissions from within the app
-
-### Added by Vibemis
-
-- **HDR display capability gate** — "My display supports HDR" toggle prevents the app from requesting HDR from the host when your client display is SDR, eliminating the washed-out/dim picture that occurs when host HDR is applied but the client has no HDR-capable output
-- **VAAPI driver path fix** — AppImage apprun-hook that sets `LIBVA_DRIVERS_PATH` to the host's DRI directory and surgically loads the host's `libva.so.2` (via a temp-dir symlink), bridging the ABI gap between the bundled libva 1.20 and modern Mesa drivers that only export `__vaDriverInit_1_22`
-- **FORCE_VAAPI apprun hook** — prevents the upstream Gallium VAAPI deprioritisation that would otherwise fall through to `hevc_cuvid` and crash on non-NVIDIA hardware
-- **EGL shader fix** — corrects a missing vertex shader reference that caused a black screen on AMD/Mesa hardware after the VAAPI fix exposed the EGLRenderer path
-- **Vibepollo-aware OTP pairing** — standard Moonlight pairing flow with a 120-second timeout; the dialog generates a PIN, shows it prominently, and waits for the user to submit it in Vibepollo's "Pair Client" web form. No web UI credentials required.
-- **Persistent client identity** — `uniqueid` generated once and stored in settings, so the paired client certificate remains valid across app restarts (no 403 after relaunch)
-- **Clipboard SSL fix** — VerifyNone for clipboard HTTPS endpoints (Vibepollo cert is issued to hostname, not IP; peer already trusted via pairing cert)
-- **Clipboard auth params** — `uniqueid` and `uuid` included in clipboard requests so Vibepollo accepts them
-- **Upstream moonlight-qt sync** — merged with `moonlight-stream/moonlight-qt:master` (May 2026), bringing in nine months of upstream fixes while preserving all Apollo extensions
+- **Virtual Display Control** — request a virtual display on the host
+- **UUID-Based App Launching** — modern app identification with legacy fallback
+- **Permissions Viewer** — inspect host-side client permissions from the app
 
 ---
 
@@ -59,7 +49,7 @@ Vibemis inherits all of Artemis Qt's Apollo-protocol client features — clipboa
 
 ### Full Keyboard Reference
 
-All shortcuts require the `Ctrl + Alt + Shift` prefix:
+All shortcuts require `Ctrl + Alt + Shift`:
 
 | Key | Action |
 |-----|--------|
@@ -88,29 +78,27 @@ All shortcuts require the `Ctrl + Alt + Shift` prefix:
 
 ## Known Issues
 
-| Issue | Workaround | Status |
+| Issue | Workaround | Planned fix |
 |---|---|---|
-| **Quick Menu not visible in Game Mode (Gamescope)** | Use Desktop Mode, or use keyboard shortcuts directly | In progress — P3.1 SDL overlay rearchitecture |
-| **Quick Menu buttons not interactable with gamepad in Game Mode** | Use keyboard shortcuts | Same as above |
-| **Server Commands accessible only via Quick Menu** | Once Quick Menu works in Game Mode, Bubbles and other commands will be available | Blocked on P3.1 |
-| **Steam library shows "Vibemis App Image" instead of "Vibemis"** | Rename the shortcut manually in Steam → Properties | P3.2 investigation |
-| **ENet drops in Desktop Mode** | Environmental — occurs with weak LAN signal in Desktop Mode; Game Mode typically more stable | Network quality issue, not app bug |
+| **Quick Menu not visible in Game Mode (Gamescope)** | Use keyboard shortcuts directly; or Desktop Mode | P3.1 — SDL overlay rearchitecture |
+| **Server Commands only reachable via Quick Menu** | — | Unblocked by P3.1 |
+| **Steam library shows app name with "AppImage"** | Rename shortcut in Steam → Properties | P3.2 |
 
 ---
 
 ## Downloads
 
-Vibemis ships as a prebuilt AppImage. Three release tiers:
+Vibemis uses a three-tier release model:
 
-| Tier | Source | Prerelease | Use for |
-|---|---|---|---|
-| 🔬 **Alpha** | `fix/**` branches | Yes | Targeted test cycles before merging |
-| 🧪 **Beta** | `vibemis-main` | No — shown as **latest** | Regular use; current recommended build |
-| ✅ **Release** | `release/**` or manual trigger | No | Explicitly verified milestones |
+| Tier | When | Use |
+|---|---|---|
+| 🔬 **Alpha** | Every push to a `fix/**` or `feat/**` branch | Test cycles during development |
+| 🧪 **Beta** | Every merge to `vibemis-main` | Regular use — current recommended build |
+| ✅ **Release** | Explicit milestone | Verified stable |
 
-**Download the latest beta:** [GitHub Releases](https://github.com/navyas321/vibemis/releases/latest)
+**[→ Download latest beta](https://github.com/navyas321/vibemis/releases/latest)**
 
-The AppImage runs on any x86-64 Linux with glibc 2.17+ — no installation required. On SteamOS / Steam Deck, run from Desktop Mode or add as a non-Steam game.
+The AppImage runs on any x86-64 Linux with glibc 2.17+. No installation required. On SteamOS, run from Desktop Mode or add as a non-Steam game.
 
 ---
 
@@ -154,10 +142,8 @@ make -j$(nproc)
 
 ### AppImage
 
-The AppImage build uses [linuxdeploy](https://github.com/linuxdeploy/linuxdeploy) (not linuxdeployqt — incompatible with glibc ≥ 2.36):
-
 ```bash
-# Ensure linuxdeploy-x86_64.AppImage is in your PATH, then:
+# Requires linuxdeploy-x86_64.AppImage in PATH
 bash scripts/build-appimage.sh
 # Output: build/installer-release/Vibemis-<version>-x86_64.AppImage
 ```
@@ -166,14 +152,12 @@ bash scripts/build-appimage.sh
 
 ## Attribution
 
-Vibemis is built on the shoulders of several excellent projects:
-
-- **[Artemis Qt](https://github.com/wjbeckett/artemis)** by [wjbeckett](https://github.com/wjbeckett) — the C++/QML desktop port of the Artemis-Android Apollo extensions that forms the direct base of Vibemis.
-- **[Moonlight Qt](https://github.com/moonlight-stream/moonlight-qt)** by the [Moonlight Team](https://github.com/moonlight-stream) — the upstream streaming client whose core decode/network/input pipeline everything builds on.
-- **[Apollo](https://github.com/ClassicOldSong/Apollo)** and **[Vibemis Android](https://github.com/ClassicOldSong/moonlight-android)** by [ClassicOldSong](https://github.com/ClassicOldSong) — the Sunshine fork and Android client whose protocol extensions Vibemis speaks.
-- **[Sunshine](https://github.com/LizardByte/Sunshine)** by [LizardByte](https://github.com/LizardByte) — the original open-source game streaming server.
-- **[moonlight-common-c](https://github.com/ClassicOldSong/moonlight-common-c)** (ClassicOldSong's Apollo-lineage fork) — the protocol/codec library submodule.
-- **[Vibepollo](https://github.com/navyas321/Vibepollo)** by [Nonary](https://github.com/Nonary) — the Apollo fork this client is tuned to pair with.
+- **[Artemis Qt](https://github.com/wjbeckett/artemis)** by [wjbeckett](https://github.com/wjbeckett) — the C++/QML desktop port of the Apollo extensions that Vibemis is forked from
+- **[Moonlight Qt](https://github.com/moonlight-stream/moonlight-qt)** by the [Moonlight Team](https://github.com/moonlight-stream) — the upstream streaming client this is built on
+- **[Apollo](https://github.com/ClassicOldSong/Apollo)** and **[Artemis Android](https://github.com/ClassicOldSong/moonlight-android)** by [ClassicOldSong](https://github.com/ClassicOldSong) — the Sunshine fork and Android client whose protocol extensions this client speaks
+- **[Sunshine](https://github.com/LizardByte/Sunshine)** by [LizardByte](https://github.com/LizardByte) — the original open-source game streaming server
+- **[moonlight-common-c](https://github.com/ClassicOldSong/moonlight-common-c)** (ClassicOldSong's Apollo-lineage fork) — the protocol/codec library submodule
+- **[Vibepollo](https://github.com/navyas321/Vibepollo)** by [Nonary](https://github.com/Nonary) — the Apollo fork this client is tuned to pair with
 
 ---
 
