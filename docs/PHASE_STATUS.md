@@ -56,6 +56,14 @@ comment so it's greppable: `grep -rn "TODO(P3" app/`.
   polish for Desktop Mode.
 - Not blocked.
 
+## P4.0 — Repo hygiene (DEFERRED to post-1.0 / first stable release)  ⏸️
+Hide the Claude/agent development files from GitHub. **Decision: deferred** until after the first
+stable release — do NOT start early. Recommended approach when we do it: **two-repo split** — keep
+the code repo public (so Releases/AppImages stay downloadable) and move all agent meta (CLAUDE.md,
+docs/personas, docs/ROUTINE_PROMPT.md, docs/WORKFLOW.md, docs/PHASE_STATUS.md, testing/*) into a
+separate private repo that the agents also clone. Alternatives considered: private-dev + public
+release mirror; cosmetic rename + trailer strip; authorship-only history scrub (git-filter-repo).
+
 ## P3.11 — Newer researched features  🟢 ongoing
 - Done: battery-saver bitrate test40 (#60); settings export/import test41 (#61); special keys
   test47 (#67); perf-overlay corner/size test49/test50.
