@@ -85,6 +85,7 @@ public:
     Q_INVOKABLE void toggleKeyboardCapture();
     Q_INVOKABLE void toggleFullscreen();
     Q_INVOKABLE void pasteClipboard();
+    Q_INVOKABLE void showStreamInfo();
 
     // Integration with other managers
     void setServerCommandManager(ServerCommandManager *manager);
