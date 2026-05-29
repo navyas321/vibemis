@@ -44,6 +44,35 @@ The feature branch carrying a test AppImage MUST be named `test<N>-<slug>` (e.g.
 
 Build agent rule: before starting a test cycle, rename (or create fresh from) the feature branch as `test<N>-<slug>`, commit the AppImage + instructions there, and target that branch in the instructions' `git checkout` command.
 
+## Phase 3 — plan
+
+Phase 2 merged. Phase 3 priorities in order:
+
+### P3.1 — Quick Menu (SDL overlay, Game Mode) ← PRIMARY
+The QQuickView window approach is confirmed broken in Gamescope (Game Mode test failed).
+Full rearchitecture to SDL-internal overlay required (see SDL overlay note below).
+This also unblocks Server Commands (Bubbles) which is only accessible via Quick Menu.
+
+### P3.2 — Steam library display name (AppImage shown without extension)
+XDG desktop integration hook was added to AppRun but didn't work on first test.
+Need to investigate: AppImageLauncher integration, steam-shortcut script, or
+direct `~/.config/systemd/user/` approach. Research proper method for SteamOS Game Mode.
+
+### P3.3 — Vibepollo presets (Phase 2.5)
+Resolution/quality profiles pre-tuned for Vibepollo on the Legion Go S Z2:
+one-click presets for common scenarios (1920×1200@120 / HEVC / VAAPI, etc.)
+
+### P3.4 — Quick Menu content (take inspiration from Artemis Qt + moonlight-qt)
+Once Quick Menu renders correctly in Game Mode, review and expand the menu items:
+- Artemis Qt reference: clipboard, server commands, virtual display toggle,
+  OTP status, resolution scaling, fractional refresh, permissions viewer
+- moonlight-qt reference: stats overlay, fullscreen, mouse/keyboard capture,
+  quit, paste clipboard (keyboard shortcut only in upstream)
+- Ensure all Artemis Apollo-protocol features are surfaced in the menu
+
+### P3.5 — Video scale mode, pan/zoom, compact perf overlay (from original plan)
+Phases 3–7 from the original plan (see pure-purring-pillow.md)
+
 ## Development priority: Game Mode over Desktop Mode
 
 **Primary target is SteamOS Game Mode (Gamescope), not Desktop Mode (KDE Plasma).**

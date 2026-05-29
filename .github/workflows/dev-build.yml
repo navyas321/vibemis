@@ -150,11 +150,11 @@ jobs:
           BUILD_NUMBER=$(date +"%H%M")
           
           # ── Release tier determination ─────────────────────────────────────
-          # Tier       Branch / trigger               Prerelease  Label
-          # release    release/** OR workflow_dispatch  false      ✅ Release (shown as latest)
-          # beta       vibemis-main, develop            true       🧪 Beta (merged, stabilizing)
-          # alpha      fix/**, feat/**                  true       🔬 Alpha (in-progress fixes)
-          # dev        anything else                    true       🔧 Dev
+          # Tier       Branch / trigger               Prerelease  Latest  Label
+          # release    release/** OR workflow_dispatch  false       true   ✅ Release
+          # beta       vibemis-main, develop            false       true   🧪 Beta  ← shown as latest until explicit release
+          # alpha      fix/**, feat/**                  true        false  🔬 Alpha
+          # dev        anything else                    true        false  🔧 Dev
 
           IS_PRERELEASE="true"
           RELEASE_TIER="dev"
@@ -163,14 +163,17 @@ jobs:
                 "${{ github.event.inputs.release_type }}" == "stable" || \
                 "$BRANCH_NAME" == "main" || \
                 "$BRANCH_NAME" == "master" ]]; then
-            # ✅ Production release — stable, appears as "latest" on GitHub Releases
+            # ✅ Production release — explicit stable ship
             VERSION="$BASE_VERSION"
             IS_PRERELEASE="false"
             RELEASE_TIER="release"
 
           elif [[ "$BRANCH_NAME" == "vibemis-main" || "$BRANCH_NAME" == "develop" ]]; then
-            # 🧪 Beta — fixes merged and integrated, ready for wider smoke testing
+            # 🧪 Beta — merged and integrated; NOT a prerelease so it appears as
+            # "latest" on GitHub Releases and is downloadable via /releases/latest.
+            # This is the current recommended build until an explicit release lands.
             VERSION="$BASE_VERSION-beta.$TIMESTAMP.$BUILD_NUMBER+$COMMIT_SHORT"
+            IS_PRERELEASE="false"
             RELEASE_TIER="beta"
 
           elif [[ "$BRANCH_NAME" =~ ^(fix|hotfix|feat|feature)/ ]]; then
@@ -822,7 +825,7 @@ jobs:
           artifacts/**/build_info.txt
           artifacts/**/install.sh
         prerelease: ${{ needs.setup-version.outputs.is_prerelease }}
-        make_latest: ${{ needs.setup-version.outputs.release_tier == 'release' && 'true' || 'false' }}
+        make_latest: ${{ (needs.setup-version.outputs.release_tier == 'release' || needs.setup-version.outputs.release_tier == 'beta') && 'true' || 'false' }}
         draft: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
