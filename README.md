@@ -17,24 +17,34 @@ Standard Moonlight doesn't support Apollo's extended protocol features. Apollo a
 
 ## Installation
 
-No building, no installer, no dependencies to install. Vibemis ships as a single
-self-contained AppImage — **download it and run it.**
+No building, no installer, no dependencies. Vibemis is a single self-contained file —
+**download it and double-click it.**
 
-1. Download the latest AppImage from **[GitHub Releases](https://github.com/navyas321/vibemis/releases/latest)**
-2. Make it executable — in your file manager: right-click → Properties → *"Allow executing as program"*, or in a terminal:
-   ```bash
-   chmod +x Vibemis-*.AppImage
-   ```
-3. Run it — double-click the file, or:
-   ```bash
-   ./Vibemis-*.AppImage
-   ```
+### Easiest way (Steam Deck / SteamOS)
 
-> **If it doesn't start with a FUSE error** (common on Steam Deck / SteamOS, which has no
-> `libfuse2`), run it in extract mode — no installation needed:
+1. **Switch to Desktop Mode.** (Hold the **power button** → **Switch to Desktop**.)
+2. Open a web browser and go to the **[Releases page](https://github.com/navyas321/vibemis/releases/latest)**.
+   Download the latest **`.AppImage`** file (either a *Release* or the latest *Pre-release* —
+   both work; the newest one is fine).
+3. Find the downloaded file (usually in your **Downloads** folder) and **double-click it** to run.
+   - If double-clicking does nothing, right-click the file → **Properties** → **Permissions**
+     → tick **"Is executable"** (or *"Allow executing file as program"*), then double-click again.
+
+That's it — Vibemis opens and you can add your host PC.
+
+> **If it still won't open** and you see a **FUSE** error (common on SteamOS, which doesn't
+> ship `libfuse2`), open a terminal in the file's folder and run it in extract mode — no
+> installation needed:
 > ```bash
 > ./Vibemis-*.AppImage --appimage-extract-and-run
 > ```
+
+### Any other Linux
+
+Same idea: download the latest `.AppImage` from
+**[Releases](https://github.com/navyas321/vibemis/releases/latest)**, make it executable
+(right-click → Properties → *"Allow executing as program"*, or `chmod +x Vibemis-*.AppImage`),
+then double-click or run `./Vibemis-*.AppImage`.
 
 ### Add to Steam (SteamOS / Steam Deck)
 
