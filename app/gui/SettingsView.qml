@@ -102,6 +102,87 @@ Flickable {
         spacing: 15
 
         GroupBox {
+            id: vibepolloPresetsGroupBox
+            width: (parent.width - (parent.leftPadding + parent.rightPadding))
+            padding: 12
+            title: "<font color=\"skyblue\">" + qsTr("Vibepollo Presets") + "</font>"
+            font.pointSize: 12
+
+            // Re-sync the resolution and FPS combo selections to the current
+            // preferences after a preset is applied (the bitrate slider is already
+            // bound live). If the matching entry isn't in a combo's model yet, the
+            // selection is left as-is — the stream still uses the preference values.
+            function reconcileResolutionFps() {
+                for (var i = 0; i < resolutionListModel.count; i++) {
+                    var e = resolutionListModel.get(i)
+                    if (!e.is_custom &&
+                        parseInt(e.video_width) === StreamingPreferences.width &&
+                        parseInt(e.video_height) === StreamingPreferences.height) {
+                        resolutionComboBox.currentIndex = i
+                        break
+                    }
+                }
+                for (var j = 0; j < fpsListModel.count; j++) {
+                    var f = fpsListModel.get(j)
+                    if (!f.is_custom && parseInt(f.video_fps) === StreamingPreferences.fps) {
+                        fpsComboBox.currentIndex = j
+                        break
+                    }
+                }
+            }
+
+            function applyVibepolloPreset(presetIndex, presetName) {
+                StreamingPreferences.applyPreset(presetIndex)
+                reconcileResolutionFps()
+                presetStatusLabel.text = qsTr("Applied: %1 — takes effect on the next stream.").arg(presetName)
+            }
+
+            Column {
+                anchors.fill: parent
+                spacing: 8
+
+                Label {
+                    width: parent.width
+                    text: qsTr("One-click quality profiles tuned for the Legion Go S Z2 (HEVC, hardware decode). Adjust anything below afterwards.")
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                }
+
+                Flow {
+                    width: parent.width
+                    spacing: 8
+
+                    Button {
+                        text: qsTr("Quality · 1200p120")
+                        onClicked: vibepolloPresetsGroupBox.applyVibepolloPreset(0, qsTr("Quality"))
+                    }
+                    Button {
+                        text: qsTr("Balanced · 1200p90")
+                        onClicked: vibepolloPresetsGroupBox.applyVibepolloPreset(1, qsTr("Balanced"))
+                    }
+                    Button {
+                        text: qsTr("Performance · 800p120")
+                        onClicked: vibepolloPresetsGroupBox.applyVibepolloPreset(2, qsTr("Performance"))
+                    }
+                    Button {
+                        text: qsTr("Battery · 800p60")
+                        onClicked: vibepolloPresetsGroupBox.applyVibepolloPreset(3, qsTr("Battery Saver"))
+                    }
+                }
+
+                Label {
+                    id: presetStatusLabel
+                    width: parent.width
+                    text: ""
+                    visible: text !== ""
+                    color: "#00cccc"
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                }
+            }
+        }
+
+        GroupBox {
             id: basicSettingsGroupBox
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
             padding: 12
