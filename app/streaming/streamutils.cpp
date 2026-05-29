@@ -93,6 +93,22 @@ void StreamUtils::scaleSourceToDestinationSurface(SDL_Rect* src, SDL_Rect* dst)
 
 void StreamUtils::scaleSourceToDestinationSurface(SDL_Rect* src, SDL_Rect* dst, int scaleMode)
 {
+    // Vibemis zoom: crop the source to a centered sub-region so the visible area is
+    // magnified. Applied here (shared by video render AND input mapping) so the cursor
+    // stays aligned with the zoomed image. zoom == 1.0 is a no-op (default).
+    if (auto prefs = StreamingPreferences::get()) {
+        double zoom = prefs->videoZoomFactor;
+        if (zoom > 1.001 && src->w > 0 && src->h > 0) {
+            if (zoom > 4.0) zoom = 4.0;
+            int zw = (int)(src->w / zoom);
+            int zh = (int)(src->h / zoom);
+            src->x += (src->w - zw) / 2;
+            src->y += (src->h - zh) / 2;
+            src->w = zw;
+            src->h = zh;
+        }
+    }
+
     if (scaleMode == StreamingPreferences::SCALE_STRETCH) {
         // Fill the whole destination, ignoring aspect ratio — leave dst unchanged.
         return;

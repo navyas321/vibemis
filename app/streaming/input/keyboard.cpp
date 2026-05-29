@@ -1,4 +1,5 @@
 #include "streaming/session.h"
+#include "settings/streamingpreferences.h"
 
 #include <Limelight.h>
 #include "SDL_compat.h"
@@ -157,12 +158,34 @@ void SdlInputHandler::performSpecialKeyCombo(KeyCombo combo)
 
     case KeyComboToggleQuickMenu:
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Detected quick menu toggle combo");
-        
+
         // Access the QuickMenuManager through the Session
         if (Session::get()) {
             Session::get()->toggleQuickMenu();
         }
         break;
+
+    case KeyComboZoomIn:
+    case KeyComboZoomOut:
+    case KeyComboZoomReset: {
+        // Vibemis in-stream video zoom (centered). Read by StreamUtils each frame.
+        auto prefs = StreamingPreferences::get();
+        if (prefs) {
+            double z = prefs->videoZoomFactor;
+            if (combo == KeyComboZoomReset) {
+                z = 1.0;
+            } else if (combo == KeyComboZoomIn) {
+                z += 0.25;
+            } else {
+                z -= 0.25;
+            }
+            if (z < 1.0) z = 1.0;
+            if (z > 4.0) z = 4.0;
+            prefs->videoZoomFactor = z;
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Video zoom set to %.2fx", z);
+        }
+        break;
+    }
 
     default:
         Q_UNREACHABLE();

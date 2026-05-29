@@ -187,6 +187,8 @@ void StreamingPreferences::reload()
                                                     static_cast<int>(RendererBackend::RB_AUTO)).toInt());
     videoScaleMode = static_cast<VideoScaleMode>(settings.value(SER_VIDEOSCALEMODE,
                                                  static_cast<int>(VideoScaleMode::SCALE_FIT)).toInt());
+    // Transient: always start un-zoomed (not persisted).
+    videoZoomFactor = 1.0;
 
     // Vibemis client-side streaming enhancements
     useVirtualDisplay = settings.value(SER_VIRTUALDISPLAY, true).toBool();
