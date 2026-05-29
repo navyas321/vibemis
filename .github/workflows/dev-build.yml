@@ -19,17 +19,18 @@ name: Development Build
 on:
   push:
     branches:
-      - develop
-      - dev
+      # Keep this list TIGHT to avoid noisy builds/releases. Only:
+      #  - vibemis-main : integration branch → 🧪 beta (latest)
+      #  - test**       : test cycle branches → 🔬 alpha (pre-release, for the test agent)
+      #  - release/**   : explicit stable ship → ✅ release
+      #  - main/master  : stable
+      # fix/**, feat/**, hotfix/**, chore/**, develop, etc. intentionally do NOT build
+      # (they produced the old noisy alpha/dev/hotfix prereleases).
       - main
       - master
-      - 'feature/**'
-      - 'feat/**'
-      - 'fix/**'
-      - 'chore/**'
+      - vibemis-main
       - 'test**'
-      - 'vibemis-**'
-      - 'release/**'   # production release branch — builds stable AppImage
+      - 'release/**'
   workflow_dispatch:
     inputs:
       release_type:
@@ -198,9 +199,11 @@ jobs:
             IS_PRERELEASE="false"
             RELEASE_TIER="beta"
 
-          elif [[ "$BRANCH_NAME" =~ ^(fix|hotfix|feat|feature)/ ]]; then
-            # 🔬 Alpha — work-in-progress fix/feature branch, test before merging
-            VERSION="$BASE_VERSION-alpha.$TIMESTAMP.$BUILD_NUMBER+$COMMIT_SHORT"
+          elif [[ "$BRANCH_NAME" =~ ^test || "$BRANCH_NAME" =~ ^(fix|hotfix|feat|feature)/ ]]; then
+            # 🔬 Alpha — test cycle (test**) or fix/feature branch. Pre-release (NOT latest) so
+            # the Legion Go test agent can download the AppImage straight from GitHub Releases.
+            # Branch name is in the version so each test PR gets its own findable alpha.
+            VERSION="$BASE_VERSION-alpha.$BRANCH_SANITIZED.$TIMESTAMP.$BUILD_NUMBER+$COMMIT_SHORT"
             RELEASE_TIER="alpha"
 
           else
@@ -642,13 +645,9 @@ jobs:
     if: >-
       needs.setup-version.outputs.should_build == 'true' && (
         github.ref == 'refs/heads/vibemis-main' ||
-        github.ref == 'refs/heads/develop' ||
         github.ref == 'refs/heads/main' ||
         github.ref == 'refs/heads/master' ||
-        startsWith(github.ref, 'refs/heads/fix/') ||
-        startsWith(github.ref, 'refs/heads/hotfix/') ||
-        startsWith(github.ref, 'refs/heads/feat/') ||
-        startsWith(github.ref, 'refs/heads/feature/') ||
+        startsWith(github.ref, 'refs/heads/test') ||
         startsWith(github.ref, 'refs/heads/release/') ||
         (github.event_name == 'workflow_dispatch' && github.event.inputs.release_type == 'stable')
       )
