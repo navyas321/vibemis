@@ -168,6 +168,31 @@ Guardrails: don't regress controller/keyboard navigability (SdlGamepadKeyNavigat
 each change in **both** Desktop Mode and Game Mode; ship incrementally (a theme PR, then view
 PRs) so each is independently testable rather than one giant restyle.
 
+### P3.10 — SteamOS one-click / platform integration (research-led)
+Make Vibemis as frictionless on SteamOS/Steam Deck as a native app. Research (May 2026:
+[XDA](https://www.xda-developers.com/how-install-use-moonlight-steam-deck/),
+[Pi My Life Up](https://pimylifeup.com/steam-deck-moonlight/),
+[Deck+Moonlight](https://louis-bompart.github.io/01-deck-and-moonlight/)) shows the friction
+points are: getting it into Game Mode, and launching a *specific game* quickly. Vibemis already
+has a CLI (`vibemis stream <host> <app>`, `pair`, `list`, `quit`), which is the key enabler.
+
+Candidate features (each its own testable PR; helper scripts are device-independent to author):
+1. **Desktop/Steam install helper** — DONE (P3.2, `scripts/install-vibemis-desktop.sh`): stable
+   path + clean `Name=Vibemis` desktop entry so "Add to Steam" shows the right name.
+2. **Per-game direct-launch shortcuts** — `scripts/add-game-to-steam.sh <host> <app>`: generate a
+   `.desktop` that runs `Vibemis stream "<host>" "<app>"` so a Steam shortcut boots straight into
+   that game's stream (the workflow the guides recommend). ← NEXT
+3. **First-run SteamOS hints** — detect Game Mode / no-DE and surface a one-time hint about the
+   Quick Menu combo and adding to Steam.
+4. **Auto-populate Steam shortcuts from host app list** — use `vibemis list <host>` to offer
+   creating a Steam shortcut per host game (bigger; shortcuts.vdf editing — research safety first).
+5. **Battery-aware bitrate** — on battery (SDL_GetPowerInfo) reduce bitrate at connect for longer
+   play; opt-in toggle. (Overlaps Phase 8.5.)
+6. **Suspend/resume handling** — cleanly pause/resume the stream across Steam Deck sleep.
+
+Guardrail: shortcuts.vdf is a binary format — for anything that writes Steam shortcuts directly,
+research the format and test carefully; prefer `.desktop` + manual "Add to Steam" until proven.
+
 ## Development priority: Game Mode over Desktop Mode
 
 **Primary target is SteamOS Game Mode (Gamescope), not Desktop Mode (KDE Plasma).**
