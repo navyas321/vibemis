@@ -57,7 +57,7 @@ Build agent rule: before starting a test cycle, rename (or create fresh from) th
 
 ## Current state — session handoff (read this to continue from where work left off)
 
-**Highest test branch: `test38`. Next new test cycle = `test39`.** `gh pr list --state open` is the
+**Highest test branch: `test39`. Next new test cycle = `test40`.** `gh pr list --state open` is the
 source of truth; this is the snapshot as of the last build session.
 
 **Open feature test PRs (all compile-clean, awaiting Legion Go hardware verification):**
@@ -79,6 +79,7 @@ source of truth; this is the snapshot as of the last build session.
 | test36 | Back-paddle Quick Menu combos | **test26** | #56 |
 | test37 | Settings About section | vibemis-main | #57 |
 | test38 | Per-game direct-launch Steam shortcut (P3.10) | vibemis-main | #58 |
+| test39 | First-run welcome hint (P3.10) | vibemis-main | #59 |
 
 **Already on `vibemis-main`:** P3.5 `scripts/vibepollo-log.sh`, P3.2 `scripts/install-vibemis-desktop.sh`,
 P3.10 `scripts/add-game-to-steam.sh`, the routine (`docs/ROUTINE_PROMPT.md`), personas, README, CI fix.
