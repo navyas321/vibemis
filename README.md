@@ -1,16 +1,41 @@
 # Vibemis
 
-**Vibemis** is a Linux game streaming client that brings the full [Apollo](https://github.com/ClassicOldSong/Apollo) / [Vibepollo](https://github.com/navyas321/Vibepollo) feature set to SteamOS and Linux handhelds. It is a fork of [Artemis Qt](https://github.com/wjbeckett/artemis) by [wjbeckett](https://github.com/wjbeckett), actively maintained for current SteamOS/Mesa/AMD hardware while the upstream has been dormant since August 2025.
+**Vibemis** is the only actively maintained Linux client for the [Apollo](https://github.com/ClassicOldSong/Apollo) / [Vibepollo](https://github.com/navyas321/Vibepollo) game streaming ecosystem. There is no official Artemis client for Linux — [wjbeckett's Artemis Qt](https://github.com/wjbeckett/artemis) has been dormant since August 2025 with a broken AppImage build on current Mesa/glibc, and a native Apollo Linux client ([Apollo issue #937](https://github.com/ClassicOldSong/Apollo/issues/937)) remains in development and unreleased. Vibemis fills that gap — forked from Artemis Qt, running on current SteamOS/Mesa/AMD hardware today.
 
 ## Why Vibemis?
 
-The Apollo ecosystem extends Sunshine with features mainstream Moonlight doesn't have: clipboard sync, server command execution, OTP pairing, virtual display control, in-stream Quick Menu, and per-client permission management. [Artemis Qt](https://github.com/wjbeckett/artemis) ported these features to desktop, but it hasn't been updated in roughly a year and its AppImage build is broken on current Mesa/glibc. Vibemis picks up where it left off:
+Standard Moonlight doesn't support Apollo's extended protocol features. Apollo and Vibepollo add clipboard sync, server command execution, OTP pairing, virtual display control, an in-stream Quick Menu, and per-client permission management — but without a working Linux client, those features were inaccessible on SteamOS and Linux handhelds.
 
+- **The only working Linux client for Apollo** — fills the gap left by dormant Artemis Qt
 - **Works on current SteamOS** — VAAPI/Mesa compatibility fixes for AMD hardware (tested on the Lenovo Legion Go S Z2)
-- **Tuned for Vibepollo** — Vibepollo-specific pairing flow, clipboard auth, and SSL handling that the generic Artemis Qt build doesn't account for
-- **Kept current** — merged with `moonlight-stream/moonlight-qt:master` (May 2026), nine months of upstream fixes, CI pipeline with every push
+- **Tuned for Vibepollo** — pairing flow, clipboard auth, and SSL handling built for Vibepollo specifically
+- **Kept current** — merged with upstream moonlight-qt (May 2026), CI pipeline on every push
 
 > **Compatibility:** Vibemis works with Vibepollo, Apollo, and vanilla Sunshine hosts. Apollo-only features light up automatically when connected to a compatible host.
+
+---
+
+## Installation
+
+### Quick start (recommended)
+
+1. Download the latest AppImage from **[GitHub Releases](https://github.com/navyas321/vibemis/releases/latest)**
+2. Make it executable and run:
+   ```bash
+   chmod +x Vibemis-*.AppImage
+   ./Vibemis-*.AppImage
+   ```
+   That's it — no installation required, no dependencies to install.
+
+### Add to Steam (SteamOS / Steam Deck)
+
+To launch Vibemis from Game Mode:
+
+1. In **Desktop Mode**, right-click the AppImage and select **Add to Steam**
+2. Open the shortcut's **Properties** and set the name to `Vibemis`
+3. Switch to Game Mode — Vibemis will appear in your library under Non-Steam Games
+
+> **Note:** Quick Menu is currently only functional in Desktop Mode. Game Mode (Gamescope) support is in active development (P3.1).
 
 ---
 
@@ -88,8 +113,6 @@ All shortcuts require `Ctrl + Alt + Shift`:
 
 ## Downloads
 
-Vibemis uses a three-tier release model:
-
 | Tier | When | Use |
 |---|---|---|
 | 🔬 **Alpha** | Every push to a `fix/**` or `feat/**` branch | Test cycles during development |
@@ -98,13 +121,11 @@ Vibemis uses a three-tier release model:
 
 **[→ Download latest beta](https://github.com/navyas321/vibemis/releases/latest)**
 
-The AppImage runs on any x86-64 Linux with glibc 2.17+. No installation required. On SteamOS, run from Desktop Mode or add as a non-Steam game.
-
 ---
 
 ## Building from Source
 
-Vibemis builds on Linux (Ubuntu 22.04+, Fedora 38+, SteamOS Desktop Mode, or WSL2).
+For development or debugging only. No need to build to use Vibemis — just download the AppImage above.
 
 ### Dependencies
 
@@ -153,6 +174,7 @@ bash scripts/build-appimage.sh
 ## Attribution
 
 - **[Artemis Qt](https://github.com/wjbeckett/artemis)** by [wjbeckett](https://github.com/wjbeckett) — the C++/QML desktop port of the Apollo extensions that Vibemis is forked from
+- **[Artemis Android](https://github.com/MobinYengejehi/Artemis)** by [MobinYengejehi](https://github.com/MobinYengejehi) — Android Apollo client whose features serve as a reference for Vibemis
 - **[Moonlight Qt](https://github.com/moonlight-stream/moonlight-qt)** by the [Moonlight Team](https://github.com/moonlight-stream) — the upstream streaming client this is built on
 - **[Apollo](https://github.com/ClassicOldSong/Apollo)** and **[Artemis Android](https://github.com/ClassicOldSong/moonlight-android)** by [ClassicOldSong](https://github.com/ClassicOldSong) — the Sunshine fork and Android client whose protocol extensions this client speaks
 - **[Sunshine](https://github.com/LizardByte/Sunshine)** by [LizardByte](https://github.com/LizardByte) — the original open-source game streaming server

@@ -1,20 +1,20 @@
 name: Development Build
 
 # This workflow handles development builds with intelligent build skipping:
-# - Feature branches: Build artifacts, no releases (testing only)  
-# - Develop branch: Build artifacts + create development releases (when meaningful changes are merged)
-# - Main/Master branch: ALWAYS build + create production releases (releases require fresh artifacts)
+# - Feature branches: Build artifacts, no releases (testing only)
+# - vibemis-main / develop: Build + publish beta releases when code changes are merged
+# - release/** / main / master: ALWAYS build + create production releases
 #
 # Smart merge detection prevents redundant builds by:
-# - Main/Master: Always builds (never skip releases!)
+# - release/main/master: Always builds (never skip releases!)
+# - vibemis-main: Skips if HEAD only touches .md files (e.g. README-only docs commits)
 # - Detecting merge commits vs regular commits
 # - For merges: Analyzing actual changes being merged (not just the merge commit)
 # - For regular commits: Comparing against previous commit
 # - Skipping builds when only documentation/config files changed (.md, .txt, .yml, .yaml, .github/)
-# - Respecting [skip ci] or [ci skip] in commit messages (except on main/master)
+# - Respecting [skip ci] or [ci skip] in commit messages (except on release/main/master)
 #
-# This ensures develop/main branches BUILD when feature branches are merged (as they should!)
-# while still preventing redundant builds when no meaningful code changes exist.
+# This ensures vibemis-main BUILDS when code lands but does NOT rebuild for README-only commits.
 
 on:
   push:
@@ -61,17 +61,39 @@ jobs:
       - name: Check for meaningful changes
         id: check-changes
         run: |
-          # Always build on integration branches, release branches, and workflow_dispatch.
-          # release/** triggers a stable production release; workflow_dispatch with
-          # release_type=stable does the same from any branch.
+          # Always build on true release branches and workflow_dispatch.
           if [[ "${{ github.ref_name }}" == "main" || \
                 "${{ github.ref_name }}" == "master" || \
-                "${{ github.ref_name }}" == "vibemis-main" || \
                 "${{ github.ref_name }}" =~ ^release/ || \
                 "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "should_build=true" >> $GITHUB_OUTPUT
-            echo "Always building on integration/release branch or workflow_dispatch"
+            echo "Always building on release branch or workflow_dispatch"
             exit 0
+          fi
+
+          # vibemis-main (beta integration branch): skip md-only commits to avoid
+          # redundant AppImage builds after README/docs-only pushes.
+          if [[ "${{ github.ref_name }}" == "vibemis-main" || "${{ github.ref_name }}" == "develop" ]]; then
+            PARENT_COUNT=$(git rev-list --parents -n 1 HEAD | wc -w)
+            PARENT_COUNT=$((PARENT_COUNT - 1))
+            if [ "$PARENT_COUNT" -gt 1 ]; then
+              FIRST_PARENT=$(git rev-parse HEAD^1)
+              CODE_FILES=$(git diff --name-only $FIRST_PARENT HEAD | grep -v -E "(\.md$|\.txt$|\.yml$|\.yaml$)" | wc -l)
+              WORKFLOW_FILES=$(git diff --name-only $FIRST_PARENT HEAD | grep -E "^\.github/workflows/.*\.(yml|yaml)$" | wc -l)
+            else
+              CODE_FILES=$(git diff --name-only HEAD~1 HEAD | grep -v -E "(\.md$|\.txt$|\.yml$|\.yaml$)" | wc -l)
+              WORKFLOW_FILES=$(git diff --name-only HEAD~1 HEAD | grep -E "^\.github/workflows/.*\.(yml|yaml)$" | wc -l)
+            fi
+            TOTAL=$((CODE_FILES + WORKFLOW_FILES))
+            if [ "$TOTAL" -eq 0 ]; then
+              echo "should_build=false" >> $GITHUB_OUTPUT
+              echo "Skipping beta build — docs-only commit on vibemis-main"
+              exit 0
+            else
+              echo "should_build=true" >> $GITHUB_OUTPUT
+              echo "Building on vibemis-main — $TOTAL meaningful file(s) changed"
+              exit 0
+            fi
           fi
 
           # Skip builds if commit message contains [skip ci] or [ci skip]

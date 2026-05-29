@@ -87,6 +87,41 @@ by reading Vibepollo's side of the handshake. Currently we only see what Vibemis
 ### P3.6 — Video scale mode, pan/zoom, compact perf overlay (from original plan)
 Phases 3–7 from the original plan (see pure-purring-pillow.md)
 
+### P3.7 — Cross-network connectivity (Tailscale / remote play)
+Stream over the internet when client and host are not on the same LAN.
+
+**Approach (decided):** Tailscale integration. Tailscale is free for personal use (up to 100
+devices) and uses WireGuard under the hood — end-to-end encrypted, NAT-traversal, no port
+forwarding required. Vibemis itself needs zero code changes: once both devices join the same
+Tailnet, the host's Tailscale IP (100.x.x.x) or MagicDNS hostname (hostname.tailnet.ts.net)
+works as a regular host address in the "Add PC" dialog.
+
+**What this phase delivers:**
+1. README "Remote Play" section — step-by-step Tailscale setup for host and client
+2. In-app help text in the Add Host dialog noting Tailscale hostnames are supported
+3. Smoke test: stream from Legion Go S Z2 to a Vibepollo host on a different network
+4. Document known latency vs LAN trade-offs (Tailscale relayed vs direct paths)
+
+**Why Tailscale over alternatives:**
+- ZeroTier: similar capability but Tailscale's DERP relay network has better global coverage
+- WireGuard manual: works but requires static IPs, port forwarding, key exchange — too complex for end users
+- Direct Tailscale API integration (embedding tailscaled): massive scope, not needed — Tailscale runs as a system service
+
+### P3.8 — Artemis Android feature parity
+Port features from [MobinYengejehi/Artemis](https://github.com/MobinYengejehi/Artemis) (Android)
+that make sense on a Linux handheld / Steam Deck form factor. That repo is the most complete
+reference for what Apollo-aware clients can do. High-value candidates for Vibemis:
+
+- **Video scaling modes** — Fit / Fill / Stretch (overlaps P3.6)
+- **Pan/zoom view** — scroll to pan while streaming (overlaps P3.6)
+- **Simplified performance display** — compact HUD showing FPS/bitrate/latency
+- **Custom shortcut commands** — user-defined in-stream shortcuts (depends on P3.4 Quick Menu)
+- **Game back menu** — in-stream pause-style menu (Quick Menu already covers some of this)
+- **Frame rate lock fixes** — investigate if upstream moonlight-qt has similar issues on SteamOS
+
+Review the Artemis Android README at https://github.com/MobinYengejehi/Artemis for the full feature
+list before implementing each item — some are touch/mobile-specific and should be skipped.
+
 ## Development priority: Game Mode over Desktop Mode
 
 **Primary target is SteamOS Game Mode (Gamescope), not Desktop Mode (KDE Plasma).**
