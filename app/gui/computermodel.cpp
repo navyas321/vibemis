@@ -102,6 +102,19 @@ QVariant ComputerModel::data(const QModelIndex& index, int role) const
         details += tr("UUID: %1").arg(computer->uuid) + '\n';
         details += tr("MAC Address: %1").arg(computer->macAddress.isEmpty() ? tr("Unknown") : QString(computer->macAddress.toHex(':'))) + '\n';
 
+        // Vibemis: surface the host software version so users can tell whether their Apollo /
+        // Vibepollo / Sunshine host is up to date. apolloVersion is empty on Vibepollo (see
+        // NvComputer::isApolloServer note), so also show the generic app/GFE version when present.
+        if (!computer->apolloVersion.isEmpty()) {
+            details += tr("Apollo Version: %1").arg(computer->apolloVersion) + '\n';
+        }
+        if (!computer->appVersion.isEmpty()) {
+            details += tr("Host Software Version: %1").arg(computer->appVersion) + '\n';
+        }
+        else if (!computer->gfeVersion.isEmpty()) {
+            details += tr("Host Software Version: %1").arg(computer->gfeVersion) + '\n';
+        }
+
         // Server Capabilities Section (Apollo/Sunshine servers only)
         if (computer->serverPermissions != 0) {
             details += '\n' + tr("═══ SERVER CAPABILITIES ═══") + '\n';
