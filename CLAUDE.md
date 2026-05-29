@@ -70,7 +70,21 @@ Once Quick Menu renders correctly in Game Mode, review and expand the menu items
   quit, paste clipboard (keyboard shortcut only in upstream)
 - Ensure all Artemis Apollo-protocol features are surfaced in the menu
 
-### P3.5 — Video scale mode, pan/zoom, compact perf overlay (from original plan)
+### P3.5 — Vibepollo log access from WSL2
+Being able to read Vibepollo's live logs from the build agent (WSL2) dramatically speeds
+up debugging pairing, clipboard, and streaming issues — no more relying solely on the
+test agent's excerpts. Currently WSL2 cannot reach Windows filesystem paths.
+
+**Plan:** do this together with the user. They will share the right Windows local path
+(likely something under `%APPDATA%\Vibepollo\logs\` or similar). Once shared:
+1. Confirm the path is accessible as `/mnt/c/...` or via a WSL2 symlink
+2. Add a note in CLAUDE.md with the exact path so every session can `tail -f` it
+3. Optionally add a helper alias / script `vibepollo-log` that tails the current log
+
+**Why it matters:** in test16–19 the pairing failures could have been diagnosed in minutes
+by reading Vibepollo's side of the handshake. Currently we only see what Vibemis logs.
+
+### P3.6 — Video scale mode, pan/zoom, compact perf overlay (from original plan)
 Phases 3–7 from the original plan (see pure-purring-pillow.md)
 
 ## Development priority: Game Mode over Desktop Mode
