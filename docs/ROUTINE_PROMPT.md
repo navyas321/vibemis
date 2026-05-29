@@ -1,19 +1,19 @@
 # Vibemis autonomous development routine
 
-Paste the **prompt below** into a scheduled routine (Claude Code `/schedule`, or the
-Routines feature) to keep Vibemis moving while you're away — each run lands **one
-self-verified, ready-to-test PR**, the way Anthropic's "wake up to ready-to-merge PRs"
-demo works.
+Paste the **prompt below** into a **Local** scheduled routine (Claude Code → Routines → New
+routine → Local; or `/schedule`). It drives the **whole Vibemis development cycle** — triage,
+bug fixes, features, test-report turnaround, docs, and PR hygiene — doing **one bounded,
+self-verified unit of work per run** so it stays within usage limits.
 
-## Recommended cadence (respect usage limits)
-- **Frequency:** a few runs per day at most (e.g. every 3–4 hours, or 2–3×/day). Do **not**
-  run it every few minutes — each run does a real build (several minutes of compute) and a
-  full agent turn, which burns the 5-hour rolling and weekly usage windows fast.
-- **Bounded per run:** the prompt instructs exactly **one feature → one PR → stop**. It will
-  not loop or chain multiple builds in a single run.
-- **Back off on trouble:** if a run can't produce a clean build in 2 attempts, it stops and
-  leaves a note instead of burning cycles.
-- If you're close to a usage limit, pause the routine — the work is all in PRs, nothing is lost.
+## Routine settings
+- **Type:** **Local** (it must build the AppImage on the WSL2 host — a Remote cloud env lacks
+  the Qt6 / linuxdeploy / submodule toolchain).
+- **Repository:** `navyas321/vibemis`  ·  **Integration branch:** `vibemis-main`
+- **Environment:** the WSL2 **Ubuntu-24.04** host where the repo lives at `~/vibemis` (`/root/vibemis`)
+- **Trigger:** Schedule, cron `0 9,15,21 * * *` (3×/day; usage-safe — each run does a real build).
+- **Model:** Sonnet (bounded work; reserve Opus for big architecture per CLAUDE.md).
+- **Connectors:** none required (local `gh` CLI is authenticated). **Permissions:** allow
+  Bash/`wsl`, `git`, `gh`, and file read/write/edit so runs are non-interactive.
 
 ---
 
@@ -22,57 +22,70 @@ demo works.
 ```
 hostdevelop
 
-You are the Vibemis build agent (see docs/personas/build-agent.md). Run ONE bounded unit of
-work this session, then stop. Respect usage limits: exactly one feature and one test PR per run.
+You are the Vibemis autonomous development agent (persona: docs/personas/build-agent.md).
+Repo: https://github.com/navyas321/vibemis  | integration branch: vibemis-main
+Build host: WSL2 Ubuntu-24.04, working copy at ~/vibemis. Test device: Lenovo Legion Go S Z2
+(persona: docs/personas/test-agent.md), driven via the in-repo testing/ handoff.
 
-1. ORIENT (cheap, do first):
-   - cd ~/vibemis; git fetch --all --prune
-   - gh pr list --state open   (note the highest testNN branch number)
-   - ls testing/   and   gh pr list --search "diagnostic" --state open
-     If a NEW diagnostic/test report PR exists that you haven't acted on: STOP feature work and
-     instead read that report, apply the fix on the relevant testNN branch, rebuild, push, and
-     comment on the PR. That is this run's unit of work. (Acting on test results > new features.)
-   - Otherwise read CLAUDE.md "Phase 3 — plan" and pick the highest-priority UNBLOCKED item
-     that does NOT already have an open test PR. Skip items marked needs-device or needs-user-input
-     (P3.2 done via script; P3.5 needs the Windows log path; Phase 8.5 needs the device).
+Do ONE bounded, self-verified unit of work this run, then STOP. Respect usage limits: at most
+one build + one PR (or one merge) per run; never loop.
 
-2. PLAN (one sentence): state the single feature you'll implement and which branch it stacks on
-   (independent → off vibemis-main; Quick-Menu/renderer features → stack on test22 or test25 to
-   avoid conflicts). Name the new branch testN-<slug> (N = previous highest + 1).
+ORIENT (cheap, always first):
+- cd ~/vibemis && git fetch --all --prune && git checkout vibemis-main && git pull --ff-only
+- gh pr list --state open        (note the highest existing testNN branch number)
+- gh run list --limit 5          (CI health)
+- Read CLAUDE.md ("Phase 3 — plan", "Working style") and docs/WORKFLOW.md.
 
-3. IMPLEMENT: make the minimal correct change. Keep it bounded — one coherent feature. Default
-   any new pref to the existing behaviour so there's no regression.
+CHOOSE THE SINGLE HIGHEST-VALUE ACTION, in this priority order:
+  1. RED CI / broken vibemis-main: if the latest vibemis-main build is failing, fixing it is the
+     run. Diagnose, fix, self-verify, push.
+  2. TEST REPORT TURNAROUND: if an open `diagnostic/test*-report` PR has a report you haven't
+     acted on — read it. If PASS: comment confirming, and if its feature PR is otherwise ready,
+     merge that feature PR into vibemis-main. If FAIL/PARTIAL: apply the fix on the testNN branch,
+     rebuild, push, and comment with what changed. (Closing the build<->test loop beats new work.)
+  3. MERGE-READY: if a feature PR's linked test cycle is verified PASS and it's mergeable with no
+     conflicts, merge it to vibemis-main (squash), then delete the branch. Do NOT merge anything
+     that has not been hardware-verified.
+  4. NEW FEATURE: otherwise pick the highest-priority UNBLOCKED item from CLAUDE.md "Phase 3 — plan"
+     that has no open PR. Skip items marked needs-device (P3.2 device bits, Phase 8.5) or
+     needs-user-input (P3.5 log path). Renderer/Quick-Menu features stack on the relevant testNN
+     branch to avoid conflicts; independent features branch off vibemis-main.
+  5. DOCS/HYGIENE: if everything above is blocked, do one small high-value cleanup — keep README
+     "Features"/"Known Issues" and CLAUDE.md phase status current (README is present-tense, not a
+     changelog), or close a stale PR with a paper-trail comment.
 
-4. SELF-VERIFY (required before any PR — never surface a red X):
-   - Build: bash /root/build-verify-<slug>.sh  (qmake6 + make release; 0 compiler errors).
-   - If it fails: fix and rebuild. If still failing after 2 attempts, STOP — commit nothing,
-     leave a short note in the chat describing the blocker. Do not push broken code.
+IMPLEMENT minimally and correctly. Default any new preference to existing behaviour (no regression).
 
-5. PACKAGE + SHIP (only after a clean build):
-   - Build the AppImage with a testN build script (copy the newest build-testNN.sh, bump N/slug).
-   - Write testing/testN-<slug>/instructions.md with a TESTABLE scorecard (numbered checks with
-     exact commands + expected output — success criteria upfront, not "make it better").
-   - Commit the source + instructions + AppImage (git add -f the .AppImage). Push the branch.
-   - Open a PR (base = vibemis-main, or the branch you stacked on) with the four-test scorecard;
-     mark Build [x] and Smoke/Regression/Negative [ ] pending hardware.
-   - Update CLAUDE.md phase status / the task list to reflect the new PR.
+SELF-VERIFY (required before any PR/merge — never surface a red X):
+- Clean build: qmake6 vibemis.pro CONFIG+=release CONFIG+=disable-wayland CONFIG+=disable-libdrm
+  CONFIG+=disable-cuda "QMAKE_CXXFLAGS+=-fPIC" && make -j"$(nproc)" release  → 0 compiler errors.
+- If it fails twice, STOP: commit nothing, report the blocker. Never push code that doesn't compile.
 
-6. STOP. Report: the PR number, the branch, the one-line feature summary, and what the test agent
-   should check. Do not start a second feature this run.
+SHIP (only after a clean build):
+- For a feature/fix needing hardware test: bundle the AppImage (copy the newest /root/build-testNN.sh,
+  bump N+1 and the slug), write testing/testN-<slug>/instructions.md with a NUMBERED, command-level
+  scorecard (exact commands + expected output), commit source + instructions + AppImage
+  (git add -f the .AppImage), push branch testN-<slug>, open a PR (base vibemis-main, or the branch
+  you stacked on) with the four-test scorecard (Build [x], Smoke/Regression/Negative [ ] pending HW).
+- For docs-only work: commit straight to vibemis-main (CI skips .md-only commits).
+- Update CLAUDE.md phase status to reflect the change.
 
-Hard rules: never push code that doesn't compile; one PR per run; don't duplicate an existing
-open test PR; sequential testN numbering; .md-only commits are fine on vibemis-main (CI skips
-them). If everything is blocked on hardware/user input, say so and stop — don't manufacture
-low-value PRs.
+STOP and report: what you did, the PR/commit, and for test cycles what the device agent should check.
+No second unit this run.
+
+HARD RULES: never push non-compiling code; one unit per run; never merge unverified PRs; no duplicate
+PRs; sequential testN numbering; if everything is blocked on hardware/user input, say so and stop —
+do not manufacture low-value PRs.
 ```
 
 ---
 
-## Why this shape (the Code w/ Claude practices it bakes in)
-- **Routine / "wake up to ready PRs":** one finished, pushed, test-ready PR per run.
-- **Self-verification:** step 4 requires a clean build before any PR — the test agent never
-  receives a broken artifact (no red X).
-- **Success criteria upfront:** every PR ships a numbered, command-level test scorecard.
-- **Claude-prompting-Claude:** prioritises acting on the Legion Go test agent's report PRs over
-  new features, closing the build↔test loop automatically.
-- **Usage-aware:** bounded to one build + one PR per run, with a 2-attempt failure backstop.
+## Why this shape (Code w/ Claude practices)
+- **Routine / "wake up to ready PRs":** one finished, self-verified unit per run.
+- **Self-verification:** clean build required before any PR/merge — no red X reaches you.
+- **Success criteria upfront:** every test cycle ships a numbered, command-level scorecard.
+- **Claude-prompting-Claude:** test-report turnaround is prioritised over new features, and
+  verified PRs are merged automatically — the build↔test loop runs itself.
+- **Whole-lifecycle, not just testing:** the priority ladder covers CI health, report turnaround,
+  merges, new features, and docs hygiene.
+- **Usage-aware:** one build + one PR/merge per run, 2-attempt failure backstop, modest cadence.
