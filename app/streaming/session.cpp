@@ -734,6 +734,17 @@ bool Session::initialize()
     m_StreamConfig.fps = m_Preferences->fps;
     m_StreamConfig.bitrate = m_Preferences->bitrateKbps;
 
+    // Vibemis battery saver: when enabled and the device is running on battery,
+    // reduce the stream bitrate (to 60% of configured) for longer handheld play.
+    if (m_Preferences->reduceBitrateOnBattery &&
+        SDL_GetPowerInfo(nullptr, nullptr) == SDL_POWERSTATE_ON_BATTERY) {
+        int reduced = (m_StreamConfig.bitrate * 60) / 100;
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "Vibemis battery saver: on battery, reducing bitrate %d -> %d kbps",
+                    m_StreamConfig.bitrate, reduced);
+        m_StreamConfig.bitrate = reduced;
+    }
+
     // Vibemis Apollo integration: Apply fractional refresh rate if enabled
     if (m_Preferences->enableFractionalRefreshRate) {
         // Convert fractional refresh rate to integer (multiply by 1000 for precision)
