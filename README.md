@@ -72,6 +72,31 @@ To launch Vibemis from Game Mode:
 
 ---
 
+## Remote Play (over the internet)
+
+Vibemis streams over your LAN out of the box. To stream when the client and host are on
+**different networks** — without port forwarding or exposing your host to the internet — put
+both devices on the same [Tailscale](https://tailscale.com) network. Tailscale is free for
+personal use, end-to-end encrypted (WireGuard), and handles NAT traversal automatically.
+
+1. **On the host** (the PC running Vibepollo/Apollo/Sunshine): install Tailscale and sign in.
+2. **On the client** (Steam Deck / handheld running Vibemis): install Tailscale and sign in
+   with the same account. On SteamOS, Tailscale is available as a Flatpak or via the static
+   binary.
+3. In Vibemis, **add the host by its Tailscale address** — either its `100.x.x.x` IP or its
+   MagicDNS name (`hostname.your-tailnet.ts.net`). Pair and stream exactly as you would on
+   the LAN.
+
+> **Notes**
+> - No Vibemis configuration is required beyond using the Tailscale address as the host.
+> - For best latency, Tailscale will establish a direct peer-to-peer path when possible and
+>   fall back to an encrypted relay (DERP) otherwise. Expect LAN-class latency on a direct
+>   path; relayed paths add some overhead.
+> - The host's streaming ports do **not** need to be forwarded — Tailscale carries the
+>   traffic over the encrypted tunnel.
+
+---
+
 ## Keyboard and Gamepad Shortcuts
 
 ### Quick Menu
