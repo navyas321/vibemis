@@ -24,6 +24,30 @@ Read your **persona file** first (who you are), then the SOP in [`docs/WORKFLOW.
 - **Routine-friendly.** Unattended development runs via [`docs/ROUTINE_PROMPT.md`](docs/ROUTINE_PROMPT.md):
   one self-verified, test-ready PR per run, bounded to respect usage limits.
 
+### How we use Claude Code on this repo (task decomposition · agents · planning · TDD)
+Distilled from Anthropic's guidance; full rationale + sources in
+[`docs/CLAUDE_CODE_PRACTICES.md`](docs/CLAUDE_CODE_PRACTICES.md). The high-leverage rules:
+
+- **Explore → Plan → Implement → Commit.** For anything touching multiple files or unfamiliar
+  code, plan first (EnterPlanMode). If you can describe the exact diff in one sentence, skip the
+  plan and just do it. Most single-file Vibemis settings/UI features are "just do it".
+- **Break into TodoWrite/Task items when** a job has ≥3 distinct steps, spans multiple files, or
+  must survive a context reset. Encode real dependencies (e.g. "verify CI green" *blocks* "stack
+  next test PR") so unverified work never gets built on. One task `in_progress` at a time.
+- **Spawn a subagent only when** the work is a wide read-only search ("find every caller of X"),
+  a genuinely parallelizable independent slice, or a context-heavy sift where most output is
+  noise — subagents have isolated context and report just a summary. Do **not** spawn for ordinary
+  multi-step work you can do inline; cold subagents re-derive context and cost more. The
+  build↔test split (`hostdevelop`/`clienttest`) is our standing agent decomposition.
+- **CLAUDE.md is followed ~70% of the time** — fine for style, NOT for safety. Anything that must
+  hold every time (don't push betas off non-`vibemis-main`; self-verify before handoff) belongs in
+  an enforcement mechanism (the CI tier rules + a hook), not just prose here.
+- **Tests are the oracle.** A model's self-judgment degrades as context fills; a green build / a
+  command-level test scorecard stays accurate. That's why every test PR ships an exact-command
+  Tier-1/2 plan and why we **never** stack a new test branch on one whose CI hasn't gone green.
+- **Reusable workflows are slash commands** in [`.claude/commands/`](.claude/commands/): e.g.
+  `/ship-test-pr`, `/verify-ci`, `/release-hygiene`. Prefer them over re-deriving the steps.
+
 ## What this repo is
 
 **Vibemis** is a Linux-focused fork of [Vibemis Qt](https://github.com/navyas321/vibemis) (which is itself a fork of [Moonlight Qt](https://github.com/moonlight-stream/moonlight-qt)). It's a desktop / Steam Deck / handheld streaming client tuned to pair with **Vibepollo** (a Sunshine fork). C++ / Qt 6 / QML, built with qmake6.
