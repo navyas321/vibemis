@@ -65,9 +65,9 @@ whole Quick Menu group depends on its render path.
 
 - [x] **test27** — Vibemis brand accent (teal/cyan) — **PR #49** — base `vibemis-main` — ☑ **PASS** (report PR #95; accent #00CCCC confirmed, dark theme intact, no regressions) → merged
 - [x] **test28** — Tailscale hint in Add-PC dialog — **PR #50** — base `vibemis-main` — ☑ **PASS** (report PR #97; hint shows 100.x/MagicDNS, wraps cleanly, field works) → merged
-- [ ] **test51** — Prefer Tailscale addresses for remote play (P3.7) — **PR #71** — base `vibemis-main` — ☐  *(Tier 1/2 launcher-only; Tier 3 needs a tailnet — mark N/A otherwise)*
+- [x] **test51** — Prefer Tailscale addresses for remote play (P3.7) — **PR #71** — base `vibemis-main` — ☑ **PASS (Tier 1+2)** (report PR #126; default off, persists, LAN unaffected; Tier 3 real-tailnet stream N/A → ledger) → merged
 - [x] **test69** ⭐**PRIORITY** — One-command Tailscale setup `scripts/setup-tailscale.sh` (P3.7) — **PR #89** — base `vibemis-main` — ☑ **PASS** (report PR #93; `bash -n` clean, `--check` safe, userspace fallback writes only to ~/.local) → merged. *(Tier 3 real-tailnet join = maintainer to confirm once.)*
-- [ ] **test70** — In-app "Set up Tailscale" entry point in Settings (P3.7) — **PR #90** — base `vibemis-main` — ☐  *(launcher only; needs a browser)*
+- [x] **test70** — In-app "Set up Tailscale" entry point in Settings (P3.7) — **PR #90** — base `vibemis-main` — ☑ **PASS** (report PR #127; both buttons render, hasBrowser gate works, URLs correct; browser-open → ledger) → merged
 - [x] **test37** — Settings "About" section — **PR #57** — base `vibemis-main` — ☑ **PASS** (report PR #117; teal "About" header, "Vibemis 0.6.7", description, github.com/navyas321/vibemis link; no regression) → merged
 - [x] **test39** — First-run welcome hint — **PR #59** — base `vibemis-main` — ☑ **PASS** (report PR #118; "Welcome to Vibemis!" dialog with 3 onboarding tips shows once, dismisses cleanly, `seenwelcomehint` persists so it doesn't reappear; no regression) → merged
 - [x] **test71** — Fix ALL-CAPS button labels (Material) — **PR #96** — base `vibemis-main` — ☑ **PASS** (report PR #119; **user-reported bug FIXED** — bitrate button now "Use Default (32 Mbps)" not "USE DEFAULT (32 MBPS)"; app-wide `QFont::MixedCase`, no styling regression) → merged
@@ -75,20 +75,20 @@ whole Quick Menu group depends on its render path.
 - [x] **test55** — System Information panel in Settings — **PR #75** — base `vibemis-main` — ☑ **PASS** (report PR #121; all 7 rows populated + correct — arch x86_64, SteamOS, VAAPI, HDR enabled, 1920×1200; no regression) → merged. *(Unblocks test63.)*
 - [x] **test56** — Help & Links section in Settings (GitHub / README / Tailscale) — **PR #76** — base `vibemis-main` — ☑ **PASS** (report PR #122; Help & Links GroupBox + all 3 buttons render, `hasBrowser` gate works (xdg-open present); Tier 2 actual link-open N/A — screen capture failed mid-test → ledger) → merged
 - [x] **test58** — Show host software version in PC details (P3.13) — **PR #78** — base `vibemis-main` — ☑ **PASS*** (report PR #123; logic verified — Navid-PC `appversion 7.1.431.-1` → "Host Software Version: 7.1.431.-1", graceful when empty, no regression. *Visual dialog confirmation blocked by device screen-lock → ledger.) → merged
-- [ ] **test60** — Per-client access level in PC context menu (P3.13) — **PR #80** — base `vibemis-main` — ☐  *(launcher only; best with a paired Apollo host)*
-- [ ] **test61** — Virtual Display clarifying notes (P3.13) — **PR #81** — base `vibemis-main` — ☐  *(launcher only)*
+- [x] **test60** — Per-client access level in PC context menu (P3.13) — **PR #80** — base `vibemis-main` — ☑ **PASS*** (report PR #124; server→model→QML pipeline confirmed via log/source; context-menu visual deferred — screen-lock) → merged
+- [x] **test61** — Virtual Display clarifying notes (P3.13) — **PR #81** — base `vibemis-main` — ☑ **PASS** (report PR #125; both contextual notes display, mutually exclusive, layout intact) → merged
 
 ## 5. Tooling / test automation
 
 - [x] **test52** — `vibemis selftest` headless smoke test (automation enabler) — **PR #72** — base `vibemis-main` — ☑ **PASS** (report PR #91; SteamOS 3.8.5/Mesa 25.3.0; 5/5 checks, exit 0) → merged to vibemis-main
 - [x] **test54** — `selftest --json` + settings round-trip checks — **PR #74** — base `test52` — ☑ **PASS** (report PR #92; 7/7 checks, valid JSON, non-destructive) → merged. Note: use `selftest --json 2>/dev/null` for pure JSON (hook/Qt warnings go to stderr).
-- [ ] **test63** — Copy system info to clipboard — **PR #83** — base `test55` — ☐  *(launcher only; verify after test55)*
+- [x] **test63** — Copy system info to clipboard — **PR #83** — base `test55` — ☑ **PASS** (report PR #128; "Copy to clipboard" → "Copied!" flash, all 7 fields copied, reverts after 1500ms) → merged. Note: "Max resolution: 0×0" under XWayland (same `maximumResolution` quirk as test68) — follow-up: apply Screen fallback to the System-Info row too.
 
 ## 6. Config / SteamOS helpers
 
-- [ ] **test41** — Settings export / import — **PR #61** — base `vibemis-main` — ☐  *(launcher only)*
+- [x] **test41** — Settings export / import — **PR #61** — base `vibemis-main` — ☑ **PASS** (report PR #129; export+import work end-to-end, import restores via reload(), status messages correct) → merged
 - [x] **test48** — SteamOS helper scripts bundle (install / update / add-game / add-all / pair / uninstall / doctor) — **PR #68** — base `vibemis-main` — ☑ **PASS** (report PR #94; all 7 scripts clean, sudo-free, $HOME-scoped) → merged. Follow-up: fixed `vibemis-doctor.sh` settings-path check.
-- [ ] **test74** — Guided one-command setup `scripts/vibemis-setup.sh` (P3.10) — **PR #109** — base `vibemis-main` — ☐  *(script test; Tier 1 = bash -n + --help + --dry-run + sudo/path safety scan, Tier 2 = --update-only, Tier 3 = full host run → deferred ledger)*
+- [x] **test74** — Guided one-command setup `scripts/vibemis-setup.sh` (P3.10) — **PR #109** — base `vibemis-main` — ☑ **PASS (Tier 1)** (report PR #130; bash -n clean, --help/--dry-run correct, bad-option exit 2, no unsafe shell patterns; Tier 2/3 → ledger) → merged
 
 ---
 
