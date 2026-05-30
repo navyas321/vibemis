@@ -826,6 +826,7 @@ Flickable {
 
                     Button {
                         id: resetBitrateButton
+                        font.capitalization: Font.MixedCase   // Vibemis: no ALL-CAPS "USE DEFAULT (30 MBPS)"
                         text: qsTr("Use Default (%1 Mbps)").arg(StreamingPreferences.getDefaultBitrate(StreamingPreferences.width, StreamingPreferences.height, StreamingPreferences.fps, StreamingPreferences.enableYUV444) / 1000.0)
                         visible: StreamingPreferences.bitrateKbps !== StreamingPreferences.getDefaultBitrate(StreamingPreferences.width, StreamingPreferences.height, StreamingPreferences.fps, StreamingPreferences.enableYUV444)
                         onClicked: {
