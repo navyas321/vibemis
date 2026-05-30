@@ -36,6 +36,13 @@ Good signals to assert on: the active renderer (expect **EGLRenderer** on this A
 ## 3. Screenshots (visual checks)
 - **Game Mode (Gamescope):** press **Super + S** → saves to `/tmp/gamescope_<date>.png`. From a
   shell you can list/pull the newest: `ls -t /tmp/gamescope_*.png | head -1`.
+- **Driving value-bound UI on Wayland (test agent tip, from the test53 cycle):** KWin (Plasma
+  Wayland) silently drops synthetic XTEST clicks into native-Wayland surfaces, so `xdotool`
+  click/type won't land. Two reliable workarounds with no installs/sudo: (a) launch with
+  `QT_QPA_PLATFORM=xcb ./Vibemis-x86_64.AppImage` → it's a real **XWayland** window `xdotool` can
+  warp/click/type; (b) for settings that are **value-bound** (render from the current pref, not an
+  `onActivated` event), pre-seed the keys in `~/.config/Vibemis Project/Vibemis.conf` (back it up
+  first) and relaunch — this reproduces the exact UI state a dropdown/slider change produces.
 - **Desktop Mode (KDE):** Spectacle has a CLI —
   `spectacle -b -n -a -o /tmp/vibemis-shot.png` (`-b` background, `-n` no notify, `-a` active
   window). Pre-installed on SteamOS. Use it to capture the launcher/Settings to confirm a control
