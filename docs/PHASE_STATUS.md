@@ -74,7 +74,7 @@ heavily, so they're now one phase).
 
 ## P3.10 — SteamOS one-click integration  🟢 core complete
 - Done: helper scripts bundle test48 (#68) — install / update / add-to-steam / add-all / pair /
-  uninstall / doctor. **Guided one-command flow `scripts/vibemis-setup.sh` test74 (#NNN)** — chains
+  uninstall / doctor. **Guided one-command flow `scripts/vibemis-setup.sh` test74 (#109)** — chains
   doctor → update → install → (optional) pair → add-all-games, with `--dry-run`/`--update-only`/
   `--host`/`--yes`. No sudo, $HOME-scoped.
 - Remaining (nice-to-have): `.desktop` polish for Desktop Mode; the full host-dependent end-to-end run
