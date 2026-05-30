@@ -2,6 +2,8 @@
 #include "utils.h"
 
 #include <QSettings>
+#include <QDir>
+#include <QFile>
 #include <QTranslator>
 #include <QCoreApplication>
 #include <QLocale>
@@ -49,6 +51,11 @@
 #define SER_DETECTNETBLOCKING "detectnetblocking"
 #define SER_SHOWPERFOVERLAY "showperfoverlay"
 #define SER_PREFERTAILSCALE "prefertailscale"
+#define SER_FORWARDMOTION "forwardmotioncontrols"
+#define SER_PERFOVERLAYCLOCK "perfoverlayclock"
+#define SER_SUPPRESSRUMBLE "suppresscontrollerrumble"
+#define SER_PERFOVERLAYTEXTSIZE "perfoverlaytextsize"
+#define SER_ADAPTIVEBITRATE "adaptivebitrate"
 #define SER_SWAPMOUSEBUTTONS "swapmousebuttons"
 #define SER_MUTEONFOCUSLOSS "muteonfocusloss"
 #define SER_BACKGROUNDGAMEPAD "backgroundgamepad"
@@ -56,6 +63,7 @@
 #define SER_SWAPFACEBUTTONS "swapfacebuttons"
 #define SER_CAPTURESYSKEYS "capturesyskeys"
 #define SER_KEEPAWAKE "keepawake"
+#define SER_SEENWELCOMEHINT "seenwelcomehint"
 #define SER_LANGUAGE "language"
 #define SER_RENDERERBACKEND "rendererbackend"
 
@@ -65,6 +73,7 @@
 #define SER_CUSTOMREFRESHRATE "customrefreshrate"
 #define SER_RESOLUTIONSCALING "resolutionscaling"
 #define SER_RESOLUTIONSCALEFACTOR "resolutionscalefactor"
+#define SER_PERFOVERLAYPOSITION "perfoverlayposition"
 
 #define CURRENT_DEFAULT_VER 2
 
@@ -158,6 +167,14 @@ void StreamingPreferences::reload()
     detectNetworkBlocking = settings.value(SER_DETECTNETBLOCKING, true).toBool();
     showPerformanceOverlay = settings.value(SER_SHOWPERFOVERLAY, false).toBool();
     preferTailscale = settings.value(SER_PREFERTAILSCALE, false).toBool();
+    forwardMotionControls = settings.value(SER_FORWARDMOTION, false).toBool();
+    perfOverlayShowClock = settings.value(SER_PERFOVERLAYCLOCK, false).toBool();
+    suppressControllerRumble = settings.value(SER_SUPPRESSRUMBLE, false).toBool();
+    perfOverlayTextSize = static_cast<PerfOverlayTextSize>(settings.value(SER_PERFOVERLAYTEXTSIZE,
+                                                           static_cast<int>(PerfOverlayTextSize::PERF_TEXT_NORMAL)).toInt());
+    perfOverlayPosition = static_cast<PerfOverlayPosition>(settings.value(SER_PERFOVERLAYPOSITION,
+                                                           static_cast<int>(PerfOverlayPosition::POS_TOP_LEFT)).toInt());
+    adaptiveBitrate = settings.value(SER_ADAPTIVEBITRATE, false).toBool();
     packetSize = settings.value(SER_PACKETSIZE, 0).toInt();
     swapMouseButtons = settings.value(SER_SWAPMOUSEBUTTONS, false).toBool();
     muteOnFocusLoss = settings.value(SER_MUTEONFOCUSLOSS, false).toBool();
@@ -165,6 +182,7 @@ void StreamingPreferences::reload()
     reverseScrollDirection = settings.value(SER_REVERSESCROLL, false).toBool();
     swapFaceButtons = settings.value(SER_SWAPFACEBUTTONS, false).toBool();
     keepAwake = settings.value(SER_KEEPAWAKE, true).toBool();
+    seenWelcomeHint = settings.value(SER_SEENWELCOMEHINT, false).toBool();
     enableHdr = settings.value(SER_HDR, false).toBool();
     displayHdrCapability = settings.value(SER_DISPLAY_HDR_CAPABILITY, true).toBool();
     captureSysKeysMode = static_cast<CaptureSysKeysMode>(settings.value(SER_CAPTURESYSKEYS,
@@ -368,6 +386,12 @@ void StreamingPreferences::save()
     settings.setValue(SER_DETECTNETBLOCKING, detectNetworkBlocking);
     settings.setValue(SER_SHOWPERFOVERLAY, showPerformanceOverlay);
     settings.setValue(SER_PREFERTAILSCALE, preferTailscale);
+    settings.setValue(SER_FORWARDMOTION, forwardMotionControls);
+    settings.setValue(SER_PERFOVERLAYCLOCK, perfOverlayShowClock);
+    settings.setValue(SER_SUPPRESSRUMBLE, suppressControllerRumble);
+    settings.setValue(SER_PERFOVERLAYTEXTSIZE, static_cast<int>(perfOverlayTextSize));
+    settings.setValue(SER_PERFOVERLAYPOSITION, static_cast<int>(perfOverlayPosition));
+    settings.setValue(SER_ADAPTIVEBITRATE, adaptiveBitrate);
     settings.setValue(SER_AUDIOCFG, static_cast<int>(audioConfig));
     settings.setValue(SER_HDR, enableHdr);
     settings.setValue(SER_DISPLAY_HDR_CAPABILITY, displayHdrCapability);
@@ -386,6 +410,7 @@ void StreamingPreferences::save()
     settings.setValue(SER_SWAPFACEBUTTONS, swapFaceButtons);
     settings.setValue(SER_CAPTURESYSKEYS, captureSysKeysMode);
     settings.setValue(SER_KEEPAWAKE, keepAwake);
+    settings.setValue(SER_SEENWELCOMEHINT, seenWelcomeHint);
     
     // Vibemis client-side streaming enhancements
     settings.setValue(SER_VIRTUALDISPLAY, useVirtualDisplay);
@@ -393,6 +418,51 @@ void StreamingPreferences::save()
     settings.setValue(SER_CUSTOMREFRESHRATE, customRefreshRate);
     settings.setValue(SER_RESOLUTIONSCALING, enableResolutionScaling);
     settings.setValue(SER_RESOLUTIONSCALEFACTOR, resolutionScaleFactor);
+}
+
+QString StreamingPreferences::exportSettings()
+{
+    // Persist current in-memory values first, then copy the live settings into a portable .ini.
+    save();
+
+    QString path = QDir::homePath() + "/vibemis-settings.ini";
+    QSettings src;
+    QSettings dst(path, QSettings::IniFormat);
+    dst.clear();
+    const QStringList keys = src.allKeys();
+    for (const QString& k : keys) {
+        dst.setValue(k, src.value(k));
+    }
+    dst.sync();
+
+    if (dst.status() != QSettings::NoError) {
+        return QString();
+    }
+    return path;
+}
+
+bool StreamingPreferences::importSettings()
+{
+    QString path = QDir::homePath() + "/vibemis-settings.ini";
+    if (!QFile::exists(path)) {
+        return false;
+    }
+
+    QSettings src(path, QSettings::IniFormat);
+    if (src.status() != QSettings::NoError) {
+        return false;
+    }
+
+    QSettings dst;
+    const QStringList keys = src.allKeys();
+    for (const QString& k : keys) {
+        dst.setValue(k, src.value(k));
+    }
+    dst.sync();
+
+    // Refresh in-memory values from the imported settings.
+    reload();
+    return true;
 }
 
 int StreamingPreferences::getDefaultBitrate(int width, int height, int fps, bool yuv444)
