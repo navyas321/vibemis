@@ -29,13 +29,14 @@ whole Quick Menu group depends on its render path.
 - [ ] **test32** — In-stream video pan — **PR #54** — base `test31` — ☐
 - [ ] **test40** — Battery-saver bitrate — **PR #60** — base `vibemis-main` — ☐
 - [ ] **test53** — Settings performance-guidance advisories (sw-decode / high-bitrate) — **PR #73** — base `vibemis-main` — ☐  *(launcher only)*
-- [ ] **test49** — Configurable performance-overlay corner (TL/TR/BL/BR) — **PR #69** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a stream — auto-publishes 🔬 alpha)*
-- [ ] **test50** — Configurable performance-overlay text size (Small/Normal/Large) — **PR #70** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a stream — auto-publishes 🔬 alpha)*
+- [x] **test49** — Configurable performance-overlay corner (TL/TR/BL/BR) — **PR #69** — base `vibemis-main` — ☑ Tier 1 PASS *(testing/test49-perf-overlay-position/report.md)*
+- [x] **test50** — Configurable performance-overlay text size (Small/Normal/Large) — **PR #70** — base `vibemis-main` — ☑ Tier 1 PASS *(testing/test50-perf-overlay-textsize/report.md)*
 
 ## 3. Input / controls
 
 - [ ] **test26** — Configurable Quick Menu gamepad shortcut — **PR #48** — base `vibemis-main` — ☐
 - [ ] **test36** — Back-paddle Quick Menu combos — **PR #56** — base `test26` — ☐
+- [x] **test57** — Disable controller rumble toggle — **PR #77** — base `vibemis-main` — ☑ Tier 1 PASS *(testing/test57-suppress-rumble/report.md)*
 
 ## 4. UI / onboarding
 
