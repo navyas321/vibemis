@@ -63,6 +63,7 @@ whole Quick Menu group depends on its render path.
 - [ ] **test28** — Tailscale hint in Add-PC dialog — **PR #50** — base `vibemis-main` — ☐  *(launcher only)*
 - [ ] **test51** — Prefer Tailscale addresses for remote play (P3.7) — **PR #71** — base `vibemis-main` — ☐  *(Tier 1/2 launcher-only; Tier 3 needs a tailnet — mark N/A otherwise)*
 - [ ] **test69** ⭐**PRIORITY** — One-command Tailscale setup `scripts/setup-tailscale.sh` (P3.7) — **PR #89** — base `vibemis-main` — ☐  *(script-only; Tier 1 = `bash -n` + `--check`, no sudo/login; full setup is user-only)*
+- [x] **test70** — In-app "Set up Tailscale" entry point in Settings (P3.7) — **PR #90** — base `vibemis-main` — ☑ **PASS** (report PR #127; both buttons render with hasBrowser=true on KDE Plasma; URLs correct from source; Tier 2 browser-launch N/A in Desktop Mode automation)  *(launcher only; needs a browser)*
 - [ ] **test37** — Settings "About" section — **PR #57** — base `vibemis-main` — ☐  *(launcher only)*
 - [ ] **test39** — First-run welcome hint — **PR #59** — base `vibemis-main` — ☐  *(launcher only)*
 - [ ] **test55** — System Information panel in Settings — **PR #75** — base `vibemis-main` — ☐  *(launcher only)*
