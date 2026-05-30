@@ -11,6 +11,18 @@ whole Quick Menu group depends on its render path.
 > Keep this file the single source of truth for test order. When a cycle is verified, change ☐ →
 > ☑ (or ✗) in the same commit as the report, and note the report path.
 
+### ▶ START HERE (first time on the device)
+1. `git fetch origin` (gets all `test*` branches + this checklist).
+2. **Smoke-test the tooling first:** `./testing/run-cycle.sh test52-selftest-cli` — it downloads the
+   alpha, verifies md5, runs `selftest --json`, and captures a launch log. If that PASSes, the
+   harness works and you can trust `selftest` for later cycles.
+3. Then take the **topmost unchecked (☐) row whose deps are satisfied** (start with **test22** — it
+   has a committed AppImage in `testing/test22-quickmenu-overlay/`). `run-cycle.sh <slug>` fetches
+   the artifact for any row; then follow that row's `testing/<slug>/instructions.md` for the tiers.
+4. **One cycle per session.** File `report.md`, tick the box here, open the report PR. Details below
+   and in [`../docs/personas/test-agent.md`](../docs/personas/test-agent.md) +
+   [`../docs/TEST_AUTOMATION.md`](../docs/TEST_AUTOMATION.md).
+
 ---
 
 ## 1. Quick Menu foundation + content (verify in this sub-order — the rest stack on test22)
@@ -28,6 +40,13 @@ whole Quick Menu group depends on its render path.
 - [ ] **test31** — In-stream video zoom — **PR #53** — base `test25` — ☐
 - [ ] **test32** — In-stream video pan — **PR #54** — base `test31` — ☐
 - [ ] **test40** — Battery-saver bitrate — **PR #60** — base `vibemis-main` — ☐
+- [ ] **test53** — Settings performance-guidance advisories (sw-decode / high-bitrate) — **PR #73** — base `vibemis-main` — ☐  *(launcher only)*
+- [ ] **test59** — Data-usage estimate under the bitrate slider — **PR #79** — base `vibemis-main` — ☐  *(launcher only)*
+- [ ] **test62** — Adaptive bitrate (experimental) first slice (P3.12) — **PR #82** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a degrading stream — mark N/A otherwise)*
+- [ ] **test65** — AV1 codec guidance note (P3.6) — **PR #85** — base `vibemis-main` — ☐  *(launcher only)*
+- [ ] **test66** — Live stream-config summary line — **PR #86** — base `vibemis-main` — ☐  *(launcher only)*
+- [ ] **test67** — Low-latency "competitive" preset button (P3.8) — **PR #87** — base `vibemis-main` — ☐  *(launcher only)*
+- [ ] **test68** — Native-resolution recommendation hint — **PR #88** — base `vibemis-main` — ☐  *(launcher only)*
 - [ ] **test49** — Configurable performance-overlay corner (TL/TR/BL/BR) — **PR #69** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a stream — auto-publishes 🔬 alpha)*
 - [ ] **test50** — Configurable performance-overlay text size (Small/Normal/Large) — **PR #70** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a stream — auto-publishes 🔬 alpha)*
 
@@ -35,16 +54,31 @@ whole Quick Menu group depends on its render path.
 
 - [ ] **test26** — Configurable Quick Menu gamepad shortcut — **PR #48** — base `vibemis-main` — ☐
 - [ ] **test36** — Back-paddle Quick Menu combos — **PR #56** — base `test26` — ☐
+- [ ] **test57** — Disable controller rumble (P3.13) — **PR #77** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs controller + stream)*
+- [ ] **test64** — Motion-control (gyro) capability detection (P3.16) — **PR #84** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a controller)*
 
 ## 4. UI / onboarding
 
 - [ ] **test27** — Vibemis brand accent (teal/cyan) — **PR #49** — base `vibemis-main` — ☐  *(launcher only, no stream)*
 - [ ] **test28** — Tailscale hint in Add-PC dialog — **PR #50** — base `vibemis-main` — ☐  *(launcher only)*
 - [ ] **test51** — Prefer Tailscale addresses for remote play (P3.7) — **PR #71** — base `vibemis-main` — ☐  *(Tier 1/2 launcher-only; Tier 3 needs a tailnet — mark N/A otherwise)*
+- [ ] **test69** ⭐**PRIORITY** — One-command Tailscale setup `scripts/setup-tailscale.sh` (P3.7) — **PR #89** — base `vibemis-main` — ☐  *(script-only; Tier 1 = `bash -n` + `--check`, no sudo/login; full setup is user-only)*
+- [ ] **test70** — In-app "Set up Tailscale" entry point in Settings (P3.7) — **PR #90** — base `vibemis-main` — ☐  *(launcher only; needs a browser)*
 - [ ] **test37** — Settings "About" section — **PR #57** — base `vibemis-main` — ☐  *(launcher only)*
 - [ ] **test39** — First-run welcome hint — **PR #59** — base `vibemis-main` — ☐  *(launcher only)*
+- [ ] **test55** — System Information panel in Settings — **PR #75** — base `vibemis-main` — ☐  *(launcher only)*
+- [ ] **test56** — Help & Links section in Settings (GitHub / README / Tailscale) — **PR #76** — base `vibemis-main` — ☐  *(launcher only; needs a browser)*
+- [ ] **test58** — Show host software version in PC details (P3.13) — **PR #78** — base `vibemis-main` — ☐  *(launcher only; best with an online host)*
+- [ ] **test60** — Per-client access level in PC context menu (P3.13) — **PR #80** — base `vibemis-main` — ☐  *(launcher only; best with a paired Apollo host)*
+- [ ] **test61** — Virtual Display clarifying notes (P3.13) — **PR #81** — base `vibemis-main` — ☐  *(launcher only)*
 
-## 5. Config / SteamOS helpers
+## 5. Tooling / test automation
+
+- [x] **test52** — `vibemis selftest` headless smoke test (automation enabler) — **PR #72** — base `vibemis-main` — ☑ PASS ([report](test52-selftest-cli/report.md))  *(launcher-only / headless; do this FIRST each visit — see docs/TEST_AUTOMATION.md)*
+- [ ] **test54** — `selftest --json` + settings round-trip checks — **PR #74** — base `test52` — ☐  *(launcher-only / headless; verify after test52)*
+- [ ] **test63** — Copy system info to clipboard — **PR #83** — base `test55` — ☐  *(launcher only; verify after test55)*
+
+## 6. Config / SteamOS helpers
 
 - [ ] **test41** — Settings export / import — **PR #61** — base `vibemis-main` — ☐  *(launcher only)*
 - [ ] **test48** — SteamOS helper scripts bundle (install / update / add-game / add-all / pair / uninstall / doctor) — **PR #68** — base `vibemis-main` — ☐  *(script-only)*
@@ -66,3 +100,17 @@ whole Quick Menu group depends on its render path.
 6. If a row is ✗, the build agent fixes it and re-pushes the same testN; re-run that row before moving on.
 
 Launcher-only rows (no stream/host) are the safest to knock out quickly if a host isn't available.
+
+### Batching (why the cycles are NOT merged into fewer PRs)
+The branches are deliberately kept **separate** — they are not combined into mega-PRs. Merging them
+would (a) collide (many edit `streamingpreferences`/`SettingsView` at the same anchors) and (b) lose
+per-feature regression isolation (a combined failure is ambiguous). Sequential, one-branch-at-a-time
+verification stays the rule.
+
+**But you may batch the *launcher-only* cycles in a single session** (they need no host/stream):
+run several in a row with `testing/run-cycle.sh <branch>` + their Tier-1 checks, then file each
+report (or one combined report that ticks several rows, clearly per-cycle). Stream-required tiers
+(marked "needs a stream/controller/tailnet") stay one-at-a-time when a host is available.
+Rough split today: **launcher-only** (batchable) = test27/28/37/39/41/48/49/50/52/53/54/55/56/58/59/
+60/61/62/63/64; **needs host/controller/stream** = test22/23/24/25/26/29/31/32/33/36/40/47/51/57
+(+ the Tier-2/3 of several launcher-only ones).
