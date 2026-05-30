@@ -9,6 +9,7 @@ import AutoUpdateChecker 1.0
 import StreamingPreferences 1.0
 import SystemProperties 1.0
 import SdlGamepadKeyNavigation 1.0
+import Theme 1.0
 
 ApplicationWindow {
     property bool pollingActive: false
@@ -291,7 +292,10 @@ ApplicationWindow {
                 id: versionLabel
                 visible: qmltypeof(stackView.currentItem, "SettingsView")
                 text: qsTr("Version %1").arg(SystemProperties.versionString)
-                font.pointSize: 12
+                // P3.17: first use of the Theme design-token singleton (proves it resolves at
+                // runtime). The version text on the Settings screen now uses the Vibemis accent.
+                font.pointSize: Theme.fontSection
+                color: Theme.accent
                 horizontalAlignment: Qt.AlignRight
                 verticalAlignment: Qt.AlignVCenter
             }
