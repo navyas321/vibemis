@@ -1,8 +1,15 @@
 name: Build Agent Alert
 
-# Posts an alert as github-actions[bot] that @mentions the maintainer, so GitHub delivers a real
-# push to the GitHub mobile (iOS) app. The bot is a DIFFERENT actor than the maintainer, so the
-# mention is not suppressed by GitHub's "no notifications for your own actions" rule.
+# Notifies the maintainer of a problem by CREATING a fresh issue that @mentions them (the mention
+# is what delivers the GitHub mobile / iOS push, and it fires at creation time) and then CLOSING it
+# immediately. github-actions[bot] is a DIFFERENT actor than the maintainer, so the mention is not
+# suppressed by GitHub's "no notifications for your own actions" rule.
+#
+# Why create-then-close instead of commenting on a standing open issue:
+#   A permanently-open "alerts" issue is a standing inbox that anyone (or injected web/email content
+#   surfaced into a comment) could write to, and that the agent might later read as instructions.
+#   Transient create-then-close issues carry the same push notification but leave NO open channel to
+#   inject through. The maintainer opens the push, reads the (now-closed) issue, and acts.
 #
 # Trigger manually from the build agent:
 #   gh workflow run "Build Agent Alert" --ref vibemis-main -f message="build failed on test42" -f severity="error"
@@ -28,18 +35,30 @@ jobs:
   alert:
     runs-on: ubuntu-latest
     steps:
-      - name: Post alert (@mention maintainer)
+      - name: Alert (create transient issue @mentioning maintainer, then close it)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Pass inputs via env (injection-safe), not inline ${{ }} in the shell.
           ALERT_MSG: ${{ inputs.message }}
           ALERT_SEV: ${{ inputs.severity }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           case "$ALERT_SEV" in
             error) ICON="🔴" ;;
             info)  ICON="🟢" ;;
             *)     ICON="🟡" ;;
           esac
-          # Comment on the standing alerts issue (#99) and @mention the maintainer.
-          gh issue comment 99 --repo "${{ github.repository }}" \
-            --body "$ICON **build-agent alert** @navyas321 — $ALERT_MSG"
+          BODY="$ICON **build-agent alert** @navyas321 — $ALERT_MSG
+
+          _Auto-closed immediately; this issue is a one-shot notification, not a channel — there is
+          nothing to reply to here. Detail is in the build-agent run logs / inbox._
+          Triggering run: $RUN_URL"
+          URL=$(gh issue create --repo "$REPO" \
+            --title "$ICON build-agent alert ($ALERT_SEV)" \
+            --body "$BODY")
+          echo "created: $URL"
+          NUM="${URL##*/}"
+          gh issue close "$NUM" --repo "$REPO" --reason completed \
+            --comment "Auto-closed by the alert workflow — the @mention already delivered the push."
+          echo "closed #$NUM"
