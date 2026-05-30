@@ -1,7 +1,13 @@
 #include "overlaymanager.h"
 #include "path.h"
+#include "settings/streamingpreferences.h"
 
 using namespace Overlay;
+
+int OverlayManager::getDebugOverlayAnchor()
+{
+    return static_cast<int>(StreamingPreferences::get()->perfOverlayPosition);
+}
 
 OverlayManager::OverlayManager() :
     m_Renderer(nullptr),

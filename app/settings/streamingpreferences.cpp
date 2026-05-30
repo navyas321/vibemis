@@ -65,6 +65,7 @@
 #define SER_CUSTOMREFRESHRATE "customrefreshrate"
 #define SER_RESOLUTIONSCALING "resolutionscaling"
 #define SER_RESOLUTIONSCALEFACTOR "resolutionscalefactor"
+#define SER_PERFOVERLAYPOSITION "perfoverlayposition"
 
 #define CURRENT_DEFAULT_VER 2
 
@@ -157,6 +158,8 @@ void StreamingPreferences::reload()
     gamepadMouse = settings.value(SER_GAMEPADMOUSE, true).toBool();
     detectNetworkBlocking = settings.value(SER_DETECTNETBLOCKING, true).toBool();
     showPerformanceOverlay = settings.value(SER_SHOWPERFOVERLAY, false).toBool();
+    perfOverlayPosition = static_cast<PerfOverlayPosition>(settings.value(SER_PERFOVERLAYPOSITION,
+                                                           static_cast<int>(PerfOverlayPosition::POS_TOP_LEFT)).toInt());
     adaptiveBitrate = settings.value(SER_ADAPTIVEBITRATE, false).toBool();
     packetSize = settings.value(SER_PACKETSIZE, 0).toInt();
     swapMouseButtons = settings.value(SER_SWAPMOUSEBUTTONS, false).toBool();
@@ -367,6 +370,7 @@ void StreamingPreferences::save()
     settings.setValue(SER_PACKETSIZE, packetSize);
     settings.setValue(SER_DETECTNETBLOCKING, detectNetworkBlocking);
     settings.setValue(SER_SHOWPERFOVERLAY, showPerformanceOverlay);
+    settings.setValue(SER_PERFOVERLAYPOSITION, static_cast<int>(perfOverlayPosition));
     settings.setValue(SER_ADAPTIVEBITRATE, adaptiveBitrate);
     settings.setValue(SER_AUDIOCFG, static_cast<int>(audioConfig));
     settings.setValue(SER_HDR, enableHdr);
