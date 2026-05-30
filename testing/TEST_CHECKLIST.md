@@ -68,7 +68,7 @@ whole Quick Menu group depends on its render path.
 - [ ] **test51** — Prefer Tailscale addresses for remote play (P3.7) — **PR #71** — base `vibemis-main` — ☐  *(Tier 1/2 launcher-only; Tier 3 needs a tailnet — mark N/A otherwise)*
 - [x] **test69** ⭐**PRIORITY** — One-command Tailscale setup `scripts/setup-tailscale.sh` (P3.7) — **PR #89** — base `vibemis-main` — ☑ **PASS** (report PR #93; `bash -n` clean, `--check` safe, userspace fallback writes only to ~/.local) → merged. *(Tier 3 real-tailnet join = maintainer to confirm once.)*
 - [ ] **test70** — In-app "Set up Tailscale" entry point in Settings (P3.7) — **PR #90** — base `vibemis-main` — ☐  *(launcher only; needs a browser)*
-- [x] **test37** — Settings "About" section — **PR #57** — base `vibemis-main` — ☑ **PASS** (report: `testing/test37-settings-about/report.md`, PR #TBD)  *(launcher only)*
+- [x] **test37** — Settings "About" section — **PR #57** — base `vibemis-main` — ☑ **PASS** (report: `testing/test37-settings-about/report.md`, PR #117)  *(launcher only)*
 - [ ] **test39** — First-run welcome hint — **PR #59** — base `vibemis-main` — ☐  *(launcher only)*
 - [ ] **test71** — Fix ALL-CAPS button labels (Material) — **PR #96** — base `vibemis-main` — ☐  *(launcher only; user-reported UI bug)*
 - [ ] **test73** — Design-system `Theme` token singleton (P3.17) — **PR #108** — base `vibemis-main` — ☐  *(launcher only; infra — verifies the Theme singleton resolves: app launches + selftest exit 0 + Settings version label is teal)*
