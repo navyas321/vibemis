@@ -48,7 +48,7 @@ whole Quick Menu group depends on its render path.
 - [ ] **test62** — Adaptive bitrate (experimental) first slice (P3.12) — **PR #82** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a degrading stream — mark N/A otherwise)*
 - [x] **test65** — AV1 codec guidance note (P3.6) — **PR #85** — base `vibemis-main` — ☑ **PASS** (report PR #103; AV1 note shows/hides on codec=AV1 vs Automatic, color #80A0C0, no Advanced-Settings regression) → merged
 - [x] **test66** — Live stream-config summary line — **PR #86** — base `vibemis-main` — ☑ **PASS** (report PR #104; `▶ W×H @ fps · Mbps · codec` teal summary updates with config, no Basic-Settings regression) → merged
-- [ ] **test67** — Low-latency "competitive" preset button (P3.8) — **PR #87** — base `vibemis-main` — ☐  *(launcher only)*
+- [x] **test67** — Low-latency "competitive" preset button (P3.8) — **PR #87** — base `vibemis-main` — ☑ **PASS** (report PR #105; one tap clears V-Sync + frame pacing, persists to disk, V-Sync re-enable restores independent toggling) → merged
 - [ ] **test68** — Native-resolution recommendation hint — **PR #88** — base `vibemis-main` — ☐  *(launcher only)*
 - [ ] **test49** — Configurable performance-overlay corner (TL/TR/BL/BR) — **PR #69** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a stream — auto-publishes 🔬 alpha)*
 - [ ] **test50** — Configurable performance-overlay text size (Small/Normal/Large) — **PR #70** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a stream — auto-publishes 🔬 alpha)*
