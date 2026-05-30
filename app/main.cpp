@@ -51,6 +51,8 @@
 #include "backend/servercommandmanager.h"
 #include "backend/quickmenumanager.h"
 
+#include <cstdio>
+
 #if defined(Q_OS_WIN32)
 #define IS_UNSPECIFIED_HANDLE(x) ((x) == INVALID_HANDLE_VALUE || (x) == NULL)
 
@@ -627,6 +629,33 @@ int main(int argc, char *argv[])
         break;
     default:
         break;
+    }
+
+    // Vibemis: `vibemis selftest` — a scriptable, non-destructive launcher smoke test for the
+    // Legion Go test agent. Runs read-only sanity checks on the preferences subsystem (no host,
+    // stream, GUI window, or SDL video required) and exits 0 (all PASS) / 1 (any FAIL). Each
+    // check prints "SELFTEST <name>: PASS|FAIL" so the agent can grep the result. See
+    // docs/TEST_AUTOMATION.md. Runs before SDL/GUI init so it works headlessly in any session.
+    if (commandLineParserResult == GlobalCommandLineParser::SelfTestRequested) {
+        StreamingPreferences* p = StreamingPreferences::get();
+        int failures = 0;
+        auto check = [&](const char* name, bool ok) {
+            fprintf(stdout, "SELFTEST %s: %s\n", name, ok ? "PASS" : "FAIL");
+            if (!ok) {
+                failures++;
+            }
+        };
+        check("prefs-load", p != nullptr);
+        check("default-bitrate", StreamingPreferences::getDefaultBitrate(1920, 1080, 60, false) > 0);
+        check("display-mode", p->width > 0 && p->height > 0 && p->fps > 0);
+        check("bitrate-positive", p->bitrateKbps > 0);
+        check("audio-config-range",
+              p->audioConfig >= StreamingPreferences::AC_STEREO &&
+              p->audioConfig <= StreamingPreferences::AC_71_SURROUND);
+        fprintf(stdout, "SELFTEST RESULT: %s (%d failure(s))\n",
+                failures == 0 ? "PASS" : "FAIL", failures);
+        fflush(stdout);
+        return failures == 0 ? 0 : 1;
     }
 
     SDL_version compileVersion;
