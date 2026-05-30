@@ -65,7 +65,11 @@ else
     info "~/Applications/Vibemis.AppImage not installed (run scripts/install-vibemis-desktop.sh)"
 fi
 [ -f "$HOME/.local/share/applications/vibemis.desktop" ] && ok "desktop entry present" || info "no desktop entry"
-[ -d "$HOME/.config/Vibemis" ] && ok "settings dir ~/.config/Vibemis present" || info "no settings yet (first run)"
+if [ -f "$HOME/.config/Vibemis Project/Vibemis.conf" ]; then
+    ok "settings present (~/.config/Vibemis Project/Vibemis.conf)"
+else
+    info "no settings yet (first run)"
+fi
 echo ""
 
 HOST="${1:-}"
