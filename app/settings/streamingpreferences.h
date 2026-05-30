@@ -187,6 +187,7 @@ public:
     Q_PROPERTY(bool reverseScrollDirection MEMBER reverseScrollDirection NOTIFY reverseScrollDirectionChanged)
     Q_PROPERTY(bool swapFaceButtons MEMBER swapFaceButtons NOTIFY swapFaceButtonsChanged)
     Q_PROPERTY(bool keepAwake MEMBER keepAwake NOTIFY keepAwakeChanged)
+    Q_PROPERTY(bool seenWelcomeHint MEMBER seenWelcomeHint NOTIFY seenWelcomeHintChanged)
     Q_PROPERTY(CaptureSysKeysMode captureSysKeysMode MEMBER captureSysKeysMode NOTIFY captureSysKeysModeChanged)
     Q_PROPERTY(Language language MEMBER language NOTIFY languageChanged)
     Q_PROPERTY(RendererBackend rendererBackend MEMBER rendererBackend NOTIFY rendererBackendChanged)
@@ -234,6 +235,7 @@ public:
     bool reverseScrollDirection;
     bool swapFaceButtons;
     bool keepAwake;
+    bool seenWelcomeHint;
     int packetSize;
     AudioConfig audioConfig;
     VideoCodecConfig videoCodecConfig;
@@ -298,6 +300,7 @@ signals:
     void swapFaceButtonsChanged();
     void captureSysKeysModeChanged();
     void keepAwakeChanged();
+    void seenWelcomeHintChanged();
     void languageChanged();
     void rendererBackendChanged();
     
