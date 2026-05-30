@@ -49,6 +49,7 @@ whole Quick Menu group depends on its render path.
 - [ ] **test68** — Native-resolution recommendation hint — **PR #88** — base `vibemis-main` — ☐  *(launcher only)*
 - [ ] **test49** — Configurable performance-overlay corner (TL/TR/BL/BR) — **PR #69** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a stream — auto-publishes 🔬 alpha)*
 - [ ] **test50** — Configurable performance-overlay text size (Small/Normal/Large) — **PR #70** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a stream — auto-publishes 🔬 alpha)*
+- [ ] **test72** — Show clock in the performance overlay — **PR #98** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a stream)*
 
 ## 3. Input / controls
 
