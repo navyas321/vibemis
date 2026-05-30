@@ -71,7 +71,7 @@ whole Quick Menu group depends on its render path.
 - [x] **test37** — Settings "About" section — **PR #57** — base `vibemis-main` — ☑ **PASS** (report PR #117; teal "About" header, "Vibemis 0.6.7", description, github.com/navyas321/vibemis link; no regression) → merged
 - [x] **test39** — First-run welcome hint — **PR #59** — base `vibemis-main` — ☑ **PASS** (report PR #118; "Welcome to Vibemis!" dialog with 3 onboarding tips shows once, dismisses cleanly, `seenwelcomehint` persists so it doesn't reappear; no regression) → merged
 - [x] **test71** — Fix ALL-CAPS button labels (Material) — **PR #96** — base `vibemis-main` — ☑ **PASS** (report PR #119; **user-reported bug FIXED** — bitrate button now "Use Default (32 Mbps)" not "USE DEFAULT (32 MBPS)"; app-wide `QFont::MixedCase`, no styling regression) → merged
-- [ ] **test73** — Design-system `Theme` token singleton (P3.17) — **PR #108** — base `vibemis-main` — ☐  *(launcher only; infra — verifies the Theme singleton resolves: app launches + selftest exit 0 + Settings version label is teal)*
+- [x] **test73** — Design-system `Theme` token singleton (P3.17) — **PR #108** — base `vibemis-main` — ☑ **PASS** (report PR #120; Theme singleton resolves — selftest 7/7, zero Theme QML errors, version label renders #00CCCC confirmed by pixel analysis) → merged. **P3.17 foundation landed.**
 - [ ] **test55** — System Information panel in Settings — **PR #75** — base `vibemis-main` — ☐  *(launcher only)*
 - [ ] **test56** — Help & Links section in Settings (GitHub / README / Tailscale) — **PR #76** — base `vibemis-main` — ☐  *(launcher only; needs a browser)*
 - [ ] **test58** — Show host software version in PC details (P3.13) — **PR #78** — base `vibemis-main` — ☐  *(launcher only; best with an online host)*
