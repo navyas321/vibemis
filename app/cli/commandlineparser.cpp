@@ -192,6 +192,9 @@ GlobalCommandLineParser::ParseResult GlobalCommandLineParser::parse(const QStrin
                 return PairRequested;
             } else if (action == "list") {
                 return ListRequested;
+            } else if (action == "selftest") {
+                // Vibemis: scriptable smoke test for the test agent (see docs/TEST_AUTOMATION.md)
+                return SelfTestRequested;
             }
         }
 

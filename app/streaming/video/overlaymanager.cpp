@@ -4,6 +4,11 @@
 
 using namespace Overlay;
 
+int OverlayManager::getDebugOverlayAnchor()
+{
+    return static_cast<int>(StreamingPreferences::get()->perfOverlayPosition);
+}
+
 OverlayManager::OverlayManager() :
     m_Renderer(nullptr),
     m_FontData(Path::readDataFile("ModeSeven.ttf"))

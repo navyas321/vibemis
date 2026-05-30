@@ -49,6 +49,7 @@
 #define SER_DETECTNETBLOCKING "detectnetblocking"
 #define SER_SHOWPERFOVERLAY "showperfoverlay"
 #define SER_PERFOVERLAYTEXTSIZE "perfoverlaytextsize"
+#define SER_ADAPTIVEBITRATE "adaptivebitrate"
 #define SER_SWAPMOUSEBUTTONS "swapmousebuttons"
 #define SER_MUTEONFOCUSLOSS "muteonfocusloss"
 #define SER_BACKGROUNDGAMEPAD "backgroundgamepad"
@@ -65,6 +66,7 @@
 #define SER_CUSTOMREFRESHRATE "customrefreshrate"
 #define SER_RESOLUTIONSCALING "resolutionscaling"
 #define SER_RESOLUTIONSCALEFACTOR "resolutionscalefactor"
+#define SER_PERFOVERLAYPOSITION "perfoverlayposition"
 
 #define CURRENT_DEFAULT_VER 2
 
@@ -159,6 +161,9 @@ void StreamingPreferences::reload()
     showPerformanceOverlay = settings.value(SER_SHOWPERFOVERLAY, false).toBool();
     perfOverlayTextSize = static_cast<PerfOverlayTextSize>(settings.value(SER_PERFOVERLAYTEXTSIZE,
                                                            static_cast<int>(PerfOverlayTextSize::PERF_TEXT_NORMAL)).toInt());
+    perfOverlayPosition = static_cast<PerfOverlayPosition>(settings.value(SER_PERFOVERLAYPOSITION,
+                                                           static_cast<int>(PerfOverlayPosition::POS_TOP_LEFT)).toInt());
+    adaptiveBitrate = settings.value(SER_ADAPTIVEBITRATE, false).toBool();
     packetSize = settings.value(SER_PACKETSIZE, 0).toInt();
     swapMouseButtons = settings.value(SER_SWAPMOUSEBUTTONS, false).toBool();
     muteOnFocusLoss = settings.value(SER_MUTEONFOCUSLOSS, false).toBool();
@@ -369,6 +374,8 @@ void StreamingPreferences::save()
     settings.setValue(SER_DETECTNETBLOCKING, detectNetworkBlocking);
     settings.setValue(SER_SHOWPERFOVERLAY, showPerformanceOverlay);
     settings.setValue(SER_PERFOVERLAYTEXTSIZE, static_cast<int>(perfOverlayTextSize));
+    settings.setValue(SER_PERFOVERLAYPOSITION, static_cast<int>(perfOverlayPosition));
+    settings.setValue(SER_ADAPTIVEBITRATE, adaptiveBitrate);
     settings.setValue(SER_AUDIOCFG, static_cast<int>(audioConfig));
     settings.setValue(SER_HDR, enableHdr);
     settings.setValue(SER_DISPLAY_HDR_CAPABILITY, displayHdrCapability);
