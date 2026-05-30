@@ -60,7 +60,7 @@ whole Quick Menu group depends on its render path.
 ## 4. UI / onboarding
 
 - [x] **test27** — Vibemis brand accent (teal/cyan) — **PR #49** — base `vibemis-main` — ☑ **PASS** (report PR #95; accent #00CCCC confirmed, dark theme intact, no regressions) → merged
-- [ ] **test28** — Tailscale hint in Add-PC dialog — **PR #50** — base `vibemis-main` — ☐  *(launcher only)*
+- [x] **test28** — Tailscale hint in Add-PC dialog — **PR #50** — base `vibemis-main` — ☑ **PASS** (report PR #97; hint shows 100.x/MagicDNS, wraps cleanly, field works) → merged
 - [ ] **test51** — Prefer Tailscale addresses for remote play (P3.7) — **PR #71** — base `vibemis-main` — ☐  *(Tier 1/2 launcher-only; Tier 3 needs a tailnet — mark N/A otherwise)*
 - [x] **test69** ⭐**PRIORITY** — One-command Tailscale setup `scripts/setup-tailscale.sh` (P3.7) — **PR #89** — base `vibemis-main` — ☑ **PASS** (report PR #93; `bash -n` clean, `--check` safe, userspace fallback writes only to ~/.local) → merged. *(Tier 3 real-tailnet join = maintainer to confirm once.)*
 - [ ] **test70** — In-app "Set up Tailscale" entry point in Settings (P3.7) — **PR #90** — base `vibemis-main` — ☐  *(launcher only; needs a browser)*
