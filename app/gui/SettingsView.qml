@@ -112,6 +112,28 @@ Flickable {
                 anchors.fill: parent
                 spacing: 5
 
+                // Vibemis: recommend this device's native resolution so users pick the sharpest
+                // option without guesswork.
+                // NOTE(test68): SystemProperties.maximumResolution is the *decoder* ceiling, which
+                // is (0,0) on devices whose decoder can exceed 1080p (e.g. Legion Go S Z2), so it
+                // can't be the native-resolution source on capable hardware. Prefer the actual panel
+                // size from QML's Screen attached property; fall back to the decoder max only if
+                // Screen is somehow unavailable. Hidden only if neither yields a positive size.
+                Label {
+                    width: parent.width
+                    readonly property int nativeResW: Screen.width > 0 ? Screen.width
+                                                       : SystemProperties.maximumResolution.width
+                    readonly property int nativeResH: Screen.height > 0 ? Screen.height
+                                                       : SystemProperties.maximumResolution.height
+                    visible: nativeResW > 0 && nativeResH > 0
+                    text: "💡 " + qsTr("This device's native resolution is %1×%2 — matching it gives the sharpest image (use a lower resolution only if you need more performance).")
+                          .arg(nativeResW).arg(nativeResH)
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                    color: "#aaaaaa"
+                    bottomPadding: 4
+                }
+
                 // Vibemis: live one-line summary of the effective stream config, so the user can
                 // see resolution/fps/bitrate/codec/HDR at a glance without reading every control.
                 Label {
