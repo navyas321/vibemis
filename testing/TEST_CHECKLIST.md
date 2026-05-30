@@ -74,7 +74,7 @@ whole Quick Menu group depends on its render path.
 - [x] **test73** — Design-system `Theme` token singleton (P3.17) — **PR #108** — base `vibemis-main` — ☑ **PASS** (report PR #120; Theme singleton resolves — selftest 7/7, zero Theme QML errors, version label renders #00CCCC confirmed by pixel analysis) → merged. **P3.17 foundation landed.**
 - [x] **test55** — System Information panel in Settings — **PR #75** — base `vibemis-main` — ☑ **PASS** (report PR #121; all 7 rows populated + correct — arch x86_64, SteamOS, VAAPI, HDR enabled, 1920×1200; no regression) → merged. *(Unblocks test63.)*
 - [x] **test56** — Help & Links section in Settings (GitHub / README / Tailscale) — **PR #76** — base `vibemis-main` — ☑ **PASS** (report PR #122; Help & Links GroupBox + all 3 buttons render, `hasBrowser` gate works (xdg-open present); Tier 2 actual link-open N/A — screen capture failed mid-test → ledger) → merged
-- [ ] **test58** — Show host software version in PC details (P3.13) — **PR #78** — base `vibemis-main` — ☐  *(launcher only; best with an online host)*
+- [x] **test58** — Show host software version in PC details (P3.13) — **PR #78** — base `vibemis-main` — ☑ **PASS*** (report PR #123; logic verified — Navid-PC `appversion 7.1.431.-1` → "Host Software Version: 7.1.431.-1", graceful when empty, no regression. *Visual dialog confirmation blocked by device screen-lock → ledger.) → merged
 - [ ] **test60** — Per-client access level in PC context menu (P3.13) — **PR #80** — base `vibemis-main` — ☐  *(launcher only; best with a paired Apollo host)*
 - [ ] **test61** — Virtual Display clarifying notes (P3.13) — **PR #81** — base `vibemis-main` — ☐  *(launcher only)*
 
@@ -130,6 +130,8 @@ ticking a row above does NOT clear its entry here.
   controller)**, confirm the `[motion]` capability log line fires on controller connect.
 - [ ] **test56** — Help & Links, Tier 2 — with the screen awake / a browser available, click each
   of the 3 buttons and confirm `xdg-open` launches the correct URL (GitHub / README / Tailscale doc).
+- [ ] **test58** — host software version, visual — with the screen awake + an online host, open the
+  PC card's **View Details** dialog and visually confirm the "Host Software Version: …" line shows.
 
 ## How the test agent should work this list (also in docs/personas/test-agent.md)
 
