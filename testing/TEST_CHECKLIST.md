@@ -61,7 +61,7 @@ whole Quick Menu group depends on its render path.
 - [ ] **test55** — System Information panel in Settings — **PR #75** — base `vibemis-main` — ☐  *(launcher only)*
 - [ ] **test56** — Help & Links section in Settings (GitHub / README / Tailscale) — **PR #76** — base `vibemis-main` — ☐  *(launcher only; needs a browser)*
 - [x] **test58** — Show host software version in PC details (P3.13) — **PR #78** — base `vibemis-main` — ☑ **PASS*** (report PR #123; "Host Software Version: 7.1.431.-1" confirmed via direct serverInfo + source; visual dialog not captured in Desktop Mode)
-- [x] **test60** — Per-client access level in PC context menu (P3.13) — **PR #80** — base `vibemis-main` — ☑ **PASS*** (report PR #124; `permissionSummary="Full access"` confirmed via log `0x7131f00` + source; visual context menu not captured in Desktop Mode)  *(launcher only; best with a paired Apollo host)*
+- [x] **test60** — Per-client access level in PC context menu (P3.13) — **PR #124** — base `vibemis-main` — ☑ **PASS*** (report PR #124; `permissionSummary="Full access"` confirmed via log `0x7131f00` + source; visual context menu not captured in Desktop Mode)  *(launcher only; best with a paired Apollo host)*
 
 ## 5. Tooling / test automation
 
