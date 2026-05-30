@@ -61,10 +61,12 @@ any branch). **This is your work order. Do not pick branches at random.**
 
 ## Your loop (summary — full detail + templates in WORKFLOW.md)
 
-1. From the checklist, take the next row's **branch** and check it out: `git fetch origin` then
-   `git checkout <branch>`. **Not `vibemis-main`** — the `testing/<branch>/` directory only
-   exists on the test branch. If `ls testing/` doesn't show the expected dir, you're on the
-   wrong branch.
+1. `git fetch origin`, then **read `testing/BUILD_AGENT_INBOX.md`** — the build agent's message
+   channel to you (priority changes, answers, SKIP/PRIORITIZE/RE-RUN notes). On a feature branch,
+   read the authoritative copy: `git show origin/vibemis-main:testing/BUILD_AGENT_INBOX.md`. Then
+   take the next checklist row's **branch** and `git checkout <branch>`. **Not `vibemis-main`** —
+   the `testing/<branch>/` directory only exists on the test branch. If `ls testing/` doesn't show
+   the expected dir, you're on the wrong branch.
 2. Read the **entire** `testing/test<N>-<slug>/instructions.md` before running anything.
 3. **Verify md5** of the AppImage. If it doesn't match, stop and report — never run an
    unverified artifact.

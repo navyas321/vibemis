@@ -804,6 +804,20 @@ Flickable {
                     topPadding: 2
                 }
 
+                // Vibemis (perf guidance): advise when the bitrate is set well above the recommended
+                // default for the chosen resolution/fps. Very high bitrate over Wi-Fi (common on a
+                // handheld) is the usual cause of stutter/dropped frames. Threshold = 2x recommended.
+                Label {
+                    width: parent.width
+                    visible: StreamingPreferences.bitrateKbps >
+                             StreamingPreferences.getDefaultBitrate(StreamingPreferences.width, StreamingPreferences.height, StreamingPreferences.fps, StreamingPreferences.enableYUV444) * 2
+                    text: "⚠ " + qsTr("This bitrate is much higher than recommended for the selected resolution. On Wi-Fi this often causes stutter or dropped frames — lower it if the stream isn't smooth.")
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                    color: "#E0A030"
+                    topPadding: 4
+                }
+
                 Label {
                     width: parent.width
                     id: windowModeTitle
@@ -1746,6 +1760,19 @@ Flickable {
                             StreamingPreferences.videoDecoderSelection = decoderListModel.get(currentIndex).val
                         }
                     }
+                }
+
+                // Vibemis (perf guidance): warn when software decoding is forced. On the Legion Go S
+                // Z2 (and most handhelds) hardware decoding cuts decode latency from ~8ms to ~2ms, so
+                // forcing software decode noticeably hurts responsiveness. Shown only when relevant.
+                Label {
+                    width: parent.width
+                    visible: StreamingPreferences.videoDecoderSelection === StreamingPreferences.VDS_FORCE_SOFTWARE
+                    text: "⚠ " + qsTr("Software decoding adds latency (≈8 ms vs ≈2 ms for hardware) and raises CPU/battery use. Prefer \"Automatic\" unless hardware decoding is broken on this device.")
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                    color: "#E0A030"
+                    topPadding: 4
                 }
 
                 Label {
