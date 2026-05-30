@@ -1765,6 +1765,22 @@ Flickable {
                     ToolTip.visible: hovered
                     ToolTip.text: qsTr("Allows Vibemis to capture gamepad inputs even if it's not the current window in focus")
                 }
+
+                CheckBox {
+                    id: suppressRumbleCheck
+                    width: parent.width
+                    text: qsTr("Disable controller rumble")
+                    font.pointSize: 12
+                    checked: StreamingPreferences.suppressControllerRumble
+                    onCheckedChanged: {
+                        StreamingPreferences.suppressControllerRumble = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Ignore rumble/force-feedback sent by the host. Useful to save battery on a handheld or if you find rumble distracting.")
+                }
             }
         }
 

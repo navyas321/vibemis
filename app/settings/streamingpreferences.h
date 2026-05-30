@@ -159,6 +159,7 @@ public:
     Q_PROPERTY(bool gamepadMouse MEMBER gamepadMouse NOTIFY gamepadMouseChanged)
     Q_PROPERTY(bool detectNetworkBlocking MEMBER detectNetworkBlocking NOTIFY detectNetworkBlockingChanged)
     Q_PROPERTY(bool showPerformanceOverlay MEMBER showPerformanceOverlay NOTIFY showPerformanceOverlayChanged)
+    Q_PROPERTY(bool suppressControllerRumble MEMBER suppressControllerRumble NOTIFY suppressControllerRumbleChanged)
     Q_PROPERTY(PerfOverlayTextSize perfOverlayTextSize MEMBER perfOverlayTextSize NOTIFY perfOverlayTextSizeChanged)
     Q_PROPERTY(PerfOverlayPosition perfOverlayPosition MEMBER perfOverlayPosition NOTIFY perfOverlayPositionChanged)
     Q_PROPERTY(bool adaptiveBitrate MEMBER adaptiveBitrate NOTIFY adaptiveBitrateChanged)
@@ -217,6 +218,7 @@ public:
     bool gamepadMouse;
     bool detectNetworkBlocking;
     bool showPerformanceOverlay;
+    bool suppressControllerRumble;
     PerfOverlayTextSize perfOverlayTextSize;
     PerfOverlayPosition perfOverlayPosition;
     bool adaptiveBitrate;
@@ -277,6 +279,7 @@ signals:
     void gamepadMouseChanged();
     void detectNetworkBlockingChanged();
     void showPerformanceOverlayChanged();
+    void suppressControllerRumbleChanged();
     void perfOverlayTextSizeChanged();
     void perfOverlayPositionChanged();
     void adaptiveBitrateChanged();
