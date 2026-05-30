@@ -815,6 +815,25 @@ Flickable {
                     }
                 }
 
+                // Vibemis (P3.12): adaptive bitrate (experimental). Currently logs a recommendation
+                // when the host reports a poor connection; runtime auto-adjust is pending protocol
+                // support (see TODO(P3.12) in session.cpp).
+                CheckBox {
+                    id: adaptiveBitrateCheck
+                    width: parent.width
+                    text: qsTr("Adaptive bitrate (experimental)")
+                    font.pointSize: 12
+                    checked: StreamingPreferences.adaptiveBitrate
+                    onCheckedChanged: {
+                        StreamingPreferences.adaptiveBitrate = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Experimental: when the connection to the host degrades, Vibemis notes a recommendation to lower the bitrate. Automatic runtime adjustment is still in development.")
+                }
+
                 // Vibemis: rough data-usage estimate for the chosen bitrate. Helps users on
                 // metered connections or marginal Wi-Fi gauge cost/feasibility. Video only
                 // (audio/overhead excluded). GB/hour = kbps * 3600 / 8 / 1e6 = kbps * 0.00045.
