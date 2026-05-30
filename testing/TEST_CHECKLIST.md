@@ -50,7 +50,7 @@ whole Quick Menu group depends on its render path.
 - [x] **test66** — Live stream-config summary line — **PR #86** — base `vibemis-main` — ☑ **PASS** (report PR #104; `▶ W×H @ fps · Mbps · codec` teal summary updates with config, no Basic-Settings regression) → merged
 - [x] **test67** — Low-latency "competitive" preset button (P3.8) — **PR #87** — base `vibemis-main` — ☑ **PASS** (report PR #105; one tap clears V-Sync + frame pacing, persists to disk, V-Sync re-enable restores independent toggling) → merged
 - [ ] **test68** — Native-resolution recommendation hint — **PR #88** — base `vibemis-main` — ✗→🔧 **FAIL, fix pushed — RE-TEST** (report PR #106: hint hidden because `maximumResolution` is the decoder max = (0,0) on >1080p devices; fix `f111363d` falls back to `Screen` panel size) — *(launcher only)*
-- [ ] **test49** — Configurable performance-overlay corner (TL/TR/BL/BR) — **PR #69** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a stream — auto-publishes 🔬 alpha)*
+- [x] **test49** — Configurable performance-overlay corner (TL/TR/BL/BR) — **PR #69** — base `vibemis-main` — ☑ **PASS (Tier 1)** (report PR #110; dropdown shows all 4 corners, default Top-left, `perfoverlayposition=3` read from config; Tier 2 corner-render-during-stream N/A → ledger) → merged. Minor: position combo truncates to "Bott" at narrow width — fold into P3.17 Settings restyle.
 - [ ] **test50** — Configurable performance-overlay text size (Small/Normal/Large) — **PR #70** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a stream — auto-publishes 🔬 alpha)*
 - [ ] **test72** — Show clock in the performance overlay — **PR #98** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a stream)*
 
@@ -118,6 +118,8 @@ ticking a row above does NOT clear its entry here.
 - [ ] **test74** *(when merged)* — guided setup, Tier 3 — run `scripts/vibemis-setup.sh --host <host>`
   end-to-end on a real host (install → pair via PIN → add-all-games creates launchers). Maintainer can
   do this once when a host is on hand.
+- [ ] **test49** — perf-overlay position, Tier 2 — during a **live stream**, confirm the overlay
+  actually renders in the selected corner (TL/TR/BL/BR) and moves when the setting changes.
 
 ## How the test agent should work this list (also in docs/personas/test-agent.md)
 
