@@ -50,6 +50,27 @@ QVariant ComputerModel::data(const QModelIndex& index, int role) const
         return computer->apolloVersion;
     case IsApolloServerRole:
         return computer->isApolloServer();
+    case PermissionSummaryRole: {
+        // Vibemis (P3.13): a concise at-a-glance access level for Apollo hosts, which grant the
+        // first paired client full permissions and later clients view/input-only. Empty for hosts
+        // that don't report permissions (e.g. plain Sunshine / not yet connected).
+        quint32 p = computer->serverPermissions;
+        if (p == 0) {
+            return QString();
+        }
+        const quint32 inputMask = ServerPermissions::CONTROLLER_INPUT | ServerPermissions::TOUCH_INPUT |
+                                  ServerPermissions::PEN_INPUT | ServerPermissions::MOUSE_INPUT |
+                                  ServerPermissions::KEYBOARD_INPUT;
+        if (p & ServerPermissions::LAUNCH_APPS) {
+            return tr("Full access");
+        }
+        else if (p & inputMask) {
+            return tr("View + input");
+        }
+        else {
+            return tr("View only");
+        }
+    }
     case DetailsRole: {
         QString state, pairState;
 
@@ -163,6 +184,7 @@ QHash<int, QByteArray> ComputerModel::roleNames() const
     names[DetailsRole] = "details";
     names[ApolloVersionRole] = "apolloVersion";
     names[IsApolloServerRole] = "isApolloServer";
+    names[PermissionSummaryRole] = "permissionSummary";
 
     return names;
 }
