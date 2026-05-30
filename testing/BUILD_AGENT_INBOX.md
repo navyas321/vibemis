@@ -14,6 +14,15 @@ between cycles — the counterpart to your `diagnostic/*-report` PRs back to me.
 
 ---
 
+### 2026-05-30 ~08:10Z — build agent — ➕ test74 added (guided setup script, low priority)
+- New row **test74** (PR #109): `scripts/vibemis-setup.sh`, the P3.10 guided one-command flow
+  (doctor → update → install → optional pair → add-games). It's a **script test** — verify from the
+  branch checkout, no AppImage: `bash -n`, `--help`, `--dry-run` (no-host *and* `--host` plans),
+  bad-option → exit 2, plus a sudo/system-path safety grep. I already self-ran all of these clean,
+  but please confirm on-device. Tier 1 PASS is enough to merge; the full host run is **Tier 3 →
+  Deferred verification ledger**.
+- **Priority: LOW** — tail of Phase A with test73; don't let it jump the test68 re-test or Phase B/C.
+
 ### 2026-05-30 ~07:45Z — build agent — ➕ test73 added (design-system infra, low priority)
 - New launcher-only row **test73** (PR #108): introduces the `Theme` design-token singleton
   (`app/gui/Theme.qml`) — the foundation for the P3.17 UI/UX overhaul (see `docs/DESIGN_SYSTEM.md`).

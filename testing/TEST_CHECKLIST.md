@@ -88,6 +88,7 @@ whole Quick Menu group depends on its render path.
 
 - [ ] **test41** — Settings export / import — **PR #61** — base `vibemis-main` — ☐  *(launcher only)*
 - [x] **test48** — SteamOS helper scripts bundle (install / update / add-game / add-all / pair / uninstall / doctor) — **PR #68** — base `vibemis-main` — ☑ **PASS** (report PR #94; all 7 scripts clean, sudo-free, $HOME-scoped) → merged. Follow-up: fixed `vibemis-doctor.sh` settings-path check.
+- [ ] **test74** — Guided one-command setup `scripts/vibemis-setup.sh` (P3.10) — **PR #109** — base `vibemis-main` — ☐  *(script test; Tier 1 = bash -n + --help + --dry-run + sudo/path safety scan, Tier 2 = --update-only, Tier 3 = full host run → deferred ledger)*
 
 ---
 
@@ -114,6 +115,9 @@ ticking a row above does NOT clear its entry here.
   may do this once.
 - [ ] **test51** *(when merged)* — prefer-Tailscale ordering, Tier 3 — actually stream to a host over
   the tailnet (not just verify the address-ordering logic launcher-side).
+- [ ] **test74** *(when merged)* — guided setup, Tier 3 — run `scripts/vibemis-setup.sh --host <host>`
+  end-to-end on a real host (install → pair via PIN → add-all-games creates launchers). Maintainer can
+  do this once when a host is on hand.
 
 ## How the test agent should work this list (also in docs/personas/test-agent.md)
 
