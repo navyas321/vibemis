@@ -112,6 +112,30 @@ Flickable {
                 anchors.fill: parent
                 spacing: 5
 
+                // Vibemis: live one-line summary of the effective stream config, so the user can
+                // see resolution/fps/bitrate/codec/HDR at a glance without reading every control.
+                Label {
+                    id: streamSummaryLabel
+                    width: parent.width
+                    function codecName(v) {
+                        if (v === StreamingPreferences.VCC_FORCE_H264) return "H.264"
+                        if (v === StreamingPreferences.VCC_FORCE_HEVC ||
+                            v === StreamingPreferences.VCC_FORCE_HEVC_HDR_DEPRECATED) return "HEVC"
+                        if (v === StreamingPreferences.VCC_FORCE_AV1) return "AV1"
+                        return qsTr("Auto codec")
+                    }
+                    text: "▶ " + StreamingPreferences.width + "×" + StreamingPreferences.height +
+                          " @ " + StreamingPreferences.fps + " fps · " +
+                          (StreamingPreferences.bitrateKbps / 1000).toFixed(0) + " Mbps · " +
+                          codecName(StreamingPreferences.videoCodecConfig) +
+                          (StreamingPreferences.enableHdr ? " · HDR" : "")
+                    font.pointSize: 11
+                    font.bold: true
+                    wrapMode: Text.Wrap
+                    color: "#00CCCC"
+                    bottomPadding: 4
+                }
+
                 Label {
                     width: parent.width
                     id: resFPStitle
