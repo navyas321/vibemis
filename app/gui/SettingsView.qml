@@ -2352,6 +2352,37 @@ Flickable {
                     }
                 }
 
+                // Vibemis: one-click copy of the system info for bug reports. Uses a hidden
+                // TextEdit (selectAll + copy) so it works in pure QML without extra C++.
+                TextEdit {
+                    id: systemInfoClipHelper
+                    visible: false
+                }
+                Button {
+                    id: copySystemInfoButton
+                    text: qsTr("Copy to clipboard")
+                    onClicked: {
+                        systemInfoClipHelper.text =
+                            "Vibemis version: " + SystemProperties.versionString + "\n" +
+                            "Architecture: " + SystemProperties.friendlyNativeArchName + "\n" +
+                            "Steam Deck: " + (SystemProperties.isSteamDeck ? "Yes" : "No") + "\n" +
+                            "Display server: " + (SystemProperties.isRunningWayland ? (SystemProperties.isRunningXWayland ? "XWayland" : "Wayland") : "X11") + "\n" +
+                            "Hardware decode: " + (SystemProperties.hasHardwareAcceleration ? "Available" : "Not available") + "\n" +
+                            "HDR support: " + (SystemProperties.supportsHdr ? "Yes" : "No") + "\n" +
+                            "Max resolution: " + SystemProperties.maximumResolution.width + "x" + SystemProperties.maximumResolution.height
+                        systemInfoClipHelper.selectAll()
+                        systemInfoClipHelper.copy()
+                        copySystemInfoButton.text = qsTr("Copied!")
+                        copyFeedbackTimer.restart()
+                    }
+
+                    Timer {
+                        id: copyFeedbackTimer
+                        interval: 1500
+                        onTriggered: copySystemInfoButton.text = qsTr("Copy to clipboard")
+                    }
+                }
+
                 Label {
                     width: parent.width
                     text: qsTr("Useful when filing a bug report. The headless 'vibemis selftest' command reports the same kind of information for automated checks.")
