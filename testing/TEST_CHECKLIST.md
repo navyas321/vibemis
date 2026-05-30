@@ -40,6 +40,7 @@ whole Quick Menu group depends on its render path.
 
 - [ ] **test27** — Vibemis brand accent (teal/cyan) — **PR #49** — base `vibemis-main` — ☐  *(launcher only, no stream)*
 - [ ] **test28** — Tailscale hint in Add-PC dialog — **PR #50** — base `vibemis-main` — ☐  *(launcher only)*
+- [x] **test51** — Prefer Tailscale addresses for remote play (P3.7) — **PR #71** — base `vibemis-main` — ☑ **PASS** (report PR #126; default false confirmed, persists true via config preseed round-trip, LAN host Navid-PC online unaffected; Tier 3 tailnet N/A)  *(Tier 1/2 launcher-only; Tier 3 needs a tailnet — mark N/A otherwise)*
 - [ ] **test37** — Settings "About" section — **PR #57** — base `vibemis-main` — ☐  *(launcher only)*
 - [ ] **test39** — First-run welcome hint — **PR #59** — base `vibemis-main` — ☐  *(launcher only)*
 
