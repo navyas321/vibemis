@@ -2398,5 +2398,43 @@ Flickable {
                 }
             }
         }
+
+        // Vibemis: Help & Links — quick access to docs/support. Only shown when a browser is
+        // available (SystemProperties.hasBrowser). Uses Qt.openUrlExternally so it works in
+        // Desktop Mode; in Game Mode the buttons simply do nothing if no browser is present.
+        GroupBox {
+            id: helpLinksGroupBox
+            visible: SystemProperties.hasBrowser
+            width: (parent.width - (parent.leftPadding + parent.rightPadding))
+            padding: 12
+            title: "<font color=\"skyblue\">" + qsTr("Help & Links") + "</font>"
+            font.pointSize: 12
+
+            Column {
+                anchors.fill: parent
+                spacing: 8
+
+                Label {
+                    width: parent.width
+                    text: qsTr("Vibemis is the Linux/SteamOS client for Apollo & Sunshine hosts. These open in your browser.")
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                    color: "#aaaaaa"
+                }
+
+                Button {
+                    text: qsTr("Vibemis on GitHub")
+                    onClicked: Qt.openUrlExternally("https://github.com/navyas321/vibemis")
+                }
+                Button {
+                    text: qsTr("Install guide (README)")
+                    onClicked: Qt.openUrlExternally("https://github.com/navyas321/vibemis#readme")
+                }
+                Button {
+                    text: qsTr("Remote play over Tailscale — setup")
+                    onClicked: Qt.openUrlExternally("https://tailscale.com/kb/installation")
+                }
+            }
+        }
     }
 }
