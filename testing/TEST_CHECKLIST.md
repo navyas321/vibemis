@@ -58,7 +58,7 @@ whole Quick Menu group depends on its render path.
 
 - [ ] **test26** — Configurable Quick Menu gamepad shortcut — **PR #48** — base `vibemis-main` — ☐
 - [ ] **test36** — Back-paddle Quick Menu combos — **PR #56** — base `test26` — ☐
-- [ ] **test57** — Disable controller rumble (P3.13) — **PR #77** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs controller + stream)*
+- [x] **test57** — Disable controller rumble (P3.13) — **PR #77** — base `vibemis-main` — ☑ **PASS (Tier 1)** (report PR #112; toggle in Gamepad Settings, default OFF, `suppresscontrollerrumble` persists; Tier 2 in-stream suppression N/A → ledger) → merged
 - [ ] **test64** — Motion-control (gyro) capability detection (P3.16) — **PR #84** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a controller)*
 
 ## 4. UI / onboarding
@@ -122,6 +122,8 @@ ticking a row above does NOT clear its entry here.
   actually renders in the selected corner (TL/TR/BL/BR) and moves when the setting changes.
 - [ ] **test50** — perf-overlay text size, Tier 2 — during a **live stream**, confirm the overlay
   text actually renders at the chosen size (Small/Normal/Large).
+- [ ] **test57** — disable controller rumble, Tier 2 — with a **rumble-capable controller + live
+  stream**, confirm rumble is actually suppressed when the toggle is on (and works when off).
 
 ## How the test agent should work this list (also in docs/personas/test-agent.md)
 
