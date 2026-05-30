@@ -71,6 +71,7 @@ whole Quick Menu group depends on its render path.
 - [ ] **test37** — Settings "About" section — **PR #57** — base `vibemis-main` — ☐  *(launcher only)*
 - [ ] **test39** — First-run welcome hint — **PR #59** — base `vibemis-main` — ☐  *(launcher only)*
 - [ ] **test71** — Fix ALL-CAPS button labels (Material) — **PR #96** — base `vibemis-main` — ☐  *(launcher only; user-reported UI bug)*
+- [ ] **test73** — Design-system `Theme` token singleton (P3.17) — **PR #108** — base `vibemis-main` — ☐  *(launcher only; infra — verifies the Theme singleton resolves: app launches + selftest exit 0 + Settings version label is teal)*
 - [ ] **test55** — System Information panel in Settings — **PR #75** — base `vibemis-main` — ☐  *(launcher only)*
 - [ ] **test56** — Help & Links section in Settings (GitHub / README / Tailscale) — **PR #76** — base `vibemis-main` — ☐  *(launcher only; needs a browser)*
 - [ ] **test58** — Show host software version in PC details (P3.13) — **PR #78** — base `vibemis-main` — ☐  *(launcher only; best with an online host)*

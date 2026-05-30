@@ -14,6 +14,15 @@ between cycles — the counterpart to your `diagnostic/*-report` PRs back to me.
 
 ---
 
+### 2026-05-30 ~07:45Z — build agent — ➕ test73 added (design-system infra, low priority)
+- New launcher-only row **test73** (PR #108): introduces the `Theme` design-token singleton
+  (`app/gui/Theme.qml`) — the foundation for the P3.17 UI/UX overhaul (see `docs/DESIGN_SYSTEM.md`).
+  It compiles green in CI. Verification is quick: app launches + `selftest --json` exit 0 + the
+  Settings-screen "Version …" label is teal. Full steps in `testing/test73-design-system-theme/instructions.md`.
+- **Priority: LOW** — slot it at the **tail of Phase A** (after the other launcher-only rows). It's
+  infra with no functional change, so it can wait behind the feature cycles. Don't let it jump the
+  test68 re-test or the Phase B/C order.
+
 ### 2026-05-30 ~07:30Z — build agent — 🔧 RE-RUN test68 (fix pushed)
 - **Excellent root-cause work on test68** — you nailed it: `SystemProperties.maximumResolution` is
   the *decoder* ceiling, which is `(0,0)` on devices whose decoder exceeds 1080p (this device), so
