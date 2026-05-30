@@ -117,6 +117,16 @@ public:
     };
     Q_ENUM(CaptureSysKeysMode);
 
+    // Vibemis: font size of the in-stream performance overlay.
+    // PERF_TEXT_NORMAL preserves the historical 20pt default.
+    enum PerfOverlayTextSize
+    {
+        PERF_TEXT_SMALL,
+        PERF_TEXT_NORMAL,
+        PERF_TEXT_LARGE,
+    };
+    Q_ENUM(PerfOverlayTextSize);
+
     // Vibemis: which screen corner the in-stream performance overlay anchors to.
     // POS_TOP_LEFT preserves the historical Moonlight position (default).
     enum PerfOverlayPosition
@@ -149,6 +159,7 @@ public:
     Q_PROPERTY(bool gamepadMouse MEMBER gamepadMouse NOTIFY gamepadMouseChanged)
     Q_PROPERTY(bool detectNetworkBlocking MEMBER detectNetworkBlocking NOTIFY detectNetworkBlockingChanged)
     Q_PROPERTY(bool showPerformanceOverlay MEMBER showPerformanceOverlay NOTIFY showPerformanceOverlayChanged)
+    Q_PROPERTY(PerfOverlayTextSize perfOverlayTextSize MEMBER perfOverlayTextSize NOTIFY perfOverlayTextSizeChanged)
     Q_PROPERTY(PerfOverlayPosition perfOverlayPosition MEMBER perfOverlayPosition NOTIFY perfOverlayPositionChanged)
     Q_PROPERTY(bool adaptiveBitrate MEMBER adaptiveBitrate NOTIFY adaptiveBitrateChanged)
     Q_PROPERTY(AudioConfig audioConfig MEMBER audioConfig NOTIFY audioConfigChanged)
@@ -206,6 +217,7 @@ public:
     bool gamepadMouse;
     bool detectNetworkBlocking;
     bool showPerformanceOverlay;
+    PerfOverlayTextSize perfOverlayTextSize;
     PerfOverlayPosition perfOverlayPosition;
     bool adaptiveBitrate;
     bool swapMouseButtons;
@@ -265,6 +277,7 @@ signals:
     void gamepadMouseChanged();
     void detectNetworkBlockingChanged();
     void showPerformanceOverlayChanged();
+    void perfOverlayTextSizeChanged();
     void perfOverlayPositionChanged();
     void adaptiveBitrateChanged();
     void mouseButtonsChanged();

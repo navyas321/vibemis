@@ -48,6 +48,7 @@
 #define SER_PACKETSIZE "packetsize"
 #define SER_DETECTNETBLOCKING "detectnetblocking"
 #define SER_SHOWPERFOVERLAY "showperfoverlay"
+#define SER_PERFOVERLAYTEXTSIZE "perfoverlaytextsize"
 #define SER_ADAPTIVEBITRATE "adaptivebitrate"
 #define SER_SWAPMOUSEBUTTONS "swapmousebuttons"
 #define SER_MUTEONFOCUSLOSS "muteonfocusloss"
@@ -158,6 +159,8 @@ void StreamingPreferences::reload()
     gamepadMouse = settings.value(SER_GAMEPADMOUSE, true).toBool();
     detectNetworkBlocking = settings.value(SER_DETECTNETBLOCKING, true).toBool();
     showPerformanceOverlay = settings.value(SER_SHOWPERFOVERLAY, false).toBool();
+    perfOverlayTextSize = static_cast<PerfOverlayTextSize>(settings.value(SER_PERFOVERLAYTEXTSIZE,
+                                                           static_cast<int>(PerfOverlayTextSize::PERF_TEXT_NORMAL)).toInt());
     perfOverlayPosition = static_cast<PerfOverlayPosition>(settings.value(SER_PERFOVERLAYPOSITION,
                                                            static_cast<int>(PerfOverlayPosition::POS_TOP_LEFT)).toInt());
     adaptiveBitrate = settings.value(SER_ADAPTIVEBITRATE, false).toBool();
@@ -370,6 +373,7 @@ void StreamingPreferences::save()
     settings.setValue(SER_PACKETSIZE, packetSize);
     settings.setValue(SER_DETECTNETBLOCKING, detectNetworkBlocking);
     settings.setValue(SER_SHOWPERFOVERLAY, showPerformanceOverlay);
+    settings.setValue(SER_PERFOVERLAYTEXTSIZE, static_cast<int>(perfOverlayTextSize));
     settings.setValue(SER_PERFOVERLAYPOSITION, static_cast<int>(perfOverlayPosition));
     settings.setValue(SER_ADAPTIVEBITRATE, adaptiveBitrate);
     settings.setValue(SER_AUDIOCFG, static_cast<int>(audioConfig));

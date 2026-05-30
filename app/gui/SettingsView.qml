@@ -2105,6 +2105,55 @@ Flickable {
 
                 Label {
                     width: parent.width
+                    id: perfOverlayTextSizeTitle
+                    text: qsTr("Performance overlay text size")
+                    font.pointSize: 12
+                    wrapMode: Text.Wrap
+                    visible: showPerformanceOverlay.checked
+                }
+
+                AutoResizingComboBox {
+                    id: perfOverlayTextSizeComboBox
+                    visible: showPerformanceOverlay.checked
+                    textRole: "text"
+                    model: ListModel {
+                        id: perfOverlayTextSizeListModel
+                        ListElement {
+                            text: qsTr("Small")
+                            val: StreamingPreferences.PERF_TEXT_SMALL
+                        }
+                        ListElement {
+                            text: qsTr("Normal")
+                            val: StreamingPreferences.PERF_TEXT_NORMAL
+                        }
+                        ListElement {
+                            text: qsTr("Large")
+                            val: StreamingPreferences.PERF_TEXT_LARGE
+                        }
+                    }
+                    Component.onCompleted: {
+                        var saved = StreamingPreferences.perfOverlayTextSize
+                        currentIndex = 0
+                        for (var i = 0; i < perfOverlayTextSizeListModel.count; i++) {
+                            if (perfOverlayTextSizeListModel.get(i).val === saved) {
+                                currentIndex = i
+                                break
+                            }
+                        }
+                    }
+                    // ::onActivated only fires on human-driven index changes
+                    onActivated: {
+                        StreamingPreferences.perfOverlayTextSize = perfOverlayTextSizeListModel.get(currentIndex).val
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Adjust the size of the performance overlay text. Takes effect the next time you start a stream.")
+                }
+
+                Label {
+                    width: parent.width
                     id: perfOverlayPositionTitle
                     text: qsTr("Performance overlay position")
                     font.pointSize: 12
