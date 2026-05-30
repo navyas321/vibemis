@@ -12,7 +12,10 @@ whole Quick Menu group depends on its render path.
 > ☑ (or ✗) in the same commit as the report, and note the report path.
 
 ### ▶ START HERE (first time on the device)
-1. `git fetch origin` (gets all `test*` branches + this checklist).
+1. `git fetch origin` (gets all `test*` branches + this checklist), then **read
+   [`testing/BUILD_AGENT_INBOX.md`](BUILD_AGENT_INBOX.md)** for any priority changes / answers from
+   the build agent (it may say SKIP/PRIORITIZE/RE-RUN a specific testN). On a feature branch, read
+   `git show origin/vibemis-main:testing/BUILD_AGENT_INBOX.md` to get the latest.
 2. **Smoke-test the tooling first:** `./testing/run-cycle.sh test52-selftest-cli` — it downloads the
    alpha, verifies md5, runs `selftest --json`, and captures a launch log. If that PASSes, the
    harness works and you can trust `selftest` for later cycles.
@@ -40,21 +43,22 @@ whole Quick Menu group depends on its render path.
 - [ ] **test31** — In-stream video zoom — **PR #53** — base `test25` — ☐
 - [ ] **test32** — In-stream video pan — **PR #54** — base `test31` — ☐
 - [ ] **test40** — Battery-saver bitrate — **PR #60** — base `vibemis-main` — ☐
-- [ ] **test53** — Settings performance-guidance advisories (sw-decode / high-bitrate) — **PR #73** — base `vibemis-main` — ☐  *(launcher only)*
-- [ ] **test59** — Data-usage estimate under the bitrate slider — **PR #79** — base `vibemis-main` — ☐  *(launcher only)*
-- [ ] **test62** — Adaptive bitrate (experimental) first slice (P3.12) — **PR #82** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a degrading stream — mark N/A otherwise)*
-- [ ] **test65** — AV1 codec guidance note (P3.6) — **PR #85** — base `vibemis-main` — ☐  *(launcher only)*
-- [ ] **test66** — Live stream-config summary line — **PR #86** — base `vibemis-main` — ☐  *(launcher only)*
-- [ ] **test67** — Low-latency "competitive" preset button (P3.8) — **PR #87** — base `vibemis-main` — ☐  *(launcher only)*
-- [ ] **test68** — Native-resolution recommendation hint — **PR #88** — base `vibemis-main` — ☐  *(launcher only)*
-- [ ] **test49** — Configurable performance-overlay corner (TL/TR/BL/BR) — **PR #69** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a stream — auto-publishes 🔬 alpha)*
-- [ ] **test50** — Configurable performance-overlay text size (Small/Normal/Large) — **PR #70** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a stream — auto-publishes 🔬 alpha)*
+- [x] **test53** — Settings performance-guidance advisories (sw-decode / high-bitrate) — **PR #73** — base `vibemis-main` — ☑ **PASS** (report on diagnostic/test53-perf-guidance-report; all 3 tiers, no false positives) → merged
+- [x] **test59** — Data-usage estimate under the bitrate slider — **PR #79** — base `vibemis-main` — ☑ **PASS** (report PR #101; 9.0 GB/hr@20Mbps, 22.5@50Mbps — math verified) → merged
+- [x] **test62** — Adaptive bitrate (experimental) first slice (P3.12) — **PR #82** — base `vibemis-main` — ☑ **PASS (Tier 1)** (report PR #107; checkbox visible + default off + persists; Tiers 2/3 N/A — need a degrading stream, re-check later) → merged. Note: QSettings may skip writing `adaptivebitrate` when false/default — read path verified, harmless.
+- [x] **test65** — AV1 codec guidance note (P3.6) — **PR #85** — base `vibemis-main` — ☑ **PASS** (report PR #103; AV1 note shows/hides on codec=AV1 vs Automatic, color #80A0C0, no Advanced-Settings regression) → merged
+- [x] **test66** — Live stream-config summary line — **PR #86** — base `vibemis-main` — ☑ **PASS** (report PR #104; `▶ W×H @ fps · Mbps · codec` teal summary updates with config, no Basic-Settings regression) → merged
+- [x] **test67** — Low-latency "competitive" preset button (P3.8) — **PR #87** — base `vibemis-main` — ☑ **PASS** (report PR #105; one tap clears V-Sync + frame pacing, persists to disk, V-Sync re-enable restores independent toggling) → merged
+- [x] **test68** — Native-resolution recommendation hint — **PR #88** — base `vibemis-main` — ☑ **PASS** (FAIL→fixed→re-test PASS, report PR #113; hint now reads 1920×1200 via `Screen` fallback — decoder max was (0,0) on this >1080p device; fix `f111363d`) → merged *(launcher only)*
+- [x] **test49** — Configurable performance-overlay corner (TL/TR/BL/BR) — **PR #69** — base `vibemis-main` — ☑ **PASS (Tier 1)** (report PR #110; dropdown shows all 4 corners, default Top-left, `perfoverlayposition=3` read from config; Tier 2 corner-render-during-stream N/A → ledger) → merged. Minor: position combo truncates to "Bott" at narrow width — fold into P3.17 Settings restyle.
+- [x] **test50** — Configurable performance-overlay text size (Small/Normal/Large) — **PR #70** — base `vibemis-main` — ☑ **PASS (Tier 1)** (report PR #111; dropdown lists Small/Normal/Large, default Normal, `perfoverlaytextsize=2` read from config; Tier 2 in-stream-render N/A → ledger) → merged. Minor: combo truncates to "Larg" — fold into P3.17 Settings restyle.
+- [x] **test72** — Show clock in the performance overlay — **PR #98** — base `vibemis-main` — ☑ **PASS (Tier 1)** (report PR #114; clock checkbox renders, greys out when perf-stats off, `perfoverlayclock` persists, selftest 7/7; Tier 2 in-stream clock N/A → ledger) → merged
 
 ## 3. Input / controls
 
 - [ ] **test26** — Configurable Quick Menu gamepad shortcut — **PR #48** — base `vibemis-main` — ☐
 - [ ] **test36** — Back-paddle Quick Menu combos — **PR #56** — base `test26` — ☐
-- [ ] **test57** — Disable controller rumble (P3.13) — **PR #77** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs controller + stream)*
+- [x] **test57** — Disable controller rumble (P3.13) — **PR #77** — base `vibemis-main` — ☑ **PASS (Tier 1)** (report PR #112; toggle in Gamepad Settings, default OFF, `suppresscontrollerrumble` persists; Tier 2 in-stream suppression N/A → ledger) → merged
 - [ ] **test64** — Motion-control (gyro) capability detection (P3.16) — **PR #84** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a controller)*
 
 ## 4. UI / onboarding
@@ -67,6 +71,7 @@ whole Quick Menu group depends on its render path.
 - [ ] **test37** — Settings "About" section — **PR #57** — base `vibemis-main` — ☐  *(launcher only)*
 - [ ] **test39** — First-run welcome hint — **PR #59** — base `vibemis-main` — ☐  *(launcher only)*
 - [ ] **test71** — Fix ALL-CAPS button labels (Material) — **PR #96** — base `vibemis-main` — ☐  *(launcher only; user-reported UI bug)*
+- [ ] **test73** — Design-system `Theme` token singleton (P3.17) — **PR #108** — base `vibemis-main` — ☐  *(launcher only; infra — verifies the Theme singleton resolves: app launches + selftest exit 0 + Settings version label is teal)*
 - [ ] **test55** — System Information panel in Settings — **PR #75** — base `vibemis-main` — ☐  *(launcher only)*
 - [ ] **test56** — Help & Links section in Settings (GitHub / README / Tailscale) — **PR #76** — base `vibemis-main` — ☐  *(launcher only; needs a browser)*
 - [ ] **test58** — Show host software version in PC details (P3.13) — **PR #78** — base `vibemis-main` — ☐  *(launcher only; best with an online host)*
@@ -83,8 +88,44 @@ whole Quick Menu group depends on its render path.
 
 - [ ] **test41** — Settings export / import — **PR #61** — base `vibemis-main` — ☐  *(launcher only)*
 - [x] **test48** — SteamOS helper scripts bundle (install / update / add-game / add-all / pair / uninstall / doctor) — **PR #68** — base `vibemis-main` — ☑ **PASS** (report PR #94; all 7 scripts clean, sudo-free, $HOME-scoped) → merged. Follow-up: fixed `vibemis-doctor.sh` settings-path check.
+- [ ] **test74** — Guided one-command setup `scripts/vibemis-setup.sh` (P3.10) — **PR #109** — base `vibemis-main` — ☐  *(script test; Tier 1 = bash -n + --help + --dry-run + sudo/path safety scan, Tier 2 = --update-only, Tier 3 = full host run → deferred ledger)*
 
 ---
+
+## ⏸ Deferred verification ledger (merged on a launcher tier — runtime tier still UNVERIFIED)
+
+Some features were **merged after only their launcher-only tier passed** because the remaining tier
+needs hardware/environment the test device doesn't have in a normal session (a live host, a
+*degrading* network, a second controller, a real tailnet). Those features are safe to ship in the
+meantime (default-off settings / observation-only / non-destructive), but their runtime behavior is
+**not yet verified**. This is the standing queue to clear **when the right environment is available** —
+ticking a row above does NOT clear its entry here.
+
+> **Test agent:** whenever a host / degrading-network / controller / tailnet *is* available, work this
+> ledger in addition to the normal queue. File a short follow-up report and check the box here.
+> **Build agent:** when you merge a Tier-1-only PASS that has an N/A runtime tier, ADD a row here
+> (don't just close the report).
+
+- [ ] **test62** — Adaptive bitrate, Tiers 2–3 — on a **degrading stream**, confirm the
+  `[adaptive-bitrate]` recommendation is logged on `CONN_STATUS_POOR` and no regression to the
+  slow-connection overlay. *(Note: runtime bitrate-stepping itself is still `TODO(P3.12)` — only the
+  observation log is in.)*
+- [ ] **test69** — Tailscale setup, Tier 3 — on a **real tailnet**, run `scripts/setup-tailscale.sh`
+  end-to-end (login URL → join → `--check` shows `up` → reach a host by its 100.x IP). Maintainer
+  may do this once.
+- [ ] **test51** *(when merged)* — prefer-Tailscale ordering, Tier 3 — actually stream to a host over
+  the tailnet (not just verify the address-ordering logic launcher-side).
+- [ ] **test74** *(when merged)* — guided setup, Tier 3 — run `scripts/vibemis-setup.sh --host <host>`
+  end-to-end on a real host (install → pair via PIN → add-all-games creates launchers). Maintainer can
+  do this once when a host is on hand.
+- [ ] **test49** — perf-overlay position, Tier 2 — during a **live stream**, confirm the overlay
+  actually renders in the selected corner (TL/TR/BL/BR) and moves when the setting changes.
+- [ ] **test50** — perf-overlay text size, Tier 2 — during a **live stream**, confirm the overlay
+  text actually renders at the chosen size (Small/Normal/Large).
+- [ ] **test57** — disable controller rumble, Tier 2 — with a **rumble-capable controller + live
+  stream**, confirm rumble is actually suppressed when the toggle is on (and works when off).
+- [ ] **test72** — perf-overlay clock, Tier 2 — during a **live stream**, confirm the clock line
+  actually renders in the performance overlay when enabled.
 
 ## How the test agent should work this list (also in docs/personas/test-agent.md)
 

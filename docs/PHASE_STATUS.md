@@ -66,9 +66,10 @@ heavily, so they're now one phase).
 - BLOCKER (parity audit): no formal Android feature spec yet — confirm gaps against Artemis-Android
   before deep work; the launcher-verifiable items above can proceed now.
 
-## P3.9 — UI modernization (Material)  🟡 partial
+## P3.9 — UI modernization (Material)  🟡 partial  → elevated into **P3.17**
 - Done: brand accent test27 (#49); About section test37 (#57); first-run hint test39 (#59).
-- Remaining: consistent Material control styling pass, spacing/typography, dark-theme polish.
+- Remaining: consistent Material control styling pass, spacing/typography, dark-theme polish —
+  **this remaining work is now folded into the deliberate design pass of P3.17 below** (step 3).
 - Not blocked — large, so done incrementally as small test PRs.
 
 ## P3.10 — SteamOS one-click integration  🟡 partial
@@ -119,6 +120,70 @@ touchpad). High value on the Legion Go S Z2 (it has a gyro + touchscreen) and a 
   with `// TODO(P3.16)` at the send site; wire the actual sensor forwarding after the symbols and
   host behaviour are confirmed on-device.
 - Sources: moonlight-qt issues #960 / #1123; Moonlight-Switch gyro-as-DS4.
+
+## P3.17 — UI/UX design overhaul (Claude-assisted)  🔵 NEW — near-term priority
+A deliberate, cohesive **design pass on the whole client** — not the incremental Material tidying of
+P3.9, but a from-the-top visual/UX redesign using **Claude's design tooling (design credits)** to
+generate a consistent visual language + per-screen mockups, then implementing the result in QML.
+- **Why now:** the feature set grew fast (Quick Menu, overlays, several Settings panels, Tailscale
+  setup, onboarding). The surfaces are *functional* but visually inconsistent (spacing, typography,
+  color usage, empty/loading states). A coherent design pass compounds the value of everything
+  already shipped and is the highest-leverage UX work available.
+- **Approach:**
+  1. **Audit** — screenshot every current screen (Computers grid, Add-PC, Settings + each panel,
+     Quick Menu overlay, first-run/onboarding, perf overlay) and list the inconsistencies.
+  2. **Design (Claude design credits)** — generate a cohesive visual language: a color + spacing +
+     type scale, component states, handheld-first layouts for **both Game Mode (Gamescope) and
+     Desktop Mode**, light/dark. Anchor on the existing Vibemis teal accent **#00CCCC** (test27).
+     Produce per-screen mockups to implement against.
+  3. **Implement incrementally** as **launcher-only `test<N>` PRs** (one screen/component per PR so
+     the test agent verifies each with no host needed): **Settings first** (largest surface area),
+     then the **Computers/Add-PC home**, then **onboarding/first-run**, then the **Quick Menu
+     overlay**. (This step *absorbs P3.9's* remaining "consistent Material styling pass".)
+  4. **Accessibility / handheld ergonomics** — minimum touch-target sizes, controller-focus
+     navigation order, readable-at-arm's-length type; final sign-off on the Legion Go S Z2.
+- **Sequence:** slot **right after the current launcher-only verification wave clears** — it produces
+  more launcher-only PRs, the cheap-to-verify lane the test agent is fastest at, so the two pipelines
+  reinforce each other.
+- **Not blocked:** mockups + most implementation are launcher-verifiable; only the final
+  Game-Mode ergonomics sign-off needs the device.
+
+## P3.18 — Claude Design integration (design → handoff → QML)  🔵 NEW — pairs with P3.17
+Wire **[Claude Design](https://claude.ai/design)** (Anthropic Labs, launched 2026-04-17; prompt →
+prototype/mockup; powered by Opus 4.7) into the Vibemis UI pipeline as the *design source* feeding
+P3.17's implementation. Claude Design can ingest a **codebase + uploaded docs** to build a reusable
+design system (our colors/type/components) and, when a design is ready, **packages a handoff bundle
+to pass to Claude Code with one instruction** — that handoff is the seam to the build agent.
+
+**Why a separate phase:** P3.17 is *implementation* (Theme tokens + restyling QML). P3.18 is the
+*input pipeline*: how a polished design gets created in Claude Design and lands in the repo as code.
+
+**Workflow (maintainer ⇄ build agent):**
+1. **Onboard** Claude Design on the Vibemis repo + `docs/DESIGN_SYSTEM.md` + the UI audit +
+   per-screen screenshots → it builds the Vibemis design system (anchor accent **#00CCCC**, the
+   6-step type scale, the 4px spacing scale — kept in sync with `Theme.qml`).
+2. **Generate** per-screen mockups in P3.17's rollout order (Settings → Computers/Add-PC →
+   onboarding → Quick Menu). Iterate with inline comments / adjustment knobs.
+3. **Export the handoff bundle** (or standalone HTML/spec) into **`docs/design/`** in the repo
+   (convention in `docs/design/README.md`) — *or* hand it straight to Claude Code.
+4. **Build agent implements** each handoff as a launcher-only `test<N>` PR, translating the design to
+   QML against the `Theme` tokens (test73). One screen per PR (keeps the test agent's verify cheap).
+5. **Round-trip:** feed the implemented screenshots back into Claude Design to refine.
+
+**Boundary / who does what:** Claude Design is an **interactive web product tied to the maintainer's
+subscription** — the headless build agent can't drive it directly. So the **maintainer** runs Claude
+Design and drops the export into `docs/design/`; the **build agent** consumes it and ships QML. That
+drop-point *is* the "take input from claude.ai/design" link, made concrete.
+
+**Credits/limits:** Claude Design has **separate weekly usage limits** (bundled with Pro/Max/Team/
+Enterprise; not counted against chat or Claude Code quotas). Enterprise gets a ~20-prompt one-time
+credit expiring **2026-07-17** — so batch mockup generation (a screen's variations in one session).
+
+**Sync rule:** `docs/DESIGN_SYSTEM.md` ⇄ `Theme.qml` ⇄ Claude Design's design system must agree; a
+token change updates DESIGN_SYSTEM.md + Theme.qml in the same PR.
+
+**Not blocked** on our side (drop-point + consumer are ready); gated only on the maintainer running
+Claude Design and dropping an export. Source: anthropic.com/news/claude-design-anthropic-labs.
 
 ## P4.0 — Repo hygiene (DEFERRED to post-1.0 / first stable release)  ⏸️
 Hide the Claude/agent development files from GitHub. **Decision: deferred** until after the first

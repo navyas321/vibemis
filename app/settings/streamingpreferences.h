@@ -117,6 +117,27 @@ public:
     };
     Q_ENUM(CaptureSysKeysMode);
 
+    // Vibemis: font size of the in-stream performance overlay.
+    // PERF_TEXT_NORMAL preserves the historical 20pt default.
+    enum PerfOverlayTextSize
+    {
+        PERF_TEXT_SMALL,
+        PERF_TEXT_NORMAL,
+        PERF_TEXT_LARGE,
+    };
+    Q_ENUM(PerfOverlayTextSize);
+
+    // Vibemis: which screen corner the in-stream performance overlay anchors to.
+    // POS_TOP_LEFT preserves the historical Moonlight position (default).
+    enum PerfOverlayPosition
+    {
+        POS_TOP_LEFT,
+        POS_TOP_RIGHT,
+        POS_BOTTOM_LEFT,
+        POS_BOTTOM_RIGHT,
+    };
+    Q_ENUM(PerfOverlayPosition);
+
     Q_PROPERTY(int width MEMBER width NOTIFY displayModeChanged)
     Q_PROPERTY(int height MEMBER height NOTIFY displayModeChanged)
     Q_PROPERTY(int fps MEMBER fps NOTIFY displayModeChanged)
@@ -141,6 +162,10 @@ public:
     // Vibemis (test72): optional wall-clock line at the top of the performance
     // overlay. Off by default so the overlay is unchanged for existing users.
     Q_PROPERTY(bool perfOverlayShowClock MEMBER perfOverlayShowClock NOTIFY perfOverlayShowClockChanged)
+    Q_PROPERTY(bool suppressControllerRumble MEMBER suppressControllerRumble NOTIFY suppressControllerRumbleChanged)
+    Q_PROPERTY(PerfOverlayTextSize perfOverlayTextSize MEMBER perfOverlayTextSize NOTIFY perfOverlayTextSizeChanged)
+    Q_PROPERTY(PerfOverlayPosition perfOverlayPosition MEMBER perfOverlayPosition NOTIFY perfOverlayPositionChanged)
+    Q_PROPERTY(bool adaptiveBitrate MEMBER adaptiveBitrate NOTIFY adaptiveBitrateChanged)
     Q_PROPERTY(AudioConfig audioConfig MEMBER audioConfig NOTIFY audioConfigChanged)
     Q_PROPERTY(VideoCodecConfig videoCodecConfig MEMBER videoCodecConfig NOTIFY videoCodecConfigChanged)
     Q_PROPERTY(bool enableHdr MEMBER enableHdr NOTIFY enableHdrChanged)
@@ -197,6 +222,10 @@ public:
     bool detectNetworkBlocking;
     bool showPerformanceOverlay;
     bool perfOverlayShowClock;
+    bool suppressControllerRumble;
+    PerfOverlayTextSize perfOverlayTextSize;
+    PerfOverlayPosition perfOverlayPosition;
+    bool adaptiveBitrate;
     bool swapMouseButtons;
     bool muteOnFocusLoss;
     bool backgroundGamepad;
@@ -255,6 +284,10 @@ signals:
     void detectNetworkBlockingChanged();
     void showPerformanceOverlayChanged();
     void perfOverlayShowClockChanged();
+    void suppressControllerRumbleChanged();
+    void perfOverlayTextSizeChanged();
+    void perfOverlayPositionChanged();
+    void adaptiveBitrateChanged();
     void mouseButtonsChanged();
     void muteOnFocusLossChanged();
     void backgroundGamepadChanged();
