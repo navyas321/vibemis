@@ -51,7 +51,7 @@ whole Quick Menu group depends on its render path.
 - [x] **test67** — Low-latency "competitive" preset button (P3.8) — **PR #87** — base `vibemis-main` — ☑ **PASS** (report PR #105; one tap clears V-Sync + frame pacing, persists to disk, V-Sync re-enable restores independent toggling) → merged
 - [ ] **test68** — Native-resolution recommendation hint — **PR #88** — base `vibemis-main` — ✗→🔧 **FAIL, fix pushed — RE-TEST** (report PR #106: hint hidden because `maximumResolution` is the decoder max = (0,0) on >1080p devices; fix `f111363d` falls back to `Screen` panel size) — *(launcher only)*
 - [x] **test49** — Configurable performance-overlay corner (TL/TR/BL/BR) — **PR #69** — base `vibemis-main` — ☑ **PASS (Tier 1)** (report PR #110; dropdown shows all 4 corners, default Top-left, `perfoverlayposition=3` read from config; Tier 2 corner-render-during-stream N/A → ledger) → merged. Minor: position combo truncates to "Bott" at narrow width — fold into P3.17 Settings restyle.
-- [ ] **test50** — Configurable performance-overlay text size (Small/Normal/Large) — **PR #70** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a stream — auto-publishes 🔬 alpha)*
+- [x] **test50** — Configurable performance-overlay text size (Small/Normal/Large) — **PR #70** — base `vibemis-main` — ☑ **PASS (Tier 1)** (report PR #111; dropdown lists Small/Normal/Large, default Normal, `perfoverlaytextsize=2` read from config; Tier 2 in-stream-render N/A → ledger) → merged. Minor: combo truncates to "Larg" — fold into P3.17 Settings restyle.
 - [ ] **test72** — Show clock in the performance overlay — **PR #98** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a stream)*
 
 ## 3. Input / controls
@@ -120,6 +120,8 @@ ticking a row above does NOT clear its entry here.
   do this once when a host is on hand.
 - [ ] **test49** — perf-overlay position, Tier 2 — during a **live stream**, confirm the overlay
   actually renders in the selected corner (TL/TR/BL/BR) and moves when the setting changes.
+- [ ] **test50** — perf-overlay text size, Tier 2 — during a **live stream**, confirm the overlay
+  text actually renders at the chosen size (Small/Normal/Large).
 
 ## How the test agent should work this list (also in docs/personas/test-agent.md)
 
