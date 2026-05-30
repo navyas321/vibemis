@@ -624,6 +624,21 @@ void SdlInputHandler::handleControllerDeviceEvent(SDL_ControllerDeviceEvent* eve
         state->controller = controller;
         state->jsId = SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(state->controller));
 
+        // Vibemis (P3.16): when motion forwarding is enabled, report whether this controller exposes
+        // gyro/accelerometer sensors. This is the observation-only first slice.
+        // TODO(P3.16): if sensors are present and host support is confirmed, enable them with
+        // SDL_GameControllerSetSensorEnabled() and forward samples via LiSendControllerMotionEvent().
+#if SDL_VERSION_ATLEAST(2, 0, 14)
+        if (StreamingPreferences::get()->forwardMotionControls) {
+            bool hasGyro = SDL_GameControllerHasSensor(controller, SDL_SENSOR_GYRO);
+            bool hasAccel = SDL_GameControllerHasSensor(controller, SDL_SENSOR_ACCEL);
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                        "[motion] Controller '%s' sensors: gyro=%s accel=%s (forwarding pending host support — TODO P3.16)",
+                        SDL_GameControllerName(controller) ? SDL_GameControllerName(controller) : "?",
+                        hasGyro ? "yes" : "no", hasAccel ? "yes" : "no");
+        }
+#endif
+
         hapticCaps = 0;
 #if SDL_VERSION_ATLEAST(2, 0, 18)
         hapticCaps |= SDL_GameControllerHasRumble(controller) ? ML_HAPTIC_GC_RUMBLE : 0;
@@ -863,6 +878,13 @@ void SdlInputHandler::rumble(unsigned short controllerNumber, unsigned short low
         return;
     }
 
+    // Vibemis (P3.13): client-side "suppress controller rumble" switch. When enabled, drop
+    // host-driven rumble entirely (some users dislike rumble or want to save handheld battery).
+    // Apollo can also disable rumble host-side; this is the always-available client control.
+    if (StreamingPreferences::get()->suppressControllerRumble) {
+        return;
+    }
+
 #if SDL_VERSION_ATLEAST(2, 0, 9)
     if (m_GamepadState[controllerNumber].controller != nullptr) {
         SDL_GameControllerRumble(m_GamepadState[controllerNumber].controller, lowFreqMotor, highFreqMotor, 30000);
@@ -918,6 +940,11 @@ void SdlInputHandler::rumbleTriggers(uint16_t controllerNumber, uint16_t leftTri
 {
     // Make sure the controller number is within our supported count
     if (controllerNumber >= MAX_GAMEPADS) {
+        return;
+    }
+
+    // Vibemis (P3.13): see rumble() — same client-side suppression switch for trigger rumble.
+    if (StreamingPreferences::get()->suppressControllerRumble) {
         return;
     }
 

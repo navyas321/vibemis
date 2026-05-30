@@ -38,6 +38,11 @@ public:
     int getOverlayFontSize(OverlayType type);
     SDL_Surface* getUpdatedOverlaySurface(OverlayType type);
 
+    // Vibemis: anchor corner for the debug/performance overlay, read from user
+    // preference. Returns StreamingPreferences::PerfOverlayPosition as an int
+    // (0=TL, 1=TR, 2=BL, 3=BR). Renderers map this to their own coordinate space.
+    int getDebugOverlayAnchor();
+
     void setOverlayRenderer(IOverlayRenderer* renderer);
 
 private:
