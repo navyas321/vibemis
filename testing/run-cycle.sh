@@ -14,6 +14,11 @@ SLUG="${1:?usage: run-cycle.sh <test-branch-slug>   (e.g. test52-selftest-cli)}"
 OUT="${HOME}/Downloads"; mkdir -p "$OUT"
 APP=""
 
+# gh is often installed at ~/.local/bin and not on PATH in non-interactive shells (SteamOS).
+# Resolve it explicitly so alpha auto-fetch works. (Reported by the test agent, test52 cycle.)
+export PATH="$HOME/.local/bin:$PATH"
+GH="$(command -v gh 2>/dev/null || echo "$HOME/.local/bin/gh")"
+
 echo "### Vibemis cycle helper for: $SLUG"
 
 # 1) Prefer a committed AppImage on the branch (older cycles ship one in testing/<slug>/).
@@ -27,11 +32,11 @@ fi
 
 # 2) Otherwise download the branch's alpha pre-release (newer cycles auto-publish one).
 if [ -z "$APP" ]; then
-  TAG=$(gh release list --limit 100 --json tagName --jq '.[].tagName' 2>/dev/null \
+  TAG=$("$GH" release list --limit 100 --json tagName --jq '.[].tagName' 2>/dev/null \
         | grep "alpha\.${SLUG}\." | head -1)
   if [ -n "$TAG" ]; then
     echo "Downloading alpha release: $TAG"
-    gh release download "$TAG" --dir "$OUT" --pattern '*.AppImage' --clobber \
+    "$GH" release download "$TAG" --dir "$OUT" --pattern '*.AppImage' --clobber \
       && APP=$(ls -t "$OUT"/*.AppImage 2>/dev/null | head -1)
   fi
 fi

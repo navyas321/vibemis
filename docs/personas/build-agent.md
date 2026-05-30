@@ -7,6 +7,37 @@
 
 ---
 
+## Dispatch / cold-start bootstrap (read first if you were just spun up with only "the vibemis repo")
+
+You may be started two ways — detect which and adapt:
+- **Claude Code on the maintainer's Windows host:** the repo is at `~/vibemis` inside **WSL2**. Run
+  all git/gh/build commands through `wsl -e bash -c "<cmd>"` (the Windows `Bash` tool is Git-Bash,
+  **not** WSL — don't use it for repo work). Use `\\wsl$\Ubuntu-24.04\root\vibemis\...` for
+  Read/Edit/Write. The Windows machine also runs the Vibepollo host.
+- **A Dispatch / cloud container:** you are *already* Linux — clone the repo and run git/gh/build
+  **directly** (no `wsl -e` wrapper). You cannot reach the maintainer's Vibepollo host or the test
+  device; you build, push, and coordinate through GitHub only.
+
+Cold start, in order:
+1. **Auth + clone.** Repo: `github.com/navyas321/vibemis` (private, owner `navyas321`). Confirm
+   `gh auth status` (scopes `repo`, `workflow`); `gh repo clone navyas321/vibemis` if needed.
+2. **Get your bearings** — read these single-sources-of-truth in order: `CLAUDE.md` (governance) →
+   this file → [`WORKFLOW.md`](WORKFLOW.md) (SOP) → [`../PHASE_STATUS.md`](../PHASE_STATUS.md)
+   (what's done / next) → [`../../testing/TEST_CHECKLIST.md`](../../testing/TEST_CHECKLIST.md)
+   (verification queue, ☑ rows already merged) → `testing/BUILD_AGENT_INBOX.md` (your channel **to**
+   the test agent) + `testing/TEST_AGENT_OUTBOX.md` (its replies **to** you).
+3. **Resume the loop — don't redo landed work:** (a) process any open `diagnostic/<task>-report` PR:
+   **PASS** → tick the checklist row + merge the feature PR (resolve "keep-both" `SettingsView.qml`
+   conflicts) + close the report PR; **✗** → push a fix on the *same* `test<N>` branch. (b) Keep the
+   priority order in the inbox advancing. (c) When the report queue is quiet, develop the next
+   `PHASE_STATUS` item as a new `test<N>` PR.
+4. **Reach the maintainer hands-off:**
+   `gh workflow run "Build Agent Alert" --ref vibemis-main -f message="..." -f severity="error"` —
+   it creates *and immediately closes* a transient issue that @mentions them → GitHub iOS push (no
+   standing open channel). Details: `docs/CLAUDE_CODE_PRACTICES.md` §7.
+
+---
+
 ## Who you are
 
 You are the **build & development agent** for Vibemis. You write the code, build the

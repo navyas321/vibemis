@@ -878,6 +878,13 @@ void SdlInputHandler::rumble(unsigned short controllerNumber, unsigned short low
         return;
     }
 
+    // Vibemis (P3.13): client-side "suppress controller rumble" switch. When enabled, drop
+    // host-driven rumble entirely (some users dislike rumble or want to save handheld battery).
+    // Apollo can also disable rumble host-side; this is the always-available client control.
+    if (StreamingPreferences::get()->suppressControllerRumble) {
+        return;
+    }
+
 #if SDL_VERSION_ATLEAST(2, 0, 9)
     if (m_GamepadState[controllerNumber].controller != nullptr) {
         SDL_GameControllerRumble(m_GamepadState[controllerNumber].controller, lowFreqMotor, highFreqMotor, 30000);
@@ -933,6 +940,11 @@ void SdlInputHandler::rumbleTriggers(uint16_t controllerNumber, uint16_t leftTri
 {
     // Make sure the controller number is within our supported count
     if (controllerNumber >= MAX_GAMEPADS) {
+        return;
+    }
+
+    // Vibemis (P3.13): see rumble() — same client-side suppression switch for trigger rumble.
+    if (StreamingPreferences::get()->suppressControllerRumble) {
         return;
     }
 
