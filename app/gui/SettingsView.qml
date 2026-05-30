@@ -113,13 +113,21 @@ Flickable {
                 spacing: 5
 
                 // Vibemis: recommend this device's native resolution so users pick the sharpest
-                // option without guesswork. Reads SystemProperties.maximumResolution (the panel's
-                // resolution on a handheld). Hidden if the value is unavailable/zero.
+                // option without guesswork.
+                // NOTE(test68): SystemProperties.maximumResolution is the *decoder* ceiling, which
+                // is (0,0) on devices whose decoder can exceed 1080p (e.g. Legion Go S Z2), so it
+                // can't be the native-resolution source on capable hardware. Prefer the actual panel
+                // size from QML's Screen attached property; fall back to the decoder max only if
+                // Screen is somehow unavailable. Hidden only if neither yields a positive size.
                 Label {
                     width: parent.width
-                    visible: SystemProperties.maximumResolution.width > 0
+                    readonly property int nativeResW: Screen.width > 0 ? Screen.width
+                                                       : SystemProperties.maximumResolution.width
+                    readonly property int nativeResH: Screen.height > 0 ? Screen.height
+                                                       : SystemProperties.maximumResolution.height
+                    visible: nativeResW > 0 && nativeResH > 0
                     text: "💡 " + qsTr("This device's native resolution is %1×%2 — matching it gives the sharpest image (use a lower resolution only if you need more performance).")
-                          .arg(SystemProperties.maximumResolution.width).arg(SystemProperties.maximumResolution.height)
+                          .arg(nativeResW).arg(nativeResH)
                     font.pointSize: 9
                     wrapMode: Text.Wrap
                     color: "#aaaaaa"
