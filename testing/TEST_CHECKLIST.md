@@ -30,7 +30,7 @@ whole Quick Menu group depends on its render path.
 
 ## 1. Quick Menu foundation + content (verify in this sub-order — the rest stack on test22)
 
-- [ ] **test22** — Quick Menu renders in Game Mode (OverlayManager surface) — **PR #44** — base `vibemis-main` — ☐  *(FOUNDATION — do first)*
+- [x] **test22** — Quick Menu renders in Game Mode (OverlayManager surface) — **PR #44** — base `vibemis-main` — ☑ **PASS (streaming-verified!)** (report PR #138; Quick Menu opens via `Ctrl+Alt+Shift+\` as a true in-stream overlay (offscreen OverlayManager surface, not a separate window), keyboard nav + clean teardown; first stream-verified cycle) → merged. **Unblocks test29/33/47.** Host-side Virtual Display bug noted (Apollo `0x80030023`, not a client defect).
 - [ ] **test29** — Quick Menu: Paste Clipboard — **PR #51** — base `test22` — ☐
 - [ ] **test33** — Quick Menu: Stream Info — **PR #55** — base `test29` — ☐
 - [ ] **test47** — Quick Menu: Send Special Keys (Ctrl+Alt+Del/Alt+F4/Super/Esc) — **PR #67** — base `test22` — ☐
