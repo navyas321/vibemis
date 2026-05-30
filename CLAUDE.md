@@ -13,6 +13,41 @@ When the user's first message is one of these keywords, follow the corresponding
 
 Read your **persona file** first (who you are), then the SOP in [`docs/WORKFLOW.md`](docs/WORKFLOW.md) (step-by-step procedures, templates, conventions).
 
+## Working style (Code w/ Claude best practices)
+
+- **Self-verify before surfacing.** Never hand the test agent (or a PR) a broken build —
+  compile clean (`qmake6 + make release`, 0 errors) first. The owner should never see a red X.
+- **Success criteria upfront.** Every test cycle ships a numbered, command-level scorecard
+  (exact commands + expected output), not "make it better".
+- **Claude-prompting-Claude.** The build↔test handoff (`hostdevelop` ↔ `clienttest`) is the
+  autonomous loop; acting on a test report PR takes priority over starting new features.
+- **Routine-friendly.** Unattended development runs via [`docs/ROUTINE_PROMPT.md`](docs/ROUTINE_PROMPT.md):
+  one self-verified, test-ready PR per run, bounded to respect usage limits.
+
+### How we use Claude Code on this repo (task decomposition · agents · planning · TDD)
+Distilled from Anthropic's guidance; full rationale + sources in
+[`docs/CLAUDE_CODE_PRACTICES.md`](docs/CLAUDE_CODE_PRACTICES.md). The high-leverage rules:
+
+- **Explore → Plan → Implement → Commit.** For anything touching multiple files or unfamiliar
+  code, plan first (EnterPlanMode). If you can describe the exact diff in one sentence, skip the
+  plan and just do it. Most single-file Vibemis settings/UI features are "just do it".
+- **Break into TodoWrite/Task items when** a job has ≥3 distinct steps, spans multiple files, or
+  must survive a context reset. Encode real dependencies (e.g. "verify CI green" *blocks* "stack
+  next test PR") so unverified work never gets built on. One task `in_progress` at a time.
+- **Spawn a subagent only when** the work is a wide read-only search ("find every caller of X"),
+  a genuinely parallelizable independent slice, or a context-heavy sift where most output is
+  noise — subagents have isolated context and report just a summary. Do **not** spawn for ordinary
+  multi-step work you can do inline; cold subagents re-derive context and cost more. The
+  build↔test split (`hostdevelop`/`clienttest`) is our standing agent decomposition.
+- **CLAUDE.md is followed ~70% of the time** — fine for style, NOT for safety. Anything that must
+  hold every time (don't push betas off non-`vibemis-main`; self-verify before handoff) belongs in
+  an enforcement mechanism (the CI tier rules + a hook), not just prose here.
+- **Tests are the oracle.** A model's self-judgment degrades as context fills; a green build / a
+  command-level test scorecard stays accurate. That's why every test PR ships an exact-command
+  Tier-1/2 plan and why we **never** stack a new test branch on one whose CI hasn't gone green.
+- **Reusable workflows are slash commands** in [`.claude/commands/`](.claude/commands/): e.g.
+  `/ship-test-pr`, `/verify-ci`, `/release-hygiene`. Prefer them over re-deriving the steps.
+
 ## What this repo is
 
 **Vibemis** is a Linux-focused fork of [Vibemis Qt](https://github.com/navyas321/vibemis) (which is itself a fork of [Moonlight Qt](https://github.com/moonlight-stream/moonlight-qt)). It's a desktop / Steam Deck / handheld streaming client tuned to pair with **Vibepollo** (a Sunshine fork). C++ / Qt 6 / QML, built with qmake6.
@@ -43,6 +78,35 @@ If the plan and this CLAUDE.md disagree, the plan wins. If you can't see the pla
 The feature branch carrying a test AppImage MUST be named `test<N>-<slug>` (e.g. `test7-streamsegue-fix`), NOT `fix/<slug>` or `feat/<slug>`. The Linux test agent looks for the newest `test<N>-*` branch when running `clienttest`. Using `fix/` or `feat/` branches confuses the agent because `vibemis-main` doesn't have the `testing/test<N>/` directory — the artifacts only exist on the feature branch, and the agent won't know which branch to check out without this convention.
 
 Build agent rule: before starting a test cycle, rename (or create fresh from) the feature branch as `test<N>-<slug>`, commit the AppImage + instructions there, and target that branch in the instructions' `git checkout` command.
+
+## Current state — session handoff (read this to continue from where work left off)
+
+**Single source of truth for what's in flight:** [`testing/TEST_CHECKLIST.md`](testing/TEST_CHECKLIST.md)
+(every open feature test PR, grouped by phase, with branch · PR# · base · ☐/☑ status) and
+`gh pr list --state open`. Don't maintain a duplicate table here — read those.
+
+**High-water mark (snapshot, re-derive from git):** highest test branch is **`test52`** →
+next new cycle = **`test53`**. test49 (perf-overlay corner), test51 (prefer-Tailscale, P3.7) and
+test52 (`vibemis selftest`) all built **alpha-green** via CI. test50 (perf-overlay text size) green too.
+
+**Recently landed on `vibemis-main`** (beyond features): the CI tier+auto-prune fix
+(`.github/workflows/dev-build.yml` — only `vibemis-main` builds beta, `test**` builds alpha, old
+betas/alphas are pruned), `docs/PHASE_STATUS.md` (phase tracker + blockers + research backlog),
+`docs/CLAUDE_CODE_PRACTICES.md` + the CLAUDE.md "How we use Claude Code" section,
+`docs/TEST_AUTOMATION.md` + persona automation section, and `.claude/commands/`
+(`/ship-test-pr`, `/verify-ci`, `/release-hygiene`).
+
+**Stacking rule to avoid conflicts:** Quick-Menu features stack on `test22`; zoom/pan/scale on the
+`test25→test31→test32` chain; configurable-combo features on `test26`. Independent features branch
+off `vibemis-main`. **Never stack on a branch whose CI hasn't gone green** (`/verify-ci`).
+
+**Next pickup priority (for the routine and for solo work):**
+1. **Act on any `diagnostic/test*-report` PR first** (fix → rebuild → push → comment; merge the
+   feature PR if the report is PASS). This is the highest-value loop.
+2. Else pull the next research-backlog item from `docs/PHASE_STATUS.md` (e.g. on-screen text-send,
+   per-game profiles P3.8, UI accent P3.9) and ship it as the next `testNN` via `/ship-test-pr`.
+3. Skip device-gated items (suspend/resume) and anything needing user input.
+4. **Re-read this section + `PHASE_STATUS.md` + `TEST_CHECKLIST.md` periodically** to stay aligned.
 
 ## Phase 3 — plan
 
@@ -101,6 +165,12 @@ test agent's excerpts. Currently WSL2 cannot reach Windows filesystem paths.
 **Why it matters:** in test16–19 the pairing failures could have been diagnosed in minutes
 by reading Vibepollo's side of the handshake. Currently we only see what Vibemis logs.
 
+**Status:** build-host helper shipped — `scripts/vibepollo-log.sh` auto-detects the newest
+Vibepollo/Apollo/Sunshine log under `/mnt/c/Users/*/AppData/Roaming/{Vibepollo,Apollo,Sunshine}/`
+(and Program Files variants) and `tail -f`s it; override with `VIBEPOLLO_LOG=/mnt/c/...`.
+**Remaining:** confirm the exact Windows path on this machine (run `bash scripts/vibepollo-log.sh --list`;
+if empty, the C: drive may need mounting in WSL2), then record it here for future sessions.
+
 ### P3.6 — Video scale mode, pan/zoom, compact perf overlay (from original plan)
 Phases 3–7 from the original plan (see pure-purring-pillow.md)
 
@@ -138,6 +208,78 @@ reference for what Apollo-aware clients can do. High-value candidates for Vibemi
 
 Review the Artemis Android README at https://github.com/MobinYengejehi/Artemis for the full feature
 list before implementing each item — some are touch/mobile-specific and should be skipped.
+
+### P3.9 — UI modernization (research-led)
+Modernize the launcher/settings UI so Vibemis looks current and is comfortable on a handheld
+(big touch targets, controller-first navigation, clean typography), not just a reskinned
+Moonlight Qt. **Do focused research before committing to a direction** — this is a design
+phase, so prototype and get sign-off rather than mass-restyling blind.
+
+Research starting points (gathered May 2026):
+- **Qt Quick Controls Material style** is the supported modern-look path
+  (https://doc.qt.io/qt-6/qtquickcontrols-material.html); Qt 6.8 has Material 3 support
+  (https://ekkesapps.wordpress.com/qt-6-in-action/material-3/material-design-3/). Set via
+  `QQuickStyle::setStyle("Material")` / `QT_QUICK_CONTROLS_STYLE`, dark variant, an accent
+  colour, and rounded controls.
+- **Best practice** (https://doc.qt.io/qt-6/qtquick-bestpractices.html): keep the C++ backend
+  separate from QML; theme via a single style config rather than per-control overrides.
+
+Candidate work (each its own testable PR, low-risk first):
+1. **Theme pass** — adopt Material dark + a Vibemis accent colour; consistent spacing/typography
+   tokens in one place (a `Theme.qml` singleton). Lowest-risk, biggest visual payoff.
+2. **PcView / AppView polish** — larger card tiles, hover/focus states tuned for controller
+   navigation, clearer connection status.
+3. **Settings readability** — group headers, section icons, better use of the two-column layout
+   on a 1280-wide handheld screen.
+4. **Quick Menu visual alignment** — once P3.1 lands, match the Quick Menu styling to the new theme.
+5. **App icon / branding** — a distinct Vibemis icon and splash.
+
+Guardrails: don't regress controller/keyboard navigability (SdlGamepadKeyNavigation); verify
+each change in **both** Desktop Mode and Game Mode; ship incrementally (a theme PR, then view
+PRs) so each is independently testable rather than one giant restyle.
+
+### P3.10 — SteamOS one-click / platform integration (research-led)
+Make Vibemis as frictionless on SteamOS/Steam Deck as a native app. Research (May 2026:
+[XDA](https://www.xda-developers.com/how-install-use-moonlight-steam-deck/),
+[Pi My Life Up](https://pimylifeup.com/steam-deck-moonlight/),
+[Deck+Moonlight](https://louis-bompart.github.io/01-deck-and-moonlight/)) shows the friction
+points are: getting it into Game Mode, and launching a *specific game* quickly. Vibemis already
+has a CLI (`vibemis stream <host> <app>`, `pair`, `list`, `quit`), which is the key enabler.
+
+Candidate features (each its own testable PR; helper scripts are device-independent to author):
+1. **Desktop/Steam install helper** — DONE (P3.2, `scripts/install-vibemis-desktop.sh`): stable
+   path + clean `Name=Vibemis` desktop entry so "Add to Steam" shows the right name.
+2. **Per-game direct-launch shortcuts** — `scripts/add-game-to-steam.sh <host> <app>`: generate a
+   `.desktop` that runs `Vibemis stream "<host>" "<app>"` so a Steam shortcut boots straight into
+   that game's stream (the workflow the guides recommend). ← NEXT
+3. **First-run SteamOS hints** — detect Game Mode / no-DE and surface a one-time hint about the
+   Quick Menu combo and adding to Steam.
+4. **Auto-populate Steam shortcuts from host app list** — use `vibemis list <host>` to offer
+   creating a Steam shortcut per host game (bigger; shortcuts.vdf editing — research safety first).
+5. **Battery-aware bitrate** — on battery (SDL_GetPowerInfo) reduce bitrate at connect for longer
+   play; opt-in toggle. (Overlaps Phase 8.5.)
+6. **Suspend/resume handling** — cleanly pause/resume the stream across Steam Deck sleep.
+
+Guardrail: shortcuts.vdf is a binary format — for anything that writes Steam shortcuts directly,
+research the format and test carefully; prefer `.desktop` + manual "Add to Steam" until proven.
+
+### P3.11 — Newer features (research-led, May 2026)
+Gaps vs. competitors (Parsec/Steam Remote Play) and long-standing community requests
+([Parsec mic passthrough](https://parsec.app/blog/now-available-microphone-passthrough),
+[Apollo mic discussion #591](https://github.com/ClassicOldSong/Apollo/discussions/591),
+[Moonlight OSK request](https://ideas.moonlight-stream.org/posts/129/ios-android-on-screen-keyboard)):
+
+1. **Settings export / import** — back up or share a full config (resolution, codec, presets,
+   shortcuts) as a portable file; great for handheld users with multiple devices. Independent,
+   launcher-testable. ← implementing first (safest, no streaming/connection logic).
+2. **Send special keys to host** — Quick Menu items for Ctrl+Alt+Del, Win/Super, Alt+F4, Esc via
+   `LiSendKeyboardEvent` — fills the remote-desktop control gap. (Stacks on test22.)
+3. **On-screen text input / send-text** — type into a small QML field in the Quick Menu and send
+   via `LiSendUtf8TextEvent` (the OSK gap on handhelds with no keyboard). (Stacks on test22.)
+4. **Per-game settings profiles** — remember resolution/codec/bitrate per host+app. Architectural;
+   design first.
+5. **Microphone passthrough** — **protocol-gated**: needs moonlight-common-c / Apollo host support
+   (Apollo #591 open). Not client-only; track upstream, don't attempt blind.
 
 ## Development priority: Game Mode over Desktop Mode
 

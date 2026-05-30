@@ -17,24 +17,34 @@ Standard Moonlight doesn't support Apollo's extended protocol features. Apollo a
 
 ## Installation
 
-No building, no installer, no dependencies to install. Vibemis ships as a single
-self-contained AppImage — **download it and run it.**
+No building, no installer, no dependencies. Vibemis is a single self-contained file —
+**download it and double-click it.**
 
-1. Download the latest AppImage from **[GitHub Releases](https://github.com/navyas321/vibemis/releases/latest)**
-2. Make it executable — in your file manager: right-click → Properties → *"Allow executing as program"*, or in a terminal:
-   ```bash
-   chmod +x Vibemis-*.AppImage
-   ```
-3. Run it — double-click the file, or:
-   ```bash
-   ./Vibemis-*.AppImage
-   ```
+### Easiest way (Steam Deck / SteamOS)
 
-> **If it doesn't start with a FUSE error** (common on Steam Deck / SteamOS, which has no
-> `libfuse2`), run it in extract mode — no installation needed:
+1. **Switch to Desktop Mode.** (Hold the **power button** → **Switch to Desktop**.)
+2. Open a web browser and go to the **[Releases page](https://github.com/navyas321/vibemis/releases/latest)**.
+   Download the latest **`.AppImage`** file (either a *Release* or the latest *Pre-release* —
+   both work; the newest one is fine).
+3. Find the downloaded file (usually in your **Downloads** folder) and **double-click it** to run.
+   - If double-clicking does nothing, right-click the file → **Properties** → **Permissions**
+     → tick **"Is executable"** (or *"Allow executing file as program"*), then double-click again.
+
+That's it — Vibemis opens and you can add your host PC.
+
+> **If it still won't open** and you see a **FUSE** error (common on SteamOS, which doesn't
+> ship `libfuse2`), open a terminal in the file's folder and run it in extract mode — no
+> installation needed:
 > ```bash
 > ./Vibemis-*.AppImage --appimage-extract-and-run
 > ```
+
+### Any other Linux
+
+Same idea: download the latest `.AppImage` from
+**[Releases](https://github.com/navyas321/vibemis/releases/latest)**, make it executable
+(right-click → Properties → *"Allow executing as program"*, or `chmod +x Vibemis-*.AppImage`),
+then double-click or run `./Vibemis-*.AppImage`.
 
 ### Add to Steam (SteamOS / Steam Deck)
 
@@ -69,6 +79,31 @@ To launch Vibemis from Game Mode:
 - **Virtual Display Control** — request a virtual display on the host
 - **UUID-Based App Launching** — modern app identification with legacy fallback
 - **Permissions Viewer** — inspect host-side client permissions from the app
+
+---
+
+## Remote Play (over the internet)
+
+Vibemis streams over your LAN out of the box. To stream when the client and host are on
+**different networks** — without port forwarding or exposing your host to the internet — put
+both devices on the same [Tailscale](https://tailscale.com) network. Tailscale is free for
+personal use, end-to-end encrypted (WireGuard), and handles NAT traversal automatically.
+
+1. **On the host** (the PC running Vibepollo/Apollo/Sunshine): install Tailscale and sign in.
+2. **On the client** (Steam Deck / handheld running Vibemis): install Tailscale and sign in
+   with the same account. On SteamOS, Tailscale is available as a Flatpak or via the static
+   binary.
+3. In Vibemis, **add the host by its Tailscale address** — either its `100.x.x.x` IP or its
+   MagicDNS name (`hostname.your-tailnet.ts.net`). Pair and stream exactly as you would on
+   the LAN.
+
+> **Notes**
+> - No Vibemis configuration is required beyond using the Tailscale address as the host.
+> - For best latency, Tailscale will establish a direct peer-to-peer path when possible and
+>   fall back to an encrypted relay (DERP) otherwise. Expect LAN-class latency on a direct
+>   path; relayed paths add some overhead.
+> - The host's streaming ports do **not** need to be forwarded — Tailscale carries the
+>   traffic over the encrypted tunnel.
 
 ---
 

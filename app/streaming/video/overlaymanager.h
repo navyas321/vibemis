@@ -45,6 +45,11 @@ public:
     // consuming it via getUpdatedOverlaySurface() will free it. Thread-safe.
     void updateOverlaySurface(OverlayType type, SDL_Surface* surface);
 
+    // Vibemis: anchor corner for the debug/performance overlay, read from user
+    // preference. Returns StreamingPreferences::PerfOverlayPosition as an int
+    // (0=TL, 1=TR, 2=BL, 3=BR). Renderers map this to their own coordinate space.
+    int getDebugOverlayAnchor();
+
     void setOverlayRenderer(IOverlayRenderer* renderer);
 
 private:

@@ -242,9 +242,14 @@ void SdlRenderer::renderOverlay(Overlay::OverlayType type)
                 m_OverlayRects[type].y = viewportRect.h - newSurface->h;
             }
             else if (type == Overlay::OverlayDebug) {
-                // Top left
-                m_OverlayRects[type].x = 0;
-                m_OverlayRects[type].y = 0;
+                // Vibemis: user-configurable corner (SDL origin is upper-left).
+                SDL_Rect viewportRect;
+                SDL_RenderGetViewport(m_Renderer, &viewportRect);
+                int anchor = Session::get()->getOverlayManager().getDebugOverlayAnchor();
+                bool right = (anchor == 1 || anchor == 3);  // TR or BR
+                bool bottom = (anchor == 2 || anchor == 3); // BL or BR
+                m_OverlayRects[type].x = right ? (viewportRect.w - newSurface->w) : 0;
+                m_OverlayRects[type].y = bottom ? (viewportRect.h - newSurface->h) : 0;
             }
             else if (type == Overlay::OverlayServerCommands || type == Overlay::OverlayQuickMenu) {
                 // Center
