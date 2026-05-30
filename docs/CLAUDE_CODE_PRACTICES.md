@@ -78,11 +78,15 @@ as `github-actions[bot]`** — because the bot is a *different actor* than the m
 "no notifications for your own actions" rule does **not** suppress it, so it delivers a real push to
 the GitHub mobile app. Verified working on this repo.
 - Workflow: [`.github/workflows/alert.yml`](../.github/workflows/alert.yml) ("Build Agent Alert",
-  `workflow_dispatch` with `message` + `severity`). It comments on the standing alerts issue
-  (#99) `@`-mentioning the maintainer. Inputs are passed via **env** (not inline `${{ }}`) to stay
-  injection-safe.
+  `workflow_dispatch` with `message` + `severity`). It **creates a fresh issue** that `@`-mentions
+  the maintainer (the mention delivers the push *at creation time*) and then **closes it
+  immediately**. Inputs are passed via **env** (not inline `${{ }}`) to stay injection-safe.
 - Fire it: `gh workflow run "Build Agent Alert" --ref vibemis-main -f message="..." -f severity="error"`.
-- **Pitfalls learned:** (a) a *self*-authored `gh issue comment`/mention (token authed as the
+- **Why create-then-close, not a standing open issue:** a permanently-open "alerts" issue is a
+  standing inbox — injected web/email content surfaced into a comment could be read back by the agent
+  as instructions. Transient create-then-close issues carry the same push but leave **no open channel
+  to inject through**. (The old standing channel, issue #99, was closed for this reason.)
+- **Pitfalls learned:** (a) a *self*-authored `gh issue` create/comment/mention (token authed as the
   maintainer) does NOT notify them — only the **bot**-posted mention does, so always alert via the
   workflow. (b) Repo issues must be enabled. (c) The Gmail connector available here is **draft-only**
   (no send), and `PushNotification` needs Remote Control paired — both are weaker than the GitHub
