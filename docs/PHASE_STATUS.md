@@ -148,6 +148,43 @@ generate a consistent visual language + per-screen mockups, then implementing th
 - **Not blocked:** mockups + most implementation are launcher-verifiable; only the final
   Game-Mode ergonomics sign-off needs the device.
 
+## P3.18 — Claude Design integration (design → handoff → QML)  🔵 NEW — pairs with P3.17
+Wire **[Claude Design](https://claude.ai/design)** (Anthropic Labs, launched 2026-04-17; prompt →
+prototype/mockup; powered by Opus 4.7) into the Vibemis UI pipeline as the *design source* feeding
+P3.17's implementation. Claude Design can ingest a **codebase + uploaded docs** to build a reusable
+design system (our colors/type/components) and, when a design is ready, **packages a handoff bundle
+to pass to Claude Code with one instruction** — that handoff is the seam to the build agent.
+
+**Why a separate phase:** P3.17 is *implementation* (Theme tokens + restyling QML). P3.18 is the
+*input pipeline*: how a polished design gets created in Claude Design and lands in the repo as code.
+
+**Workflow (maintainer ⇄ build agent):**
+1. **Onboard** Claude Design on the Vibemis repo + `docs/DESIGN_SYSTEM.md` + the UI audit +
+   per-screen screenshots → it builds the Vibemis design system (anchor accent **#00CCCC**, the
+   6-step type scale, the 4px spacing scale — kept in sync with `Theme.qml`).
+2. **Generate** per-screen mockups in P3.17's rollout order (Settings → Computers/Add-PC →
+   onboarding → Quick Menu). Iterate with inline comments / adjustment knobs.
+3. **Export the handoff bundle** (or standalone HTML/spec) into **`docs/design/`** in the repo
+   (convention in `docs/design/README.md`) — *or* hand it straight to Claude Code.
+4. **Build agent implements** each handoff as a launcher-only `test<N>` PR, translating the design to
+   QML against the `Theme` tokens (test73). One screen per PR (keeps the test agent's verify cheap).
+5. **Round-trip:** feed the implemented screenshots back into Claude Design to refine.
+
+**Boundary / who does what:** Claude Design is an **interactive web product tied to the maintainer's
+subscription** — the headless build agent can't drive it directly. So the **maintainer** runs Claude
+Design and drops the export into `docs/design/`; the **build agent** consumes it and ships QML. That
+drop-point *is* the "take input from claude.ai/design" link, made concrete.
+
+**Credits/limits:** Claude Design has **separate weekly usage limits** (bundled with Pro/Max/Team/
+Enterprise; not counted against chat or Claude Code quotas). Enterprise gets a ~20-prompt one-time
+credit expiring **2026-07-17** — so batch mockup generation (a screen's variations in one session).
+
+**Sync rule:** `docs/DESIGN_SYSTEM.md` ⇄ `Theme.qml` ⇄ Claude Design's design system must agree; a
+token change updates DESIGN_SYSTEM.md + Theme.qml in the same PR.
+
+**Not blocked** on our side (drop-point + consumer are ready); gated only on the maintainer running
+Claude Design and dropping an export. Source: anthropic.com/news/claude-design-anthropic-labs.
+
 ## P4.0 — Repo hygiene (DEFERRED to post-1.0 / first stable release)  ⏸️
 Hide the Claude/agent development files from GitHub. **Decision: deferred** until after the first
 stable release — do NOT start early. Recommended approach when we do it: **two-repo split** — keep
