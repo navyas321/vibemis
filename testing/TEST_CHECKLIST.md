@@ -24,6 +24,7 @@ whole Quick Menu group depends on its render path.
 
 - [ ] **test23** — Vibepollo quality presets — **PR #45** — base `vibemis-main` — ☐
 - [ ] **test24** — Compact performance overlay — **PR #46** — base `vibemis-main` — ☐
+- [x] **test49** — Performance overlay position (corner) — **PR #69** — base `vibemis-main` — ☑ Tier 1 PASS *(testing/test49-perf-overlay-position/report.md)*
 - [ ] **test25** — Video scale mode (Fit/Fill/Stretch) — **PR #47** — base `vibemis-main` — ☐
 - [ ] **test31** — In-stream video zoom — **PR #53** — base `test25` — ☐
 - [ ] **test32** — In-stream video pan — **PR #54** — base `test31` — ☐
