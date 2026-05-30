@@ -49,6 +49,7 @@ whole Quick Menu group depends on its render path.
 
 - [ ] **test52** — `vibemis selftest` headless smoke test (automation enabler) — **PR #72** — base `vibemis-main` — ☐  *(launcher-only / headless; do this FIRST each visit — see docs/TEST_AUTOMATION.md)*
 - [ ] **test54** — `selftest --json` + settings round-trip checks — **PR #74** — base `test52` — ☐  *(launcher-only / headless; verify after test52)*
+- [x] **test63** — Copy system info to clipboard — **PR #83** — base `test55` — ☑ **PASS** (report PR #128; "Copied!" flash confirmed, clipboard verified: 7 fields correct; button reverts after 1500ms; panel layout no regression)  *(launcher only; verify after test55)*
 
 ## 6. Config / SteamOS helpers
 
