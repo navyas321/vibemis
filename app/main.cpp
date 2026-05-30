@@ -821,6 +821,10 @@ int main(int argc, char *argv[])
                                                    return new QuickMenuManager();
                                                });
 
+    // Vibemis design-token singleton (P3.17) — a QML-only singleton (pragma Singleton in
+    // gui/Theme.qml). Lets QML reference Theme.accent / Theme.spacingM / etc. See docs/DESIGN_SYSTEM.md.
+    qmlRegisterSingletonType(QUrl(QStringLiteral("qrc:/gui/Theme.qml")), "Theme", 1, 0, "Theme");
+
     // Create the identity manager on the main thread
     IdentityManager::get();
 
