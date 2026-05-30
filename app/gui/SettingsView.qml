@@ -1578,6 +1578,54 @@ Flickable {
                     ToolTip.visible: hovered
                     ToolTip.text: qsTr("Prevents the screensaver from starting or the display from going to sleep while streaming.")
                 }
+
+                Label {
+                    width: parent.width
+                    text: qsTr("Settings backup")
+                    font.pointSize: 12
+                    topPadding: 6
+                }
+
+                Row {
+                    spacing: 8
+
+                    Button {
+                        text: qsTr("Export settings")
+                        onClicked: {
+                            var p = StreamingPreferences.exportSettings()
+                            settingsBackupStatus.text = p
+                                ? qsTr("Exported to %1").arg(p)
+                                : qsTr("Export failed")
+                        }
+                        ToolTip.delay: 1000
+                        ToolTip.timeout: 5000
+                        ToolTip.visible: hovered
+                        ToolTip.text: qsTr("Save all Vibemis settings to ~/vibemis-settings.ini for backup or to copy to another device.")
+                    }
+
+                    Button {
+                        text: qsTr("Import settings")
+                        onClicked: {
+                            settingsBackupStatus.text = StreamingPreferences.importSettings()
+                                ? qsTr("Imported from ~/vibemis-settings.ini — reopen Settings or restart to see all values.")
+                                : qsTr("No backup found at ~/vibemis-settings.ini")
+                        }
+                        ToolTip.delay: 1000
+                        ToolTip.timeout: 5000
+                        ToolTip.visible: hovered
+                        ToolTip.text: qsTr("Load settings previously exported to ~/vibemis-settings.ini.")
+                    }
+                }
+
+                Label {
+                    id: settingsBackupStatus
+                    width: parent.width
+                    text: ""
+                    visible: text !== ""
+                    color: "#00cccc"
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                }
             }
         }
     }

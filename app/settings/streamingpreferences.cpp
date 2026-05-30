@@ -2,6 +2,8 @@
 #include "utils.h"
 
 #include <QSettings>
+#include <QDir>
+#include <QFile>
 #include <QTranslator>
 #include <QCoreApplication>
 #include <QLocale>
@@ -413,6 +415,51 @@ void StreamingPreferences::save()
     settings.setValue(SER_CUSTOMREFRESHRATE, customRefreshRate);
     settings.setValue(SER_RESOLUTIONSCALING, enableResolutionScaling);
     settings.setValue(SER_RESOLUTIONSCALEFACTOR, resolutionScaleFactor);
+}
+
+QString StreamingPreferences::exportSettings()
+{
+    // Persist current in-memory values first, then copy the live settings into a portable .ini.
+    save();
+
+    QString path = QDir::homePath() + "/vibemis-settings.ini";
+    QSettings src;
+    QSettings dst(path, QSettings::IniFormat);
+    dst.clear();
+    const QStringList keys = src.allKeys();
+    for (const QString& k : keys) {
+        dst.setValue(k, src.value(k));
+    }
+    dst.sync();
+
+    if (dst.status() != QSettings::NoError) {
+        return QString();
+    }
+    return path;
+}
+
+bool StreamingPreferences::importSettings()
+{
+    QString path = QDir::homePath() + "/vibemis-settings.ini";
+    if (!QFile::exists(path)) {
+        return false;
+    }
+
+    QSettings src(path, QSettings::IniFormat);
+    if (src.status() != QSettings::NoError) {
+        return false;
+    }
+
+    QSettings dst;
+    const QStringList keys = src.allKeys();
+    for (const QString& k : keys) {
+        dst.setValue(k, src.value(k));
+    }
+    dst.sync();
+
+    // Refresh in-memory values from the imported settings.
+    reload();
+    return true;
 }
 
 int StreamingPreferences::getDefaultBitrate(int width, int height, int fps, bool yuv444)
