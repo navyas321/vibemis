@@ -553,6 +553,16 @@ ApplicationWindow {
                     addPcDialog.accept()
                 }
             }
+
+            // Vibemis: hint that remote (off-LAN) hosts work via a Tailscale address.
+            Label {
+                Layout.fillWidth: true
+                Layout.maximumWidth: 360
+                wrapMode: Text.Wrap
+                font.pointSize: 9
+                opacity: 0.7
+                text: qsTr("On the same network, use the host's local IP. To stream from a different network, put both devices on Tailscale and enter the host's Tailscale IP (100.x.x.x) or MagicDNS name.")
+            }
         }
     }
 }
