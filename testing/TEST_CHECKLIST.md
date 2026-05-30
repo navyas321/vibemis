@@ -88,6 +88,7 @@ whole Quick Menu group depends on its render path.
 
 - [ ] **test41** — Settings export / import — **PR #61** — base `vibemis-main` — ☐  *(launcher only)*
 - [x] **test48** — SteamOS helper scripts bundle (install / update / add-game / add-all / pair / uninstall / doctor) — **PR #68** — base `vibemis-main` — ☑ **PASS** (report PR #94; all 7 scripts clean, sudo-free, $HOME-scoped) → merged. Follow-up: fixed `vibemis-doctor.sh` settings-path check.
+- [x] **test74** — Guided one-command setup `scripts/vibemis-setup.sh` (P3.10) — **PR #110** — base `vibemis-main` — ☑ **PASS** (report PR #130; `bash -n` clean; `--help` accurate; `--dry-run` 3-step / `--dry-run --host` 5-step correct; `--bogus` exit 2; safety scan: no sudo/system-paths) *(Tier 2 --update-only N/A; Tier 3 host-pairing deferred to ledger)*
 
 ---
 
