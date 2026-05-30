@@ -1983,6 +1983,24 @@ Flickable {
                                   qsTr("You can toggle it at any time while streaming using Ctrl+Alt+Shift+S or Select+L1+R1+X.") + "\n\n" +
                                   qsTr("The performance overlay is not supported on Steam Link or Raspberry Pi.")
                 }
+
+                CheckBox {
+                    id: perfOverlayShowClock
+                    width: parent.width
+                    text: qsTr("Show clock in the performance overlay")
+                    font.pointSize: 12
+                    enabled: showPerformanceOverlay.checked
+                    checked: StreamingPreferences.perfOverlayShowClock
+                    onCheckedChanged: {
+                        StreamingPreferences.perfOverlayShowClock = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Add a wall-clock time (HH:MM:SS) line to the top of the performance overlay.") + "\n\n" +
+                                  qsTr("Useful on a handheld in Game Mode, where the system clock is hidden while streaming.")
+                }
             }
         }
 
