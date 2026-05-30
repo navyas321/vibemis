@@ -1,0 +1,45 @@
+name: Build Agent Alert
+
+# Posts an alert as github-actions[bot] that @mentions the maintainer, so GitHub delivers a real
+# push to the GitHub mobile (iOS) app. The bot is a DIFFERENT actor than the maintainer, so the
+# mention is not suppressed by GitHub's "no notifications for your own actions" rule.
+#
+# Trigger manually from the build agent:
+#   gh workflow run "Build Agent Alert" --ref vibemis-main -f message="build failed on test42" -f severity="error"
+# Or call it from another workflow on failure.
+
+on:
+  workflow_dispatch:
+    inputs:
+      message:
+        description: 'Alert message'
+        required: true
+        type: string
+      severity:
+        description: 'info | warn | error'
+        required: false
+        default: 'warn'
+        type: string
+
+permissions:
+  issues: write
+
+jobs:
+  alert:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post alert (@mention maintainer)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Pass inputs via env (injection-safe), not inline ${{ }} in the shell.
+          ALERT_MSG: ${{ inputs.message }}
+          ALERT_SEV: ${{ inputs.severity }}
+        run: |
+          case "$ALERT_SEV" in
+            error) ICON="🔴" ;;
+            info)  ICON="🟢" ;;
+            *)     ICON="🟡" ;;
+          esac
+          # Comment on the standing alerts issue (#99) and @mention the maintainer.
+          gh issue comment 99 --repo "${{ github.repository }}" \
+            --body "$ICON **build-agent alert** @navyas321 — $ALERT_MSG"
