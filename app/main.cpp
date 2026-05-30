@@ -595,6 +595,15 @@ int main(int argc, char *argv[])
 
     QGuiApplication app(argc, argv);
 
+    // Vibemis: the Qt Quick Controls Material style renders button text in ALL CAPS by default
+    // (e.g. the bitrate "USE DEFAULT (30 MBPS)" button), which looks off. Force mixed case for the
+    // whole app so button labels read naturally ("Use Default (30 Mbps)").
+    {
+        QFont vibemisAppFont = app.font();
+        vibemisAppFont.setCapitalization(QFont::MixedCase);
+        app.setFont(vibemisAppFont);
+    }
+
 #ifndef STEAM_LINK
     // Force use of the KMSDRM backend for SDL when using Qt platform plugins
     // that directly draw to the display without a windowing system.
