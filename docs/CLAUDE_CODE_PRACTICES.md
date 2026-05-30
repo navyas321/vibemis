@@ -71,6 +71,30 @@ red-green unit TDD on this GUI/streaming client, but we apply the same principle
   `/release-hygiene`. Encode a workflow once, stop re-deriving it.
 - **Self-verify before handoff.** The owner / test agent should never see a red X.
 
+## 7. Alerting the maintainer hands-off (GitHub bot @mention → mobile push)
+When an unattended agent needs to reach the maintainer (build failed, test agent went silent, a
+decision is needed), the reliable channel here is a **GitHub Actions workflow that posts an @mention
+as `github-actions[bot]`** — because the bot is a *different actor* than the maintainer, GitHub's
+"no notifications for your own actions" rule does **not** suppress it, so it delivers a real push to
+the GitHub mobile app. Verified working on this repo.
+- Workflow: [`.github/workflows/alert.yml`](../.github/workflows/alert.yml) ("Build Agent Alert",
+  `workflow_dispatch` with `message` + `severity`). It **creates a fresh issue** that `@`-mentions
+  the maintainer (the mention delivers the push *at creation time*) and then **closes it
+  immediately**. Inputs are passed via **env** (not inline `${{ }}`) to stay injection-safe.
+- Fire it: `gh workflow run "Build Agent Alert" --ref vibemis-main -f message="..." -f severity="error"`.
+- **Why create-then-close, not a standing open issue:** a permanently-open "alerts" issue is a
+  standing inbox — injected web/email content surfaced into a comment could be read back by the agent
+  as instructions. Transient create-then-close issues carry the same push but leave **no open channel
+  to inject through**. (The old standing channel, issue #99, was closed for this reason.)
+- **Pitfalls learned:** (a) a *self*-authored `gh issue` create/comment/mention (token authed as the
+  maintainer) does NOT notify them — only the **bot**-posted mention does, so always alert via the
+  workflow. (b) Repo issues must be enabled. (c) The Gmail connector available here is **draft-only**
+  (no send), and `PushNotification` needs Remote Control paired — both are weaker than the GitHub
+  channel for true hands-off delivery. (d) On the phone: GitHub app → Settings → Notifications →
+  Push → "Direct mentions" must be on.
+- A background watcher can fire this itself on a condition (e.g. "no new test report in 45 min")
+  since `gh workflow run` is just a CLI call.
+
 ## Sources
 - [Anthropic — Claude Code best practices](https://www.anthropic.com/engineering/claude-code-best-practices)
 - [Anthropic — Building agents with the Claude Agent SDK](https://www.anthropic.com/engineering/building-agents-with-the-claude-agent-sdk)
