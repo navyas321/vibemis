@@ -91,6 +91,30 @@ whole Quick Menu group depends on its render path.
 
 ---
 
+## ⏸ Deferred verification ledger (merged on a launcher tier — runtime tier still UNVERIFIED)
+
+Some features were **merged after only their launcher-only tier passed** because the remaining tier
+needs hardware/environment the test device doesn't have in a normal session (a live host, a
+*degrading* network, a second controller, a real tailnet). Those features are safe to ship in the
+meantime (default-off settings / observation-only / non-destructive), but their runtime behavior is
+**not yet verified**. This is the standing queue to clear **when the right environment is available** —
+ticking a row above does NOT clear its entry here.
+
+> **Test agent:** whenever a host / degrading-network / controller / tailnet *is* available, work this
+> ledger in addition to the normal queue. File a short follow-up report and check the box here.
+> **Build agent:** when you merge a Tier-1-only PASS that has an N/A runtime tier, ADD a row here
+> (don't just close the report).
+
+- [ ] **test62** — Adaptive bitrate, Tiers 2–3 — on a **degrading stream**, confirm the
+  `[adaptive-bitrate]` recommendation is logged on `CONN_STATUS_POOR` and no regression to the
+  slow-connection overlay. *(Note: runtime bitrate-stepping itself is still `TODO(P3.12)` — only the
+  observation log is in.)*
+- [ ] **test69** — Tailscale setup, Tier 3 — on a **real tailnet**, run `scripts/setup-tailscale.sh`
+  end-to-end (login URL → join → `--check` shows `up` → reach a host by its 100.x IP). Maintainer
+  may do this once.
+- [ ] **test51** *(when merged)* — prefer-Tailscale ordering, Tier 3 — actually stream to a host over
+  the tailnet (not just verify the address-ordering logic launcher-side).
+
 ## How the test agent should work this list (also in docs/personas/test-agent.md)
 
 1. **Pick the topmost unchecked (☐) item** whose dependencies are satisfied. Start at the top;
