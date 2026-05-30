@@ -2367,6 +2367,23 @@ Flickable {
                     width: parent.width
                 }
 
+                CheckBox {
+                    id: preferTailscaleCheck
+                    width: parent.width
+                    text: qsTr("Prefer Tailscale addresses for remote play")
+                    font.pointSize: 12
+                    checked: StreamingPreferences.preferTailscale
+                    onCheckedChanged: {
+                        StreamingPreferences.preferTailscale = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("When connecting to a host, try its Tailscale address (100.64.x.x or a *.ts.net MagicDNS name) before other addresses.") + "\n\n" +
+                                  qsTr("Useful for remote play over your tailnet. Has no effect if the host has no Tailscale address.")
+                }
+
                 // Vibemis (P3.7): in-app entry point to set up Tailscale for remote play. One click
                 // opens the setup guide; the one-command script scripts/setup-tailscale.sh does the
                 // install + login. Pair with Settings -> "Prefer Tailscale addresses".
