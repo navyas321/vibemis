@@ -2308,6 +2308,61 @@ Flickable {
             }
         }
 
+        // Vibemis: read-only System Information panel. Surfaces the same environment facts the
+        // headless `vibemis selftest` reports, so a human (or a bug report) can see version,
+        // platform, and capability at a glance. Pure QML over the already-exposed SystemProperties.
+        GroupBox {
+            id: systemInfoGroupBox
+            width: (parent.width - (parent.leftPadding + parent.rightPadding))
+            padding: 12
+            title: "<font color=\"skyblue\">" + qsTr("System Information") + "</font>"
+            font.pointSize: 12
+
+            Column {
+                anchors.fill: parent
+                spacing: 6
+
+                Repeater {
+                    width: parent.width
+                    model: [
+                        { k: qsTr("Vibemis version"), v: SystemProperties.versionString },
+                        { k: qsTr("Architecture"),    v: SystemProperties.friendlyNativeArchName },
+                        { k: qsTr("Steam Deck"),      v: SystemProperties.isSteamDeck ? qsTr("Yes") : qsTr("No") },
+                        { k: qsTr("Display server"),  v: SystemProperties.isRunningWayland ? (SystemProperties.isRunningXWayland ? "XWayland" : "Wayland") : "X11" },
+                        { k: qsTr("Hardware decode"), v: SystemProperties.hasHardwareAcceleration ? qsTr("Available") : qsTr("Not available") },
+                        { k: qsTr("HDR support"),     v: SystemProperties.supportsHdr ? qsTr("Yes") : qsTr("No") },
+                        { k: qsTr("Max resolution"),  v: SystemProperties.maximumResolution.width + "×" + SystemProperties.maximumResolution.height }
+                    ]
+                    delegate: RowLayout {
+                        width: systemInfoGroupBox.availableWidth
+                        spacing: 8
+                        Label {
+                            text: modelData.k
+                            font.pointSize: 11
+                            color: "#aaaaaa"
+                            Layout.preferredWidth: 200
+                        }
+                        Label {
+                            text: modelData.v
+                            font.pointSize: 11
+                            Layout.fillWidth: true
+                            wrapMode: Text.Wrap
+                            textFormat: Text.PlainText
+                        }
+                    }
+                }
+
+                Label {
+                    width: parent.width
+                    text: qsTr("Useful when filing a bug report. The headless 'vibemis selftest' command reports the same kind of information for automated checks.")
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                    color: "#aaaaaa"
+                    topPadding: 6
+                }
+            }
+        }
+
         GroupBox {
             id: aboutGroupBox
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
