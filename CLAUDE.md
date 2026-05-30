@@ -112,10 +112,27 @@ off `vibemis-main`. **Never stack on a branch whose CI hasn't gone green** (`/ve
 
 Phase 2 merged. Phase 3 priorities in order:
 
-### P3.1 — Quick Menu (SDL overlay, Game Mode) ← PRIMARY
+### P3.1 — Quick Menu (OverlayManager surface, Game Mode) ← PRIMARY — IN TEST (test22)
 The QQuickView window approach is confirmed broken in Gamescope (Game Mode test failed).
-Full rearchitecture to SDL-internal overlay required (see SDL overlay note below).
-This also unblocks Server Commands (Bubbles) which is only accessible via Quick Menu.
+
+**Architecture (implemented in `test22-quickmenu-overlay`):** the menu is rendered from QML
+**offscreen** via `QQuickRenderControl` into an OpenGL FBO, read back to an ARGB8888
+`SDL_Surface`, and published to the **`OverlayManager`** as a new `OverlayQuickMenu` type.
+Every video renderer (EGL/SDL/VAAPI) already composites `OverlayManager` surfaces into the
+stream in its `renderOverlay()` loop — the same path the perf-stats overlay uses, which is
+already confirmed working in Game Mode. So the menu composites correctly regardless of which
+renderer is active.
+
+> **Important correction:** the earlier documented plan ("composite via `SDL_RenderCopy` in
+> `sdlvid.cpp`") targeted the wrong renderer. On the AMD Legion Go the active frontend
+> renderer is **EGLRenderer** (see `ffmpeg.cpp` renderer preference), not `SdlRenderer`
+> (last-resort fallback). Routing through the renderer-agnostic `OverlayManager` avoids
+> per-renderer work and the fragile SDL↔Qt GL-context sharing the old plan required.
+
+Input: gamepad D-pad/A/B and keyboard arrows/Enter/Esc are injected as synthetic Qt key
+events into the offscreen `QQuickWindow` via `QuickMenuManager::injectKey()` (the window is
+never shown, so it never holds OS focus). This also unblocks Server Commands (only reachable
+via Quick Menu).
 
 ### P3.2 — Steam library display name (AppImage shown without extension)
 XDG desktop integration hook was added to AppRun but didn't work on first test.

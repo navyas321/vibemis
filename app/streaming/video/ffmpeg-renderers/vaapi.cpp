@@ -732,12 +732,14 @@ void VAAPIRenderer::notifyOverlayUpdated(Overlay::OverlayType type)
             overlayRect.x = right ? (m_DisplayWidth - newSurface->w) : 0;
             overlayRect.y = bottom ? (m_DisplayHeight - newSurface->h) : 0;
         }
-        else if (type == Overlay::OverlayServerCommands) {
+        else if (type == Overlay::OverlayServerCommands || type == Overlay::OverlayQuickMenu) {
             // Center
             overlayRect.x = (m_DisplayWidth - newSurface->w) / 2;
             overlayRect.y = (m_DisplayHeight - newSurface->h) / 2;
         } else {
-            SDL_assert(false);
+            // Unknown overlay type — center it rather than asserting.
+            overlayRect.x = (m_DisplayWidth - newSurface->w) / 2;
+            overlayRect.y = (m_DisplayHeight - newSurface->h) / 2;
         }
 
         overlayRect.w = newSurface->w;
