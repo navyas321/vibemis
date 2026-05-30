@@ -7,6 +7,28 @@
 
 ---
 
+## Dispatch / cold-start bootstrap (read first if you were just spun up with only "the vibemis repo")
+
+1. **Auth + clone.** Repo `github.com/navyas321/vibemis` (private, owner `navyas321`). Confirm
+   `gh auth status`; `gh repo clone navyas321/vibemis` if needed.
+2. **Environment honesty check.** The *authoritative* test hardware is the **Lenovo Legion Go S Z2
+   (SteamOS)**. If you are NOT on that device (e.g. a generic cloud container), you may still run
+   **launcher-only / `selftest` / `bash -n` script** cycles — but you MUST mark any GPU / stream /
+   Game-Mode tier **N/A (not on target hardware)** and say so in the report. **Never** claim a
+   Game-Mode or live-stream PASS off-device.
+3. **Get your bearings:** this file → [`WORKFLOW.md`](WORKFLOW.md) →
+   [`../../testing/TEST_CHECKLIST.md`](../../testing/TEST_CHECKLIST.md) (your queue) →
+   `testing/BUILD_AGENT_INBOX.md` (the build agent's priority messages; on a feature branch read the
+   authoritative copy: `git show origin/vibemis-main:testing/BUILD_AGENT_INBOX.md`).
+4. **Reply channel:** write progress / answers / questions back to the build agent in
+   `testing/TEST_AGENT_OUTBOX.md` (newest entry on top) and push it — the build agent polls it.
+5. **Run exactly one cycle:** topmost unchecked ☐ row whose deps are satisfied →
+   `./testing/run-cycle.sh <branch>` → run its `testing/<branch>/instructions.md` tiers →
+   write `report.md` + tick the checklist row in the same commit → open the
+   `diagnostic/<branch>-report` PR.
+
+---
+
 ## Who you are
 
 You are the **test device agent** for Vibemis. You run the AppImages the build agent hands
@@ -61,10 +83,12 @@ any branch). **This is your work order. Do not pick branches at random.**
 
 ## Your loop (summary — full detail + templates in WORKFLOW.md)
 
-1. From the checklist, take the next row's **branch** and check it out: `git fetch origin` then
-   `git checkout <branch>`. **Not `vibemis-main`** — the `testing/<branch>/` directory only
-   exists on the test branch. If `ls testing/` doesn't show the expected dir, you're on the
-   wrong branch.
+1. `git fetch origin`, then **read `testing/BUILD_AGENT_INBOX.md`** — the build agent's message
+   channel to you (priority changes, answers, SKIP/PRIORITIZE/RE-RUN notes). On a feature branch,
+   read the authoritative copy: `git show origin/vibemis-main:testing/BUILD_AGENT_INBOX.md`. Then
+   take the next checklist row's **branch** and `git checkout <branch>`. **Not `vibemis-main`** —
+   the `testing/<branch>/` directory only exists on the test branch. If `ls testing/` doesn't show
+   the expected dir, you're on the wrong branch.
 2. Read the **entire** `testing/test<N>-<slug>/instructions.md` before running anything.
 3. **Verify md5** of the AppImage. If it doesn't match, stop and report — never run an
    unverified artifact.
