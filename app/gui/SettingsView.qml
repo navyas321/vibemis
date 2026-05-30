@@ -961,6 +961,29 @@ Flickable {
                     ToolTip.visible: hovered
                     ToolTip.text: qsTr("Frame pacing reduces micro-stutter by delaying frames that come in too early")
                 }
+
+                // Vibemis (P3.8): one-tap low-latency / "competitive" preset. Frame pacing delays
+                // early frames (smoother but higher latency) and V-Sync adds a frame of latency;
+                // turning both off minimises input-to-photon latency for fast/competitive games.
+                Button {
+                    id: lowLatencyPresetButton
+                    text: qsTr("Apply low-latency preset")
+                    onClicked: {
+                        StreamingPreferences.framePacing = false
+                        StreamingPreferences.enableVsync = false
+                        lowLatencyPresetButton.text = qsTr("Applied — V-Sync & frame pacing off")
+                        lowLatencyFeedbackTimer.restart()
+                    }
+                    Timer {
+                        id: lowLatencyFeedbackTimer
+                        interval: 2000
+                        onTriggered: lowLatencyPresetButton.text = qsTr("Apply low-latency preset")
+                    }
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 6000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Turns off V-Sync and frame pacing for the lowest input latency (best for fast/competitive games). May introduce slight tearing.")
+                }
             }
         }
 
