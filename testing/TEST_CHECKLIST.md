@@ -12,7 +12,10 @@ whole Quick Menu group depends on its render path.
 > ☑ (or ✗) in the same commit as the report, and note the report path.
 
 ### ▶ START HERE (first time on the device)
-1. `git fetch origin` (gets all `test*` branches + this checklist).
+1. `git fetch origin` (gets all `test*` branches + this checklist), then **read
+   [`testing/BUILD_AGENT_INBOX.md`](BUILD_AGENT_INBOX.md)** for any priority changes / answers from
+   the build agent (it may say SKIP/PRIORITIZE/RE-RUN a specific testN). On a feature branch, read
+   `git show origin/vibemis-main:testing/BUILD_AGENT_INBOX.md` to get the latest.
 2. **Smoke-test the tooling first:** `./testing/run-cycle.sh test52-selftest-cli` — it downloads the
    alpha, verifies md5, runs `selftest --json`, and captures a launch log. If that PASSes, the
    harness works and you can trust `selftest` for later cycles.
