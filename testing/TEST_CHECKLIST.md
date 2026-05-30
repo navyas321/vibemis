@@ -75,7 +75,7 @@ whole Quick Menu group depends on its render path.
 ## 5. Tooling / test automation
 
 - [x] **test52** — `vibemis selftest` headless smoke test (automation enabler) — **PR #72** — base `vibemis-main` — ☑ **PASS** (report PR #91; SteamOS 3.8.5/Mesa 25.3.0; 5/5 checks, exit 0) → merged to vibemis-main
-- [ ] **test54** — `selftest --json` + settings round-trip checks — **PR #74** — base `test52` — ☐  *(launcher-only / headless; verify after test52)*
+- [x] **test54** — `selftest --json` + settings round-trip checks — **PR #74** — base `test52` — ☑ **PASS** (report PR #92; 7/7 checks, valid JSON, non-destructive) → merged. Note: use `selftest --json 2>/dev/null` for pure JSON (hook/Qt warnings go to stderr).
 - [ ] **test63** — Copy system info to clipboard — **PR #83** — base `test55` — ☐  *(launcher only; verify after test55)*
 
 ## 6. Config / SteamOS helpers

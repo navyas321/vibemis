@@ -15,6 +15,9 @@ APP=~/Downloads/Vibemis-x86_64.AppImage
 grep -q "SELFTEST RESULT: PASS" /tmp/vibemis-selftest.log && echo "SMOKE OK" || echo "SMOKE FAIL"
 ```
 - Exit code `0` = all checks PASS, `1` = a failure. Each check prints `SELFTEST <name>: PASS|FAIL`.
+- **Machine-readable:** `"$APP" selftest --json 2>/dev/null` prints a single JSON object
+  `{"result","failures","checks":{…}}`. Use `2>/dev/null` (the AppRun hook + Qt platform warnings
+  go to **stderr**) so the stdout is pure JSON for `python3 -c 'import json,sys;json.load(sys.stdin)'`.
 - Use this as the first step of every cycle: if the build can't even initialise its prefs on the
   device, stop and report before doing anything else.
 
