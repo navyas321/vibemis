@@ -40,15 +40,16 @@ whole Quick Menu group depends on its render path.
 - [ ] **test31** — In-stream video zoom — **PR #53** — base `test25` — ☐
 - [ ] **test32** — In-stream video pan — **PR #54** — base `test31` — ☐
 - [ ] **test40** — Battery-saver bitrate — **PR #60** — base `vibemis-main` — ☐
-- [ ] **test53** — Settings performance-guidance advisories (sw-decode / high-bitrate) — **PR #73** — base `vibemis-main` — ☐  *(launcher only)*
-- [ ] **test59** — Data-usage estimate under the bitrate slider — **PR #79** — base `vibemis-main` — ☐  *(launcher only)*
-- [ ] **test62** — Adaptive bitrate (experimental) first slice (P3.12) — **PR #82** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a degrading stream — mark N/A otherwise)*
-- [ ] **test65** — AV1 codec guidance note (P3.6) — **PR #85** — base `vibemis-main` — ☐  *(launcher only)*
-- [ ] **test66** — Live stream-config summary line — **PR #86** — base `vibemis-main` — ☐  *(launcher only)*
-- [ ] **test67** — Low-latency "competitive" preset button (P3.8) — **PR #87** — base `vibemis-main` — ☐  *(launcher only)*
-- [ ] **test68** — Native-resolution recommendation hint — **PR #88** — base `vibemis-main` — ☐  *(launcher only)*
-- [ ] **test49** — Configurable performance-overlay corner (TL/TR/BL/BR) — **PR #69** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a stream — auto-publishes 🔬 alpha)*
-- [ ] **test50** — Configurable performance-overlay text size (Small/Normal/Large) — **PR #70** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a stream — auto-publishes 🔬 alpha)*
+- [x] **test53** — Settings performance-guidance advisories (sw-decode / high-bitrate) — **PR #73** — base `vibemis-main` — ☑ **PASS** (report PR #100) → merged
+- [x] **test59** — Data-usage estimate under the bitrate slider — **PR #79** — base `vibemis-main` — ☑ **PASS** (report PR #101) → merged
+- [x] **test62** — Adaptive bitrate (experimental) first slice (P3.12) — **PR #82** — base `vibemis-main` — ☑ **PASS (Tier 1)** (report PR #107) → merged
+- [x] **test65** — AV1 codec guidance note (P3.6) — **PR #85** — base `vibemis-main` — ☑ **PASS** (report PR #103) → merged
+- [x] **test66** — Live stream-config summary line — **PR #86** — base `vibemis-main` — ☑ **PASS** (report PR #104) → merged
+- [x] **test67** — Low-latency "competitive" preset button (P3.8) — **PR #87** — base `vibemis-main` — ☑ **PASS** (report PR #105) → merged
+- [x] **test68** — Native-resolution recommendation hint — **PR #88** — base `vibemis-main` — ☑ **PASS** (re-test after f111363 QScreen fix; report PR #113) → merged
+- [x] **test49** — Configurable performance-overlay corner (TL/TR/BL/BR) — **PR #69** — base `vibemis-main` — ☑ **PASS (Tier 1)** (report PR #110) → merged
+- [x] **test50** — Configurable performance-overlay text size (Small/Normal/Large) — **PR #70** — base `vibemis-main` — ☑ **PASS (Tier 1)** (report PR #111) → merged
+- [x] **test72** — Show clock in the performance overlay — **PR #98** — base `vibemis-main` — ☑ **PASS (Tier 1)** (report: `testing/test72-perf-overlay-clock/report.md`, PR #114)
 
 ## 3. Input / controls
 
