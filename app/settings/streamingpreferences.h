@@ -159,6 +159,7 @@ public:
     Q_PROPERTY(bool gamepadMouse MEMBER gamepadMouse NOTIFY gamepadMouseChanged)
     Q_PROPERTY(bool detectNetworkBlocking MEMBER detectNetworkBlocking NOTIFY detectNetworkBlockingChanged)
     Q_PROPERTY(bool showPerformanceOverlay MEMBER showPerformanceOverlay NOTIFY showPerformanceOverlayChanged)
+    Q_PROPERTY(bool forwardMotionControls MEMBER forwardMotionControls NOTIFY forwardMotionControlsChanged)
     // Vibemis (test72): optional wall-clock line at the top of the performance
     // overlay. Off by default so the overlay is unchanged for existing users.
     Q_PROPERTY(bool perfOverlayShowClock MEMBER perfOverlayShowClock NOTIFY perfOverlayShowClockChanged)
@@ -221,6 +222,7 @@ public:
     bool gamepadMouse;
     bool detectNetworkBlocking;
     bool showPerformanceOverlay;
+    bool forwardMotionControls;
     bool perfOverlayShowClock;
     bool suppressControllerRumble;
     PerfOverlayTextSize perfOverlayTextSize;
@@ -283,6 +285,7 @@ signals:
     void gamepadMouseChanged();
     void detectNetworkBlockingChanged();
     void showPerformanceOverlayChanged();
+    void forwardMotionControlsChanged();
     void perfOverlayShowClockChanged();
     void suppressControllerRumbleChanged();
     void perfOverlayTextSizeChanged();
