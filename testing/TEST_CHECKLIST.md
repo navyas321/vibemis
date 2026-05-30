@@ -52,7 +52,7 @@ whole Quick Menu group depends on its render path.
 - [x] **test68** — Native-resolution recommendation hint — **PR #88** — base `vibemis-main` — ☑ **PASS** (FAIL→fixed→re-test PASS, report PR #113; hint now reads 1920×1200 via `Screen` fallback — decoder max was (0,0) on this >1080p device; fix `f111363d`) → merged *(launcher only)*
 - [x] **test49** — Configurable performance-overlay corner (TL/TR/BL/BR) — **PR #69** — base `vibemis-main` — ☑ **PASS (Tier 1)** (report PR #110; dropdown shows all 4 corners, default Top-left, `perfoverlayposition=3` read from config; Tier 2 corner-render-during-stream N/A → ledger) → merged. Minor: position combo truncates to "Bott" at narrow width — fold into P3.17 Settings restyle.
 - [x] **test50** — Configurable performance-overlay text size (Small/Normal/Large) — **PR #70** — base `vibemis-main` — ☑ **PASS (Tier 1)** (report PR #111; dropdown lists Small/Normal/Large, default Normal, `perfoverlaytextsize=2` read from config; Tier 2 in-stream-render N/A → ledger) → merged. Minor: combo truncates to "Larg" — fold into P3.17 Settings restyle.
-- [ ] **test72** — Show clock in the performance overlay — **PR #98** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a stream)*
+- [x] **test72** — Show clock in the performance overlay — **PR #98** — base `vibemis-main` — ☑ **PASS (Tier 1)** (report PR #114; clock checkbox renders, greys out when perf-stats off, `perfoverlayclock` persists, selftest 7/7; Tier 2 in-stream clock N/A → ledger) → merged
 
 ## 3. Input / controls
 
@@ -124,6 +124,8 @@ ticking a row above does NOT clear its entry here.
   text actually renders at the chosen size (Small/Normal/Large).
 - [ ] **test57** — disable controller rumble, Tier 2 — with a **rumble-capable controller + live
   stream**, confirm rumble is actually suppressed when the toggle is on (and works when off).
+- [ ] **test72** — perf-overlay clock, Tier 2 — during a **live stream**, confirm the clock line
+  actually renders in the performance overlay when enabled.
 
 ## How the test agent should work this list (also in docs/personas/test-agent.md)
 
