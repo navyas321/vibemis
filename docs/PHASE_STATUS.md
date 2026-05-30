@@ -72,11 +72,13 @@ heavily, so they're now one phase).
   **this remaining work is now folded into the deliberate design pass of P3.17 below** (step 3).
 - Not blocked — large, so done incrementally as small test PRs.
 
-## P3.10 — SteamOS one-click integration  🟡 partial
+## P3.10 — SteamOS one-click integration  🟢 core complete
 - Done: helper scripts bundle test48 (#68) — install / update / add-to-steam / add-all / pair /
-  uninstall / doctor.
-- Remaining: a single guided "one-click" flow (download → install → add to Steam) and a `.desktop`
-  polish for Desktop Mode.
+  uninstall / doctor. **Guided one-command flow `scripts/vibemis-setup.sh` test74 (#109)** — chains
+  doctor → update → install → (optional) pair → add-all-games, with `--dry-run`/`--update-only`/
+  `--host`/`--yes`. No sudo, $HOME-scoped.
+- Remaining (nice-to-have): `.desktop` polish for Desktop Mode; the full host-dependent end-to-end run
+  of vibemis-setup.sh is on the Deferred verification ledger (needs a host).
 - Not blocked.
 
 ## P3.12 — Adaptive bitrate (network-aware)  🔵 NEW (research-led)
