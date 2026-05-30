@@ -62,6 +62,7 @@ whole Quick Menu group depends on its render path.
 - [ ] **test56** — Help & Links section in Settings (GitHub / README / Tailscale) — **PR #76** — base `vibemis-main` — ☐  *(launcher only; needs a browser)*
 - [ ] **test58** — Show host software version in PC details (P3.13) — **PR #78** — base `vibemis-main` — ☐  *(launcher only; best with an online host)*
 - [ ] **test60** — Per-client access level in PC context menu (P3.13) — **PR #80** — base `vibemis-main` — ☐  *(launcher only; best with a paired Apollo host)*
+- [x] **test61** — Virtual Display clarifying notes (P3.13) — **PR #81** — base `vibemis-main` — ☑ **PASS** (report PR #81; green note confirmed via pixel analysis (93–118 green px/row) when checked; grey note confirmed when unchecked; one note at a time verified via source)  *(launcher only)*
 
 ## 5. Tooling / test automation
 
