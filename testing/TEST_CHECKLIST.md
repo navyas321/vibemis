@@ -59,7 +59,7 @@ whole Quick Menu group depends on its render path.
 - [ ] **test26** — Configurable Quick Menu gamepad shortcut — **PR #48** — base `vibemis-main` — ☐
 - [ ] **test36** — Back-paddle Quick Menu combos — **PR #56** — base `test26` — ☐
 - [x] **test57** — Disable controller rumble (P3.13) — **PR #77** — base `vibemis-main` — ☑ **PASS (Tier 1)** (report PR #112; toggle in Gamepad Settings, default OFF, `suppresscontrollerrumble` persists; Tier 2 in-stream suppression N/A → ledger) → merged
-- [ ] **test64** — Motion-control (gyro) capability detection (P3.16) — **PR #84** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a controller)*
+- [x] **test64** — Motion-control (gyro) capability detection (P3.16) — **PR #84** — base `vibemis-main` — ☑ **PASS (Tier 1)** (report PR #116; gyro toggle renders in Gamepad Settings, `forwardmotioncontrols` persists; Tier 2 `[motion]` log needs a controller/Game Mode → ledger) → merged. ⚠ Report also flagged a **pre-existing mDNS auto-exit bug** (tracked separately).
 
 ## 4. UI / onboarding
 
@@ -126,6 +126,8 @@ ticking a row above does NOT clear its entry here.
   stream**, confirm rumble is actually suppressed when the toggle is on (and works when off).
 - [ ] **test72** — perf-overlay clock, Tier 2 — during a **live stream**, confirm the clock line
   actually renders in the performance overlay when enabled.
+- [ ] **test64** — motion-control capability, Tier 2 — in **Game Mode (or with a connected
+  controller)**, confirm the `[motion]` capability log line fires on controller connect.
 
 ## How the test agent should work this list (also in docs/personas/test-agent.md)
 
