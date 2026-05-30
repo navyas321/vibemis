@@ -40,26 +40,27 @@ whole Quick Menu group depends on its render path.
 - [ ] **test31** — In-stream video zoom — **PR #53** — base `test25` — ☐
 - [ ] **test32** — In-stream video pan — **PR #54** — base `test31` — ☐
 - [ ] **test40** — Battery-saver bitrate — **PR #60** — base `vibemis-main` — ☐
-- [ ] **test53** — Settings performance-guidance advisories (sw-decode / high-bitrate) — **PR #73** — base `vibemis-main` — ☐  *(launcher only)*
-- [ ] **test59** — Data-usage estimate under the bitrate slider — **PR #79** — base `vibemis-main` — ☐  *(launcher only)*
-- [ ] **test62** — Adaptive bitrate (experimental) first slice (P3.12) — **PR #82** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a degrading stream — mark N/A otherwise)*
-- [ ] **test65** — AV1 codec guidance note (P3.6) — **PR #85** — base `vibemis-main` — ☐  *(launcher only)*
-- [ ] **test66** — Live stream-config summary line — **PR #86** — base `vibemis-main` — ☐  *(launcher only)*
-- [ ] **test67** — Low-latency "competitive" preset button (P3.8) — **PR #87** — base `vibemis-main` — ☐  *(launcher only)*
-- [ ] **test49** — Configurable performance-overlay corner (TL/TR/BL/BR) — **PR #69** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a stream — auto-publishes 🔬 alpha)*
-- [ ] **test50** — Configurable performance-overlay text size (Small/Normal/Large) — **PR #70** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a stream — auto-publishes 🔬 alpha)*
+- [x] **test53** — Settings performance-guidance advisories (sw-decode / high-bitrate) — **PR #73** — base `vibemis-main` — ☑ **PASS** (report PR #100) → merged
+- [x] **test59** — Data-usage estimate under the bitrate slider — **PR #79** — base `vibemis-main` — ☑ **PASS** (report PR #101) → merged
+- [x] **test62** — Adaptive bitrate (experimental) first slice (P3.12) — **PR #82** — base `vibemis-main` — ☑ **PASS (Tier 1)** (report PR #107) → merged
+- [x] **test65** — AV1 codec guidance note (P3.6) — **PR #85** — base `vibemis-main` — ☑ **PASS** (report PR #103) → merged
+- [x] **test66** — Live stream-config summary line — **PR #86** — base `vibemis-main` — ☑ **PASS** (report PR #104) → merged
+- [x] **test67** — Low-latency "competitive" preset button (P3.8) — **PR #87** — base `vibemis-main` — ☑ **PASS** (report PR #105) → merged
+- [x] **test68** — Native-resolution recommendation hint — **PR #88** — base `vibemis-main` — ☑ **PASS** (re-test after f111363 QScreen fix; report: `testing/test68-native-res-hint/report.md`, PR #114)
+- [x] **test49** — Configurable performance-overlay corner (TL/TR/BL/BR) — **PR #69** — base `vibemis-main` — ☑ **PASS (Tier 1)** (report PR #110) → merged
+- [x] **test50** — Configurable performance-overlay text size (Small/Normal/Large) — **PR #70** — base `vibemis-main` — ☑ **PASS (Tier 1)** (report PR #111) → merged
 
 ## 3. Input / controls
 
 - [ ] **test26** — Configurable Quick Menu gamepad shortcut — **PR #48** — base `vibemis-main` — ☐
 - [ ] **test36** — Back-paddle Quick Menu combos — **PR #56** — base `test26` — ☐
-- [ ] **test57** — Disable controller rumble (P3.13) — **PR #77** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs controller + stream)*
+- [x] **test57** — Disable controller rumble (P3.13) — **PR #77** — base `vibemis-main` — ☑ **PASS (Tier 1)** (report PR #112) → merged
 - [ ] **test64** — Motion-control (gyro) capability detection (P3.16) — **PR #84** — base `vibemis-main` — ☐  *(Tier 1 launcher-only; Tier 2 needs a controller)*
 
 ## 4. UI / onboarding
 
-- [ ] **test27** — Vibemis brand accent (teal/cyan) — **PR #49** — base `vibemis-main` — ☐  *(launcher only, no stream)*
-- [ ] **test28** — Tailscale hint in Add-PC dialog — **PR #50** — base `vibemis-main` — ☐  *(launcher only)*
+- [x] **test27** — Vibemis brand accent (teal/cyan) — **PR #49** — base `vibemis-main` — ☑ **PASS** (report PR #95) → merged
+- [x] **test28** — Tailscale hint in Add-PC dialog — **PR #50** — base `vibemis-main` — ☑ **PASS** (report PR #97) → merged
 - [ ] **test51** — Prefer Tailscale addresses for remote play (P3.7) — **PR #71** — base `vibemis-main` — ☐  *(Tier 1/2 launcher-only; Tier 3 needs a tailnet — mark N/A otherwise)*
 - [ ] **test37** — Settings "About" section — **PR #57** — base `vibemis-main` — ☐  *(launcher only)*
 - [ ] **test39** — First-run welcome hint — **PR #59** — base `vibemis-main` — ☐  *(launcher only)*
@@ -71,14 +72,14 @@ whole Quick Menu group depends on its render path.
 
 ## 5. Tooling / test automation
 
-- [ ] **test52** — `vibemis selftest` headless smoke test (automation enabler) — **PR #72** — base `vibemis-main` — ☐  *(launcher-only / headless; do this FIRST each visit — see docs/TEST_AUTOMATION.md)*
-- [ ] **test54** — `selftest --json` + settings round-trip checks — **PR #74** — base `test52` — ☐  *(launcher-only / headless; verify after test52)*
+- [x] **test52** — `vibemis selftest` headless smoke test (automation enabler) — **PR #72** — base `vibemis-main` — ☑ **PASS** (report PR #91) → merged
+- [x] **test54** — `selftest --json` + settings round-trip checks — **PR #74** — base `test52` — ☑ **PASS** (report PR #92) → merged
 - [ ] **test63** — Copy system info to clipboard — **PR #83** — base `test55` — ☐  *(launcher only; verify after test55)*
 
 ## 6. Config / SteamOS helpers
 
 - [ ] **test41** — Settings export / import — **PR #61** — base `vibemis-main` — ☐  *(launcher only)*
-- [ ] **test48** — SteamOS helper scripts bundle (install / update / add-game / add-all / pair / uninstall / doctor) — **PR #68** — base `vibemis-main` — ☐  *(script-only)*
+- [x] **test48** — SteamOS helper scripts bundle (install / update / add-game / add-all / pair / uninstall / doctor) — **PR #68** — base `vibemis-main` — ☑ **PASS** (report PR #94) → merged
 
 ---
 
