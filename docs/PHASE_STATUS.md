@@ -66,9 +66,10 @@ heavily, so they're now one phase).
 - BLOCKER (parity audit): no formal Android feature spec yet — confirm gaps against Artemis-Android
   before deep work; the launcher-verifiable items above can proceed now.
 
-## P3.9 — UI modernization (Material)  🟡 partial
+## P3.9 — UI modernization (Material)  🟡 partial  → elevated into **P3.17**
 - Done: brand accent test27 (#49); About section test37 (#57); first-run hint test39 (#59).
-- Remaining: consistent Material control styling pass, spacing/typography, dark-theme polish.
+- Remaining: consistent Material control styling pass, spacing/typography, dark-theme polish —
+  **this remaining work is now folded into the deliberate design pass of P3.17 below** (step 3).
 - Not blocked — large, so done incrementally as small test PRs.
 
 ## P3.10 — SteamOS one-click integration  🟡 partial
@@ -119,6 +120,33 @@ touchpad). High value on the Legion Go S Z2 (it has a gyro + touchscreen) and a 
   with `// TODO(P3.16)` at the send site; wire the actual sensor forwarding after the symbols and
   host behaviour are confirmed on-device.
 - Sources: moonlight-qt issues #960 / #1123; Moonlight-Switch gyro-as-DS4.
+
+## P3.17 — UI/UX design overhaul (Claude-assisted)  🔵 NEW — near-term priority
+A deliberate, cohesive **design pass on the whole client** — not the incremental Material tidying of
+P3.9, but a from-the-top visual/UX redesign using **Claude's design tooling (design credits)** to
+generate a consistent visual language + per-screen mockups, then implementing the result in QML.
+- **Why now:** the feature set grew fast (Quick Menu, overlays, several Settings panels, Tailscale
+  setup, onboarding). The surfaces are *functional* but visually inconsistent (spacing, typography,
+  color usage, empty/loading states). A coherent design pass compounds the value of everything
+  already shipped and is the highest-leverage UX work available.
+- **Approach:**
+  1. **Audit** — screenshot every current screen (Computers grid, Add-PC, Settings + each panel,
+     Quick Menu overlay, first-run/onboarding, perf overlay) and list the inconsistencies.
+  2. **Design (Claude design credits)** — generate a cohesive visual language: a color + spacing +
+     type scale, component states, handheld-first layouts for **both Game Mode (Gamescope) and
+     Desktop Mode**, light/dark. Anchor on the existing Vibemis teal accent **#00CCCC** (test27).
+     Produce per-screen mockups to implement against.
+  3. **Implement incrementally** as **launcher-only `test<N>` PRs** (one screen/component per PR so
+     the test agent verifies each with no host needed): **Settings first** (largest surface area),
+     then the **Computers/Add-PC home**, then **onboarding/first-run**, then the **Quick Menu
+     overlay**. (This step *absorbs P3.9's* remaining "consistent Material styling pass".)
+  4. **Accessibility / handheld ergonomics** — minimum touch-target sizes, controller-focus
+     navigation order, readable-at-arm's-length type; final sign-off on the Legion Go S Z2.
+- **Sequence:** slot **right after the current launcher-only verification wave clears** — it produces
+  more launcher-only PRs, the cheap-to-verify lane the test agent is fastest at, so the two pipelines
+  reinforce each other.
+- **Not blocked:** mockups + most implementation are launcher-verifiable; only the final
+  Game-Mode ergonomics sign-off needs the device.
 
 ## P4.0 — Repo hygiene (DEFERRED to post-1.0 / first stable release)  ⏸️
 Hide the Claude/agent development files from GitHub. **Decision: deferred** until after the first
