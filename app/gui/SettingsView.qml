@@ -112,6 +112,30 @@ Flickable {
                 anchors.fill: parent
                 spacing: 5
 
+                // Vibemis: live one-line summary of the effective stream config, so the user can
+                // see resolution/fps/bitrate/codec/HDR at a glance without reading every control.
+                Label {
+                    id: streamSummaryLabel
+                    width: parent.width
+                    function codecName(v) {
+                        if (v === StreamingPreferences.VCC_FORCE_H264) return "H.264"
+                        if (v === StreamingPreferences.VCC_FORCE_HEVC ||
+                            v === StreamingPreferences.VCC_FORCE_HEVC_HDR_DEPRECATED) return "HEVC"
+                        if (v === StreamingPreferences.VCC_FORCE_AV1) return "AV1"
+                        return qsTr("Auto codec")
+                    }
+                    text: "▶ " + StreamingPreferences.width + "×" + StreamingPreferences.height +
+                          " @ " + StreamingPreferences.fps + " fps · " +
+                          (StreamingPreferences.bitrateKbps / 1000).toFixed(0) + " Mbps · " +
+                          codecName(StreamingPreferences.videoCodecConfig) +
+                          (StreamingPreferences.enableHdr ? " · HDR" : "")
+                    font.pointSize: 11
+                    font.bold: true
+                    wrapMode: Text.Wrap
+                    color: "#00CCCC"
+                    bottomPadding: 4
+                }
+
                 Label {
                     width: parent.width
                     id: resFPStitle
@@ -791,6 +815,52 @@ Flickable {
                     }
                 }
 
+                // Vibemis (P3.12): adaptive bitrate (experimental). Currently logs a recommendation
+                // when the host reports a poor connection; runtime auto-adjust is pending protocol
+                // support (see TODO(P3.12) in session.cpp).
+                CheckBox {
+                    id: adaptiveBitrateCheck
+                    width: parent.width
+                    text: qsTr("Adaptive bitrate (experimental)")
+                    font.pointSize: 12
+                    checked: StreamingPreferences.adaptiveBitrate
+                    onCheckedChanged: {
+                        StreamingPreferences.adaptiveBitrate = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Experimental: when the connection to the host degrades, Vibemis notes a recommendation to lower the bitrate. Automatic runtime adjustment is still in development.")
+                }
+
+                // Vibemis: rough data-usage estimate for the chosen bitrate. Helps users on
+                // metered connections or marginal Wi-Fi gauge cost/feasibility. Video only
+                // (audio/overhead excluded). GB/hour = kbps * 3600 / 8 / 1e6 = kbps * 0.00045.
+                Label {
+                    width: parent.width
+                    text: qsTr("Uses roughly %1 GB/hour of data at this bitrate (video only).")
+                          .arg((StreamingPreferences.bitrateKbps * 0.00045).toFixed(1))
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                    color: "#aaaaaa"
+                    topPadding: 2
+                }
+
+                // Vibemis (perf guidance): advise when the bitrate is set well above the recommended
+                // default for the chosen resolution/fps. Very high bitrate over Wi-Fi (common on a
+                // handheld) is the usual cause of stutter/dropped frames. Threshold = 2x recommended.
+                Label {
+                    width: parent.width
+                    visible: StreamingPreferences.bitrateKbps >
+                             StreamingPreferences.getDefaultBitrate(StreamingPreferences.width, StreamingPreferences.height, StreamingPreferences.fps, StreamingPreferences.enableYUV444) * 2
+                    text: "⚠ " + qsTr("This bitrate is much higher than recommended for the selected resolution. On Wi-Fi this often causes stutter or dropped frames — lower it if the stream isn't smooth.")
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                    color: "#E0A030"
+                    topPadding: 4
+                }
+
                 Label {
                     width: parent.width
                     id: windowModeTitle
@@ -909,6 +979,29 @@ Flickable {
                     ToolTip.timeout: 5000
                     ToolTip.visible: hovered
                     ToolTip.text: qsTr("Frame pacing reduces micro-stutter by delaying frames that come in too early")
+                }
+
+                // Vibemis (P3.8): one-tap low-latency / "competitive" preset. Frame pacing delays
+                // early frames (smoother but higher latency) and V-Sync adds a frame of latency;
+                // turning both off minimises input-to-photon latency for fast/competitive games.
+                Button {
+                    id: lowLatencyPresetButton
+                    text: qsTr("Apply low-latency preset")
+                    onClicked: {
+                        StreamingPreferences.framePacing = false
+                        StreamingPreferences.enableVsync = false
+                        lowLatencyPresetButton.text = qsTr("Applied — V-Sync & frame pacing off")
+                        lowLatencyFeedbackTimer.restart()
+                    }
+                    Timer {
+                        id: lowLatencyFeedbackTimer
+                        interval: 2000
+                        onTriggered: lowLatencyPresetButton.text = qsTr("Apply low-latency preset")
+                    }
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 6000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Turns off V-Sync and frame pacing for the lowest input latency (best for fast/competitive games). May introduce slight tearing.")
                 }
             }
         }
@@ -1735,6 +1828,19 @@ Flickable {
                     }
                 }
 
+                // Vibemis (perf guidance): warn when software decoding is forced. On the Legion Go S
+                // Z2 (and most handhelds) hardware decoding cuts decode latency from ~8ms to ~2ms, so
+                // forcing software decode noticeably hurts responsiveness. Shown only when relevant.
+                Label {
+                    width: parent.width
+                    visible: StreamingPreferences.videoDecoderSelection === StreamingPreferences.VDS_FORCE_SOFTWARE
+                    text: "⚠ " + qsTr("Software decoding adds latency (≈8 ms vs ≈2 ms for hardware) and raises CPU/battery use. Prefer \"Automatic\" unless hardware decoding is broken on this device.")
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                    color: "#E0A030"
+                    topPadding: 4
+                }
+
                 Label {
                     width: parent.width
                     id: resVCCTitle
@@ -1790,6 +1896,19 @@ Flickable {
                             StreamingPreferences.videoCodecConfig = codecListModel.get(currentIndex).val
                         }
                     }
+                }
+
+                // Vibemis (P3.6 codec): contextual guidance when AV1 is forced. AV1 gives better
+                // quality-per-bit (great on a bandwidth-limited handheld) but needs a host + GPU that
+                // can encode it; otherwise the stream falls back or fails. Shown only for AV1.
+                Label {
+                    width: parent.width
+                    visible: StreamingPreferences.videoCodecConfig === StreamingPreferences.VCC_FORCE_AV1
+                    text: qsTr("AV1 offers better quality at the same bitrate, but requires an Apollo/Sunshine host with an AV1-capable GPU (e.g. NVIDIA RTX 40, AMD RX 7000, Intel Arc). If streaming fails or falls back, choose \"Automatic\".")
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                    color: "#80A0C0"
+                    topPadding: 4
                 }
 
                 // Preferred renderer backend

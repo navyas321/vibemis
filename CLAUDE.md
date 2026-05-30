@@ -24,6 +24,30 @@ Read your **persona file** first (who you are), then the SOP in [`docs/WORKFLOW.
 - **Routine-friendly.** Unattended development runs via [`docs/ROUTINE_PROMPT.md`](docs/ROUTINE_PROMPT.md):
   one self-verified, test-ready PR per run, bounded to respect usage limits.
 
+### How we use Claude Code on this repo (task decomposition · agents · planning · TDD)
+Distilled from Anthropic's guidance; full rationale + sources in
+[`docs/CLAUDE_CODE_PRACTICES.md`](docs/CLAUDE_CODE_PRACTICES.md). The high-leverage rules:
+
+- **Explore → Plan → Implement → Commit.** For anything touching multiple files or unfamiliar
+  code, plan first (EnterPlanMode). If you can describe the exact diff in one sentence, skip the
+  plan and just do it. Most single-file Vibemis settings/UI features are "just do it".
+- **Break into TodoWrite/Task items when** a job has ≥3 distinct steps, spans multiple files, or
+  must survive a context reset. Encode real dependencies (e.g. "verify CI green" *blocks* "stack
+  next test PR") so unverified work never gets built on. One task `in_progress` at a time.
+- **Spawn a subagent only when** the work is a wide read-only search ("find every caller of X"),
+  a genuinely parallelizable independent slice, or a context-heavy sift where most output is
+  noise — subagents have isolated context and report just a summary. Do **not** spawn for ordinary
+  multi-step work you can do inline; cold subagents re-derive context and cost more. The
+  build↔test split (`hostdevelop`/`clienttest`) is our standing agent decomposition.
+- **CLAUDE.md is followed ~70% of the time** — fine for style, NOT for safety. Anything that must
+  hold every time (don't push betas off non-`vibemis-main`; self-verify before handoff) belongs in
+  an enforcement mechanism (the CI tier rules + a hook), not just prose here.
+- **Tests are the oracle.** A model's self-judgment degrades as context fills; a green build / a
+  command-level test scorecard stays accurate. That's why every test PR ships an exact-command
+  Tier-1/2 plan and why we **never** stack a new test branch on one whose CI hasn't gone green.
+- **Reusable workflows are slash commands** in [`.claude/commands/`](.claude/commands/): e.g.
+  `/ship-test-pr`, `/verify-ci`, `/release-hygiene`. Prefer them over re-deriving the steps.
+
 ## What this repo is
 
 **Vibemis** is a Linux-focused fork of [Vibemis Qt](https://github.com/navyas321/vibemis) (which is itself a fork of [Moonlight Qt](https://github.com/moonlight-stream/moonlight-qt)). It's a desktop / Steam Deck / handheld streaming client tuned to pair with **Vibepollo** (a Sunshine fork). C++ / Qt 6 / QML, built with qmake6.
@@ -57,44 +81,32 @@ Build agent rule: before starting a test cycle, rename (or create fresh from) th
 
 ## Current state — session handoff (read this to continue from where work left off)
 
-**Highest test branch: `test40`. Next new test cycle = `test41`.** `gh pr list --state open` is the
-source of truth; this is the snapshot as of the last build session.
+**Single source of truth for what's in flight:** [`testing/TEST_CHECKLIST.md`](testing/TEST_CHECKLIST.md)
+(every open feature test PR, grouped by phase, with branch · PR# · base · ☐/☑ status) and
+`gh pr list --state open`. Don't maintain a duplicate table here — read those.
 
-**Open feature test PRs (all compile-clean, awaiting Legion Go hardware verification):**
+**High-water mark (snapshot, re-derive from git):** highest test branch is **`test52`** →
+next new cycle = **`test53`**. test49 (perf-overlay corner), test51 (prefer-Tailscale, P3.7) and
+test52 (`vibemis selftest`) all built **alpha-green** via CI. test50 (perf-overlay text size) green too.
 
-| Test | Feature | Base (stacks on) | PR |
-|------|---------|------------------|----|
-| test22 | Quick Menu in Game Mode (OverlayManager surface) — PRIMARY | vibemis-main | #44 |
-| test23 | Vibepollo quality presets | vibemis-main | #45 |
-| test24 | Compact performance overlay | vibemis-main | #46 |
-| test25 | Video scale mode (Fit/Fill/Stretch) | vibemis-main | #47 |
-| test26 | Configurable Quick Menu gamepad shortcut | vibemis-main | #48 |
-| test27 | Vibemis brand accent (UI) | vibemis-main | #49 |
-| test28 | Tailscale Add-PC hint | vibemis-main | #50 |
-| test29 | Quick Menu Paste Clipboard | **test22** | #51 |
-| test30 | Steam/desktop install script (P3.2) | vibemis-main | #52 |
-| test31 | In-stream video zoom | **test25** | #53 |
-| test32 | In-stream video pan | **test31** | #54 |
-| test33 | Quick Menu Stream Info | **test29** | #55 |
-| test36 | Back-paddle Quick Menu combos | **test26** | #56 |
-| test37 | Settings About section | vibemis-main | #57 |
-| test38 | Per-game direct-launch Steam shortcut (P3.10) | vibemis-main | #58 |
-| test39 | First-run welcome hint (P3.10) | vibemis-main | #59 |
-| test40 | Battery-saver bitrate (P3.10) | vibemis-main | #60 |
-
-**Already on `vibemis-main`:** P3.5 `scripts/vibepollo-log.sh`, P3.2 `scripts/install-vibemis-desktop.sh`,
-P3.10 `scripts/add-game-to-steam.sh`, the routine (`docs/ROUTINE_PROMPT.md`), personas, README, CI fix.
+**Recently landed on `vibemis-main`** (beyond features): the CI tier+auto-prune fix
+(`.github/workflows/dev-build.yml` — only `vibemis-main` builds beta, `test**` builds alpha, old
+betas/alphas are pruned), `docs/PHASE_STATUS.md` (phase tracker + blockers + research backlog),
+`docs/CLAUDE_CODE_PRACTICES.md` + the CLAUDE.md "How we use Claude Code" section,
+`docs/TEST_AUTOMATION.md` + persona automation section, and `.claude/commands/`
+(`/ship-test-pr`, `/verify-ci`, `/release-hygiene`).
 
 **Stacking rule to avoid conflicts:** Quick-Menu features stack on `test22`; zoom/pan/scale on the
 `test25→test31→test32` chain; configurable-combo features on `test26`. Independent features branch
-off `vibemis-main`.
+off `vibemis-main`. **Never stack on a branch whose CI hasn't gone green** (`/verify-ci`).
 
 **Next pickup priority (for the routine and for solo work):**
 1. **Act on any `diagnostic/test*-report` PR first** (fix → rebuild → push → comment; merge the
    feature PR if the report is PASS). This is the highest-value loop.
-2. Else continue **P3.10** (#3 first-run SteamOS hint, #4 battery-aware bitrate), then **P3.4** more
-   Quick Menu items (stack on test22), then **P3.9** deeper UI.
-3. Skip device-gated items (Phase 8.5 suspend/resume) and anything needing user input (P3.5 log path).
+2. Else pull the next research-backlog item from `docs/PHASE_STATUS.md` (e.g. on-screen text-send,
+   per-game profiles P3.8, UI accent P3.9) and ship it as the next `testNN` via `/ship-test-pr`.
+3. Skip device-gated items (suspend/resume) and anything needing user input.
+4. **Re-read this section + `PHASE_STATUS.md` + `TEST_CHECKLIST.md` periodically** to stay aligned.
 
 ## Phase 3 — plan
 
