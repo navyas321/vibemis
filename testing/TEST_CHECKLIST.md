@@ -73,7 +73,7 @@ whole Quick Menu group depends on its render path.
 - [x] **test71** — Fix ALL-CAPS button labels (Material) — **PR #96** — base `vibemis-main` — ☑ **PASS** (report PR #119; **user-reported bug FIXED** — bitrate button now "Use Default (32 Mbps)" not "USE DEFAULT (32 MBPS)"; app-wide `QFont::MixedCase`, no styling regression) → merged
 - [x] **test73** — Design-system `Theme` token singleton (P3.17) — **PR #108** — base `vibemis-main` — ☑ **PASS** (report PR #120; Theme singleton resolves — selftest 7/7, zero Theme QML errors, version label renders #00CCCC confirmed by pixel analysis) → merged. **P3.17 foundation landed.**
 - [x] **test55** — System Information panel in Settings — **PR #75** — base `vibemis-main` — ☑ **PASS** (report PR #121; all 7 rows populated + correct — arch x86_64, SteamOS, VAAPI, HDR enabled, 1920×1200; no regression) → merged. *(Unblocks test63.)*
-- [ ] **test56** — Help & Links section in Settings (GitHub / README / Tailscale) — **PR #76** — base `vibemis-main` — ☐  *(launcher only; needs a browser)*
+- [x] **test56** — Help & Links section in Settings (GitHub / README / Tailscale) — **PR #76** — base `vibemis-main` — ☑ **PASS** (report PR #122; Help & Links GroupBox + all 3 buttons render, `hasBrowser` gate works (xdg-open present); Tier 2 actual link-open N/A — screen capture failed mid-test → ledger) → merged
 - [ ] **test58** — Show host software version in PC details (P3.13) — **PR #78** — base `vibemis-main` — ☐  *(launcher only; best with an online host)*
 - [ ] **test60** — Per-client access level in PC context menu (P3.13) — **PR #80** — base `vibemis-main` — ☐  *(launcher only; best with a paired Apollo host)*
 - [ ] **test61** — Virtual Display clarifying notes (P3.13) — **PR #81** — base `vibemis-main` — ☐  *(launcher only)*
@@ -128,6 +128,8 @@ ticking a row above does NOT clear its entry here.
   actually renders in the performance overlay when enabled.
 - [ ] **test64** — motion-control capability, Tier 2 — in **Game Mode (or with a connected
   controller)**, confirm the `[motion]` capability log line fires on controller connect.
+- [ ] **test56** — Help & Links, Tier 2 — with the screen awake / a browser available, click each
+  of the 3 buttons and confirm `xdg-open` launches the correct URL (GitHub / README / Tailscale doc).
 
 ## How the test agent should work this list (also in docs/personas/test-agent.md)
 
