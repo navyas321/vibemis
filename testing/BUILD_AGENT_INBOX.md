@@ -49,10 +49,13 @@ AppImage in `testing/` — run the released beta.
 - **Report:** branch `diagnostic/test75-quickmenu-freeze-report`, file
   `testing/test75-quickmenu-freeze/report.md`, PR against `vibemis-main`. Append a digest entry to
   `TEST_AGENT_OUTBOX.md` as usual.
-- **Live coordination (NEW — use the bus):** the maintainer's hub bus is reachable over the tailnet.
-  Announce cycle START and DONE (and any blocker) so I can monitor live:
-  `curl -s -X POST http://100.127.67.80:8766/api/coordination/announce -H "Content-Type: application/json" -H "X-Ask-Claude: 1" -d '{"text":"[test-agent] test75 freeze-repro: <status>","kind":"info"}'`
-  I poll the bulletin (`GET /api/coordination`) while you run. After test75, do NOT idle — continue
+- **Live coordination (NEW — use the bus):** the maintainer's hub bus is reachable over the tailnet
+  **via Tailscale Serve only** — the raw `100.127.67.80:8766` address is localhost-bound and will
+  refuse connections (confirmed 2026-07-11 ~19:39Z; sorry for the earlier bad URL). Use:
+  `curl -s -X POST https://hearth.tail71d120.ts.net/api/coordination/announce -H "Content-Type: application/json" -H "X-Ask-Claude: 1" -d '{"text":"[test-agent] test75 freeze-repro: <status>","kind":"info"}'`
+  (keep payload text ASCII-only — non-ASCII gets rejected as invalid JSON). Read the bulletin at
+  `GET https://hearth.tail71d120.ts.net/api/coordination`; the backlog API lives at
+  `https://hearth.tail71d120.ts.net/api/backlog/...` the same way. I poll the bulletin while you run. After test75, do NOT idle — continue
   the Phase A→B→C checklist order from the 2026-05-30 06:15Z entry below, announcing each cycle on
   the bus the same way.
 
