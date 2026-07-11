@@ -14,6 +14,48 @@ between cycles — the counterpart to your `diagnostic/*-report` PRs back to me.
 
 ---
 
+### 2026-07-11 ~19:25Z — build agent — ⭐ PRIORITY OVERRIDE: test75 Quick Menu FREEZE repro (drop everything else)
+
+**Context:** the maintainer reports the Quick Menu **gamepad combo (Select+L1+R1+Y) opens the menu
+but it is then FROZEN in BOTH Desktop Mode and Game Mode** on the current beta. Your May test22 PASS
+was **keyboard-only, Desktop Mode** — the gamepad path and Game Mode were never runtime-verified.
+I'm root-causing on the host (prime suspects: gamepad-combo re-trigger from axis events — local
+`state->buttons` is never cleared after the combo fires — and offscreen-window input delivery).
+I need discriminating runtime evidence. This is a **diagnostic-only cycle** — no feature branch, no
+AppImage in `testing/` — run the released beta.
+
+- **Artifact:** newest beta on GitHub Releases — `0.6.7-beta.20260711.0854+e7a2a4b` (the build the
+  maintainer ran). Download, `chmod +x`, note md5 in the report.
+- **Host:** Navid-PC Vibepollo is **UP** (I verified sunshine.exe + ApolloService running just now).
+  LAN `192.168.4.78`, tailnet `100.127.67.80`. Pair/stream is authorized for this cycle.
+- **Tier 1 — Desktop Mode, keyboard (regression check of your verified path):** stream **Desktop**,
+  `Ctrl+Alt+Shift+\` → Down ×2 → Esc. Same signals as your test22 report (open/nav/close, video keeps
+  playing). PASS/FAIL vs May behavior.
+- **Tier 2 — Desktop Mode, GAMEPAD (the failing path — the core of this cycle):** with the built-in
+  controller: hold **Select+L1+R1+Y ~1s** (like a human), release, then D-pad Down ×2, A (Enter),
+  B (Esc), re-open, and try closing via the combo again. Capture in the log:
+  1. `grep -c "Detected quick menu toggle gamepad combo"` per open attempt — **>1 = re-trigger bug
+     confirmed** (this is my #1 suspect; note the count and timestamps).
+  2. Does the selection highlight move on D-pad? (screenshot before/after)
+  3. Does the video behind the menu keep playing, or does the whole window/stream hang?
+  4. Any `Qt Debug/Warning` lines, especially QML `TypeError` / `ReferenceError`, and every
+     `QuickMenuManager:` line.
+- **Tier 3 — Game Mode via emulation (use `scripts/gamescope-emulate.sh` from `vibemis-main` — this
+  is now our standard Game Mode validation path):** run the beta under the harness
+  (`scripts/gamescope-emulate.sh -o -s /tmp/qm-freeze.png -- <beta.AppImage>`), drive it with
+  `DISPLAY=:1 xdotool` (pair/stream inside the nested gamescope if feasible; else launcher-level +
+  report the blocker), toggle the menu with the keyboard combo, capture screenshots + the same log
+  signals + WSI line + coredump count.
+- **Report:** branch `diagnostic/test75-quickmenu-freeze-report`, file
+  `testing/test75-quickmenu-freeze/report.md`, PR against `vibemis-main`. Append a digest entry to
+  `TEST_AGENT_OUTBOX.md` as usual.
+- **Live coordination (NEW — use the bus):** the maintainer's hub bus is reachable over the tailnet.
+  Announce cycle START and DONE (and any blocker) so I can monitor live:
+  `curl -s -X POST http://100.127.67.80:8766/api/coordination/announce -H "Content-Type: application/json" -H "X-Ask-Claude: 1" -d '{"text":"[test-agent] test75 freeze-repro: <status>","kind":"info"}'`
+  I poll the bulletin (`GET /api/coordination`) while you run. After test75, do NOT idle — continue
+  the Phase A→B→C checklist order from the 2026-05-30 06:15Z entry below, announcing each cycle on
+  the bus the same way.
+
 ### 2026-05-30 ~09:30Z — build agent — 🖥️ screen-lock is blocking your visual checks
 - I've noticed test55/56/58 all hit the same thing: the device screen enters **DPMS / KWin
   compositor lock** between cycles, so `ffmpeg x11grab` / `imlib2_grab` return all-black frames and
