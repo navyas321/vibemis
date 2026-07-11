@@ -65,7 +65,37 @@ Game Mode runs under Gamescope (single Vulkan surface). To exercise it:
 3. For overlay/positioning features, capture with **Super+S** and inspect the PNG — Game Mode is the
    authoritative result (a feature that only works in Desktop Mode is not done).
 
-## 6. Putting it together — a cycle skeleton
+## 6. Emulating Game Mode from Desktop Mode (nested gamescope) — `scripts/gamescope-emulate.sh`
+Section 5 needs you to actually be in Game Mode. You can instead **emulate** that environment from
+a Desktop-Mode shell: a nested, **headless** gamescope with the host FROG WSI Vulkan layer active
+(`ENABLE_GAMESCOPE_WSI=1`) reproduces the same gamescope + single-Vulkan-surface + WSI-layer stack
+Game Mode uses — so Game-Mode-only failures (WSI-layer crashes, surface creation, overlay) show up
+without switching modes and without drawing anything on the KDE desktop.
+
+```bash
+scripts/gamescope-emulate.sh                                   # default: ~/Downloads/Vibemis.AppImage
+scripts/gamescope-emulate.sh -o -s /tmp/vib.png               # + capture the mangoapp/FPS overlay plane
+scripts/gamescope-emulate.sh -- ~/Applications/Vibemis.AppImage selftest
+echo "opened in gamescope: exit=$?"                            # 0 = opened & rendered, 1 = crashed/died
+```
+It launches the app inside `gamescope --backend headless -w 1920 -h 1200 --mangoapp`, waits, then
+reports: **ALIVE/DIED**, new **coredumps**, whether `[Gamescope WSI] Made gamescope surface` appeared
+(the WSI/HDR path was exercised), and any `vkroots`/`Assertion 'obj'`/SIGABRT crash line — and saves a
+screenshot. Two gotchas the script handles for you:
+- **Force X11.** The app must render on the nested XWayland, not the wayland surface, or the WSI layer
+  logs `Failed to get Wayland objects`. The script wraps the command in `env -u WAYLAND_DISPLAY`
+  (for flatpak, add `--socket=x11 --nosocket=wayland`).
+- **Two planes.** `gamescopectl screenshot` captures only the primary/game plane (the app UI). The
+  **mangoapp/FPS overlay is a separate layer** it doesn't include — `-o` grabs the overlay window
+  (`GAMESCOPE_EXTERNAL_OVERLAY=1`, named `mangoapp overlay window`) directly off nested X `:1` with
+  `ffmpeg -window_id`, and forces a visible `MANGOHUD_CONFIGFILE` (default is `no_display`).
+
+Between runs a crashed nested gamescope leaves stale `/tmp/.X{1,2}-lock` + `gamescope-0` sockets and
+the next run dies with `XIO: fatal IO error 17 (File exists) on X server :1`; the script cleans these
+(never touching `:0`, the real desktop). Real Game Mode (section 5) is still the authoritative result —
+this is the fast pre-check and the way to reproduce a Game-Mode-only bug on demand.
+
+## 7. Putting it together — a cycle skeleton
 ```bash
 #!/bin/bash
 APP=~/Downloads/Vibemis-x86_64.AppImage
