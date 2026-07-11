@@ -2,6 +2,7 @@
 #include "settings/streamingpreferences.h"
 #include "streaming/streamutils.h"
 #include "backend/richpresencemanager.h"
+#include "backend/appprofilemanager.h"
 #include "backend/quickmenumanager.h"
 #include "backend/servercommandmanager.h"
 #include "backend/clipboardmanager.h"
@@ -639,6 +640,16 @@ Session::Session(NvComputer* computer, NvApp& app, StreamingPreferences *prefere
     m_ServerCommandManager(new ServerCommandManager()),
     m_ClipboardManager(ClipboardManager::instance())
 {
+    // P3.8 per-game stream profiles: when the user saved a profile for this app, run
+    // the session on a private preferences copy with the profile applied, so the
+    // global preferences object (shared with the Settings UI) is never mutated.
+    // An explicitly-passed preferences object (e.g. the CLI's) always wins.
+    if (!preferences && AppProfileManager::hasProfileStatic(computer->uuid, app.id)) {
+        StreamingPreferences* profilePrefs = StreamingPreferences::createDetached();
+        profilePrefs->setParent(this);
+        AppProfileManager::applyProfile(profilePrefs, computer->uuid, app.id);
+        m_Preferences = profilePrefs;
+    }
 }
 
 bool Session::initialize()
