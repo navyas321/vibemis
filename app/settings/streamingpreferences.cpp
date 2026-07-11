@@ -392,6 +392,8 @@ void StreamingPreferences::save()
     settings.setValue(SER_RESOLUTIONSCALEFACTOR, resolutionScaleFactor);
 }
 
+// Presets mutate the in-memory preferences only; the caller (SettingsView) decides
+// when to persist, matching every other Settings control on the page.
 void StreamingPreferences::applyPreset(int preset)
 {
     switch (preset) {
