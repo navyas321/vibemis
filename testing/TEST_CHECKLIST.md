@@ -28,14 +28,15 @@ whole Quick Menu group depends on its render path.
 
 ---
 
-## 0. ⭐ ACTIVE PRIORITY — Quick Menu freeze diagnosis (blocks group 1)
+## 0. ⭐ ACTIVE PRIORITY — Quick Menu freeze diagnosis + fix (blocks group 1)
 
-- [ ] **test75** — Quick Menu FREEZE repro on the current beta (gamepad path + Game Mode via
-  `scripts/gamescope-emulate.sh`) — **diagnostic-only, no feature branch** — instructions in the
-  2026-07-11 ~19:25Z `BUILD_AGENT_INBOX.md` entry — ☐
-  *Maintainer reports: Select+L1+R1+Y opens the menu but it is then frozen in BOTH modes. test22's
-  May PASS was keyboard-only, so the gamepad path was never runtime-verified. Until test75 lands,
-  treat test29/33/47 as blocked (they'd inherit the freeze).*
+- [x] **test75** — Quick Menu FREEZE repro (diagnostic-only) — ☑ **DONE — root cause found**
+  (report PR #142: NOT a global freeze; keyboard path passes in-stream under gamescope emulation.
+  Real defect = no gamepad close/return: Back/Select swallowed unmapped, only B closes, hint
+  keyboard-only; plus the open-combo left stuck buttons on the host. Fix shipped as **test77**.)
+- [ ] **test77** — Quick Menu gamepad close/return-to-game (Back/Start→close, combo state clear,
+  "Resume Game" hint) — **PR #144** — base `vibemis-main` — ☐  ⭐ **RUN THIS FIRST** (re-run of the
+  test75 scenario on the fix; `testing/test77-quickmenu-gamepad-close/instructions.md`)
 
 ## 1. Quick Menu foundation + content (verify in this sub-order — the rest stack on test22)
 
@@ -43,6 +44,11 @@ whole Quick Menu group depends on its render path.
 - [ ] **test29** — Quick Menu: Paste Clipboard — **PR #51** — base `test22` — ☐
 - [ ] **test33** — Quick Menu: Stream Info — **PR #55** — base `test29` — ☐
 - [ ] **test47** — Quick Menu: Send Special Keys (Ctrl+Alt+Del/Alt+F4/Super/Esc) — **PR #67** — base `test22` — ☐
+
+> ⚠️ **Stale alphas:** the May 🔬 alphas for all unchecked rows below (and test29/33/47 above) were
+> pruned from Releases. The build agent is re-dispatching CI per branch — if `run-cycle.sh` can't
+> find a branch's alpha, ping the bus and take the next row that has one. test29/33/47 rebuild
+> AFTER test77 merges (they'll be rebased onto the fix).
 
 ## 2. Streaming quality / video
 
@@ -92,6 +98,11 @@ whole Quick Menu group depends on its render path.
 - [x] **test52** — `vibemis selftest` headless smoke test (automation enabler) — **PR #72** — base `vibemis-main` — ☑ **PASS** (report PR #91; SteamOS 3.8.5/Mesa 25.3.0; 5/5 checks, exit 0) → merged to vibemis-main
 - [x] **test54** — `selftest --json` + settings round-trip checks — **PR #74** — base `test52` — ☑ **PASS** (report PR #92; 7/7 checks, valid JSON, non-destructive) → merged. Note: use `selftest --json 2>/dev/null` for pure JSON (hook/Qt warnings go to stderr).
 - [x] **test63** — Copy system info to clipboard — **PR #83** — base `test55` — ☑ **PASS** (report PR #128; "Copy to clipboard" → "Copied!" flash, all 7 fields copied, reverts after 1500ms) → merged. Note: "Max resolution: 0×0" under XWayland (same `maximumResolution` quirk as test68) — follow-up: apply Screen fallback to the System-Info row too.
+
+## 5b. Parity features (P3.8)
+
+- [ ] **test76** — Per-game stream profiles (save/apply/clear per host+app; detached prefs at
+  launch) — **PR #143** — base `vibemis-main` — ☐ (`testing/test76-per-game-profiles/instructions.md`)
 
 ## 6. Config / SteamOS helpers
 
