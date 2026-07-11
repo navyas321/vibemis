@@ -28,6 +28,15 @@ whole Quick Menu group depends on its render path.
 
 ---
 
+## 0. ⭐ ACTIVE PRIORITY — Quick Menu freeze diagnosis (blocks group 1)
+
+- [ ] **test75** — Quick Menu FREEZE repro on the current beta (gamepad path + Game Mode via
+  `scripts/gamescope-emulate.sh`) — **diagnostic-only, no feature branch** — instructions in the
+  2026-07-11 ~19:25Z `BUILD_AGENT_INBOX.md` entry — ☐
+  *Maintainer reports: Select+L1+R1+Y opens the menu but it is then frozen in BOTH modes. test22's
+  May PASS was keyboard-only, so the gamepad path was never runtime-verified. Until test75 lands,
+  treat test29/33/47 as blocked (they'd inherit the freeze).*
+
 ## 1. Quick Menu foundation + content (verify in this sub-order — the rest stack on test22)
 
 - [x] **test22** — Quick Menu renders in Game Mode (OverlayManager surface) — **PR #44** — base `vibemis-main` — ☑ **PASS (streaming-verified!)** (report PR #138; Quick Menu opens via `Ctrl+Alt+Shift+\` as a true in-stream overlay (offscreen OverlayManager surface, not a separate window), keyboard nav + clean teardown; first stream-verified cycle) → merged. **Unblocks test29/33/47.** Host-side Virtual Display bug noted (Apollo `0x80030023`, not a client defect).
