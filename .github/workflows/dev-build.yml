@@ -834,10 +834,24 @@ jobs:
           - **Commit**: `${{ github.sha }}`
           - **Build**: #${{ github.run_number }}
           
-          ## 🔄 Installation (SteamOS / Linux)
-          ${{ (steps.check-artifacts.outputs.artifacts_exist == 'true' || steps.find-previous.outputs.reused_artifacts_available == 'true') && '1. Download the `.AppImage` below (Desktop Mode on SteamOS)
-          2. Double-click it to run — no extraction or install needed. (If your file manager asks, allow executing; or `chmod +x` it once.)
-          3. Optional: add it to Steam for Game Mode — `scripts/install-vibemis-desktop.sh` does this for you.' || 'No installation files are available for this release. Please check recent releases or feature branches for builds.' }}
+          ## 🎮 Install on Steam Deck / SteamOS (no terminal needed)
+          ${{ (steps.check-artifacts.outputs.artifacts_exist == 'true' || steps.find-previous.outputs.reused_artifacts_available == 'true') && '**Just want to play? Follow these three steps in Desktop Mode.**
+
+          1. **Switch to Desktop Mode** (hold the **power button** → **Switch to Desktop**) and **download the `.AppImage`** below with the browser.
+          2. **Add it to Steam:** open your file manager, find the downloaded `.AppImage` (usually in **Downloads**), **right-click it → Add to Steam**. *(No file manager “Add to Steam”? Open Steam → **Games → Add a Non-Steam Game to My Library → Browse**, and pick the `.AppImage`.)* You can rename the shortcut to **Vibemis** in its Properties.
+          3. **Play from Game Mode:** switch back to Game Mode — **Vibemis** is now in your library under **Non-Steam Games**. Launch it, add your host PC, pair, and stream.
+
+          <details><summary>Just run it once from the desktop (no Steam)</summary>
+
+          Double-click the `.AppImage`. If nothing happens, right-click → **Properties → Permissions → Allow executing file as program** (or `chmod +x Vibemis-*.AppImage`), then double-click again. On SteamOS a FUSE error means: run `./Vibemis-*.AppImage --appimage-extract-and-run` — no install needed.
+          </details>
+
+          <details><summary>Advanced / scripted setup</summary>
+
+          `scripts/install-vibemis-desktop.sh` installs the AppImage to a stable path with a clean **Vibemis** desktop entry ready to “Add to Steam”; `scripts/vibemis-setup.sh` chains doctor → install → pair → add-all-games. See the README.
+          </details>
+
+          > Any modern Linux desktop works the same way — download the `.AppImage`, make it executable, double-click.' || 'No installation files are available for this release. Please check recent releases or feature branches for builds.' }}
         # Ship ONLY the AppImage (maintainer directive 2026-07-11): one double-clickable
         # artifact per release — no tarballs/zips/raw binaries cluttering the assets list.
         files: |
