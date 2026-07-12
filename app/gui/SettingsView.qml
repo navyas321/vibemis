@@ -112,6 +112,52 @@ Flickable {
                 anchors.fill: parent
                 spacing: 5
 
+                // Vibemis: recommend this device's native resolution so users pick the sharpest
+                // option without guesswork.
+                // NOTE(test68): SystemProperties.maximumResolution is the *decoder* ceiling, which
+                // is (0,0) on devices whose decoder can exceed 1080p (e.g. Legion Go S Z2), so it
+                // can't be the native-resolution source on capable hardware. Prefer the actual panel
+                // size from QML's Screen attached property; fall back to the decoder max only if
+                // Screen is somehow unavailable. Hidden only if neither yields a positive size.
+                Label {
+                    width: parent.width
+                    readonly property int nativeResW: Screen.width > 0 ? Screen.width
+                                                       : SystemProperties.maximumResolution.width
+                    readonly property int nativeResH: Screen.height > 0 ? Screen.height
+                                                       : SystemProperties.maximumResolution.height
+                    visible: nativeResW > 0 && nativeResH > 0
+                    text: "💡 " + qsTr("This device's native resolution is %1×%2 — matching it gives the sharpest image (use a lower resolution only if you need more performance).")
+                          .arg(nativeResW).arg(nativeResH)
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                    color: "#aaaaaa"
+                    bottomPadding: 4
+                }
+
+                // Vibemis: live one-line summary of the effective stream config, so the user can
+                // see resolution/fps/bitrate/codec/HDR at a glance without reading every control.
+                Label {
+                    id: streamSummaryLabel
+                    width: parent.width
+                    function codecName(v) {
+                        if (v === StreamingPreferences.VCC_FORCE_H264) return "H.264"
+                        if (v === StreamingPreferences.VCC_FORCE_HEVC ||
+                            v === StreamingPreferences.VCC_FORCE_HEVC_HDR_DEPRECATED) return "HEVC"
+                        if (v === StreamingPreferences.VCC_FORCE_AV1) return "AV1"
+                        return qsTr("Auto codec")
+                    }
+                    text: "▶ " + StreamingPreferences.width + "×" + StreamingPreferences.height +
+                          " @ " + StreamingPreferences.fps + " fps · " +
+                          (StreamingPreferences.bitrateKbps / 1000).toFixed(0) + " Mbps · " +
+                          codecName(StreamingPreferences.videoCodecConfig) +
+                          (StreamingPreferences.enableHdr ? " · HDR" : "")
+                    font.pointSize: 11
+                    font.bold: true
+                    wrapMode: Text.Wrap
+                    color: "#00CCCC"
+                    bottomPadding: 4
+                }
+
                 Label {
                     width: parent.width
                     id: resFPStitle
@@ -780,6 +826,7 @@ Flickable {
 
                     Button {
                         id: resetBitrateButton
+                        font.capitalization: Font.MixedCase   // Vibemis: no ALL-CAPS "USE DEFAULT (30 MBPS)"
                         text: qsTr("Use Default (%1 Mbps)").arg(StreamingPreferences.getDefaultBitrate(StreamingPreferences.width, StreamingPreferences.height, StreamingPreferences.fps, StreamingPreferences.enableYUV444) / 1000.0)
                         visible: StreamingPreferences.bitrateKbps !== StreamingPreferences.getDefaultBitrate(StreamingPreferences.width, StreamingPreferences.height, StreamingPreferences.fps, StreamingPreferences.enableYUV444)
                         onClicked: {
@@ -789,6 +836,52 @@ Flickable {
                             slider.value = defaultBitrate
                         }
                     }
+                }
+
+                // Vibemis (P3.12): adaptive bitrate (experimental). Currently logs a recommendation
+                // when the host reports a poor connection; runtime auto-adjust is pending protocol
+                // support (see TODO(P3.12) in session.cpp).
+                CheckBox {
+                    id: adaptiveBitrateCheck
+                    width: parent.width
+                    text: qsTr("Adaptive bitrate (experimental)")
+                    font.pointSize: 12
+                    checked: StreamingPreferences.adaptiveBitrate
+                    onCheckedChanged: {
+                        StreamingPreferences.adaptiveBitrate = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Experimental: when the connection to the host degrades, Vibemis notes a recommendation to lower the bitrate. Automatic runtime adjustment is still in development.")
+                }
+
+                // Vibemis: rough data-usage estimate for the chosen bitrate. Helps users on
+                // metered connections or marginal Wi-Fi gauge cost/feasibility. Video only
+                // (audio/overhead excluded). GB/hour = kbps * 3600 / 8 / 1e6 = kbps * 0.00045.
+                Label {
+                    width: parent.width
+                    text: qsTr("Uses roughly %1 GB/hour of data at this bitrate (video only).")
+                          .arg((StreamingPreferences.bitrateKbps * 0.00045).toFixed(1))
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                    color: "#aaaaaa"
+                    topPadding: 2
+                }
+
+                // Vibemis (perf guidance): advise when the bitrate is set well above the recommended
+                // default for the chosen resolution/fps. Very high bitrate over Wi-Fi (common on a
+                // handheld) is the usual cause of stutter/dropped frames. Threshold = 2x recommended.
+                Label {
+                    width: parent.width
+                    visible: StreamingPreferences.bitrateKbps >
+                             StreamingPreferences.getDefaultBitrate(StreamingPreferences.width, StreamingPreferences.height, StreamingPreferences.fps, StreamingPreferences.enableYUV444) * 2
+                    text: "⚠ " + qsTr("This bitrate is much higher than recommended for the selected resolution. On Wi-Fi this often causes stutter or dropped frames — lower it if the stream isn't smooth.")
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                    color: "#E0A030"
+                    topPadding: 4
                 }
 
                 Label {
@@ -910,6 +1003,29 @@ Flickable {
                     ToolTip.visible: hovered
                     ToolTip.text: qsTr("Frame pacing reduces micro-stutter by delaying frames that come in too early")
                 }
+
+                // Vibemis (P3.8): one-tap low-latency / "competitive" preset. Frame pacing delays
+                // early frames (smoother but higher latency) and V-Sync adds a frame of latency;
+                // turning both off minimises input-to-photon latency for fast/competitive games.
+                Button {
+                    id: lowLatencyPresetButton
+                    text: qsTr("Apply low-latency preset")
+                    onClicked: {
+                        StreamingPreferences.framePacing = false
+                        StreamingPreferences.enableVsync = false
+                        lowLatencyPresetButton.text = qsTr("Applied — V-Sync & frame pacing off")
+                        lowLatencyFeedbackTimer.restart()
+                    }
+                    Timer {
+                        id: lowLatencyFeedbackTimer
+                        interval: 2000
+                        onTriggered: lowLatencyPresetButton.text = qsTr("Apply low-latency preset")
+                    }
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 6000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Turns off V-Sync and frame pacing for the lowest input latency (best for fast/competitive games). May introduce slight tearing.")
+                }
             }
         }
 
@@ -955,6 +1071,29 @@ Flickable {
                     ToolTip.timeout: 5000
                     ToolTip.visible: hovered
                     ToolTip.text: qsTr("Creates a virtual display on the Apollo server for streaming. Requires Apollo server - not available with Sunshine/GeForce Experience.")
+                }
+
+                // Vibemis (P3.13): clarify the virtual-display behavior, which commonly confuses
+                // new users. Apollo auto-creates a per-client virtual display matching the
+                // resolution/refresh you select above — ideal on a handheld so you don't have to
+                // change the host's physical display. Shown contextually based on the toggle.
+                Label {
+                    width: parent.width
+                    visible: virtualDisplayCheck.checked
+                    text: qsTr("✓ Apollo will create a virtual display matching your selected resolution and refresh rate — recommended on a handheld (the host's physical monitor is left untouched).")
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                    color: "#80C080"
+                    leftPadding: 8
+                }
+                Label {
+                    width: parent.width
+                    visible: !virtualDisplayCheck.checked
+                    text: qsTr("Without a virtual display, the stream uses the host's current physical display resolution. Enable this with an Apollo host to match this device's resolution automatically.")
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                    color: "#aaaaaa"
+                    leftPadding: 8
                 }
 
                 // Resolution Scaling
@@ -1439,6 +1578,54 @@ Flickable {
                     ToolTip.visible: hovered
                     ToolTip.text: qsTr("Prevents the screensaver from starting or the display from going to sleep while streaming.")
                 }
+
+                Label {
+                    width: parent.width
+                    text: qsTr("Settings backup")
+                    font.pointSize: 12
+                    topPadding: 6
+                }
+
+                Row {
+                    spacing: 8
+
+                    Button {
+                        text: qsTr("Export settings")
+                        onClicked: {
+                            var p = StreamingPreferences.exportSettings()
+                            settingsBackupStatus.text = p
+                                ? qsTr("Exported to %1").arg(p)
+                                : qsTr("Export failed")
+                        }
+                        ToolTip.delay: 1000
+                        ToolTip.timeout: 5000
+                        ToolTip.visible: hovered
+                        ToolTip.text: qsTr("Save all Vibemis settings to ~/vibemis-settings.ini for backup or to copy to another device.")
+                    }
+
+                    Button {
+                        text: qsTr("Import settings")
+                        onClicked: {
+                            settingsBackupStatus.text = StreamingPreferences.importSettings()
+                                ? qsTr("Imported from ~/vibemis-settings.ini — reopen Settings or restart to see all values.")
+                                : qsTr("No backup found at ~/vibemis-settings.ini")
+                        }
+                        ToolTip.delay: 1000
+                        ToolTip.timeout: 5000
+                        ToolTip.visible: hovered
+                        ToolTip.text: qsTr("Load settings previously exported to ~/vibemis-settings.ini.")
+                    }
+                }
+
+                Label {
+                    id: settingsBackupStatus
+                    width: parent.width
+                    text: ""
+                    visible: text !== ""
+                    color: "#00cccc"
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                }
             }
         }
     }
@@ -1672,6 +1859,38 @@ Flickable {
                     ToolTip.visible: hovered
                     ToolTip.text: qsTr("Allows Vibemis to capture gamepad inputs even if it's not the current window in focus")
                 }
+
+                CheckBox {
+                    id: forwardMotionCheck
+                    width: parent.width
+                    text: qsTr("Forward motion controls (gyro) — experimental")
+                    font.pointSize: 12
+                    checked: StreamingPreferences.forwardMotionControls
+                    onCheckedChanged: {
+                        StreamingPreferences.forwardMotionControls = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Experimental: detect this device's gyro/accelerometer for forwarding to the host (motion/gyro aim). Sensor forwarding is still in development; enabling this currently logs the detected sensors.")
+                }
+
+                CheckBox {
+                    id: suppressRumbleCheck
+                    width: parent.width
+                    text: qsTr("Disable controller rumble")
+                    font.pointSize: 12
+                    checked: StreamingPreferences.suppressControllerRumble
+                    onCheckedChanged: {
+                        StreamingPreferences.suppressControllerRumble = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Ignore rumble/force-feedback sent by the host. Useful to save battery on a handheld or if you find rumble distracting.")
+                }
             }
         }
 
@@ -1735,6 +1954,19 @@ Flickable {
                     }
                 }
 
+                // Vibemis (perf guidance): warn when software decoding is forced. On the Legion Go S
+                // Z2 (and most handhelds) hardware decoding cuts decode latency from ~8ms to ~2ms, so
+                // forcing software decode noticeably hurts responsiveness. Shown only when relevant.
+                Label {
+                    width: parent.width
+                    visible: StreamingPreferences.videoDecoderSelection === StreamingPreferences.VDS_FORCE_SOFTWARE
+                    text: "⚠ " + qsTr("Software decoding adds latency (≈8 ms vs ≈2 ms for hardware) and raises CPU/battery use. Prefer \"Automatic\" unless hardware decoding is broken on this device.")
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                    color: "#E0A030"
+                    topPadding: 4
+                }
+
                 Label {
                     width: parent.width
                     id: resVCCTitle
@@ -1790,6 +2022,19 @@ Flickable {
                             StreamingPreferences.videoCodecConfig = codecListModel.get(currentIndex).val
                         }
                     }
+                }
+
+                // Vibemis (P3.6 codec): contextual guidance when AV1 is forced. AV1 gives better
+                // quality-per-bit (great on a bandwidth-limited handheld) but needs a host + GPU that
+                // can encode it; otherwise the stream falls back or fails. Shown only for AV1.
+                Label {
+                    width: parent.width
+                    visible: StreamingPreferences.videoCodecConfig === StreamingPreferences.VCC_FORCE_AV1
+                    text: qsTr("AV1 offers better quality at the same bitrate, but requires an Apollo/Sunshine host with an AV1-capable GPU (e.g. NVIDIA RTX 40, AMD RX 7000, Intel Arc). If streaming fails or falls back, choose \"Automatic\".")
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                    color: "#80A0C0"
+                    topPadding: 4
                 }
 
                 // Preferred renderer backend
@@ -1993,12 +2238,124 @@ Flickable {
                     checked: StreamingPreferences.compactPerformanceOverlay
                     onCheckedChanged: {
                         StreamingPreferences.compactPerformanceOverlay = checked
+                    id: perfOverlayShowClock
+                    width: parent.width
+                    text: qsTr("Show clock in the performance overlay")
+                    font.pointSize: 12
+                    enabled: showPerformanceOverlay.checked
+                    checked: StreamingPreferences.perfOverlayShowClock
+                    onCheckedChanged: {
+                        StreamingPreferences.perfOverlayShowClock = checked
                     }
 
                     ToolTip.delay: 1000
                     ToolTip.timeout: 5000
                     ToolTip.visible: hovered
                     ToolTip.text: qsTr("Show the stats as a single compact line (fps, resolution, latency, dropped frames) instead of the full multi-line block — easier to read on a handheld screen.")
+                    ToolTip.text: qsTr("Add a wall-clock time (HH:MM:SS) line to the top of the performance overlay.") + "\n\n" +
+                                  qsTr("Useful on a handheld in Game Mode, where the system clock is hidden while streaming.")
+                }
+
+                Label {
+                    width: parent.width
+                    id: perfOverlayTextSizeTitle
+                    text: qsTr("Performance overlay text size")
+                    font.pointSize: 12
+                    wrapMode: Text.Wrap
+                    visible: showPerformanceOverlay.checked
+                }
+
+                AutoResizingComboBox {
+                    id: perfOverlayTextSizeComboBox
+                    visible: showPerformanceOverlay.checked
+                    textRole: "text"
+                    model: ListModel {
+                        id: perfOverlayTextSizeListModel
+                        ListElement {
+                            text: qsTr("Small")
+                            val: StreamingPreferences.PERF_TEXT_SMALL
+                        }
+                        ListElement {
+                            text: qsTr("Normal")
+                            val: StreamingPreferences.PERF_TEXT_NORMAL
+                        }
+                        ListElement {
+                            text: qsTr("Large")
+                            val: StreamingPreferences.PERF_TEXT_LARGE
+                        }
+                    }
+                    Component.onCompleted: {
+                        var saved = StreamingPreferences.perfOverlayTextSize
+                        currentIndex = 0
+                        for (var i = 0; i < perfOverlayTextSizeListModel.count; i++) {
+                            if (perfOverlayTextSizeListModel.get(i).val === saved) {
+                                currentIndex = i
+                                break
+                            }
+                        }
+                    }
+                    // ::onActivated only fires on human-driven index changes
+                    onActivated: {
+                        StreamingPreferences.perfOverlayTextSize = perfOverlayTextSizeListModel.get(currentIndex).val
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Adjust the size of the performance overlay text. Takes effect the next time you start a stream.")
+                }
+
+                Label {
+                    width: parent.width
+                    id: perfOverlayPositionTitle
+                    text: qsTr("Performance overlay position")
+                    font.pointSize: 12
+                    wrapMode: Text.Wrap
+                    visible: showPerformanceOverlay.checked
+                }
+
+                AutoResizingComboBox {
+                    id: perfOverlayPositionComboBox
+                    visible: showPerformanceOverlay.checked
+                    textRole: "text"
+                    model: ListModel {
+                        id: perfOverlayPositionListModel
+                        ListElement {
+                            text: qsTr("Top left")
+                            val: StreamingPreferences.POS_TOP_LEFT
+                        }
+                        ListElement {
+                            text: qsTr("Top right")
+                            val: StreamingPreferences.POS_TOP_RIGHT
+                        }
+                        ListElement {
+                            text: qsTr("Bottom left")
+                            val: StreamingPreferences.POS_BOTTOM_LEFT
+                        }
+                        ListElement {
+                            text: qsTr("Bottom right")
+                            val: StreamingPreferences.POS_BOTTOM_RIGHT
+                        }
+                    }
+                    Component.onCompleted: {
+                        var saved = StreamingPreferences.perfOverlayPosition
+                        currentIndex = 0
+                        for (var i = 0; i < perfOverlayPositionListModel.count; i++) {
+                            if (perfOverlayPositionListModel.get(i).val === saved) {
+                                currentIndex = i
+                                break
+                            }
+                        }
+                    }
+                    // ::onActivated only fires on human-driven index changes
+                    onActivated: {
+                        StreamingPreferences.perfOverlayPosition = perfOverlayPositionListModel.get(currentIndex).val
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Choose which corner of the screen the performance overlay appears in.")
                 }
             }
         }
@@ -2019,6 +2376,54 @@ Flickable {
                     width: parent.width
                 }
 
+                CheckBox {
+                    id: preferTailscaleCheck
+                    width: parent.width
+                    text: qsTr("Prefer Tailscale addresses for remote play")
+                    font.pointSize: 12
+                    checked: StreamingPreferences.preferTailscale
+                    onCheckedChanged: {
+                        StreamingPreferences.preferTailscale = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("When connecting to a host, try its Tailscale address (100.64.x.x or a *.ts.net MagicDNS name) before other addresses.") + "\n\n" +
+                                  qsTr("Useful for remote play over your tailnet. Has no effect if the host has no Tailscale address.")
+                }
+
+                // Vibemis (P3.7): in-app entry point to set up Tailscale for remote play. One click
+                // opens the setup guide; the one-command script scripts/setup-tailscale.sh does the
+                // install + login. Pair with Settings -> "Prefer Tailscale addresses".
+                Label {
+                    width: parent.width
+                    text: qsTr("Remote play (stream from anywhere): set up Tailscale, then enable \"Prefer Tailscale addresses\" above.")
+                    font.pointSize: 10
+                    wrapMode: Text.Wrap
+                    topPadding: 6
+                }
+                Row {
+                    spacing: 8
+                    Button {
+                        text: qsTr("Set up Tailscale")
+                        onClicked: Qt.openUrlExternally("https://tailscale.com/kb/installation")
+                        visible: SystemProperties.hasBrowser
+                    }
+                    Button {
+                        text: qsTr("One-command setup (guide)")
+                        onClicked: Qt.openUrlExternally("https://github.com/navyas321/vibemis/blob/vibemis-main/scripts/setup-tailscale.sh")
+                        visible: SystemProperties.hasBrowser
+                    }
+                }
+                Label {
+                    width: parent.width
+                    text: qsTr("Tip: on SteamOS, run scripts/setup-tailscale.sh for a one-command, no-sudo setup.")
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                    color: "#aaaaaa"
+                }
+
                 // Note about Server Commands
                 Label {
                     width: parent.width
@@ -2027,6 +2432,135 @@ Flickable {
                     wrapMode: Text.Wrap
                     color: "#aaaaaa"
                     topPadding: 10
+                }
+            }
+        }
+
+        // Vibemis: read-only System Information panel. Surfaces the same environment facts the
+        // headless `vibemis selftest` reports, so a human (or a bug report) can see version,
+        // platform, and capability at a glance. Pure QML over the already-exposed SystemProperties.
+        GroupBox {
+            id: systemInfoGroupBox
+            width: (parent.width - (parent.leftPadding + parent.rightPadding))
+            padding: 12
+            title: "<font color=\"skyblue\">" + qsTr("System Information") + "</font>"
+            font.pointSize: 12
+
+            Column {
+                anchors.fill: parent
+                spacing: 6
+
+                Repeater {
+                    width: parent.width
+                    model: [
+                        { k: qsTr("Vibemis version"), v: SystemProperties.versionString },
+                        { k: qsTr("Architecture"),    v: SystemProperties.friendlyNativeArchName },
+                        { k: qsTr("Steam Deck"),      v: SystemProperties.isSteamDeck ? qsTr("Yes") : qsTr("No") },
+                        { k: qsTr("Display server"),  v: SystemProperties.isRunningWayland ? (SystemProperties.isRunningXWayland ? "XWayland" : "Wayland") : "X11" },
+                        { k: qsTr("Hardware decode"), v: SystemProperties.hasHardwareAcceleration ? qsTr("Available") : qsTr("Not available") },
+                        { k: qsTr("HDR support"),     v: SystemProperties.supportsHdr ? qsTr("Yes") : qsTr("No") },
+                        { k: qsTr("Max resolution"),  v: SystemProperties.maximumResolution.width + "×" + SystemProperties.maximumResolution.height }
+                    ]
+                    delegate: RowLayout {
+                        width: systemInfoGroupBox.availableWidth
+                        spacing: 8
+                        Label {
+                            text: modelData.k
+                            font.pointSize: 11
+                            color: "#aaaaaa"
+                            Layout.preferredWidth: 200
+                        }
+                        Label {
+                            text: modelData.v
+                            font.pointSize: 11
+                            Layout.fillWidth: true
+                            wrapMode: Text.Wrap
+                            textFormat: Text.PlainText
+                        }
+                    }
+                }
+
+                Label {
+                    width: parent.width
+                    text: qsTr("Useful when filing a bug report. The headless 'vibemis selftest' command reports the same kind of information for automated checks.")
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                    color: "#aaaaaa"
+                    topPadding: 6
+                }
+            }
+        }
+
+        GroupBox {
+            id: aboutGroupBox
+            width: (parent.width - (parent.leftPadding + parent.rightPadding))
+            padding: 12
+            title: "<font color=\"skyblue\">" + qsTr("About") + "</font>"
+            font.pointSize: 12
+
+            Column {
+                anchors.fill: parent
+                spacing: 6
+
+                Label {
+                    width: parent.width
+                    text: qsTr("Vibemis %1").arg(SystemProperties.versionString)
+                    font.pointSize: 12
+                    font.bold: true
+                    wrapMode: Text.Wrap
+                }
+                Label {
+                    width: parent.width
+                    text: qsTr("The actively maintained Apollo / Vibepollo game-streaming client for Linux and SteamOS.")
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                    color: "#aaaaaa"
+                }
+                Label {
+                    width: parent.width
+                    text: "<a href=\"https://github.com/navyas321/vibemis\">github.com/navyas321/vibemis</a>"
+                    onLinkActivated: Qt.openUrlExternally(link)
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                    color: "#aaaaaa"
+                }
+            }
+        }
+
+        // Vibemis: Help & Links — quick access to docs/support. Only shown when a browser is
+        // available (SystemProperties.hasBrowser). Uses Qt.openUrlExternally so it works in
+        // Desktop Mode; in Game Mode the buttons simply do nothing if no browser is present.
+        GroupBox {
+            id: helpLinksGroupBox
+            visible: SystemProperties.hasBrowser
+            width: (parent.width - (parent.leftPadding + parent.rightPadding))
+            padding: 12
+            title: "<font color=\"skyblue\">" + qsTr("Help & Links") + "</font>"
+            font.pointSize: 12
+
+            Column {
+                anchors.fill: parent
+                spacing: 8
+
+                Label {
+                    width: parent.width
+                    text: qsTr("Vibemis is the Linux/SteamOS client for Apollo & Sunshine hosts. These open in your browser.")
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                    color: "#aaaaaa"
+                }
+
+                Button {
+                    text: qsTr("Vibemis on GitHub")
+                    onClicked: Qt.openUrlExternally("https://github.com/navyas321/vibemis")
+                }
+                Button {
+                    text: qsTr("Install guide (README)")
+                    onClicked: Qt.openUrlExternally("https://github.com/navyas321/vibemis#readme")
+                }
+                Button {
+                    text: qsTr("Remote play over Tailscale — setup")
+                    onClicked: Qt.openUrlExternally("https://tailscale.com/kb/installation")
                 }
             }
         }
