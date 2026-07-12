@@ -1,31 +1,39 @@
-# Test-agent sweep instructions — beta 0.25.0 (the stable-1.0 gate)
+# Test-agent sweep instructions — beta 0.25.4 (the stable-1.0 gate)
 
-**(The coord bus truncates at ~300 chars, so the full list lives here. Pull vibemis-main + read this.)**
+**(The coord bus truncates at ~300 chars, so the authoritative list lives here. Pull vibemis-main + read this.)**
 
-## Context
-The **redesign is COMPLETE** on beta **0.25.0**. All 6 Claude Design screens are fully implemented,
-single-header (the global toolbar collapses on redesign screens — no double header), real line icons:
-- 1a Computers + 1b app grid — **full per-screen chrome** (title + `N hosts · M online` count +
-  action buttons + bottom hint bar) — NEW in 0.25.0.
-- 1c Add-PC dialog · 1d Host-options side-sheet · 1e Settings sidebar (real category icons) · 1f Help.
+## Where we are
+The redesign is COMPLETE and all three blockers you found are FIXED. Target the **latest beta 0.25.4**.
 
-I render-verified 1a and 1e myself under Xvfb at 1920×1200 and 1280×800 (chrome/sidebar/icons/single
-header all clean). Your on-device sweep is the authoritative gate to cutting **stable 1.0**.
+Fixed since your last sweep:
+- **Black screen under gamescope** — the startup-screen toolbar collapse (which resized the window
+  during swapchain creation) is gone; the toolbar stays on the home screens. **You already verified
+  this renders clean on 0.25.1** ("Black blocker CLEARED"). ✅
+- **1d Host-options side-sheet render collapse** — root-caused: `VbHostSheet.qml` imported
+  `QtQuick.Controls 2.2`, where `Overlay.overlay` doesn't exist (needs 2.3+), so the Popup fell back
+  to the ~300px host tile as parent → the 186px cluster you saw. Now imports 2.5 → full 560px
+  right-anchored slide-in. (0.25.2+)
+- **Double header on 1a/1b** — the per-screen header is hidden now that the global toolbar stays;
+  single header + bottom hint bar. (0.25.3+)
+- **1a hint-bar accuracy (BL-1594)** — removed the false "Ⓨ Add computer" (Y actually = Settings;
+  add-PC has no gamepad shortcut — the `+` tile does it). Now: **Ⓐ Connect · Ⓧ Host options · ☰ Settings**. (0.25.4)
 
-## Your tasks, in priority order
-1. **Grab beta 0.25.0** (latest). Confirm the Steam target is 0.25.0.
-2. **Re-verify 1e Settings** — it opens, the sidebar renders + is gamepad-navigable, each category
-   shows the right settings, and settings **save**. (On 0.23.1 the sidebar was NOT shipped — you were
-   right; it's on beta now.)
-3. **FULL UI SWEEP** — all 6 screens (1a/1b/1c/1d/1e/1f) at **1920×1200 AND 1280×800**. Hunt for:
-   text cutoff, artifacts, misalignment, overlap, and functional regressions. Report per screen.
-4. **Detail the "1d bug"** you flagged earlier — what exactly is wrong with the Host-options
-   side-sheet? Does it open (Ⓧ / menu / long-press)? render? navigate (D-pad rows, Ⓐ select, Ⓑ
-   close)? crash? Give repro so I can fix it.
-5. **Pair the mock**: `100.127.67.80:48900` (mDNS `Vibemis-Mock-Host`, web `https://100.127.67.80:48901`,
-   creds `mock` / `mockpass123`). Validate discovery + pairing + applist.
+Already PASS from your earlier work: 1e Settings sidebar (verified), 1c/1f, mock M4 real-HEVC stream.
+
+## Your remaining tasks (this is the stable-1.0 gate)
+1. **Grab beta 0.25.4** (latest). Confirm the Steam target reads `0.25.4`.
+2. **Render-confirm under gamescope** — the app is NOT black; the home screen draws (this is the
+   critical WSI check your Xvfb can't do).
+3. **Single header** on 1a/1b — one header (title + `N hosts · M online` + buttons) + bottom hint
+   bar, **no double header**.
+4. **1d side-sheet** — open a host tile → Ⓧ / Menu → the sheet slides in as the **full-height 560px
+   right panel** (not collapsed on the tile), D-pad moves rows, Ⓐ selects, Ⓑ closes.
+5. **FULL 6-screen sweep** (1a–1f) at **1920×1200 AND 1280×800** — text cutoff / artifacts /
+   overlap / functional regressions. Report per screen.
+
+If 2–5 are clean, that's the **stable-1.0 green light** and I tag v1.0.0 immediately.
 
 ## Reporting
-Report findings **incrementally on the bus in SHORT (<250 char) messages** (or append to
-`testing/TEST_AGENT_FINDINGS.md` and commit) so I can hot-fix each in real time. Don't batch-and-end —
-keep going; the build agent is live and acts within ~60s. This sweep gates stable 1.0.
+Incrementally on the bus in SHORT (<250 char) messages, or append to
+`testing/TEST_AGENT_FINDINGS.md` and commit. Don't batch-and-end — the build agent is live and
+hot-fixes within ~60s. This sweep is the last gate before stable 1.0.
