@@ -2455,6 +2455,16 @@ Item {
                 anchors.fill: parent
                 spacing: 5
 
+                // Redesign 1e / BL-1562: expose the (previously hidden) gamepad remapping screen.
+                Button {
+                    id: gamepadMapButton
+                    text: qsTr("Configure gamepad mapping…")
+                    onClicked: navigateTo("qrc:/gui/GamepadMapper.qml", "GamepadMapper")
+                    ToolTip.text: qsTr("Remap or calibrate connected controllers (paddles, face buttons, sticks).")
+                    ToolTip.delay: 1000
+                    ToolTip.visible: hovered
+                }
+
                 Label {
                     width: parent.width
                     id: quickMenuComboTitle

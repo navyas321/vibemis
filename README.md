@@ -191,10 +191,10 @@ Each release ships a single **`.AppImage`** — download and double-click; nothi
 | Tier | When | Use |
 |---|---|---|
 | 🔬 **Alpha** | Every push to a `test<N>-*` feature branch | Hardware test cycles during development |
-| 🧪 **Beta** | Every PR merged into `vibemis-main` | Regular use — current recommended build |
-| ✅ **Release** | Explicit milestone | Verified stable |
+| 🧪 **Beta** | Every PR merged into `vibemis-main` | Latest features; may change between releases |
+| ✅ **Release** | Milestone (1.0.0+) | **Recommended** — verified stable |
 
-**[→ Download latest beta](https://github.com/navyas321/vibemis/releases/latest)**
+**[→ Download the latest release](https://github.com/navyas321/vibemis/releases/latest)**
 
 ---
 
