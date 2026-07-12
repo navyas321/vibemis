@@ -60,7 +60,13 @@ void ClipboardManager::loadSettings()
 
 ClipboardManager::~ClipboardManager()
 {
-    disconnect();
+    // test83 (review fix R1#13): don't emit connectionChanged/apolloSupportChanged from
+    // the destructor — QML bindings could re-enter a half-destroyed object. Just null the
+    // connection state directly.
+    m_computer = nullptr;
+    m_http = nullptr;
+    m_syncInProgress = false;
+    m_connected = false;
     if (s_instance == this) {
         s_instance = nullptr;
     }
