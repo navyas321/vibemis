@@ -9,7 +9,7 @@ Moonlight Qt and Artemis (Apollo's extended protocol), tuned to pair with the **
 ### A complete gamepad-first redesign
 The whole UI was redesigned from a Claude Design prototype and implemented faithfully in Qt6/QML
 (dark theme, 1920×1200 canvas that scales cleanly to 1280×800), on a single design-token system:
-- **Computers** — rich host cards (online-pulse status pill, host-type badge, latency/transport),
+- **Computers** — rich host cards (online-pulse status pill, host-type badge),
   a per-screen header with a live `N hosts · M online` count, and a controller hint bar.
 - **App grid** — larger tiles with a green RESUME badge for the running app.
 - **Add-PC dialog**, **Host-options side-sheet** (replaces the old right-click menu), **Settings**
