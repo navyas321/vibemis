@@ -202,6 +202,54 @@ release mirror; cosmetic rename + trailer strip; authorship-only history scrub (
 "Newer researched features" overlapped P3.8 (Android parity) — the two are now the single combined
 backlog under **P3.8** above. (Hardware-decode hint shipped as test53; UI accent stays under P3.9.)
 
+## P3.19 — Theme-token migration waves (P3.17 step 3, concretized)  🔵 IN PROGRESS
+From the test agent's THEME-AUDIT.md (PR #147): Theme.qml tokens exist (test73) but no page consumes
+them. Migrate one page per test PR, no behavior change:
+- **Wave 1 (test79):** PcView + AppView + a Material bridge in main.qml (accent/background from
+  tokens) — the biggest visual divergence.
+- **Wave 2:** SettingsView (17 literals) + ClipboardSettings + Toast — AFTER test23/24/40 land
+  (they touch SettingsView; avoid conflicts).
+- **Wave 3:** QuickMenu + ServerCommands literal alignment — AFTER test29/33/47 land.
+- Verification: test agent re-screenshots every page under gamescope-emulate and diffs vs the audit zip.
+
+## P3.20 — On-screen text-send (Quick Menu)  🔵 NEXT (P3.8 parity item)
+Quick Menu "Type text" field → `LiSendUtf8TextEvent` — the OSK gap on keyboard-less handhelds.
+Stacks on the (merged) Quick Menu; keyboard input into the offscreen QML field arrives via the
+existing injectKey bridge + a focused TextField; gamepad text entry deferred (needs an on-screen
+keyboard — separate phase).
+
+## P3.21 — Auto-reconnect on stream drop  🔵 PLANNED (P3.8 parity item)
+Bounded retry (e.g. 3 attempts, backoff) after an unexpected `Connection terminated`, preserving
+the session config. Touches session teardown — medium risk; design the state machine first, gate
+behind a setting (default on, per Android parity).
+
+## P3.22 — Motion (gyro) forwarding, slice 2  🔵 PLANNED (P3.16 completion)
+test64 shipped capability detection + setting. Slice 2 = actually forward SDL sensor data via
+`LiSendControllerMotionEvent` when `forwardMotionControls` is on. Needs on-device verification of
+host DS4 mapping (device-gated tiers).
+
+## P3.23 — Touchscreen passthrough  🔵 PLANNED (P3.16 sibling)
+Forward `SDL_FINGERDOWN/UP/MOTION` via `LiSendTouchEvent` (ClassicOldSong fork symbols confirmed in
+the submodule wrapper). High value on the Legion Go touchscreen; gate behind a setting.
+
+## P3.24 — Adaptive bitrate runtime stepping (P3.12 slice 2)  🔵 PLANNED
+test62 shipped the setting + CONN_STATUS_POOR observation log. Slice 2 = conservative step-down/
+slow-recover policy at runtime (gated on moonlight-common-c runtime bitrate support — re-check the
+submodule for `LiSetVideoBitrate`-class symbols before starting; if absent, document and park the
+phase as upstream-gated, do NOT hack the control stream).
+
+## P4.1 — Stable 1.0 criteria  🔵 DEFINED (cut when all hold)
+1. TEST_CHECKLIST fully drained (all rows ☑, including test76-followup + the deferred-verification ledger triage).
+2. Zero open freeze-class bugs; Quick Menu content stack verified on-device in Game Mode.
+3. README + PHASE_STATUS current; release pipeline AppImage-only (done 2026-07-12).
+4. P4.0 repo-hygiene split executed (agent meta moved to a private repo).
+5. Cut `release/1.0` → stable, tagged from a beta that soaked ≥1 week on the device.
+
+## P4.2 — Upstream rebase cadence  🔵 STANDING
+Quarterly: merge upstream moonlight-qt, re-check the moonlight-common-c wrapper for new symbols the
+ClassicOldSong fork lacks (rswrapper/nanors/LiSendControllerTouchEvent2/LI_CCAP_DUAL_TOUCHPAD/
+LiGetMicroseconds), full clean rebuild + one regression cycle on-device.
+
 ---
 
 ## Why PR numbers "jump" phases (and aren't sequential per phase)
