@@ -50,6 +50,12 @@
 #include "backend/clipboardmanager.h"
 #include "backend/servercommandmanager.h"
 #include "backend/quickmenumanager.h"
+#include "backend/appprofilemanager.h"
+
+#include <cstdio>
+#include <QSettings>
+#include <QJsonObject>
+#include <QJsonDocument>
 
 #if defined(Q_OS_WIN32)
 #define IS_UNSPECIFIED_HANDLE(x) ((x) == INVALID_HANDLE_VALUE || (x) == NULL)
@@ -590,6 +596,15 @@ int main(int argc, char *argv[])
 
     QGuiApplication app(argc, argv);
 
+    // Vibemis: the Qt Quick Controls Material style renders button text in ALL CAPS by default
+    // (e.g. the bitrate "USE DEFAULT (30 MBPS)" button), which looks off. Force mixed case for the
+    // whole app so button labels read naturally ("Use Default (30 Mbps)").
+    {
+        QFont vibemisAppFont = app.font();
+        vibemisAppFont.setCapitalization(QFont::MixedCase);
+        app.setFont(vibemisAppFont);
+    }
+
 #ifndef STEAM_LINK
     // Force use of the KMSDRM backend for SDL when using Qt platform plugins
     // that directly draw to the display without a windowing system.
@@ -627,6 +642,78 @@ int main(int argc, char *argv[])
         break;
     default:
         break;
+    }
+
+    // Vibemis: `vibemis selftest [--json]` — a scriptable, non-destructive launcher smoke test for
+    // the Legion Go test agent. Runs sanity checks on the preferences subsystem (no host, stream,
+    // GUI window, or SDL video required) and exits 0 (all PASS) / 1 (any FAIL). Runs before SDL/GUI
+    // init so it works headlessly in any session. See docs/TEST_AUTOMATION.md.
+    //   default : one "SELFTEST <name>: PASS|FAIL" line per check + a "SELFTEST RESULT: …" summary
+    //   --json  : a single compact JSON object {"result","failures","checks":{…}} for parsing
+    if (commandLineParserResult == GlobalCommandLineParser::SelfTestRequested) {
+        const bool jsonOutput = app.arguments().contains("--json");
+        StreamingPreferences* p = StreamingPreferences::get();
+
+        QVector<QPair<QString, bool>> results;
+        auto check = [&](const char* name, bool ok) {
+            results.append(qMakePair(QString::fromLatin1(name), ok));
+        };
+
+        check("prefs-load", p != nullptr);
+        check("default-bitrate", StreamingPreferences::getDefaultBitrate(1920, 1080, 60, false) > 0);
+        check("display-mode", p->width > 0 && p->height > 0 && p->fps > 0);
+        check("bitrate-positive", p->bitrateKbps > 0);
+        check("audio-config-range",
+              p->audioConfig >= StreamingPreferences::AC_STEREO &&
+              p->audioConfig <= StreamingPreferences::AC_71_SURROUND);
+
+        // Non-destructive QSettings round-trip in an isolated group so we never touch real
+        // preferences or paired-host data: write a probe, read it back, then delete the group.
+        bool settingsWritable = false;
+        bool settingsRoundTrip = false;
+        {
+            QSettings st;
+            st.beginGroup("vibemis-selftest");
+            st.setValue("probe", 0x5A5A);
+            st.sync();
+            settingsWritable = (st.status() == QSettings::NoError);
+            settingsRoundTrip = (st.value("probe").toInt() == 0x5A5A);
+            st.remove(""); // clear only this probe group
+            st.endGroup();
+            st.sync();
+        }
+        check("settings-writable", settingsWritable);
+        check("settings-roundtrip", settingsRoundTrip);
+
+        int failures = 0;
+        for (const auto& r : results) {
+            if (!r.second) {
+                failures++;
+            }
+        }
+
+        if (jsonOutput) {
+            QJsonObject checksObj;
+            for (const auto& r : results) {
+                checksObj.insert(r.first, r.second);
+            }
+            QJsonObject root;
+            root.insert("result", failures == 0 ? "PASS" : "FAIL");
+            root.insert("failures", failures);
+            root.insert("checks", checksObj);
+            fprintf(stdout, "%s\n",
+                    QJsonDocument(root).toJson(QJsonDocument::Compact).constData());
+        }
+        else {
+            for (const auto& r : results) {
+                fprintf(stdout, "SELFTEST %s: %s\n",
+                        r.first.toUtf8().constData(), r.second ? "PASS" : "FAIL");
+            }
+            fprintf(stdout, "SELFTEST RESULT: %s (%d failure(s))\n",
+                    failures == 0 ? "PASS" : "FAIL", failures);
+        }
+        fflush(stdout);
+        return failures == 0 ? 0 : 1;
     }
 
     SDL_version compileVersion;
@@ -743,6 +830,15 @@ int main(int argc, char *argv[])
                                                [](QQmlEngine*, QJSEngine*) -> QObject* {
                                                    return new QuickMenuManager();
                                                });
+    qmlRegisterSingletonType<AppProfileManager>("AppProfileManager", 1, 0,
+                                                "AppProfileManager",
+                                                [](QQmlEngine*, QJSEngine*) -> QObject* {
+                                                    return new AppProfileManager();
+                                                });
+
+    // Vibemis design-token singleton (P3.17) — a QML-only singleton (pragma Singleton in
+    // gui/Theme.qml). Lets QML reference Theme.accent / Theme.spacingM / etc. See docs/DESIGN_SYSTEM.md.
+    qmlRegisterSingletonType(QUrl(QStringLiteral("qrc:/gui/Theme.qml")), "Theme", 1, 0, "Theme");
 
     // Create the identity manager on the main thread
     IdentityManager::get();
@@ -753,9 +849,11 @@ int main(int argc, char *argv[])
     // Our icons are styled for a dark theme, so we do not allow the user to override this
     qputenv("QT_QUICK_CONTROLS_MATERIAL_THEME", "Dark");
 
-    // These are defaults that we allow the user to override
+    // These are defaults that we allow the user to override.
+    // Vibemis brand accent: teal/cyan (#00CCCC), matching the in-stream Quick Menu accent,
+    // for a consistent identity distinct from upstream's purple. Still overridable via env.
     if (!qEnvironmentVariableIsSet("QT_QUICK_CONTROLS_MATERIAL_ACCENT")) {
-        qputenv("QT_QUICK_CONTROLS_MATERIAL_ACCENT", "Purple");
+        qputenv("QT_QUICK_CONTROLS_MATERIAL_ACCENT", "#00CCCC");
     }
     if (!qEnvironmentVariableIsSet("QT_QUICK_CONTROLS_MATERIAL_VARIANT")) {
         qputenv("QT_QUICK_CONTROLS_MATERIAL_VARIANT", "Dense");

@@ -310,6 +310,11 @@ void SdlInputHandler::handleControllerButtonEvent(SDL_ControllerButtonEvent* eve
             case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: qtKey = Qt::Key_Right;  break;
             case SDL_CONTROLLER_BUTTON_A:          qtKey = Qt::Key_Return; break;
             case SDL_CONTROLLER_BUTTON_B:          qtKey = Qt::Key_Escape; break;
+            // test77: Back/Select(View) and Start also close the menu and return to the
+            // game. Back was previously swallowed unmapped, which left gamepad-only users
+            // (Game Mode) with no discoverable way out of the menu — it read as a freeze.
+            case SDL_CONTROLLER_BUTTON_BACK:       qtKey = Qt::Key_Escape; break;
+            case SDL_CONTROLLER_BUTTON_START:      qtKey = Qt::Key_Escape; break;
             default: break;
             }
             if (qtKey != Qt::Key_unknown) {
@@ -414,9 +419,11 @@ void SdlInputHandler::handleControllerButtonEvent(SDL_ControllerButtonEvent* eve
         event.quit.timestamp = SDL_GetTicks();
         SDL_PushEvent(&event);
 
-        // Clear buttons down on this gamepad
+        // Clear buttons down on this gamepad — locally too (test77), otherwise the
+        // held combo is re-sent to the host by the next axis/state update.
         LiSendMultiControllerEvent(state->index, m_GamepadMask,
                                    0, 0, 0, 0, 0, 0, 0);
+        state->buttons = 0;
         return;
     }
 
@@ -429,9 +436,11 @@ void SdlInputHandler::handleControllerButtonEvent(SDL_ControllerButtonEvent* eve
         Session::get()->getOverlayManager().setOverlayState(Overlay::OverlayDebug,
                                                             !Session::get()->getOverlayManager().isOverlayEnabled(Overlay::OverlayDebug));
 
-        // Clear buttons down on this gamepad
+        // Clear buttons down on this gamepad — locally too (test77), otherwise the
+        // held combo is re-sent to the host by the next axis/state update.
         LiSendMultiControllerEvent(state->index, m_GamepadMask,
                                    0, 0, 0, 0, 0, 0, 0);
+        state->buttons = 0;
         return;
     }
 
@@ -443,9 +452,12 @@ void SdlInputHandler::handleControllerButtonEvent(SDL_ControllerButtonEvent* eve
         // Toggle the quick menu
         Session::get()->toggleQuickMenu();
 
-        // Clear buttons down on this gamepad
+        // Clear buttons down on this gamepad — locally too (test77). Without the local
+        // clear the held Select+L1+R1+Y was re-sent to the host on every axis update
+        // (stuck buttons in-game) while the menu sat open.
         LiSendMultiControllerEvent(state->index, m_GamepadMask,
                                    0, 0, 0, 0, 0, 0, 0);
+        state->buttons = 0;
         return;
     }
 
@@ -618,6 +630,21 @@ void SdlInputHandler::handleControllerDeviceEvent(SDL_ControllerDeviceEvent* eve
 
         state->controller = controller;
         state->jsId = SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(state->controller));
+
+        // Vibemis (P3.16): when motion forwarding is enabled, report whether this controller exposes
+        // gyro/accelerometer sensors. This is the observation-only first slice.
+        // TODO(P3.16): if sensors are present and host support is confirmed, enable them with
+        // SDL_GameControllerSetSensorEnabled() and forward samples via LiSendControllerMotionEvent().
+#if SDL_VERSION_ATLEAST(2, 0, 14)
+        if (StreamingPreferences::get()->forwardMotionControls) {
+            bool hasGyro = SDL_GameControllerHasSensor(controller, SDL_SENSOR_GYRO);
+            bool hasAccel = SDL_GameControllerHasSensor(controller, SDL_SENSOR_ACCEL);
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                        "[motion] Controller '%s' sensors: gyro=%s accel=%s (forwarding pending host support — TODO P3.16)",
+                        SDL_GameControllerName(controller) ? SDL_GameControllerName(controller) : "?",
+                        hasGyro ? "yes" : "no", hasAccel ? "yes" : "no");
+        }
+#endif
 
         hapticCaps = 0;
 #if SDL_VERSION_ATLEAST(2, 0, 18)
@@ -858,6 +885,13 @@ void SdlInputHandler::rumble(unsigned short controllerNumber, unsigned short low
         return;
     }
 
+    // Vibemis (P3.13): client-side "suppress controller rumble" switch. When enabled, drop
+    // host-driven rumble entirely (some users dislike rumble or want to save handheld battery).
+    // Apollo can also disable rumble host-side; this is the always-available client control.
+    if (StreamingPreferences::get()->suppressControllerRumble) {
+        return;
+    }
+
 #if SDL_VERSION_ATLEAST(2, 0, 9)
     if (m_GamepadState[controllerNumber].controller != nullptr) {
         SDL_GameControllerRumble(m_GamepadState[controllerNumber].controller, lowFreqMotor, highFreqMotor, 30000);
@@ -913,6 +947,11 @@ void SdlInputHandler::rumbleTriggers(uint16_t controllerNumber, uint16_t leftTri
 {
     // Make sure the controller number is within our supported count
     if (controllerNumber >= MAX_GAMEPADS) {
+        return;
+    }
+
+    // Vibemis (P3.13): see rumble() — same client-side suppression switch for trigger rumble.
+    if (StreamingPreferences::get()->suppressControllerRumble) {
         return;
     }
 

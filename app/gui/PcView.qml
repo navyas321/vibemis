@@ -199,6 +199,13 @@ CenteredGridView {
                     font.bold: true
                     enabled: false
                 }
+                MenuItem {
+                    // Vibemis (P3.13): Apollo per-client access level, when the host reports it.
+                    text: qsTr("Access: %1").arg(model.permissionSummary)
+                    visible: model.permissionSummary !== ""
+                    height: visible ? implicitHeight : 0
+                    enabled: false
+                }
                 NavigableMenuItem {
                     text: qsTr("View All Apps")
                     onTriggered: {

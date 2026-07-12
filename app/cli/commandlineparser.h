@@ -14,6 +14,7 @@ public:
         QuitRequested,
         PairRequested,
         ListRequested,
+        SelfTestRequested, // Vibemis: `vibemis selftest` — non-destructive launcher smoke test
     };
 
     GlobalCommandLineParser();

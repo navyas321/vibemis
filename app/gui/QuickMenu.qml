@@ -34,7 +34,13 @@ Rectangle {
     // Handle keyboard input for navigation
     Keys.onPressed: function(event) {
         if (event.key === Qt.Key_Escape) {
-            closeMenu()
+            // test77: from a submenu, Esc/B/Back returns to the main menu (matching the
+            // on-screen "← Back" button); from the main menu it resumes the game.
+            if (currentMenu !== "main") {
+                currentMenu = "main"
+            } else {
+                closeMenu()
+            }
         } else if (event.key === Qt.Key_Up) {
             menuListView.decrementCurrentIndex()
         } else if (event.key === Qt.Key_Down) {
@@ -130,9 +136,11 @@ Rectangle {
             }
         }
 
-        // Back/Close button
+        // Back/Close button. test77: name the action ("Resume Game") and show the GAMEPAD
+        // buttons that trigger it — the old "Close (Esc)" keyboard-only hint left
+        // controller users with no discoverable way back to the game.
         Button {
-            text: currentMenu === "main" ? qsTr("Close (Esc)") : qsTr("← Back")
+            text: currentMenu === "main" ? qsTr("Resume Game (Ⓑ / Back / Esc)") : qsTr("← Back (Ⓑ)")
             Layout.alignment: Qt.AlignHCenter
             onClicked: {
                 if (currentMenu === "main") {
