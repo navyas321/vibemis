@@ -65,3 +65,41 @@ I compare each shipped screen against its `previews/*.png` and report per-screen
 `TEST_AGENT_FINDINGS.md`. **Caveat:** headless-gamescope keyboard nav is unreliable this session (can capture
 the 1a landing screen without input; nav-gated screens need input) — so please **self-verify 1c–1f under Xvfb/
 real display** as you go; I'll confirm what I can capture and do the decisive 1a check under gamescope.
+(Confirmed this session: headless-gamescope keyboard AND uinput-mouse input both fail to reach the app —
+md5 deltas were only animated status dots. So runtime nav-verification of 1c–1f is on the build side.)
+
+---
+
+## FULL SOURCE AUDIT (2026-07-12) — refined 6-item gap map
+
+Read every redesign QML vs HANDOFF. **Refinement of the diagnosis above:** 1a's *chrome* (header/hint bar)
+IS converted; it's the **host CARD BODY** that was never redesigned. And **1b is already faithful** — the
+sparse placeholder look was the static MOCKUP (`previews/1b-app-grid.png`), not the shipped app.
+
+**Per-screen verdicts:** 1a NOT-CONVERTED (card body) · 1b FAITHFUL · 1c PARTIAL (buttons) · 1d FAITHFUL ·
+1e FAITHFUL · 1f FAITHFUL. Fonts PASS (Sora/Manrope bundled `app/fonts/*`, loaded `main.cpp:758-759`).
+Hint bar PASS (all screens).
+
+**Prioritized must-fix for stable 1.0:**
+1. **PcView host card (1a)** — replace the vertical `NavigableItemDelegate 300×320` (`PcView.qml:280-357`,
+   200×200 icon, centered name) with the horizontal ~430px card; ADD the missing "Paired · Full access"
+   access line + "4 ms · LAN"/"Last seen …" latency/transport lines (not rendered at all today). **CORE.**
+2. **Host-type badge (FAIL)** — only boolean `isApolloServer` (`nvcomputer.h:134`) which is true for ALL
+   non-GFE hosts, so: never emits VIBEPOLLO, and **mislabels Sunshine as "APOLLO"** (`PcView.qml:343`,
+   `VbHostSheet.qml:158`). Fix: expose a 3-way host type (data exists — `nvcomputer.h:119 apolloVersion`,
+   empty on Vibepollo / set on Apollo — just unused) → emit VIBEPOLLO / APOLLO / SUNSHINE correctly.
+3. **Verify toolbar-collapse fix fires at runtime** — working tree `main.qml:252-256` adds PcView/AppView to
+   `redesignScreen` (test107) via `qmltypeof(currentItem,"PcView")`; PcView's root type is `CenteredGridView`
+   so confirm the match resolves in Game Mode (else the blue toolbar returns). Shipped `origin/vibemis-main`
+   `main.qml:257` only matched Settings+Help → why 0.25.4 still shows blue.
+4. **Material accent leak** — `main.qml:40` `Material.accent = Theme.accent (#00CCCC)`; set it to
+   `VbTokens.accent (#2FC6D0)` so Settings controls + dialog buttons use the spec accent.
+5. **Add-PC buttons (1c)** — `main.qml:585` uses default `Dialog.Ok|Cancel`; render "Connect" (accent fill,
+   text `#08090B`) + neutral "Cancel" per spec.
+6. **Token cleanup** — migrate remaining `Theme.*` off-spec leaks: PcView pairing-PIN dialog
+   (`PcView.qml:749-801`), AppView round buttons (`AppView.qml:268,294`).
+
+**Bottom line:** 1b/1d/1e/1f faithful; 1c buttons-only; **the two real missing conversions are the 1a card
+and the host-type badge** — both must land in the one-pass correction, plus the accent leak + runtime toolbar
+verification. The maintainer's "app-grid real art + fill screen" ask appears already satisfied in code
+(`AppView.qml:209 model.boxart` + multi-col `CenteredGridView`) — flag for the maintainer, don't rebuild.
