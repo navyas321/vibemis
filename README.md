@@ -1,21 +1,24 @@
 # Vibemis
 
-**Vibemis** is a gamepad-first Linux game-streaming client for **SteamOS** and Linux handhelds. It's the Linux counterpart to [Artemis](https://github.com/wjbeckett/artemis) — forked from Artemis Qt and actively maintained — and it pairs with **[Vibepollo](https://github.com/navyas321/Vibepollo)**, its host-side counterpart. Client and host are built to work together: set up Vibepollo on your gaming PC, run Vibemis on your handheld, pair, and stream.
+**Vibemis** is a gamepad-first, actively-maintained game-streaming **client** for **SteamOS** and Linux handhelds. It takes the best of both sides of the Moonlight/Artemis world — [Moonlight Qt](https://github.com/moonlight-stream/moonlight-qt)'s solid Linux/handheld foundation and [Artemis](https://github.com/MobinYengejehi/Artemis)'s support for **Apollo**'s extended protocol — and pairs with **[Vibepollo](https://github.com/navyas321/Vibepollo)**, its host-side counterpart. Set up Vibepollo on your gaming PC, run Vibemis on your handheld, pair, and stream.
 
 **Built for SteamOS.** The primary target is SteamOS Game Mode (Gamescope) on AMD handhelds; every release is hardware-verified on a **Lenovo Legion Go S Z2** test device before it ships. It runs on any modern Linux desktop too.
 
-## Why Vibemis?
+## Why Vibemis? (the best of both worlds)
 
-Artemis Qt — the desktop client these extended features were built for — went dormant (August 2025) with an AppImage that no longer builds on current Mesa/glibc, leaving no maintained Linux client. Vibemis picks that up: forked from Artemis Qt, fixed for current SteamOS/Mesa/AMD hardware, and tuned for Vibepollo.
+Streaming clients in this world come in two flavors, and until now you couldn't get both on a Linux handheld:
 
-Beyond standard Moonlight streaming, the Vibepollo host adds clipboard sync, server command execution, OTP pairing, virtual display control, an in-stream Quick Menu, and per-client permission management — and Vibemis surfaces all of them on the handheld.
+- **[Moonlight Qt](https://github.com/moonlight-stream/moonlight-qt)** is the mainline open-source Qt **client** for PCs and handhelds — rock-solid and actively maintained — **but it speaks only the base GameStream/Sunshine protocol.** The extras that [Apollo](https://github.com/ClassicOldSong/Apollo) / Vibepollo hosts add (clipboard sync, server commands, OTP pairing, virtual display control, an in-stream Quick Menu, per-client permissions) simply don't work through it.
+- **[Artemis](https://github.com/MobinYengejehi/Artemis)** ("Moonlight Noir") is the **client** family that *does* speak those Apollo extensions. **Artemis for Android is active**, but the **desktop/Linux** build — [wjbeckett/artemis](https://github.com/wjbeckett/artemis), which Vibemis is forked from — **went dormant (Aug 2025)** with an AppImage that no longer builds on current Mesa/glibc. That left **no maintained Linux/handheld client with the Apollo features.**
 
-- **Actively-maintained Linux client** — the up-to-date Artemis-lineage client for SteamOS and Linux handhelds
+**Vibemis takes the best of both:** Moonlight Qt's current, well-supported Linux/handheld base **plus** the Apollo-protocol features from the Artemis lineage — actively maintained, fixed for current SteamOS/Mesa/AMD, gamepad-first, and tuned for the Vibepollo host.
+
+- **The Apollo features, on a maintained Linux handheld** — clipboard sync, server commands, OTP pairing, virtual display, in-stream Quick Menu, and per-client permissions, all surfaced on-device
 - **Works on current SteamOS** — VAAPI/Mesa compatibility fixes for AMD hardware; every cycle is verified on the Lenovo Legion Go S Z2 (including nested-Gamescope "Game Mode" runs)
 - **Tuned for Vibepollo** — pairing flow, clipboard auth, and SSL handling built for the Vibepollo host specifically
 - **Kept current** — merged with upstream moonlight-qt (May 2026), CI pipeline on every push
 
-> **Compatibility:** Vibemis pairs with **Vibepollo**, and also works with [Apollo](https://github.com/ClassicOldSong/Apollo) and vanilla Sunshine hosts (Vibepollo is an Apollo/Sunshine-lineage host). The extended Vibepollo/Apollo features light up automatically when the host supports them.
+> **Clients vs. hosts:** Vibemis, Moonlight Qt, and Artemis are **clients** (they run on your handheld/PC). They pair with a **host** on your gaming PC: **Vibepollo** (the counterpart Vibemis is tuned for), [Apollo](https://github.com/ClassicOldSong/Apollo), or vanilla [Sunshine](https://github.com/LizardByte/Sunshine). Apollo/Vibepollo are Sunshine-lineage hosts; their extended features light up automatically when the host supports them.
 
 ---
 
@@ -77,7 +80,7 @@ AppImage to a stable path with a clean `Vibemis` desktop entry, ready to Add to 
 - 10-point multitouch, gamepad with force feedback and motion controls (up to 16 players)
 - Pointer capture / direct mouse mode, system-wide keyboard shortcut passthrough
 
-### From Artemis Qt (Apollo protocol features)
+### From Artemis / Apollo (extended protocol features)
 
 - **Clipboard Sync** — bidirectional clipboard between client and host
 - **Server Commands** — trigger custom commands on the Apollo/Vibepollo host
@@ -252,7 +255,7 @@ bash scripts/build-appimage.sh
 
 ## Attribution
 
-- **[Artemis Qt](https://github.com/wjbeckett/artemis)** by [wjbeckett](https://github.com/wjbeckett) — the C++/QML desktop port of the Apollo extensions that Vibemis is forked from
+- **[Artemis (desktop / "Moonlight Noir")](https://github.com/wjbeckett/artemis)** by [wjbeckett](https://github.com/wjbeckett) — the C++/QML desktop client (a Moonlight-Qt-lineage build that speaks Apollo's extensions) that Vibemis is forked from; now dormant
 - **[Artemis Android](https://github.com/MobinYengejehi/Artemis)** by [MobinYengejehi](https://github.com/MobinYengejehi) — Android Apollo client whose features serve as a reference for Vibemis
 - **[Moonlight Qt](https://github.com/moonlight-stream/moonlight-qt)** by the [Moonlight Team](https://github.com/moonlight-stream) — the upstream streaming client this is built on
 - **[Apollo](https://github.com/ClassicOldSong/Apollo)** and **[Artemis Android](https://github.com/ClassicOldSong/moonlight-android)** by [ClassicOldSong](https://github.com/ClassicOldSong) — the Sunshine fork and Android client whose protocol extensions this client speaks
