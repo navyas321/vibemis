@@ -112,9 +112,10 @@ AppImage to a stable path with a clean `Vibemis` desktop entry, ready to Add to 
   context menu; the profile applies automatically at launch without touching global settings
 - **Auto-reconnect** *(opt-in)* — a dropped stream retries in place (3 attempts with backoff)
   instead of dumping you back to the game grid
-- **Gamepad-first redesign** *(rolling out)* — a unified dark design-token system (one
-  accent/surface/type language) with controller-first layouts, live across the Computers list,
-  app grid, Add-PC dialog, and in-stream Help
+- **Gamepad-first redesign** — a full controller-first UI on a unified dark design-token system
+  (one accent/surface/type language), across every screen: the Computers list (rich status cards +
+  live host count), app grid, Add-PC dialog, Host-options side-sheet, Settings (a category sidebar),
+  and in-stream Help — per-screen chrome, a single header, the accent focus-ring, and line icons
 
 ---
 
