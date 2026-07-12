@@ -840,6 +840,12 @@ int main(int argc, char *argv[])
     // gui/Theme.qml). Lets QML reference Theme.accent / Theme.spacingM / etc. See docs/DESIGN_SYSTEM.md.
     qmlRegisterSingletonType(QUrl(QStringLiteral("qrc:/gui/Theme.qml")), "Theme", 1, 0, "Theme");
 
+    // Vibemis redesign design tokens (P3.17/P3.18) — QML singleton mapping
+    // docs/design/redesign/tokens/vibemis-tokens.json. Referenced as VbTokens.accent etc.
+    // The Vb* reusable components (VbFocusRing/VbHintBar/VbBadge/VbStatusPill/VbCard) live
+    // in gui/ and are used via `import "."` from the redesigned screens.
+    qmlRegisterSingletonType(QUrl(QStringLiteral("qrc:/gui/VbTokens.qml")), "Vibemis.Redesign", 1, 0, "VbTokens");
+
     // Create the identity manager on the main thread
     IdentityManager::get();
 
