@@ -33,7 +33,7 @@ mkdir "$DEPLOY_FOLDER"
 mkdir "$INSTALLER_FOLDER"
 
 echo Configuring the project
-pushd $BUILD_FOLDER
+pushd "$BUILD_FOLDER"
 # Building with Wayland support will cause linuxdeploy to include libwayland-client.so in the AppImage.
 # Since we always use the host implementation of EGL, this can cause libEGL_mesa.so to fail to load due
 # to missing symbols from the host's version of libwayland-client.so that aren't present in the older
@@ -47,12 +47,12 @@ qmake6 $SOURCE_ROOT/vibemis.pro CONFIG+=disable-wayland CONFIG+=disable-libdrm C
 popd
 
 echo Compiling Vibemis in $BUILD_CONFIG configuration
-pushd $BUILD_FOLDER
+pushd "$BUILD_FOLDER"
 make -j$(nproc) $(echo "$BUILD_CONFIG" | tr '[:upper:]' '[:lower:]') || fail "Make failed!"
 popd
 
 echo Deploying to staging directory
-pushd $BUILD_FOLDER
+pushd "$BUILD_FOLDER"
 make install || fail "Make install failed!"
 popd
 
@@ -206,7 +206,7 @@ export QML_SOURCES_PATHS=$SOURCE_ROOT/app/gui
 export QMAKE=qmake6
 
 echo Creating AppImage
-pushd $INSTALLER_FOLDER
+pushd "$INSTALLER_FOLDER"
 # Vibemis: take upstream's modern linuxdeploy approach (linuxdeployqt is broken on glibc >= 2.36).
 VERSION=$VERSION $LINUXDEPLOY --appdir $DEPLOY_FOLDER \
   --library=/usr/local/lib/libSDL3.so.0 \

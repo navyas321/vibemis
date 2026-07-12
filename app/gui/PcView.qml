@@ -160,10 +160,13 @@ CenteredGridView {
         anchors.bottom: parent.bottom
         anchors.left: parent.left
         anchors.right: parent.right
+        // Hints reflect the ACTUAL launcher gamepad map (sdlgamepadkeynavigation.cpp,
+        // swapFaceButtons off): A=Return(connect), X=Menu(host options), Start(☰)=Hangup(settings).
+        // Add-computer has no button shortcut — the focusable "+" tile self-documents — so it is not
+        // listed here (previously mis-labelled as Ⓨ, which actually maps to Settings). See BL-1594.
         hints: [
             { glyph: "Ⓐ", label: qsTr("Connect") },
-            { glyph: "Ⓧ", label: qsTr("Host options") },
-            { glyph: "Ⓨ", label: qsTr("Add computer") }
+            { glyph: "Ⓧ", label: qsTr("Host options") }
         ]
         hintsRight: [ { glyph: "☰", label: qsTr("Settings") } ]
     }
