@@ -757,7 +757,7 @@ ApplicationWindow {
                 color: VbTokens.text
             }
             Label {
-                text: qsTr("Enter the host's IP address or hostname to pair and stream.")
+                text: qsTr("Enter the IP address or hostname of your host PC.")
                 font.family: VbTokens.fontBody
                 font.pixelSize: VbTokens.sizeBody
                 color: VbTokens.textDim

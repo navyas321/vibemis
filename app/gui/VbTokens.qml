@@ -1,5 +1,6 @@
 pragma Singleton
 import QtQuick 2.9
+import StreamingPreferences 1.0
 
 // Vibemis redesign design tokens — mapped 1:1 from docs/design/redesign/tokens/vibemis-tokens.json
 // (the Claude Design handoff, P3.17/P3.18). Dark theme only. Canvas 1920x1200 (Legion Go S),
@@ -22,7 +23,8 @@ QtObject {
 
     // Accent is swappable — one of the 4 curated values (index 0 = default #2FC6D0).
     readonly property var accentOptions:  ["#2FC6D0", "#7C8CF8", "#3ED598", "#F0A868"]
-    property int accentIndex: 0
+    // Bound to the saved preference (Settings > accent picker); persists across restarts.
+    property int accentIndex: StreamingPreferences.uiAccentIndex
     readonly property color accent:       accentOptions[accentIndex]
     readonly property color accentHi:     "#6ADDE7"  // accent gradient light stop / link hover
 
@@ -81,8 +83,8 @@ QtObject {
     readonly property int caretBlinkMs:  1000   // Add-PC input caret
     readonly property int sheetInMs:     220    // side-sheet slide-in
     readonly property color dialogScrim: Qt.rgba(4/255, 5/255, 7/255, 0.72)
-    readonly property color sheetScrim:  Qt.rgba(0, 0, 0, 0.60)
+    readonly property color sheetScrim:  Qt.rgba(4/255, 5/255, 7/255, 0.60)
 
     // ---- Global UI flags ----
-    property bool showHints: true               // gamepad hint-bar visibility
+    property bool showHints: StreamingPreferences.uiShowHints   // gamepad hint-bar visibility (Settings toggle)
 }

@@ -217,6 +217,9 @@ public:
     Q_PROPERTY(AudioConfig audioConfig MEMBER audioConfig NOTIFY audioConfigChanged)
     Q_PROPERTY(VideoCodecConfig videoCodecConfig MEMBER videoCodecConfig NOTIFY videoCodecConfigChanged)
     Q_PROPERTY(bool enableHdr MEMBER enableHdr NOTIFY enableHdrChanged)
+    // Vibemis redesign UI prefs: gamepad hint-bar visibility + accent color (index into the 4 token accents).
+    Q_PROPERTY(bool uiShowHints MEMBER uiShowHints NOTIFY uiShowHintsChanged)
+    Q_PROPERTY(int uiAccentIndex MEMBER uiAccentIndex NOTIFY uiAccentIndexChanged)
     // Vibemis: companion gate to enableHdr. When the user enables HDR but their
     // display can't actually show HDR (e.g. Legion Go S Z2 LCD), the host
     // streams HDR PQ-encoded content that looks washed out on the SDR panel.
@@ -297,6 +300,8 @@ public:
     AudioConfig audioConfig;
     VideoCodecConfig videoCodecConfig;
     bool enableHdr;
+    bool uiShowHints;
+    int uiAccentIndex;
     // Vibemis: see Q_PROPERTY comment above; gates HDR request on display capability.
     bool displayHdrCapability;
     bool enableYUV444;
@@ -340,6 +345,8 @@ signals:
     void audioConfigChanged();
     void videoCodecConfigChanged();
     void enableHdrChanged();
+    void uiShowHintsChanged();
+    void uiAccentIndexChanged();
     void displayHdrCapabilityChanged();
     void enableYUV444Changed();
     void videoDecoderSelectionChanged();

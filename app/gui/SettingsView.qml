@@ -2465,6 +2465,43 @@ Item {
                     ToolTip.visible: hovered
                 }
 
+                // Redesign handoff live tweaks (State model: showHints + accent). Persisted via prefs.
+                CheckBox {
+                    id: showHintsCheck
+                    width: parent.width
+                    text: qsTr("Show the gamepad hint bar")
+                    font.pointSize: 12
+                    checked: StreamingPreferences.uiShowHints
+                    onCheckedChanged: StreamingPreferences.uiShowHints = checked
+                    ToolTip.text: qsTr("Show the button-hint bar at the bottom of every screen.")
+                    ToolTip.delay: 1000
+                    ToolTip.visible: hovered
+                }
+
+                Label {
+                    width: parent.width
+                    text: qsTr("Accent color")
+                    font.pointSize: 12
+                    wrapMode: Text.Wrap
+                }
+
+                AutoResizingComboBox {
+                    id: accentComboBox
+                    textRole: "text"
+                    hoverEnabled: true
+                    model: ListModel {
+                        ListElement { text: qsTr("Teal (default)") }
+                        ListElement { text: qsTr("Indigo") }
+                        ListElement { text: qsTr("Green") }
+                        ListElement { text: qsTr("Amber") }
+                    }
+                    Component.onCompleted: currentIndex = StreamingPreferences.uiAccentIndex
+                    onActivated: StreamingPreferences.uiAccentIndex = currentIndex
+                    ToolTip.text: qsTr("The accent color used across the redesigned UI.")
+                    ToolTip.delay: 1000
+                    ToolTip.visible: hovered
+                }
+
                 Label {
                     width: parent.width
                     id: quickMenuComboTitle

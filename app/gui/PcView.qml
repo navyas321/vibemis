@@ -21,7 +21,13 @@ CenteredGridView {
     // (title + host count + icon buttons) and the bottom gamepad hint bar. See the chrome
     // block below. The global toolbar is collapsed for PcView in main.qml (redesignScreen).
     topMargin: pcChromeHeader.height + 12
+    // The "Add a computer" ghost card is hand-placed at the index==count cell (see the delegate's
+    // sibling below). GridView.contentHeight only counts real delegates, so when the last row is FULL
+    // (count is a multiple of the column count) the ghost card starts a brand-new virtual row at
+    // y==contentHeight and can't be scrolled into view. Reserve an extra row of bottom clearance in
+    // that case so it's always reachable. (Code-review MED finding.)
     bottomMargin: (pcHintBar.visible ? pcHintBar.height : 0) + 12
+                  + ((count > 0 && (count % Math.max(1, Math.floor(itemsPerRow))) === 0) ? cellHeight : 0)
     // Redesign 1a: 430px rich host cards (gap 32) in a centered wrapping row.
     cellWidth: 462; cellHeight: 274;
     objectName: qsTr("Computers")
@@ -173,9 +179,15 @@ CenteredGridView {
                 
                 // Navigate to the AppView for the newly paired computer
                 var component = Qt.createComponent("AppView.qml")
+                var midx = computerModel.index(targetIndex, 0)
                 var appView = component.createObject(stackView, {
-                    "computerIndex": targetIndex, 
-                    "objectName": computerModel.data(computerModel.index(targetIndex, 0), ComputerModel.NameRole) || "Computer"
+                    "computerIndex": targetIndex,
+                    "objectName": computerModel.data(midx, ComputerModel.NameRole) || "Computer",
+                    // Pass the host status so the global toolbar's 1b header shows the right dot/badge/transport
+                    // (code-review: fresh-pair path was missing these). ComputerModel roles.
+                    "hostOnline": computerModel.data(midx, ComputerModel.OnlineRole) || false,
+                    "hostType": computerModel.data(midx, ComputerModel.HostTypeRole) || "",
+                    "hostTransport": computerModel.data(midx, ComputerModel.TransportRole) || ""
                 })
                 stackView.push(appView)
                 
@@ -287,9 +299,9 @@ CenteredGridView {
                 initiator: pcContextMenuLoader.parent
                 hostName: model.name
                 online: model.online
-                apolloHost: model.isApolloServer
-                hostBadge: model.isApolloServer ? qsTr("APOLLO") : qsTr("SUNSHINE")
-                subtitleLine: model.permissionSummary
+                apolloHost: model.hostType !== "SUNSHINE"
+                hostBadge: model.hostType
+                subtitleLine: model.permissionSummary + (model.transport ? " · " + model.transport : "")
                 actions: [
                     {
                         label: qsTr("View all apps"), icon: "apps",

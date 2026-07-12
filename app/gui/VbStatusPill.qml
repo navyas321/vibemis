@@ -5,12 +5,12 @@ import Vibemis.Redesign 1.0
 Rectangle {
     id: pill
     property bool online: true
-    implicitWidth: row.implicitWidth + 24
-    implicitHeight: 28
+    implicitWidth: row.implicitWidth + 30
+    implicitHeight: 32
     radius: VbTokens.radiusPill
-    color: VbTokens.bgElev2
-    border.width: 1
-    border.color: VbTokens.stroke
+    // Handoff: tinted fill, no border — online = green@12%, offline = white@6% (matches VbHostCard's pill).
+    color: pill.online ? Qt.rgba(0.243, 0.835, 0.596, 0.12) : Qt.rgba(1, 1, 1, 0.06)
+    border.width: 0
 
     Row {
         id: row
