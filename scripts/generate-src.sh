@@ -13,9 +13,9 @@ ARCHIVE_FOLDER=$BUILD_ROOT/source
 VERSION=`cat app/version.txt`
 
 echo Cleaning output directories
-rm -rf $ARCHIVE_FOLDER
-mkdir $BUILD_ROOT
-mkdir $ARCHIVE_FOLDER
+rm -rf "$ARCHIVE_FOLDER"
+mkdir "$BUILD_ROOT"
+mkdir "$ARCHIVE_FOLDER"
 
 scripts/git-archive-all.sh --format tar.gz $ARCHIVE_FOLDER/MoonlightSrc-$VERSION.tar.gz || fail "Archive failed"
 

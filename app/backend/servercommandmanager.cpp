@@ -39,7 +39,15 @@ ServerCommandManager::~ServerCommandManager()
 void ServerCommandManager::setConnection(NvComputer *computer, NvHTTP *http)
 {
     m_computer = computer;
+    // test81 (review fix): take ownership of the NvHTTP handed to us — the previous one
+    // (and its QNetworkAccessManager) leaked on every new streaming session.
+    if (m_http && m_http != http && m_http->parent() == this) {
+        delete m_http;
+    }
     m_http = http;
+    if (m_http && !m_http->parent()) {
+        m_http->setParent(this);
+    }
     
     bool oldPermission = m_hasPermission;
     
@@ -384,15 +392,12 @@ void ServerCommandManager::sendCommandExecution(const QString &commandId)
         return;
     }
 
-    // Use available commands (either from server or builtin fallback)
+    // test81 (review fix): LiSendExecServerCmd() sends an INDEX into the HOST's command
+    // list. The old builtin-list fallback sent an index into OUR local list, so on a
+    // host whose list differs, "shutdown" could execute whatever the host had at that
+    // slot. Only ever index into the host-provided list; without one, refuse.
     QStringList serverCommands = m_computer->serverCommands;
-    if (serverCommands.isEmpty()) {
-        // Fall back to using our available commands list
-        serverCommands = m_availableCommands;
-        qDebug() << "ServerCommandManager: Using builtin commands as fallback:" << serverCommands;
-    } else {
-        qDebug() << "ServerCommandManager: Using server-provided commands:" << serverCommands;
-    }
+    qDebug() << "ServerCommandManager: Using server-provided commands:" << serverCommands;
     
     if (serverCommands.isEmpty()) {
         qWarning() << "ServerCommandManager: No server commands available";

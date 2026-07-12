@@ -2345,9 +2345,13 @@ void Session::execInternal()
                 }
                 m_InputHandler->notifyFocusLost();
                 
-                // Trigger clipboard sync from server when focus is lost
+                // Trigger clipboard sync from server when focus is lost.
+                // test81 (review fix): this runs on the SDL exec thread on Linux, but
+                // onFocusLost() uses QNetworkAccessManager + QClipboard, which are
+                // main-thread-affine — invoke queued on the manager's (main) thread.
                 if (m_ClipboardManager) {
-                    m_ClipboardManager->onFocusLost();
+                    QMetaObject::invokeMethod(m_ClipboardManager, "onFocusLost",
+                                              Qt::QueuedConnection);
                 }
                 break;
             case SDL_WINDOWEVENT_FOCUS_GAINED:

@@ -121,7 +121,12 @@ public:
             m_ServerCommandManager = nullptr;
         }
         if (m_ClipboardManager) {
-            delete m_ClipboardManager;
+            // test81 (review fix): m_ClipboardManager is the ClipboardManager::instance()
+            // SINGLETON, also owned by the QML engine (main.cpp registers it via
+            // ClipboardManager::create). Deleting it here left QML holding a dangling
+            // pointer (crash on the next Settings open) and caused a double-delete at
+            // shutdown. Just drop our connection state; never delete the singleton.
+            m_ClipboardManager->disconnect();
             m_ClipboardManager = nullptr;
         }
     };
