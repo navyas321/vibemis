@@ -595,13 +595,17 @@ jobs:
         HOOK
         chmod +x "$DEPLOY/apprun-hooks/01-libva-driver-paths.sh"
 
-    - name: Render icon PNG from SVG
+    - name: Verify branded app icon is installed
       run: |
+        # The branded app icon (redesign brand mark) is installed into the
+        # hicolor theme by `make install` (app/app.pro INSTALLS icon128/256/512).
+        # linuxdeploy consumes the 256px PNG as the AppImage .DirIcon via the
+        # --icon-file flag below, so fail loudly here if it is missing rather
+        # than shipping a generic-icon AppImage.
         DEPLOY=$PWD/deploy
-        mkdir -p "$DEPLOY/usr/share/icons/hicolor/256x256/apps"
-        rsvg-convert -w 256 -h 256 \
-          "$DEPLOY/usr/share/icons/hicolor/scalable/apps/vibemis.svg" \
-          -o "$DEPLOY/usr/share/icons/hicolor/256x256/apps/vibemis.png"
+        ICON="$DEPLOY/usr/share/icons/hicolor/256x256/apps/vibemis.png"
+        test -f "$ICON" || { echo "ERROR: branded app icon missing at $ICON"; exit 1; }
+        file "$ICON"
 
     - name: Bundle AppImage with linuxdeploy
       run: |

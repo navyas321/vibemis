@@ -548,13 +548,22 @@ unix:!macx: {
     desktop.files = deploy/linux/com.vibemis.Vibemis.desktop
     desktop.path = $$PREFIX/$$DATADIR/applications/
 
-    icons.files = res/vibemis.svg
-    icons.path = $$PREFIX/$$DATADIR/icons/hicolor/scalable/apps/
+    # Branded app icon (redesign brand mark) installed into the hicolor icon
+    # theme so the AppImage, the .desktop entry, and "Add to Steam" show the
+    # Vibemis mark instead of a generic icon. The .desktop Icon= key is
+    # "vibemis", which matches these files' basename. We ship real PNGs at
+    # 128/256/512 (there is no vector master for the raster brand mark).
+    icon128.files = res/icons/hicolor/128x128/apps/vibemis.png
+    icon128.path = $$PREFIX/$$DATADIR/icons/hicolor/128x128/apps/
+    icon256.files = res/icons/hicolor/256x256/apps/vibemis.png
+    icon256.path = $$PREFIX/$$DATADIR/icons/hicolor/256x256/apps/
+    icon512.files = res/icons/hicolor/512x512/apps/vibemis.png
+    icon512.path = $$PREFIX/$$DATADIR/icons/hicolor/512x512/apps/
 
     appstream.files = deploy/linux/com.vibemis.Vibemis.appdata.xml
     appstream.path = $$PREFIX/$$DATADIR/metainfo/
 
-    INSTALLS += target desktop icons appstream
+    INSTALLS += target desktop icon128 icon256 icon512 appstream
 }
 win32 {
     RC_ICONS = vibemis.ico

@@ -168,7 +168,7 @@ cat > $DEPLOY_FOLDER/apprun-hooks/02-desktop-integration.sh << 'DESKHOOK'
 # shows "Vibemis" instead of "Vibemis AppImage" in the library.
 _vibemis_appimage_path="${APPIMAGE:-$ARGV0}"
 _vibemis_desktop_dir="${HOME}/.local/share/applications"
-_vibemis_icon_dir="${HOME}/.local/share/icons/hicolor/scalable/apps"
+_vibemis_icon_dir="${HOME}/.local/share/icons/hicolor/256x256/apps"
 _vibemis_desktop="${_vibemis_desktop_dir}/Vibemis.desktop"
 
 mkdir -p "${_vibemis_desktop_dir}" "${_vibemis_icon_dir}"
@@ -187,9 +187,9 @@ Keywords=streaming;gaming;moonlight;vibepollo;
 StartupNotify=true
 DESKEOF
 
-# Install the SVG icon if not already present (icon rarely changes)
-_vibemis_icon_src="${APPDIR}/usr/share/icons/hicolor/scalable/apps/vibemis.svg"
-_vibemis_icon_dst="${_vibemis_icon_dir}/vibemis.svg"
+# Install the branded PNG icon if not already present (icon rarely changes)
+_vibemis_icon_src="${APPDIR}/usr/share/icons/hicolor/256x256/apps/vibemis.png"
+_vibemis_icon_dst="${_vibemis_icon_dir}/vibemis.png"
 if [ -f "${_vibemis_icon_src}" ] && [ ! -f "${_vibemis_icon_dst}" ]; then
     cp "${_vibemis_icon_src}" "${_vibemis_icon_dst}"
     # Notify the icon cache if xdg-icon-resource is available
@@ -210,6 +210,7 @@ pushd $INSTALLER_FOLDER
 # Vibemis: take upstream's modern linuxdeploy approach (linuxdeployqt is broken on glibc >= 2.36).
 VERSION=$VERSION $LINUXDEPLOY --appdir $DEPLOY_FOLDER \
   --library=/usr/local/lib/libSDL3.so.0 \
+  --icon-file $DEPLOY_FOLDER/usr/share/icons/hicolor/256x256/apps/vibemis.png \
   --plugin qt --output appimage || fail "linuxdeploy failed!"
 popd
 
