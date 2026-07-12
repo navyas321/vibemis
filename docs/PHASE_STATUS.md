@@ -10,8 +10,10 @@ comment so it's greppable: `grep -rn "TODO(P3" app/`.
 
 ---
 
-## P3.1 — Quick Menu as OverlayManager surface (Game Mode)  ✅ implemented
-- Done: test22 (#44). Foundation for all Quick Menu content.
+## P3.1 — Quick Menu as OverlayManager surface (Game Mode)  ✅ implemented + hardware-verified
+- Done: test22 (#44) streaming-verified; **test75 diagnostic** (PR #142) found the gamepad
+  close/return gap ("frozen menu"); **fixed + verified by test77 (#144, PASS PR #145)** — Back/
+  Select/Start close, per-combo state clear, "Resume Game" hint. Shipped in 0.7.1-beta.
 
 ## P3.3 — Vibepollo quality presets  ✅ implemented
 - Done: test23 (#45).
@@ -28,9 +30,9 @@ comment so it's greppable: `grep -rn "TODO(P3" app/`.
 - Done: compact overlay test24 (#46); scale mode test25 (#47); zoom test31 (#53); pan test32 (#54);
   perf-overlay corner test49 (#69); perf-overlay text size test50 (#70); data-usage estimate
   test59 (#79); software-decode advisory test53 (#73).
-- **Codec/renderer (merged from P3.14), remaining:** clearer "Prefer AV1 (if host supports)" UX
-  (`VCC_FORCE_AV1` already exists); validate the Vulkan video-decode + HDR path (`RB_VULKAN`) on the
-  Legion Go S Z2 and document when to prefer it over EGL (device-gated — needs the test agent).
+- **Codec/renderer (merged from P3.14), remaining:** ~~clearer "Prefer AV1" UX~~ **DONE — shipped
+  as test65 (#85)** (contextual AV1 guidance under the codec combo). Still remaining: validate the
+  Vulkan video-decode + HDR path (`RB_VULKAN`) on the Legion Go S Z2 (device-gated — test agent).
 
 ## Phase 4 / Input  ✅ implemented
 - Done: configurable QM gamepad combo test26 (#48); back-paddle combos test36 (#56).
@@ -55,9 +57,10 @@ heavily, so they're now one phase).
 - **Done (researched features):** battery-saver bitrate test40 (#60); settings export/import
   test41 (#61); special keys test47 (#67); perf-overlay corner/size test49/50; data estimate
   test59; adaptive-bitrate slice test62.
+- **Done (2026-07-12): Per-game stream profiles** — test76 (#143), merged (0.8.0): per host+app
+  resolution/fps/bitrate/HDR snapshot applied at launch on a detached prefs copy; save/update/clear
+  from the app-tile context menu. Runtime on-device pass = checklist `test76-followup`.
 - **Backlog / parity gaps (pick the next as a single test PR):**
-  - **Per-game stream profiles** — persist resolution/fps/bitrate/HDR per app id, applied at launch.
-    The headline Android-parity gap. Larger; design the QSettings keying first.
   - **On-screen text-send** — Quick Menu "type text" field → `LiSendUtf8TextEvent` (stacks on test22).
   - **Auto-reconnect on stream drop** — bounded retry; medium risk (session teardown).
   - **Low-latency "competitive" preset** — vsync off + frame pacing tuned (builds on test23 presets).

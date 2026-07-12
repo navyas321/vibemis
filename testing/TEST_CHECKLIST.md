@@ -103,8 +103,12 @@ whole Quick Menu group depends on its render path.
 
 ## 5b. Parity features (P3.8)
 
-- [ ] **test76** — Per-game stream profiles (save/apply/clear per host+app; detached prefs at
-  launch) — **PR #143** — base `vibemis-main` — ☐ (`testing/test76-per-game-profiles/instructions.md`)
+- [x] **test76** — Per-game stream profiles — **PR #143** — ☑ **PARTIAL→merged with maintainer
+  approval** (report PR #146: selftest PASS + full wiring source-confirmed; runtime context-menu
+  CRUD not drivable headlessly — harness limit, no code defect) → **merged**, ships in 0.8.0-beta.
+- [ ] **test76-followup** — Per-game profiles on-device runtime pass *(2 min, needs the physical
+  device/controller)*: open a game tile's menu → Save profile → `grep appprofiles` conf → stream
+  applies profile (log line + negotiated shape) → Clear — ☐
 
 ## 6. Config / SteamOS helpers
 
