@@ -44,6 +44,7 @@ enum KeyCombo {
 #include <QDebug>
 
 #include <SDL.h>
+#include <Limelight.h>
 
 // How often the offscreen menu is re-rendered while visible. The menu is small
 // (500x400) and this only runs while the menu is open, so a 30 Hz refresh keeps
@@ -408,6 +409,9 @@ void QuickMenuManager::executeAction(const QString &action)
         toggleKeyboardCapture();
     } else if (action == "toggle_fullscreen") {
         toggleFullscreen();
+    } else if (action == "key_ctrl_alt_del" || action == "key_super" ||
+               action == "key_alt_f4" || action == "key_esc") {
+        sendSpecialKey(action);
     } else if (action == "paste_clipboard") {
         pasteClipboard();
     } else if (action == "stream_info") {
@@ -455,6 +459,30 @@ void QuickMenuManager::pasteClipboard()
     } else {
         showToast(QStringLiteral("Clipboard is empty"));
     }
+}
+
+void QuickMenuManager::sendSpecialKey(const QString &action)
+{
+    // Send a special key chord to the host (remote-desktop control). Windows VK codes.
+    short vk = 0;
+    char modifiers = 0;
+    if (action == "key_ctrl_alt_del") {
+        vk = 0x2E;                                 // VK_DELETE
+        modifiers = MODIFIER_CTRL | MODIFIER_ALT;
+    } else if (action == "key_super") {
+        vk = 0x5B;                                 // VK_LWIN (Super)
+    } else if (action == "key_alt_f4") {
+        vk = 0x73;                                 // VK_F4
+        modifiers = MODIFIER_ALT;
+    } else if (action == "key_esc") {
+        vk = 0x1B;                                 // VK_ESCAPE
+    } else {
+        return;
+    }
+
+    LiSendKeyboardEvent(vk, KEY_ACTION_DOWN, modifiers);
+    LiSendKeyboardEvent(vk, KEY_ACTION_UP, modifiers);
+    showToast(QStringLiteral("Sent key to host"));
 }
 
 void QuickMenuManager::showToast(const QString &message) {

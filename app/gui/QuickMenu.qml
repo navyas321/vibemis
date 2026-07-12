@@ -296,6 +296,30 @@ Rectangle {
             action: "toggle_fullscreen"
             description: qsTr("Toggle fullscreen mode")
         }
+        ListElement {
+            text: qsTr("Send Ctrl+Alt+Del")
+            icon: "⌨"
+            action: "key_ctrl_alt_del"
+            description: qsTr("Send Ctrl+Alt+Del to the host")
+        }
+        ListElement {
+            text: qsTr("Send Alt+F4")
+            icon: "✖"
+            action: "key_alt_f4"
+            description: qsTr("Close the focused window on the host")
+        }
+        ListElement {
+            text: qsTr("Send Super (Win) key")
+            icon: "⊞"
+            action: "key_super"
+            description: qsTr("Open the host start menu / launcher")
+        }
+        ListElement {
+            text: qsTr("Send Esc")
+            icon: "⎋"
+            action: "key_esc"
+            description: qsTr("Send the Escape key to the host")
+        }
     }
     
     function closeMenuDelayed() {
