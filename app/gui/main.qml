@@ -249,9 +249,13 @@ ApplicationWindow {
         // + hint bar), so collapse the global toolbar on them to avoid a double header — matching the
         // design previews, which show only per-screen chrome. Screens 1a (PcView / Computers) and 1b
         // (AppView / app grid) own their full chrome as of test107, joining Settings (1e) + Help (1f).
+        // BL: 0.25.0 black-screen regression under Game-Mode gamescope (WSI/Vulkan swapchain). Collapsing
+        // the toolbar on the STARTUP screen (PcView) resized the window while the gamescope swapchain was
+        // being created -> "Destroying swapchain: (nil)" -> black. 0.24.x (toolbar stays on PcView/AppView)
+        // rendered fine, so the home/list screens keep the global toolbar; only the navigated-to Settings
+        // (1e) + Help (1f) collapse it (they were fine in 0.24.2).
         readonly property bool redesignScreen: stackView.currentItem
-            && (qmltypeof(stackView.currentItem, "SettingsView") || qmltypeof(stackView.currentItem, "VbHelpView")
-                || qmltypeof(stackView.currentItem, "PcView") || qmltypeof(stackView.currentItem, "AppView"))
+            && (qmltypeof(stackView.currentItem, "SettingsView") || qmltypeof(stackView.currentItem, "VbHelpView"))
         height: redesignScreen ? 0 : 60
         visible: !redesignScreen
         anchors.topMargin: 5
@@ -314,7 +318,7 @@ ApplicationWindow {
                 color: VbTokens.bgElev2
                 border.width: 1
                 border.color: VbTokens.stroke
-                anchors.verticalCenter: parent ? parent.verticalCenter : undefined
+                Layout.alignment: Qt.AlignVCenter
                 Text {
                     id: versionChipText
                     anchors.centerIn: parent
