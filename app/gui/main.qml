@@ -9,6 +9,7 @@ import AutoUpdateChecker 1.0
 import StreamingPreferences 1.0
 import SystemProperties 1.0
 import SdlGamepadKeyNavigation 1.0
+import Theme 1.0
 
 ApplicationWindow {
     property bool pollingActive: false
@@ -291,7 +292,10 @@ ApplicationWindow {
                 id: versionLabel
                 visible: qmltypeof(stackView.currentItem, "SettingsView")
                 text: qsTr("Version %1").arg(SystemProperties.versionString)
-                font.pointSize: 12
+                // P3.17: first use of the Theme design-token singleton (proves it resolves at
+                // runtime). The version text on the Settings screen now uses the Vibemis accent.
+                font.pointSize: Theme.fontSection
+                color: Theme.accent
                 horizontalAlignment: Qt.AlignRight
                 verticalAlignment: Qt.AlignVCenter
             }
@@ -490,6 +494,31 @@ ApplicationWindow {
         onAccepted: Qt.quit()
     }
 
+    // Vibemis: one-time welcome hint with key SteamOS / handheld onboarding tips.
+    // Self-contained: opens from its own onCompleted and persists a "seen" flag, so it
+    // shows exactly once and does not affect the main startup logic.
+    NavigableMessageDialog {
+        id: welcomeDialog
+        standardButtons: Dialog.Ok
+        text: qsTr("Welcome to Vibemis!") + "\n\n" +
+              qsTr("• In-stream Quick Menu: Select + L1 + R1 + Y (gamepad), or Ctrl+Alt+Shift+\\ (keyboard).") + "\n" +
+              qsTr("• On Steam Deck / SteamOS, add Vibemis to Steam from Desktop Mode so it appears in Game Mode.") + "\n" +
+              qsTr("• Set resolution, FPS, video scaling and more in Settings.")
+
+        function markSeen() {
+            StreamingPreferences.seenWelcomeHint = true
+            StreamingPreferences.save()
+        }
+        onAccepted: markSeen()
+        onRejected: markSeen()
+
+        Component.onCompleted: {
+            if (!StreamingPreferences.seenWelcomeHint) {
+                welcomeDialog.open()
+            }
+        }
+    }
+
     // HACK: This belongs in StreamSegue but keeping a dialog around after the parent
     // dies can trigger bugs in Qt 5.12 that cause the app to crash. For now, we will
     // host this dialog in a QML component that is never destroyed.
@@ -552,6 +581,16 @@ ApplicationWindow {
                 Keys.onEnterPressed: {
                     addPcDialog.accept()
                 }
+            }
+
+            // Vibemis: hint that remote (off-LAN) hosts work via a Tailscale address.
+            Label {
+                Layout.fillWidth: true
+                Layout.maximumWidth: 360
+                wrapMode: Text.Wrap
+                font.pointSize: 9
+                opacity: 0.7
+                text: qsTr("On the same network, use the host's local IP. To stream from a different network, put both devices on Tailscale and enter the host's Tailscale IP (100.x.x.x) or MagicDNS name.")
             }
         }
     }

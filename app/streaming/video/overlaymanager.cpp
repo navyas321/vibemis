@@ -1,7 +1,13 @@
 #include "overlaymanager.h"
 #include "path.h"
+#include "settings/streamingpreferences.h"
 
 using namespace Overlay;
+
+int OverlayManager::getDebugOverlayAnchor()
+{
+    return static_cast<int>(StreamingPreferences::get()->perfOverlayPosition);
+}
 
 OverlayManager::OverlayManager() :
     m_Renderer(nullptr),
@@ -9,14 +15,35 @@ OverlayManager::OverlayManager() :
 {
     memset(m_Overlays, 0, sizeof(m_Overlays));
 
+    // Vibemis: the debug/performance overlay font size is user-configurable so the
+    // stats HUD is legible on small handheld panels. Map the preference onto point
+    // sizes; PERF_TEXT_NORMAL (20) preserves the historical default.
+    int debugFontSize;
+    switch (StreamingPreferences::get()->perfOverlayTextSize) {
+    case StreamingPreferences::PERF_TEXT_SMALL:
+        debugFontSize = 16;
+        break;
+    case StreamingPreferences::PERF_TEXT_LARGE:
+        debugFontSize = 28;
+        break;
+    case StreamingPreferences::PERF_TEXT_NORMAL:
+    default:
+        debugFontSize = 20;
+        break;
+    }
+
     m_Overlays[OverlayType::OverlayDebug].color = {0xD0, 0xD0, 0x00, 0xFF};
-    m_Overlays[OverlayType::OverlayDebug].fontSize = 20;
+    m_Overlays[OverlayType::OverlayDebug].fontSize = debugFontSize;
 
     m_Overlays[OverlayType::OverlayStatusUpdate].color = {0xCC, 0x00, 0x00, 0xFF};
     m_Overlays[OverlayType::OverlayStatusUpdate].fontSize = 36;
 
     m_Overlays[OverlayType::OverlayServerCommands].color = {0x00, 0xCC, 0xCC, 0xFF};
     m_Overlays[OverlayType::OverlayServerCommands].fontSize = 24;
+
+    // The Quick Menu is not a text overlay — its surface is rendered offscreen from QML
+    // and published via updateOverlaySurface(). No font/colour is used here.
+    m_Overlays[OverlayType::OverlayQuickMenu].fontSize = 0;
 
     // While TTF will usually not be initialized here, it is valid for that not to
     // be the case, since Session destruction is deferred and could overlap with
@@ -121,9 +148,32 @@ void OverlayManager::setOverlayRenderer(IOverlayRenderer* renderer)
     m_Renderer = renderer;
 }
 
+void OverlayManager::updateOverlaySurface(OverlayType type, SDL_Surface* surface)
+{
+    // Atomically swap in the externally-rendered surface, freeing any previous
+    // surface that the renderer hasn't consumed yet. Mirrors the swap discipline
+    // used for text overlays so getUpdatedOverlaySurface() stays race-free.
+    SDL_Surface* oldSurface = (SDL_Surface*)SDL_AtomicSetPtr((void**)&m_Overlays[type].surface, surface);
+    if (oldSurface != nullptr) {
+        SDL_FreeSurface(oldSurface);
+    }
+
+    if (m_Renderer != nullptr) {
+        m_Renderer->notifyOverlayUpdated(type);
+    }
+}
+
 void OverlayManager::notifyOverlayUpdated(OverlayType type)
 {
     if (m_Renderer == nullptr) {
+        return;
+    }
+
+    // The Quick Menu's pixels come from updateOverlaySurface(), not TTF. Just notify
+    // the renderer of the enable/disable state change — don't run the text path which
+    // would clobber the externally-rendered surface.
+    if (type == OverlayQuickMenu) {
+        m_Renderer->notifyOverlayUpdated(type);
         return;
     }
 

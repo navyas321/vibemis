@@ -75,3 +75,7 @@ config.log
 *.a
 config.log
 **/qml_qmlcache.qrc
+
+# Stray local libs dir (build scratch); never track (was accidentally added as a gitlink)
+/libs/
+/soundio/libsoundio/

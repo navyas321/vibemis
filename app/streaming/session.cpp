@@ -184,9 +184,23 @@ void Session::clRumble(unsigned short controllerNumber, unsigned short lowFreqMo
 
 void Session::clConnectionStatusUpdate(int connectionStatus)
 {
+    // NB: callback runs on the moonlight-common-c connection thread.
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                 "Connection status update: %d",
                 connectionStatus);
+
+    // Vibemis (P3.12): adaptive-bitrate observation slice. When the user enables adaptive bitrate
+    // and the host reports a POOR connection, emit a structured recommendation to the log. This is
+    // intentionally observation-only for now.
+    // TODO(P3.12): once moonlight-common-c exposes a runtime bitrate API, step
+    // m_StreamConfig.bitrate down here on sustained CONN_STATUS_POOR and recover slowly on
+    // sustained CONN_STATUS_OKAY, instead of only logging the recommendation.
+    if (s_ActiveSession->m_Preferences->adaptiveBitrate && connectionStatus == CONN_STATUS_POOR) {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "[adaptive-bitrate] Poor connection at %d kbps — recommend lowering bitrate "
+                    "(runtime auto-adjust pending protocol support).",
+                    s_ActiveSession->m_StreamConfig.bitrate);
+    }
 
     if (!s_ActiveSession->m_Preferences->connectionWarnings) {
         return;
