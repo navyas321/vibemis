@@ -14,7 +14,7 @@
 | test83 | Remove blocking server-command probes (BL-1531) + guard clipboard dtor emits (BL-1534) | `37d07dd`/`314846c` region | **SOURCE-PASS** | No — needs stream + host |
 | test84 | Pump Qt on non-threaded exec path (BL-1533) | `314846c` | **SOURCE-PASS** (already in main) | **No — unreachable on this device** |
 | test85 | Surface Apollo per-app save-sync note (P3.13) | `a8cebba` | **SOURCE-PASS** (minor caveat) | Launcher-visible, no stream |
-| test86 | Quick Menu "Type Text" text-send (P3.20) | `c0cbba1` | **ITERATE — live blocker on main** | No — needs stream + keyboard |
+| test86 | Quick Menu "Type Text" text-send (P3.20) | `c0cbba1` | **ITERATE — Type Text item missing on main (menu still loads)** | No — needs stream + keyboard |
 | test87 | Wire dead Quick Menu toggles (BL-1532) | `a5eb640` | **SOURCE-PASS** | No — needs stream |
 
 **One actionable defect for the build agent: the test86 "Type Text" menu item is unreachable on `vibemis-main` because of a merge artifact (details below).** Everything else is correct/safe.
@@ -34,7 +34,9 @@ ListElement {
 
 The `}` closing the Type-Text element and the `ListElement {` opening the Paste element were dropped during commit `49886c7` ("fix(merge): resolve quickmenumanager conflict markers"). The clean, separated form exists in the original test86 commit `c0cbba1` — the fusion was introduced by the later main re-sync merge, not by test86 itself.
 
-**Effect (QML ListModel last-value-wins on duplicate roles):** the surviving item is **"Paste Clipboard Text"/`paste_clipboard`**; the **"Type Text"/`type_text` entry disappears entirely**. The test86 feature therefore has no menu entry point on main, even though its full backend (`quickmenumanager.cpp` `sendText`/`injectText`, `keyboard.cpp` text-mode branch, `session.cpp` `SDL_TEXTINPUT` routing) and the QML `type_text` action handler (line 431) are all present and correctly wired. Some Qt builds will also emit a duplicate-role QML warning at load.
+**Effect (QML ListModel last-value-wins on duplicate roles):** the surviving item is **"Paste Clipboard Text"/`paste_clipboard`**; the **"Type Text"/`type_text` entry disappears entirely**. The test86 feature therefore has no menu entry point on main, even though its full backend (`quickmenumanager.cpp` `sendText`/`injectText`, `keyboard.cpp` text-mode branch, `session.cpp` `SDL_TEXTINPUT` routing) and the QML `type_text` action handler (line 431) are all present and correctly wired.
+
+**Severity confirmed empirically (this device, Qt 6.9.1 `qmllint`):** the duplicate-role `ListElement` **passes `qmllint` clean (exit 0, no warning)** — so it is **NOT a hard QML load error**. The Quick Menu still loads; this is a **silent drop of the Type Text row**, not a menu-wide breakage. So the subagent's "either QML load error or item disappears" resolves to the milder branch: **the whole Quick Menu is fine, only the Type Text item is missing.** (Runtime row-dump not obtainable — the SteamOS system `qml` runner won't execute `console.log`; but `qmllint` clean is sufficient to rule out the load-error branch.)
 
 **Fix (build agent):** split lines 323-331 back into two separate `ListElement {}` blocks so `type_text` and `paste_clipboard` are distinct entries; confirm the selftest launch log is free of QML errors.
 
