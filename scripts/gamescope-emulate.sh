@@ -10,7 +10,7 @@
 # can't be seen from a normal Desktop-Mode launch. This gives a one-command, repeatable signal.
 #
 # Usage:
-#   scripts/gamescope-emulate.sh [-w W] [-h H] [-t SECS] [-s SHOT.png] [-o] [-- <command...>]
+#   scripts/gamescope-emulate.sh [-w W] [-h H] [-t SECS] [-s SHOT.png] [-o] [-F] [-- <command...>]
 #   scripts/gamescope-emulate.sh                          # default: ~/Downloads/Vibemis.AppImage
 #   scripts/gamescope-emulate.sh -- ~/Applications/Moonlight-6.1.0.AppImage
 #   scripts/gamescope-emulate.sh -o -s /tmp/vib.png       # also grab the mangoapp overlay plane
@@ -21,20 +21,36 @@
 #   -t N   seconds to let the app settle before checking (default 15)
 #   -s F   primary-plane screenshot path (default /tmp/gamescope-emulate.png)
 #   -o     ALSO capture the mangoapp/FPS overlay plane to <F>.overlay.png (see note below)
+#   -F     --force-cleanup: BEFORE starting, broadly kill leftover headless gamescope/mangoapp
+#          and nested-Xwayland/locks from OTHER or crashed runs. OFF by default because it can
+#          kill processes THIS script never spawned (BL-1536). Normal teardown only ever kills
+#          this run's own process group.
 #
 # Exit: 0 = app opened & rendered inside gamescope (survived, no coredump, WSI surface made);
 #       1 = it crashed or died (e.g. the libplacebo/vkroots WSI assert).
 #
-# Safe: no sudo, no installs, nothing drawn on the real desktop, does not touch the app.
+# Safe: no sudo, no installs, nothing drawn on the real desktop, does not touch the app. By
+# default it only ever kills the process group it launched (never a system-wide pkill).
 # Requires (all pre-installed on SteamOS): gamescope, gamescopectl, xdotool, ffmpeg, coredumpctl.
 set -uo pipefail
 
-W=1920; H=1200; SECS=15; SHOT=/tmp/gamescope-emulate.png; OVERLAY=0
-while getopts "w:h:t:s:o" opt; do
+W=1920; H=1200; SECS=15; SHOT=/tmp/gamescope-emulate.png; OVERLAY=0; FORCE_CLEANUP=0
+
+# Accept the long alias --force-cleanup for -F (only before the `--` command separator, so an
+# app command after `--` that happens to contain the word is left untouched).
+_args=(); _dd=0
+for _a in "$@"; do
+    if [ "$_dd" = 0 ] && [ "$_a" = "--force-cleanup" ]; then _args+=("-F"); continue; fi
+    [ "$_a" = "--" ] && _dd=1
+    _args+=("$_a")
+done
+set -- ${_args[@]+"${_args[@]}"}
+
+while getopts "w:h:t:s:oF" opt; do
     case "$opt" in
         w) W="$OPTARG" ;; h) H="$OPTARG" ;; t) SECS="$OPTARG" ;;
-        s) SHOT="$OPTARG" ;; o) OVERLAY=1 ;;
-        *) sed -n '2,30p' "$0"; exit 2 ;;
+        s) SHOT="$OPTARG" ;; o) OVERLAY=1 ;; F) FORCE_CLEANUP=1 ;;
+        *) sed -n '2,34p' "$0"; exit 2 ;;
     esac
 done
 shift $((OPTIND - 1))
@@ -53,7 +69,11 @@ CFG="$(mktemp /tmp/gs-emulate-mango.XXXXXX.conf)"
 printf 'fps\nframetime\ncpu_stats\ngpu_stats\nvram\nram\nposition=top-left\nfont_size=48\nno_display=0\n' > "$CFG"
 GSLOG="$(mktemp /tmp/gs-emulate.XXXXXX.log)"
 
-cleanup_stale() {
+# OPT-IN ONLY (-F / --force-cleanup). This BROADLY kills every matching headless gamescope and
+# mangoapp on the machine plus any nested-Xwayland on :1/:2/:3 -- i.e. it can kill processes THIS
+# script never spawned (another headless test, or a real Game Mode mangoapp). BL-1536: it is no
+# longer run by default; normal teardown kills only this run's own process group (see below).
+force_cleanup() {
     pkill -9 -f "gamescope --backend headless" >/dev/null 2>&1
     pkill -9 -x mangoapp >/dev/null 2>&1
     # Remove ONLY nested test locks/sockets (:1/:2/:3). NEVER :0 — that's the real desktop.
@@ -70,16 +90,20 @@ cleanup_stale() {
     done
     rm -f "$XDG_RUNTIME_DIR"/gamescope-0 "$XDG_RUNTIME_DIR"/gamescope-0.lock 2>/dev/null
 }
-cleanup_stale; sleep 2
+[ "$FORCE_CLEANUP" = 1 ] && { force_cleanup; sleep 2; }
 
 dumps_before=$(coredumpctl list --no-pager 2>/dev/null | grep -ciE 'moonlight|vibemis|artemis' || true)
 
 # Launch. Force X11 onto the nested XWayland (env -u WAYLAND_DISPLAY) so the app uses the
 # WSI layer path — apps that grab the wayland surface trip "[Gamescope WSI] Failed to get Wayland objects".
+# `set -m` puts this background job in its OWN process group (PGID == $GS) so teardown can signal
+# exactly this run's tree (gamescope + its mangoapp/Xwayland/app children) and nothing else (BL-1536).
+set -m
 SDL_VIDEODRIVER=x11 ENABLE_GAMESCOPE_WSI=1 MANGOHUD_CONFIGFILE="$CFG" \
 gamescope --backend headless --xwayland-count 1 -w "$W" -h "$H" -W "$W" -H "$H" --mangoapp -- \
     env -u WAYLAND_DISPLAY "${APPCMD[@]}" >"$GSLOG" 2>&1 &
 GS=$!
+set +m
 
 for _ in $(seq 1 "$SECS"); do
     sleep 1
@@ -115,10 +139,17 @@ if [ "$alive" = 1 ]; then
     fi
 fi
 
-# Teardown
-pkill -9 -x mangoapp >/dev/null 2>&1
-kill "$GS" >/dev/null 2>&1; sleep 1
-cleanup_stale
-rm -f "$CFG" "$GSLOG"
+# Teardown — kill ONLY the process group this script spawned (gamescope + its mangoapp/Xwayland/
+# app children), never a system-wide pkill. $GS is the group leader; -"$GS" targets the whole
+# group. SIGTERM first (lets Xwayland drop its own /tmp/.X<n>-lock cleanly), then SIGKILL any
+# straggler still in our group. Guarded with kill -0 so we never signal a reused/dead PID.
+if kill -0 "$GS" 2>/dev/null; then
+    kill -- -"$GS" 2>/dev/null
+    for _ in 1 2 3; do kill -0 "$GS" 2>/dev/null || break; sleep 1; done
+    kill -9 -- -"$GS" 2>/dev/null || true
+fi
+# Remove only THIS run's own artifacts (its mango config, log, and the gamescope-0 socket it made).
+rm -f "$CFG" "$GSLOG" 2>/dev/null
+rm -f "$XDG_RUNTIME_DIR"/gamescope-0 "$XDG_RUNTIME_DIR"/gamescope-0.lock 2>/dev/null
 
 [ "$alive" = 1 ] && [ "$new_dumps" -le 0 ]
