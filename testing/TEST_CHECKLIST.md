@@ -110,6 +110,12 @@ whole Quick Menu group depends on its render path.
   device/controller)*: open a game tile's menu → Save profile → `grep appprofiles` conf → stream
   applies profile (log line + negotiated shape) → Clear — ☐
 
+## 5b2. UI / design system (P3.19)
+
+- [ ] **test79** — Theme-token migration wave 1 (PcView + AppView + Material bridge) — **PR #149**
+  — base `vibemis-main` — ☐ (launcher-only screenshot diff vs your audit zip;
+  `testing/test79-theme-wave1/instructions.md`; auto-merges on green CI — report = post-merge gate)
+
 ## 5c. CLI
 
 - [ ] **test78** — CLI app seek: cached-list immediate seek + robust matching (fixes YOUR test75
