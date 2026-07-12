@@ -112,8 +112,9 @@ AppImage to a stable path with a clean `Vibemis` desktop entry, ready to Add to 
   context menu; the profile applies automatically at launch without touching global settings
 - **Auto-reconnect** *(opt-in)* — a dropped stream retries in place (3 attempts with backoff)
   instead of dumping you back to the game grid
-- **Unified design tokens** — one accent/surface/type system (`Theme.qml`) rolling out across all
-  screens, starting with the Computers and app grids
+- **Gamepad-first redesign** *(rolling out)* — a unified dark design-token system (one
+  accent/surface/type language) with controller-first layouts, live across the Computers list,
+  app grid, Add-PC dialog, and in-stream Help
 
 ---
 
@@ -179,15 +180,6 @@ All shortcuts require `Ctrl + Alt + Shift`:
 | `Start + Select + L1 + R1` | Quit stream |
 | `Select + L1 + R1 + X` | Toggle performance stats overlay |
 | Long press `Start` | Toggle mouse emulation mode |
-
----
-
-## Known Issues
-
-| Issue | Workaround | Planned fix |
-|---|---|---|
-| **CLI `vibemis stream <host> <app>` may fail app-name matching** (GUI launch works) | Launch from the GUI, or use a direct-launch Steam shortcut | Tracked (backlog) |
-| **Steam library shows app name with "AppImage"** | Use `scripts/install-vibemis-desktop.sh` (clean `Vibemis` entry), or rename the shortcut in Steam → Properties | Shipped — script path |
 
 ---
 
