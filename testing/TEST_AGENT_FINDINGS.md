@@ -59,3 +59,15 @@ Beta **0.26.0** (md5 `5944d137`, commit 77fd3c7 "rebuild 1a Computers") — the 
 - **Xvfb would NOT catch this** (plain X software path, not the WSI/swapchain path Game Mode uses).
 
 **This is the build agent's own release-blocking gate.** Escalated on the bus immediately. Do NOT tag stable. The header must be built without a null-swapchain at first frame (the default-true height-0 collapse is the trigger). Could not check the rich host cards / wordmark / badge — the whole screen is black.
+
+---
+
+## ✅ 0.26.2 — BLACK-SCREEN GATE PASS + 1a matches the redesign (stable-1.0 render gate GREEN)
+Beta **0.26.2** (md5 `48b8edcd`, Steam target). The black-screen blocker is **RESOLVED**.
+- **Renders (NOT black):** 1a under gamescope WSI = md5 `1527ee20` then `2e606012` (≠ `85ccd4cf` black), **persistent** across two captures. The always-present-84px-header fix (toolbar is now the header, never collapses to 0) reproduces the known-good render condition. The `swapchain: (nil)` log line persists but is now **benign** (screen draws fully).
+- **1a MATCHES the handoff** (`previews/1a-computers.png`) — visually confirmed on-device: ◆ VIBEMIS wordmark, near-black bg, Add/Refresh/Help/Settings buttons, "Computers · 5 hosts · 3 online", rich horizontal cards (Navid-PC: monitor thumbnail, ● ONLINE pill, Sora name, "Paired · Full access", **VIBEPOLLO** badge + "LAN"), bottom hint bar Ⓐ/Ⓧ/Ⓨ · ☰ Settings.
+- **3-way host badge WORKS** — shows **VIBEPOLLO** (not the old APOLLO mislabel). My audit finding #2 is verified fixed at runtime.
+- **Caveat:** visually confirmed **1a only** — headless keyboard+mouse are dead this session so I can't nav to 1b–1f; those were source-audited faithful (1b/1d/1e/1f) and are now render-unblocked (toolbar always present globally). Recommend the build agent's Xvfb/real-display pass for 1c–1f, or I retry after a fresh Deck session.
+- **Still open (minor):** `main.qml:40` `Material.accent = Theme.accent (#00CCCC)` — Settings/dialog Material controls still off the spec `#2FC6D0`. Non-blocking but a spec deviation for stable.
+
+**Verdict: the release-blocking black screen is CLEARED and 1a is on-spec. Stable-1.0 render gate GREEN from the test side** (pending the 1b–1f visual pass + the accent-leak cleanup).
