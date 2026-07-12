@@ -79,6 +79,18 @@ Rectangle {
             // so the ListView must not also claim focus (events are injected to the root).
             focus: false
             currentIndex: 0
+            // Bug fix: without clip the 16 delegates (≈960px of content) painted OUTSIDE the
+            // ~250px viewport, bleeding over the footer "Resume Game" hint and the title —
+            // this is what made the last visible row (e.g. "Fetch Clipboard") and the footer
+            // overlap. Clip keeps every delegate inside the list's own bounds.
+            clip: true
+            spacing: 4
+            boundsBehavior: Flickable.StopAtBounds
+            // Keep the keyboard/gamepad-selected row scrolled into view.
+            highlightMoveDuration: 0
+            highlightRangeMode: ListView.ApplyRange
+            preferredHighlightBegin: 0
+            preferredHighlightEnd: height
 
             model: currentMenu === "main" ? mainMenuModel : serverCommandsModel
             
@@ -103,20 +115,27 @@ Rectangle {
                     executeAction(model.action)
                 }
 
+                // Bug fix: the old RowLayout mixed anchors.fill with anchors.left/right/
+                // verticalCenter (conflicting anchors) and its labels had no width bound or
+                // elision, so long descriptions overflowed the row and collided with the next
+                // item. Fill the delegate with explicit padding; the label column fills the
+                // remaining width and elides instead of overflowing.
                 contentItem: RowLayout {
                     anchors.fill: parent
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.verticalCenter: parent.verticalCenter
-                    anchors.margins: 15
-                    spacing: 15
+                    anchors.leftMargin: 16
+                    anchors.rightMargin: 16
+                    anchors.topMargin: 6
+                    anchors.bottomMargin: 6
+                    spacing: 14
 
                     Text {
                         text: model.icon
                         font.pointSize: 20
                         color: "white"
-                        Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
                         Layout.preferredWidth: 40
+                        Layout.alignment: Qt.AlignVCenter
                     }
 
                     ColumnLayout {
@@ -129,12 +148,16 @@ Rectangle {
                             font.pointSize: 14
                             font.bold: true
                             color: "white"
+                            Layout.fillWidth: true
+                            elide: Text.ElideRight
                         }
 
                         Text {
                             text: model.description
                             font.pointSize: 10
                             color: "#cccccc"
+                            Layout.fillWidth: true
+                            elide: Text.ElideRight
                         }
                     }
                 }
@@ -196,11 +219,23 @@ Rectangle {
             Item { Layout.fillHeight: true }
         }
 
+        // Divider so the footer hint reads as a separate bar below the scrolling menu
+        // list rather than sitting on top of the last row.
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 1
+            color: "#444"
+        }
+
         // Back/Close button. test77: name the action ("Resume Game") and show the GAMEPAD
         // buttons that trigger it — the old "Close (Esc)" keyboard-only hint left
         // controller users with no discoverable way back to the game.
+        // Bug fix: pinned as a full-width footer bar (was a centered auto-width button that
+        // the overflowing, unclipped list painted over). It now always sits below the list.
         Button {
             text: currentMenu === "main" ? qsTr("Resume Game (Ⓑ / Back / Esc)") : qsTr("← Back (Ⓑ)")
+            Layout.fillWidth: true
+            Layout.preferredHeight: 40
             Layout.alignment: Qt.AlignHCenter
             onClicked: {
                 if (currentMenu === "main") {
@@ -212,12 +247,14 @@ Rectangle {
         }
     }
     
-    // Toast notification overlay
+    // Toast notification overlay. Bug fix: anchored to the TOP as a banner (was at the
+    // bottom, where it stacked on top of the "Resume Game" footer). Kept off the footer
+    // hint bar and out of the menu rows; it only shows transiently on an action.
     Rectangle {
         id: toastNotification
-        anchors.bottom: parent.bottom
+        anchors.top: parent.top
         anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottomMargin: 20
+        anchors.topMargin: 12
         width: Math.min(parent.width - 40, toastText.implicitWidth + 20)
         height: 40
         radius: 20

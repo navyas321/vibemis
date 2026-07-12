@@ -70,7 +70,10 @@ QuickMenuManager::QuickMenuManager(QObject *parent)
     , m_rootItem(nullptr)
     , m_fbo(nullptr)
     , m_renderTimer(nullptr)
-    , m_overlaySize(500, 400)
+    // BL-1622: the menu renders into this FBO and the renderers blit it 1:1, centered. 500x400 was
+    // only ~26% of a 1920-wide stream — physically tiny + cramped. Bumped to a readable default that
+    // still fits an 800px-tall surface. (A viewport-relative size is a follow-up.)
+    , m_overlaySize(720, 600)
     , m_overlayReady(false)
 {
     m_renderTimer = new QTimer(this);

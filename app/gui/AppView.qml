@@ -35,7 +35,11 @@ CenteredGridView {
     bottomMargin: (appHintBar.visible ? appHintBar.height : 0) + VbTokens.screenPadY
     // Redesign 1b: 320x430 app tiles (HTML #1b), gap 36 horizontal; cellHeight adds room for the
     // 16px-gap + "Ⓐ Launch" hint row (or app name) below the focused tile.
-    cellWidth: 356; cellHeight: 474;
+    // Cap the row height to the available viewport so tiles never clip their bottom border on
+    // shorter render surfaces (e.g. 1280x800 in Game Mode) — the absolute 474 was tuned for
+    // 1920x1200 (BL-1622). At 1200p this stays 474; on shorter surfaces tiles shrink to fit.
+    cellWidth: 356
+    cellHeight: Math.max(300, Math.min(474, height - topMargin - bottomMargin))
 
     // ---- Redesign 1b chrome: per-screen header + persistent gamepad hint bar ----
     // Fixed header (does not scroll with the grid). Opaque bg so scrolled tiles pass behind it.
@@ -162,7 +166,9 @@ CenteredGridView {
 
     delegate: NavigableItemDelegate {
         id: appDelegate
-        width: 320; height: 430;
+        // Shrink with the row height on short surfaces so the tile + its border stay on-screen
+        // (BL-1622). At 1200p cellHeight is 474 -> tile 430; on shorter surfaces it scales down.
+        width: 320; height: Math.min(430, appGrid.cellHeight - 44)
         grid: appGrid
 
         property alias appContextMenu: appContextMenuLoader.item
