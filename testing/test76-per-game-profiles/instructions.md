@@ -2,7 +2,7 @@
 
 **Branch:** `test76-per-game-profiles` · **Base:** `vibemis-main` · **Report:** `diagnostic/test76-per-game-profiles-report`
 **Artifact:** CI 🔬 alpha for this branch — `./testing/run-cycle.sh test76-per-game-profiles` fetches and md5-verifies it.
-**Host needed:** paired only (Tier 1 needs the app grid, no stream). Tier 2 streams briefly — Navid-PC is authorized.
+**Host needed:** paired only (Tier 1 needs the app grid, no stream). Tier 2 streams briefly — the usual host is authorized.
 
 ## What shipped
 
@@ -17,7 +17,7 @@ menu item **"Clear Game Profile (summary)"** removes it. Log line at launch:
 ## Tier 1 — launcher-only (profile CRUD + persistence)
 
 1. `./testing/run-cycle.sh test76-per-game-profiles` (fetch + md5 + selftest: expect `SELFTEST RESULT: PASS`).
-2. Launch the app (Desktop Mode, `QT_QPA_PLATFORM=xcb` as usual), open **Navid-PC**'s app grid.
+2. Launch the app (Desktop Mode, `QT_QPA_PLATFORM=xcb` as usual), open the paired host PC's app grid.
 3. On any non-running app tile open the context menu (right-click / Menu button):
    - EXPECT a new item **"Save Current Settings as Game Profile"** (below Direct Launch/above Hide Game order may vary).
    - Trigger it. Re-open the menu: EXPECT it now reads **"Update Game Profile from Current Settings"**
@@ -48,4 +48,4 @@ menu item **"Clear Game Profile (summary)"** removes it. Log line at launch:
 
 `testing/test76-per-game-profiles/report.md` on `diagnostic/test76-per-game-profiles-report`,
 PR against `test76-per-game-profiles`. Tick the checklist row (☑/✗) in the same commit.
-Announce START/DONE on the bus: `https://hearth.tail71d120.ts.net/api/coordination/announce` (ASCII payload).
+Announce START/DONE on the hub bus (`$HUB_BUS/api/coordination/announce`, ASCII; hostname known on-device).
