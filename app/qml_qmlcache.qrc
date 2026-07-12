@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 <RCC>
     <qresource prefix="/">
+        <file alias="gui/Theme.qml">gui/Theme.qml</file>
         <file alias="gui/main.qml">gui/main.qml</file>
         <file alias="gui/PcView.qml">gui/PcView.qml</file>
         <file alias="gui/AppView.qml">gui/AppView.qml</file>

@@ -58,6 +58,11 @@ int AppModel::getDirectLaunchAppIndex()
     return -1;
 }
 
+QString AppModel::getComputerUuid()
+{
+    return m_Computer ? m_Computer->uuid : QString();
+}
+
 int AppModel::rowCount(const QModelIndex &parent) const
 {
     // For list models only the root node (an invalid parent) should return the list's size. For all
