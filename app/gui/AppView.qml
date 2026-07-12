@@ -35,7 +35,12 @@ CenteredGridView {
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        height: VbTokens.headerH * 1.4
+        // Hidden for now (see PcView): the global toolbar stays on the home screens (its collapse was
+        // the 0.25.0 gamescope black-screen cause) and provides Back + title, so this per-screen header
+        // would double it. The bottom hint bar stays. TODO(BL-1590 follow-up): restore once the toolbar
+        // collapse is gamescope-WSI-safe.
+        visible: false
+        height: 0
 
         Rectangle { anchors.fill: parent; color: VbTokens.bgWindow }
 
