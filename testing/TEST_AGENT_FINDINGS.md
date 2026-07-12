@@ -48,3 +48,14 @@ The top toolbar bar ("Computers" header) renders the **default Material indigo-b
 
 ## Headless keyboard-nav LIMITATION this session (transparency note)
 Fresh 0.25.4 captures of the **nav-gated** screens (1b app-grid, 1e Settings, 1f Help, 1d side-sheet open-state) are blocked: keyboard injection is not reaching the app's QML `Keys` handlers in headless gamescope this session — tried xdotool (to display, render surface, and the named Vibemis window) **and** a kernel-level `/dev/uinput` virtual keyboard; screenshot md5s change only from the animated online-status dots, not real navigation. Menu/Ctrl+N worked earlier this session (0.25.2), so it's a gamescope keyboard-**focus** degradation, not a Vibemis bug (app runs, renders 1a, polls host perms every 3s). **1d 560px-panel render, 1e sidebar, 1b/1c/1f were already verified on 0.24.0–0.25.2** (see checklist). Recommend the build agent do the decisive 1b–1f re-capture under Xvfb/real display, or I retry after a fresh Deck session.
+
+---
+
+## 🚨 0.26.0 RELEASE-BLOCKER — 1a corrected redesign BLACK-SCREENS under gamescope (regression)
+Beta **0.26.0** (md5 `5944d137`, commit 77fd3c7 "rebuild 1a Computers") — the rebuilt 1a home screen renders **fully black** under headless gamescope (WSI path). The toolbar-collapse change (`main.qml` `redesignScreen` now **default-true** → toolbar height-0 from frame one) reintroduced the exact 0.25.0 black regression. Isolated rigorously:
+- **1a fully black**, md5 `85ccd4cf` — the EXACT known-black hash from the 0.25.0 finding; **persistent** across two captures +8s apart (not a startup frame).
+- **Log:** renderer inits fine (`Vulkan RADV REMBRANDT`, `VAAPI on x11`, `HDR ENABLED`) then `[Gamescope WSI] Made gamescope surface for xid: 0x60000e` → `Destroying swapchain: (nil)` → `Destroyed swapchain: (nil)`. App runs but the GUI **swapchain is NULL** → black.
+- **glxgears control** in the SAME gamescope renders fine (md5 `70c4fc31`, 161 KB) → compositor + WSI + `gamescopectl screenshot` all work → **the black is APP-ONLY**, a 0.26.0 regression, not harness.
+- **Xvfb would NOT catch this** (plain X software path, not the WSI/swapchain path Game Mode uses).
+
+**This is the build agent's own release-blocking gate.** Escalated on the bus immediately. Do NOT tag stable. The header must be built without a null-swapchain at first frame (the default-true height-0 collapse is the trigger). Could not check the rich host cards / wordmark / badge — the whole screen is black.
