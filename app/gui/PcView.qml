@@ -4,6 +4,7 @@ import Theme 1.0
 import QtQuick.Layouts 1.3
 
 import ComputerModel 1.0
+import Vibemis.Redesign 1.0
 
 import ComputerManager 1.0
 import StreamingPreferences 1.0
@@ -174,6 +175,32 @@ CenteredGridView {
             width: 75
             height: 75
             visible: model.statusUnknown
+        }
+
+        // Redesign 1a: token focus-ring + online/offline status pill + host-type badge.
+        // Visual overlays bound to the real model roles; pairing/wake/menu wiring is untouched.
+        VbFocusRing {
+            active: highlighted
+            radius: VbTokens.radiusCard
+            anchors.fill: parent
+            anchors.margins: 4
+        }
+        VbStatusPill {
+            visible: !model.statusUnknown
+            online: model.online
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.top: parent.top
+            anchors.topMargin: 8
+            z: 5
+        }
+        VbBadge {
+            visible: model.online && model.paired
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.top: pcIcon.bottom
+            anchors.topMargin: -4
+            z: 5
+            neutral: !model.isApolloServer
+            text: model.isApolloServer ? qsTr("APOLLO") : qsTr("SUNSHINE")
         }
 
         Label {
