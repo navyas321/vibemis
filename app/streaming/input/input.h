@@ -99,6 +99,13 @@ public:
     void handleKeyEvent(SDL_KeyboardEvent* event);
     void handleTextInputEvent(SDL_TextInputEvent* event);   // P3.20 (test86)
 
+    // P3.20b (test87): thread-safe bridge so the Quick Menu (Qt main thread) can trigger
+    // input ops that MUST run on the SDL thread (fullscreen / mouse-mode / input-capture
+    // toggles). QuickMenuManager pushes this SDL user event; the SDL event loop dispatches
+    // it here. Returns the registered SDL user-event type (stable for the process).
+    static Uint32 quickMenuComboEventType();
+    void dispatchQuickMenuCombo(int comboCode);
+
     void handleMouseButtonEvent(SDL_MouseButtonEvent* event);
 
     void handleMouseMotionEvent(SDL_MouseMotionEvent* event);

@@ -2572,6 +2572,14 @@ void Session::execInternal()
             // ignored otherwise (the host receives scancodes from SDL_KEYDOWN as before).
             m_InputHandler->handleTextInputEvent(&event.text);
             break;
+        default:
+            // P3.20b (test87): the Quick Menu (Qt thread) pushes a registered SDL user
+            // event to run fullscreen/mouse-mode/capture toggles on THIS (SDL) thread.
+            if (m_InputHandler != nullptr &&
+                event.type == SdlInputHandler::quickMenuComboEventType()) {
+                m_InputHandler->dispatchQuickMenuCombo((int)event.user.code);
+            }
+            break;
         case SDL_MOUSEBUTTONDOWN:
         case SDL_MOUSEBUTTONUP:
             presence.runCallbacks();
