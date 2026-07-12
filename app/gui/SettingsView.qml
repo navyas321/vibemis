@@ -1719,6 +1719,8 @@ Flickable {
                     ToolTip.timeout: 5000
                     ToolTip.visible: hovered
                     ToolTip.text: qsTr("When this device is running on battery, start streams at a lower bitrate (60% of the configured value) to save power and reduce heat. Plugged-in streams are unaffected.")
+                }
+
                 Label {
                     width: parent.width
                     text: qsTr("Settings backup")
@@ -2424,6 +2426,15 @@ Flickable {
                     checked: StreamingPreferences.compactPerformanceOverlay
                     onCheckedChanged: {
                         StreamingPreferences.compactPerformanceOverlay = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Show the stats as a single compact line (fps, resolution, latency, dropped frames) instead of the full multi-line block — easier to read on a handheld screen.")
+                }
+
+                CheckBox {
                     id: perfOverlayShowClock
                     width: parent.width
                     text: qsTr("Show clock in the performance overlay")
@@ -2437,7 +2448,6 @@ Flickable {
                     ToolTip.delay: 1000
                     ToolTip.timeout: 5000
                     ToolTip.visible: hovered
-                    ToolTip.text: qsTr("Show the stats as a single compact line (fps, resolution, latency, dropped frames) instead of the full multi-line block — easier to read on a handheld screen.")
                     ToolTip.text: qsTr("Add a wall-clock time (HH:MM:SS) line to the top of the performance overlay.") + "\n\n" +
                                   qsTr("Useful on a handheld in Game Mode, where the system clock is hidden while streaming.")
                 }
