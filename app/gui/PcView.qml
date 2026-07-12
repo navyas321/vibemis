@@ -219,86 +219,86 @@ CenteredGridView {
         Loader {
             id: pcContextMenuLoader
             asynchronous: true
-            sourceComponent: NavigableMenu {
+            // Redesign 1d: the old right-click NavigableMenu is now a right-side action sheet
+            // (VbHostSheet). Same actions + visibility rules, presented gamepad-first.
+            sourceComponent: VbHostSheet {
                 id: pcContextMenu
                 initiator: pcContextMenuLoader.parent
-                MenuItem {
-                    text: qsTr("PC Status: %1").arg(model.online ? qsTr("Online") : qsTr("Offline"))
-                    font.bold: true
-                    enabled: false
-                }
-                MenuItem {
-                    // Vibemis (P3.13): Apollo per-client access level, when the host reports it.
-                    text: qsTr("Access: %1").arg(model.permissionSummary)
-                    visible: model.permissionSummary !== ""
-                    height: visible ? implicitHeight : 0
-                    enabled: false
-                }
-                NavigableMenuItem {
-                    text: qsTr("View All Apps")
-                    onTriggered: {
-                        var component = Qt.createComponent("AppView.qml")
-                        var appView = component.createObject(stackView, {"computerIndex": index, "objectName": model.name, "showHiddenGames": true})
-                        stackView.push(appView)
+                hostName: model.name
+                online: model.online
+                apolloHost: model.isApolloServer
+                hostBadge: model.isApolloServer ? qsTr("APOLLO") : qsTr("SUNSHINE")
+                subtitleLine: model.permissionSummary
+                actions: [
+                    {
+                        label: qsTr("View all apps"), icon: "apps",
+                        visible: model.online && model.paired,
+                        trigger: function() {
+                            var component = Qt.createComponent("AppView.qml")
+                            var appView = component.createObject(stackView, {"computerIndex": index, "objectName": model.name, "showHiddenGames": true})
+                            stackView.push(appView)
+                        }
+                    },
+                    {
+                        label: qsTr("Wake PC"), icon: "wake",
+                        visible: !model.online && model.wakeable,
+                        trigger: function() { computerModel.wakeComputer(index) }
+                    },
+                    {
+                        label: qsTr("Pair"), icon: "pair",
+                        visible: model.online && !model.paired,
+                        trigger: function() {
+                            // Use standard pairing for GeForce Experience
+                            var pin = computerModel.generatePinString()
+                            computerModel.pairComputer(index, pin)
+                            pairDialog.pin = pin
+                            pairDialog.open()
+                        }
+                    },
+                    {
+                        label: qsTr("Pair using OTP"), icon: "pair",
+                        visible: model.online && !model.paired && model.isApolloServer,
+                        trigger: function() {
+                            // Pairing starts in otpPairDialog.onOpened
+                            otpPairDialog.computerIndex = index
+                            otpPairDialog.open()
+                        }
+                    },
+                    {
+                        label: qsTr("Test network"), icon: "network",
+                        visible: true,
+                        trigger: function() {
+                            computerModel.testConnectionForComputer(index)
+                            testConnectionDialog.open()
+                        }
+                    },
+                    {
+                        label: qsTr("Rename"), icon: "rename",
+                        visible: true,
+                        trigger: function() {
+                            renamePcDialog.pcIndex = index
+                            renamePcDialog.originalName = model.name
+                            renamePcDialog.open()
+                        }
+                    },
+                    {
+                        label: qsTr("View details & permissions"), icon: "details",
+                        visible: true,
+                        trigger: function() {
+                            showPcDetailsDialog.pcDetails = model.details
+                            showPcDetailsDialog.open()
+                        }
+                    },
+                    {
+                        label: qsTr("Delete PC"), icon: "delete", danger: true,
+                        visible: true,
+                        trigger: function() {
+                            deletePcDialog.pcIndex = index
+                            deletePcDialog.pcName = model.name
+                            deletePcDialog.open()
+                        }
                     }
-                    visible: model.online && model.paired
-                }
-                NavigableMenuItem {
-                    text: qsTr("Wake PC")
-                    onTriggered: computerModel.wakeComputer(index)
-                    visible: !model.online && model.wakeable
-                }
-                NavigableMenuItem {
-                    text: qsTr("Pair")
-                    onTriggered: {
-                        // Use standard pairing for GeForce Experience
-                        var pin = computerModel.generatePinString()
-                        computerModel.pairComputer(index, pin)
-                        pairDialog.pin = pin
-                        pairDialog.open()
-                    }
-                    visible: model.online && !model.paired
-                }
-                NavigableMenuItem {
-                    text: qsTr("Pair using OTP")
-                    onTriggered: {
-                        // Pairing starts in otpPairDialog.onOpened
-                        otpPairDialog.computerIndex = index
-                        otpPairDialog.open()
-                    }
-                    visible: model.online && !model.paired && model.isApolloServer
-                }
-                NavigableMenuItem {
-                    text: qsTr("Test Network")
-                    onTriggered: {
-                        computerModel.testConnectionForComputer(index)
-                        testConnectionDialog.open()
-                    }
-                }
-
-                NavigableMenuItem {
-                    text: qsTr("Rename PC")
-                    onTriggered: {
-                        renamePcDialog.pcIndex = index
-                        renamePcDialog.originalName = model.name
-                        renamePcDialog.open()
-                    }
-                }
-                NavigableMenuItem {
-                    text: qsTr("Delete PC")
-                    onTriggered: {
-                        deletePcDialog.pcIndex = index
-                        deletePcDialog.pcName = model.name
-                        deletePcDialog.open()
-                    }
-                }
-                NavigableMenuItem {
-                    text: qsTr("View Details")
-                    onTriggered: {
-                        showPcDetailsDialog.pcDetails = model.details
-                        showPcDetailsDialog.open()
-                    }
-                }
+                ]
             }
         }
 
@@ -342,14 +342,9 @@ CenteredGridView {
         }
 
         onPressAndHold: {
-            // popup() ensures the menu appears under the mouse cursor
-            if (pcContextMenu.popup) {
-                pcContextMenu.popup()
-            }
-            else {
-                // Qt 5.9 doesn't have popup()
-                pcContextMenu.open()
-            }
+            // Redesign 1d: the host-options sheet always slides in from the right edge
+            // (not positioned under the cursor like the old context menu).
+            pcContextMenu.open()
         }
 
         MouseArea {
