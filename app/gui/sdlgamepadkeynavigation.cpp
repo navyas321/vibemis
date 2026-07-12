@@ -197,6 +197,16 @@ void SdlGamepadKeyNavigation::onPollingTimerFired()
                 // handled by the control in focus. ☰ / Start = Settings on every screen.
                 sendKey(type, Qt::Key_Hangup);
                 break;
+            case SDL_CONTROLLER_BUTTON_LEFTSHOULDER:
+                // Redesign 1e: LB/RB switch the Settings sidebar category (design handoff hint bar
+                // "LB RB Switch category"). Same trick as Ⓨ/Start above — distinct synthetic keycodes
+                // (Key_MediaPrevious/Key_MediaNext) let SettingsView bind them via Keys.onPressed
+                // without hijacking other screens, which simply ignore them.
+                sendKey(type, Qt::Key_MediaPrevious);
+                break;
+            case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER:
+                sendKey(type, Qt::Key_MediaNext);
+                break;
             default:
                 break;
             }

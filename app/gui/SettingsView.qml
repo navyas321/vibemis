@@ -56,6 +56,24 @@ Item {
         StreamingPreferences.save()
     }
 
+    // ---- Redesign 1e: LB/RB switch category (matches the hint bar below) ----
+    // SdlGamepadKeyNavigation forwards the shoulder buttons as Key_MediaPrevious (LB) /
+    // Key_MediaNext (RB) — see sdlgamepadkeynavigation.cpp. The handler lives on the page root, so
+    // a shoulder press from any focused sidebar row or control bubbles up here (unhandled key
+    // events propagate to ancestors — the same path main.qml uses for ☰/Start). The category is
+    // clamped to the sidebar's range with no wrap. Other screens don't bind these keys, so the
+    // shoulder buttons are a harmless no-op there.
+    Keys.onPressed: {
+        if (event.key === Qt.Key_MediaPrevious) {
+            settingsPage.category = Math.max(0, settingsPage.category - 1)
+            event.accepted = true
+        }
+        else if (event.key === Qt.Key_MediaNext) {
+            settingsPage.category = Math.min(sidebarRepeater.count - 1, settingsPage.category + 1)
+            event.accepted = true
+        }
+    }
+
     // ---- Header (Back + "Settings" + version chip) MOVED to the always-present global toolbar
     // (main.qml), which is the header bar kept present so it renders under gamescope. Hidden here so
     // there is no double header; the sidebar/panel (anchored to header.bottom) shift up to the top. ----
@@ -3279,12 +3297,10 @@ Item {
     }
 
     // ---- Gamepad hint bar (redesign 1e) ----
-    // Note: the LB/RB hint below matches the HTML handoff, but shoulder buttons are NOT yet
-    // forwarded by SdlGamepadKeyNavigation (sdlgamepadkeynavigation.cpp has no
-    // SDL_CONTROLLER_BUTTON_LEFTSHOULDER/RIGHTSHOULDER case) — that's a C++ change outside this
-    // QML file's scope. Today the sidebar rows are still focusable (D-pad/Tab reachable,
-    // Ⓐ/Return/click to select), which makes every category gamepad-reachable in the meantime.
-    // Ⓑ / Esc pop the view via the StackView's key handlers.
+    // The LB/RB hint matches real behavior: SdlGamepadKeyNavigation now forwards the shoulder
+    // buttons as Key_MediaPrevious/Key_MediaNext, handled by the page-root Keys.onPressed above to
+    // switch category (LB = previous, RB = next). The sidebar rows also stay focusable (D-pad/Tab
+    // reachable, Ⓐ/Return/click to select). Ⓑ / Esc pop the view via the StackView's key handlers.
     VbHintBar {
         id: hintBar
         anchors.bottom: parent.bottom
