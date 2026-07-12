@@ -143,6 +143,13 @@ CenteredGridView {
         if (currentIndex == -1 && SdlGamepadKeyNavigation.getConnectedGamepads() > 0) {
             currentIndex = 0
         }
+
+        // Give the GRID active focus on entry so d-pad / arrow keys drive the host cards
+        // immediately. Without this, active focus can land on a header toolbar button (the
+        // Settings gear), and arrow/d-pad keys never reach the grid — observed as "focus stuck
+        // on the gear, DOWN doesn't move to the grid" (headless gamescope, where StackView's
+        // implicit focus hand-off to the current item doesn't win over the header buttons).
+        forceActiveFocus()
     }
 
     StackView.onDeactivating: {

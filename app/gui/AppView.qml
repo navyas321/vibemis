@@ -128,6 +128,10 @@ CenteredGridView {
             currentIndex = 0
         }
 
+        // Give the app grid active focus on entry (see PcView) so d-pad / arrow keys drive the
+        // tiles immediately instead of a header toolbar button capturing focus.
+        forceActiveFocus()
+
         if (!showGames && !showHiddenGames) {
             // Check if there's a direct launch app
             var directLaunchAppIndex = model.getDirectLaunchAppIndex();
