@@ -406,8 +406,16 @@ ApplicationWindow {
                     onActivated: helpButton.clicked()
                 }
 
-                // TODO need to make sure browser is brought to foreground.
-                onClicked: Qt.openUrlExternally("https://github.com/navyas321/vibemis");
+                // Redesign 1f: push the in-app Help screen (falls back to the repo URL is no
+                // longer needed — the screen has the shortcuts + remote-play info inline).
+                onClicked: {
+                    var comp = Qt.createComponent("qrc:/gui/VbHelpView.qml")
+                    if (comp.status === Component.Ready) {
+                        stackView.push(comp)
+                    } else {
+                        Qt.openUrlExternally("https://github.com/navyas321/vibemis")
+                    }
+                }
 
                 Keys.onDownPressed: {
                     stackView.currentItem.forceActiveFocus(Qt.TabFocus)
