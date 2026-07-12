@@ -3,6 +3,7 @@ import QtQuick.Controls 2.2
 import QtQuick.Controls.Material 2.2
 
 import Theme 1.0
+import Vibemis.Redesign 1.0
 import AppModel 1.0
 import AppProfileManager 1.0
 import ComputerManager 1.0
@@ -247,6 +248,38 @@ CenteredGridView {
             else {
                 // Qt 5.9 doesn't have popup()
                 appContextMenu.open()
+            }
+        }
+
+        // Redesign 1b: token focus-ring over the tile art + a green RESUME badge on running
+        // games. Purely visual overlays; the box-art/launch/context-menu wiring is untouched.
+        VbFocusRing {
+            active: highlighted
+            radius: VbTokens.radiusCard
+            anchors.fill: appIcon
+            anchors.margins: -6
+        }
+        Rectangle {
+            visible: model.running
+            anchors.horizontalCenter: appIcon.horizontalCenter
+            anchors.top: appIcon.top
+            anchors.topMargin: 8
+            z: 5
+            implicitWidth: resumeLbl.implicitWidth + 20
+            implicitHeight: 26
+            radius: VbTokens.radiusPill
+            color: Qt.rgba(VbTokens.statusOnline.r, VbTokens.statusOnline.g, VbTokens.statusOnline.b, 0.16)
+            border.width: 1
+            border.color: VbTokens.statusOnline
+            Text {
+                id: resumeLbl
+                anchors.centerIn: parent
+                text: qsTr("RESUME")
+                font.family: VbTokens.fontBody
+                font.pixelSize: VbTokens.sizeBadge
+                font.bold: true
+                font.letterSpacing: VbTokens.badgeSpacing
+                color: VbTokens.statusOnline
             }
         }
 
