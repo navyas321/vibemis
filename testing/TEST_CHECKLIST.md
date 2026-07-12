@@ -34,9 +34,11 @@ whole Quick Menu group depends on its render path.
   (report PR #142: NOT a global freeze; keyboard path passes in-stream under gamescope emulation.
   Real defect = no gamepad close/return: Back/Select swallowed unmapped, only B closes, hint
   keyboard-only; plus the open-combo left stuck buttons on the host. Fix shipped as **test77**.)
-- [ ] **test77** — Quick Menu gamepad close/return-to-game (Back/Start→close, combo state clear,
-  "Resume Game" hint) — **PR #144** — base `vibemis-main` — ☐  ⭐ **RUN THIS FIRST** (re-run of the
-  test75 scenario on the fix; `testing/test77-quickmenu-gamepad-close/instructions.md`)
+- [x] **test77** — Quick Menu gamepad close/return-to-game — **PR #144** — ☑ **PASS** (report
+  PR #145: verified in-stream under gamescope emulation — "Resume Game (Ⓑ / Back / Esc)" hint,
+  Esc/Back close+resume, submenu Esc→main, exactly 1 combo-detect per open, 0 coredumps; physical-
+  controller Game Mode pass optional follow-up) → **merged**, ships in 0.7.1-beta. **Unblocks
+  test29/33/47 (rebase onto the fix before verifying).**
 
 ## 1. Quick Menu foundation + content (verify in this sub-order — the rest stack on test22)
 
