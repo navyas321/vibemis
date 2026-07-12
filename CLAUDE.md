@@ -334,9 +334,11 @@ features — never again):
 - **Bump MINOR** (`0.7.0` → `0.8.0`) when a feature wave merges to `vibemis-main`
   (one or more verified `test<N>` feature PRs).
 - **Bump PATCH** for a fix-only wave.
-- Bump `app/version.txt` **in the same push as (or immediately after) the merge** — and remember
-  the smart-build check: the push's HEAD commit must touch a code file (`.cpp/.h/.qml/.pro`) or no
-  release is produced (`.txt` alone does not count).
+- Bump `app/version.txt` **in the same push as (or immediately after) the merge**. Mechanics
+  (verified 2026-07-11 against `check-changes`): on `vibemis-main`, betas publish **only on PR
+  merge commits that touch code** — a direct push (even code-touching) never releases. So a bump
+  pushed directly cuts its beta at the **next PR merge**; to release immediately, run
+  `gh workflow run dev-build.yml --ref vibemis-main` (workflow_dispatch always builds).
 - **Stable releases stay explicit** (workflow_dispatch `release_type=stable` or a `release/**`
   branch) — cut one at milestones (e.g. after a verification wave clears); don't let stable lag
   more than a few minor versions behind beta.
