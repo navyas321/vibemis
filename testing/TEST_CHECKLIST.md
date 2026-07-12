@@ -116,10 +116,19 @@ whole Quick Menu group depends on its render path.
   — base `vibemis-main` — ☐ (launcher-only screenshot diff vs your audit zip;
   `testing/test79-theme-wave1/instructions.md`; auto-merges on green CI — report = post-merge gate)
 
+## 5b3. Streaming resilience (P3.21)
+
+- [ ] **test80** — Auto-reconnect on unexpected stream drop (3 attempts, backoff; setting default
+  OFF) — **PR #153** (auto-merges) — ☐ (`testing/test80-auto-reconnect/instructions.md`)
+
 ## 5c. CLI
 
-- [ ] **test78** — CLI app seek: cached-list immediate seek + robust matching (fixes YOUR test75
-  finding; fully headless) — **PR #148** — base `vibemis-main` — ☐ (`testing/test78-cli-app-seek/instructions.md`)
+- [x] **test78** — CLI app seek fix — **PR #148** — ☑ **PASS** (report PR #150: all 4 headless CLI
+  cases on the real host — exact, substring, not-found w/ app list, ambiguity) → merged; zero-width
+  app-name sanitization follow-up shipped in test81.
+- [ ] **test81** — repo-review fix wave regression cycle (server commands UNBROKEN, export identity
+  exclusion, menu input gating, UAF fixes) — **PR #152** (auto-merges) — ☐
+  (`testing/test81-review-fixes/instructions.md` — post-merge gate)
 
 ## 6. Config / SteamOS helpers
 
