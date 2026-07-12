@@ -110,10 +110,31 @@ whole Quick Menu group depends on its render path.
   device/controller)*: open a game tile's menu → Save profile → `grep appprofiles` conf → stream
   applies profile (log line + negotiated shape) → Clear — ☐
 
+## 5b2. UI / design system (P3.19)
+
+- [ ] **test79** — Theme-token migration wave 1 (PcView + AppView + Material bridge) — **PR #149**
+  — base `vibemis-main` — ☐ (launcher-only screenshot diff vs your audit zip;
+  `testing/test79-theme-wave1/instructions.md`; auto-merges on green CI — report = post-merge gate)
+
+## 5b4. Input / handheld (P3.22)
+
+- [ ] **test82** — Motion forwarding slice 2: gate gyro/accel enablement on the setting — **PR #157**
+  (auto-merges) — ☐ device-gated Tier 2 (`testing/test82-motion-forward/instructions.md`)
+
+## 5b3. Streaming resilience (P3.21)
+
+- [ ] **test80** — Auto-reconnect on unexpected stream drop (3 attempts, backoff; setting default
+  OFF) — **PR #153** (auto-merges) — ☐ (`testing/test80-auto-reconnect/instructions.md`)
+
 ## 5c. CLI
 
-- [ ] **test78** — CLI app seek: cached-list immediate seek + robust matching (fixes YOUR test75
-  finding; fully headless) — **PR #148** — base `vibemis-main` — ☐ (`testing/test78-cli-app-seek/instructions.md`)
+- [x] **test78** — CLI app seek fix — **PR #148** — ☑ **PASS** (report PR #150: all 4 headless CLI
+  cases on the real host — exact, substring, not-found w/ app list, ambiguity) → merged; zero-width
+  app-name sanitization follow-up shipped in test81.
+- [x] **test81** — repo-review fix wave — **PR #152** — ☑ **PASS** (report PR #156 on real Apollo
+  host: Server Commands revived (lists "Bubbles", no Command-not-found), TLS private-key export leak
+  gone, renderer-swap race stable 17×8 toggles / 0 coredumps) → merged, 0.10.1. Tier-2 controller +
+  Settings-UAF nav deferred (headless-harness gaps).
 
 ## 6. Config / SteamOS helpers
 

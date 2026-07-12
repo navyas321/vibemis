@@ -63,6 +63,7 @@
 #define SER_SWAPFACEBUTTONS "swapfacebuttons"
 #define SER_CAPTURESYSKEYS "capturesyskeys"
 #define SER_KEEPAWAKE "keepawake"
+#define SER_AUTORECONNECT "autoreconnect"
 #define SER_SEENWELCOMEHINT "seenwelcomehint"
 #define SER_LANGUAGE "language"
 #define SER_RENDERERBACKEND "rendererbackend"
@@ -182,6 +183,8 @@ void StreamingPreferences::reload()
     reverseScrollDirection = settings.value(SER_REVERSESCROLL, false).toBool();
     swapFaceButtons = settings.value(SER_SWAPFACEBUTTONS, false).toBool();
     keepAwake = settings.value(SER_KEEPAWAKE, true).toBool();
+    // P3.21 (test80): default OFF for the first slice; flip after on-device verification.
+    autoReconnect = settings.value(SER_AUTORECONNECT, false).toBool();
     seenWelcomeHint = settings.value(SER_SEENWELCOMEHINT, false).toBool();
     enableHdr = settings.value(SER_HDR, false).toBool();
     displayHdrCapability = settings.value(SER_DISPLAY_HDR_CAPABILITY, true).toBool();
@@ -410,6 +413,7 @@ void StreamingPreferences::save()
     settings.setValue(SER_SWAPFACEBUTTONS, swapFaceButtons);
     settings.setValue(SER_CAPTURESYSKEYS, captureSysKeysMode);
     settings.setValue(SER_KEEPAWAKE, keepAwake);
+    settings.setValue(SER_AUTORECONNECT, autoReconnect);
     settings.setValue(SER_SEENWELCOMEHINT, seenWelcomeHint);
     
     // Vibemis client-side streaming enhancements
@@ -418,6 +422,19 @@ void StreamingPreferences::save()
     settings.setValue(SER_CUSTOMREFRESHRATE, customRefreshRate);
     settings.setValue(SER_RESOLUTIONSCALING, enableResolutionScaling);
     settings.setValue(SER_RESOLUTIONSCALEFACTOR, resolutionScaleFactor);
+}
+
+// test81 (review fix): the export/import round-trip must NEVER carry the device
+// identity — "key" is the client TLS PRIVATE KEY, "certificate"/"uniqueid" are the
+// pairing identity. Exporting them put the private key in a file users are told to
+// copy between devices; importing them clobbered THIS device's pairing with every
+// host. Host pairing data ("hosts/...") is likewise per-device and excluded.
+static bool isDeviceIdentityKey(const QString& k)
+{
+    return k == QLatin1String("key") ||
+           k == QLatin1String("certificate") ||
+           k == QLatin1String("uniqueid") ||
+           k.startsWith(QLatin1String("hosts/"));
 }
 
 QString StreamingPreferences::exportSettings()
@@ -431,6 +448,9 @@ QString StreamingPreferences::exportSettings()
     dst.clear();
     const QStringList keys = src.allKeys();
     for (const QString& k : keys) {
+        if (isDeviceIdentityKey(k)) {
+            continue;
+        }
         dst.setValue(k, src.value(k));
     }
     dst.sync();
@@ -456,6 +476,11 @@ bool StreamingPreferences::importSettings()
     QSettings dst;
     const QStringList keys = src.allKeys();
     for (const QString& k : keys) {
+        // Belt-and-braces: even if the .ini came from an old build that exported
+        // identity keys, never let an import overwrite this device's identity.
+        if (isDeviceIdentityKey(k)) {
+            continue;
+        }
         dst.setValue(k, src.value(k));
     }
     dst.sync();

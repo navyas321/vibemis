@@ -4,6 +4,8 @@
 #include <QQmlEngine>
 #include <QSize>
 
+#include <atomic>
+
 class NvComputer;
 class NvHTTP;
 #include "backend/servercommandmanager.h"
@@ -130,7 +132,9 @@ private:
     void teardownOverlayRenderer();
     void sendKeyCombo(int keyCombo);
 
-    bool m_isVisible;
+    // test81 (review fix): read from the SDL input thread (gamepad/keyboard intercepts)
+    // while written on the Qt main thread — must be atomic.
+    std::atomic<bool> m_isVisible;
 
     ServerCommandManager *m_serverCommandManager;
     ClipboardManager *m_clipboardManager;

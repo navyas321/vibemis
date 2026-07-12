@@ -19,6 +19,12 @@ struct GamepadState {
     SDL_TimerID mouseEmulationTimer;
     uint32_t lastStartDownTime;
 
+    // test81 (review fix): buttons whose PRESS was consumed by the Quick Menu intercept.
+    // Their RELEASE must be swallowed too, or it leaks into the normal handlers with
+    // stale state (e.g. Start release toggling mouse emulation, stray mouse-button
+    // releases in emulation mode).
+    int buttonsConsumedByMenu;
+
     bool clickpadButtonEmulationEnabled;
     bool emulatedClickpadButtonDown;
 
@@ -216,6 +222,10 @@ private:
     int m_GamepadMask;
     GamepadState m_GamepadState[MAX_GAMEPADS];
     QSet<short> m_KeysDown;
+    // test81 (review fix): scancodes whose key-DOWN the Quick Menu consumed; their key-UP
+    // must be swallowed too — but a key held since BEFORE the menu opened must still get
+    // its release sent to the host (stuck-key fix).
+    QSet<int> m_MenuConsumedKeys;
     bool m_FakeCaptureActive;
     QString m_OldIgnoreDevices;
     QString m_OldIgnoreDevicesExcept;

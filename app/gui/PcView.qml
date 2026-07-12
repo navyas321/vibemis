@@ -1,5 +1,6 @@
 import QtQuick 2.9
 import QtQuick.Controls 2.2
+import Theme 1.0
 import QtQuick.Layouts 1.3
 
 import ComputerModel 1.0
@@ -582,9 +583,9 @@ CenteredGridView {
                 Rectangle {
                     Layout.fillWidth: true
                     height: pinLabel.implicitHeight + 16
-                    color: "#1a1a2e"
+                    color: Theme.surface
                     radius: 6
-                    border.color: "#00cccc"
+                    border.color: Theme.accent
                     border.width: 2
 
                     Label {
@@ -594,7 +595,7 @@ CenteredGridView {
                         font.pointSize: 36
                         font.bold: true
                         font.letterSpacing: 12
-                        color: "#00cccc"
+                        color: Theme.accent
                     }
                 }
             }
@@ -635,7 +636,7 @@ CenteredGridView {
                 text: qsTr("Waiting for PIN entry on host… (up to 2 minutes)")
                 Layout.fillWidth: true
                 wrapMode: Text.Wrap
-                color: "#aaaaaa"
+                color: Theme.textTertiary
                 font.pointSize: 9
             }
         }
