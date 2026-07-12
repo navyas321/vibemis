@@ -34,6 +34,11 @@ public:
     Q_INVOKABLE QRect getNativeResolution(int displayIndex);
     Q_INVOKABLE QRect getSafeAreaResolution(int displayIndex);
     Q_INVOKABLE int getRefreshRate(int displayIndex);
+
+    // Vibemis P3.7 (test93): run `tailscale status` in-app and return a short human-readable
+    // status line (the device's tailnet IP if up, or an install/up hint) so the user can
+    // confirm their tailnet from Settings without a terminal. Best-effort; never throws.
+    Q_INVOKABLE QString checkTailscaleStatus();
     
     static bool isSteamDeckOrGamescope();
     static bool hasVulkanHdrSupport();

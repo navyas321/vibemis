@@ -98,6 +98,26 @@ int SystemProperties::getRefreshRate(int displayIndex)
     return monitorRefreshRates.value(displayIndex);
 }
 
+QString SystemProperties::checkTailscaleStatus()
+{
+    // `tailscale ip -4` prints the device's tailnet IPv4 on its own line when the tailnet is
+    // up; a non-zero exit (or empty output) means Tailscale isn't installed or isn't connected.
+    QProcess proc;
+    proc.setProcessChannelMode(QProcess::MergedChannels);
+    proc.start("tailscale", QStringList() << "ip" << "-4");
+    if (!proc.waitForStarted(2000)) {
+        return tr("Tailscale not found. Install it, then run the one-command setup.");
+    }
+    proc.waitForFinished(4000);
+    QString out = QString::fromUtf8(proc.readAll()).trimmed();
+    if (proc.exitStatus() == QProcess::NormalExit && proc.exitCode() == 0 && !out.isEmpty()) {
+        // Take the first line (the primary tailnet IPv4).
+        QString ip = out.split(QLatin1Char('\n')).first().trimmed();
+        return tr("Connected — this device's Tailscale IP is %1.").arg(ip);
+    }
+    return tr("Tailscale is installed but not connected. Run the one-command setup or `tailscale up`.");
+}
+
 class QuerySdlVideoThread : public QThread
 {
 public:
