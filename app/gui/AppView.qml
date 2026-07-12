@@ -3,6 +3,7 @@ import QtQuick.Controls 2.2
 import QtQuick.Controls.Material 2.2
 
 import AppModel 1.0
+import AppProfileManager 1.0
 import ComputerManager 1.0
 import SdlGamepadKeyNavigation 1.0
 
@@ -295,6 +296,15 @@ CenteredGridView {
             sourceComponent: NavigableMenu {
                 id: appContextMenu
                 initiator: appContextMenuLoader.parent
+
+                // P3.8 per-game profiles: bump to re-evaluate hasProfile() bindings after
+                // a save/clear (QML can't observe QSettings directly).
+                property int profileRev: 0
+                readonly property bool hasGameProfile: {
+                    profileRev; // re-evaluation dependency
+                    return AppProfileManager.hasProfile(appModel.getComputerUuid(), model.appid)
+                }
+
                 NavigableMenuItem {
                     text: model.running ? qsTr("Resume Game") : qsTr("Launch Game")
                     onTriggered: launchOrResumeSelectedApp(true)
@@ -314,6 +324,37 @@ CenteredGridView {
                     ToolTip.text: qsTr("Launch this app immediately when the host is selected, bypassing the app selection grid.")
                     ToolTip.delay: 1000
                     ToolTip.timeout: 3000
+                    ToolTip.visible: hovered
+                }
+                NavigableMenuItem {
+                    // P3.8: snapshot the CURRENT global settings (resolution/FPS/bitrate/HDR)
+                    // as this game's stream profile, applied automatically at launch.
+                    text: appContextMenu.hasGameProfile ? qsTr("Update Game Profile from Current Settings")
+                                                        : qsTr("Save Current Settings as Game Profile")
+                    onTriggered: {
+                        AppProfileManager.saveCurrentAsProfile(appModel.getComputerUuid(), model.appid)
+                        appContextMenu.profileRev++
+                    }
+
+                    ToolTip.text: qsTr("Store the current resolution, FPS, bitrate and HDR settings as this game's profile. Streams of this game will use the profile instead of the global settings.")
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                }
+                NavigableMenuItem {
+                    text: {
+                        appContextMenu.profileRev; // re-evaluation dependency
+                        return qsTr("Clear Game Profile (%1)").arg(AppProfileManager.profileSummary(appModel.getComputerUuid(), model.appid))
+                    }
+                    visible: appContextMenu.hasGameProfile
+                    onTriggered: {
+                        AppProfileManager.clearProfile(appModel.getComputerUuid(), model.appid)
+                        appContextMenu.profileRev++
+                    }
+
+                    ToolTip.text: qsTr("Remove this game's stream profile and go back to the global settings.")
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
                     ToolTip.visible: hovered
                 }
                 NavigableMenuItem {

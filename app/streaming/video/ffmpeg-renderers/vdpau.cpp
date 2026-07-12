@@ -437,9 +437,12 @@ void VDPAURenderer::notifyOverlayUpdated(Overlay::OverlayType type)
             overlayRect.y0 = m_DisplayHeight - newSurface->h;
         }
         else if (type == Overlay::OverlayDebug) {
-            // Top left
-            overlayRect.x0 = 0;
-            overlayRect.y0 = 0;
+            // Vibemis: user-configurable corner (upper-left origin).
+            int anchor = Session::get()->getOverlayManager().getDebugOverlayAnchor();
+            bool right = (anchor == 1 || anchor == 3);  // TR or BR
+            bool bottom = (anchor == 2 || anchor == 3); // BL or BR
+            overlayRect.x0 = right ? (m_DisplayWidth - newSurface->w) : 0;
+            overlayRect.y0 = bottom ? (m_DisplayHeight - newSurface->h) : 0;
         }
 
         overlayRect.x1 = overlayRect.x0 + newSurface->w;

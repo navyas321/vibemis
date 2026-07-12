@@ -1,11 +1,43 @@
 #include "nvcomputer.h"
 #include "nvapp.h"
 #include "settings/compatfetcher.h"
+#include "settings/streamingpreferences.h"
 
 #include <QUdpSocket>
 #include <QHostInfo>
 #include <QNetworkInterface>
 #include <QNetworkProxy>
+
+#include <algorithm>
+
+// Vibemis (P3.7): a host address belongs to a Tailscale tailnet if it falls in the
+// IPv4 CGNAT range (100.64.0.0/10), the IPv6 ULA range (fd7a:115c:a1e0::/48), or is a
+// MagicDNS name (*.ts.net).
+// When the user enables "prefer Tailscale", such addresses are tried first so remote
+// play over the tailnet connects without waiting for LAN probes to time out.
+// NOTE(P3.7): this only reorders existing candidates — it can't conjure a tailnet
+// address that the host never reported. End-to-end remote-play latency/NAT behaviour
+// still needs verification on a real tailnet (deferred to the test agent; LAN-only today).
+static bool isTailscaleAddress(const NvAddress& addr)
+{
+    const QString host = addr.address();
+    if (host.isEmpty()) {
+        return false;
+    }
+    if (host.endsWith(QStringLiteral(".ts.net"), Qt::CaseInsensitive)) {
+        return true;
+    }
+    QHostAddress parsed(host);
+    if (parsed.protocol() == QAbstractSocket::IPv4Protocol) {
+        // Tailscale CGNAT range 100.64.0.0/10.
+        return parsed.isInSubnet(QHostAddress(QStringLiteral("100.64.0.0")), 10);
+    }
+    if (parsed.protocol() == QAbstractSocket::IPv6Protocol) {
+        // Tailscale ULA range fd7a:115c:a1e0::/48 (review fix: IPv6 tailnets were missed before).
+        return parsed.isInSubnet(QHostAddress(QStringLiteral("fd7a:115c:a1e0::")), 48);
+    }
+    return false;
+}
 
 #define SER_NAME "hostname"
 #define SER_UUID "uuid"
@@ -535,6 +567,15 @@ QVector<NvAddress> NvComputer::uniqueAddresses() const
                 j--;
             }
         }
+    }
+
+    // Vibemis (P3.7): if the user prefers Tailscale for remote play, stable-partition
+    // the candidate list so tailnet addresses (100.64.0.0/10 or *.ts.net) are probed
+    // first. std::stable_partition preserves the existing local→remote→manual ordering
+    // within each group, so LAN still wins among non-tailnet addresses.
+    if (StreamingPreferences::get()->preferTailscale) {
+        std::stable_partition(uniqueAddressList.begin(), uniqueAddressList.end(),
+                              [](const NvAddress& a) { return isTailscaleAddress(a); });
     }
 
     // We must have at least 1 address
