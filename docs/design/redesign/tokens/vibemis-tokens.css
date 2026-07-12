@@ -1,0 +1,67 @@
+/* Vibemis — canonical design tokens (CSS mirror of vibemis-tokens.json)
+   Gamepad-first Linux/SteamOS game-streaming client. Dark theme only.
+   Design canvas 1920x1200 (Legion Go S); scales to 1280x800 (Steam Deck). */
+
+:root {
+  /* ---- color ---- */
+  --vb-bg-app:        #08090B;
+  --vb-bg-window:     #0E1013;
+  --vb-bg-elev:       #15181D;
+  --vb-bg-elev-2:     #1B1F26;
+  --vb-bg-footer:     #0B0D10;
+  --vb-stroke:        rgba(255,255,255,0.08);
+  --vb-stroke-soft:   rgba(255,255,255,0.06);
+  --vb-text:          #ECEEF1;
+  --vb-text-dim:      #98A1AB;
+  --vb-text-mute:     #B9C0C8;
+  --vb-accent:        #2FC6D0;   /* alts: #7C8CF8 indigo, #3ED598 green, #F0A868 amber */
+  --vb-accent-hi:     #6ADDE7;
+  --vb-online:        #3ED598;
+  --vb-offline:       #5A626C;
+  --vb-danger:        #F26D6D;
+
+  /* ---- type ---- */
+  --vb-font-display:  "Sora", sans-serif;      /* 700 / 800 */
+  --vb-font-body:     "Manrope", sans-serif;   /* 400-800 */
+  --vb-size-screen-title:  34px;
+  --vb-size-section-title: 28px;
+  --vb-size-card-name:     27px;
+  --vb-size-body:          16px;
+  --vb-size-label:         14px;
+  --vb-size-badge:         13px;
+
+  /* ---- radius ---- */
+  --vb-r-window: 20px;
+  --vb-r-card:   16px;
+  --vb-r-dialog: 24px;
+  --vb-r-control:14px;
+  --vb-r-pill:   999px;
+  --vb-r-badge:  7px;
+
+  /* ---- spacing / geometry ---- */
+  --vb-pad-x:      56px;
+  --vb-pad-y:      52px;
+  --vb-header-h:   84px;
+  --vb-footer-h:   72px;
+  --vb-card-gap:   32px;
+  --vb-tile-gap:   36px;
+  --vb-icon-btn:   52px;
+  --vb-hit-min:    56px;   /* gamepad minimum hit target */
+  --vb-list-row-h: 66px;
+}
+
+/* ---- focus ring (used for all gamepad navigation) ---- */
+.vb-focus {
+  border: 2px solid var(--vb-accent);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--vb-accent) 22%, transparent),
+              0 18px 48px rgba(0,0,0,0.45);
+  background: var(--vb-bg-elev-2);   /* focused cards switch fill */
+}
+
+/* ---- elevated shadows ---- */
+.vb-shadow-dialog     { box-shadow: 0 40px 100px rgba(0,0,0,0.6); }
+.vb-shadow-side-sheet { box-shadow: -30px 0 80px rgba(0,0,0,0.5); }
+
+/* ---- motion ---- */
+@keyframes vb-online-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
+@keyframes vb-caret-blink  { 0%,49% { opacity: 1; } 50%,100% { opacity: 0; } }

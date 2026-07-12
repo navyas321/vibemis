@@ -10,8 +10,10 @@ comment so it's greppable: `grep -rn "TODO(P3" app/`.
 
 ---
 
-## P3.1 — Quick Menu as OverlayManager surface (Game Mode)  ✅ implemented
-- Done: test22 (#44). Foundation for all Quick Menu content.
+## P3.1 — Quick Menu as OverlayManager surface (Game Mode)  ✅ implemented + hardware-verified
+- Done: test22 (#44) streaming-verified; **test75 diagnostic** (PR #142) found the gamepad
+  close/return gap ("frozen menu"); **fixed + verified by test77 (#144, PASS PR #145)** — Back/
+  Select/Start close, per-combo state clear, "Resume Game" hint. Shipped in 0.7.1-beta.
 
 ## P3.3 — Vibepollo quality presets  ✅ implemented
 - Done: test23 (#45).
@@ -28,9 +30,9 @@ comment so it's greppable: `grep -rn "TODO(P3" app/`.
 - Done: compact overlay test24 (#46); scale mode test25 (#47); zoom test31 (#53); pan test32 (#54);
   perf-overlay corner test49 (#69); perf-overlay text size test50 (#70); data-usage estimate
   test59 (#79); software-decode advisory test53 (#73).
-- **Codec/renderer (merged from P3.14), remaining:** clearer "Prefer AV1 (if host supports)" UX
-  (`VCC_FORCE_AV1` already exists); validate the Vulkan video-decode + HDR path (`RB_VULKAN`) on the
-  Legion Go S Z2 and document when to prefer it over EGL (device-gated — needs the test agent).
+- **Codec/renderer (merged from P3.14), remaining:** ~~clearer "Prefer AV1" UX~~ **DONE — shipped
+  as test65 (#85)** (contextual AV1 guidance under the codec combo). Still remaining: validate the
+  Vulkan video-decode + HDR path (`RB_VULKAN`) on the Legion Go S Z2 (device-gated — test agent).
 
 ## Phase 4 / Input  ✅ implemented
 - Done: configurable QM gamepad combo test26 (#48); back-paddle combos test36 (#56).
@@ -55,9 +57,10 @@ heavily, so they're now one phase).
 - **Done (researched features):** battery-saver bitrate test40 (#60); settings export/import
   test41 (#61); special keys test47 (#67); perf-overlay corner/size test49/50; data estimate
   test59; adaptive-bitrate slice test62.
+- **Done (2026-07-12): Per-game stream profiles** — test76 (#143), merged (0.8.0): per host+app
+  resolution/fps/bitrate/HDR snapshot applied at launch on a detached prefs copy; save/update/clear
+  from the app-tile context menu. Runtime on-device pass = checklist `test76-followup`.
 - **Backlog / parity gaps (pick the next as a single test PR):**
-  - **Per-game stream profiles** — persist resolution/fps/bitrate/HDR per app id, applied at launch.
-    The headline Android-parity gap. Larger; design the QSettings keying first.
   - **On-screen text-send** — Quick Menu "type text" field → `LiSendUtf8TextEvent` (stacks on test22).
   - **Auto-reconnect on stream drop** — bounded retry; medium risk (session teardown).
   - **Low-latency "competitive" preset** — vsync off + frame pacing tuned (builds on test23 presets).
@@ -100,8 +103,8 @@ Apollo (our host) has capabilities mainline Sunshine lacks; surface/expose them 
 - **Done:** suppress controller rumble (test57); host software version in PC details (test58);
   per-client **permission level** in the PC context menu (test60); **virtual-display
   resolution-match** clarifying notes (test61).
-- **Remaining:** optional **per-app save-sync** awareness (Apollo host feature — document it in
-  the host details / a help note). Largely complete otherwise.
+- **Done (2026-07-12):** per-app save-sync awareness surfaced in the Computer Details dialog for
+  Apollo hosts (test85, #161). **P3.13 complete.**
 - Sources: Apollo README + XDA Apollo coverage (see bottom).
 
 ## P3.14 / P3.15 — merged (plan pruned)
@@ -198,6 +201,54 @@ release mirror; cosmetic rename + trailer strip; authorship-only history scrub (
 ## P3.11 — merged into P3.8
 "Newer researched features" overlapped P3.8 (Android parity) — the two are now the single combined
 backlog under **P3.8** above. (Hardware-decode hint shipped as test53; UI accent stays under P3.9.)
+
+## P3.19 — Theme-token migration waves (P3.17 step 3, concretized)  🔵 IN PROGRESS
+From the test agent's THEME-AUDIT.md (PR #147): Theme.qml tokens exist (test73) but no page consumes
+them. Migrate one page per test PR, no behavior change:
+- **Wave 1 (test79):** PcView + AppView + a Material bridge in main.qml (accent/background from
+  tokens) — the biggest visual divergence.
+- **Wave 2:** SettingsView (17 literals) + ClipboardSettings + Toast — AFTER test23/24/40 land
+  (they touch SettingsView; avoid conflicts).
+- **Wave 3:** QuickMenu + ServerCommands literal alignment — AFTER test29/33/47 land.
+- Verification: test agent re-screenshots every page under gamescope-emulate and diffs vs the audit zip.
+
+## P3.20 — On-screen text-send (Quick Menu)  🔵 NEXT (P3.8 parity item)
+Quick Menu "Type text" field → `LiSendUtf8TextEvent` — the OSK gap on keyboard-less handhelds.
+Stacks on the (merged) Quick Menu; keyboard input into the offscreen QML field arrives via the
+existing injectKey bridge + a focused TextField; gamepad text entry deferred (needs an on-screen
+keyboard — separate phase).
+
+## P3.21 — Auto-reconnect on stream drop  🔵 PLANNED (P3.8 parity item)
+Bounded retry (e.g. 3 attempts, backoff) after an unexpected `Connection terminated`, preserving
+the session config. Touches session teardown — medium risk; design the state machine first, gate
+behind a setting (default on, per Android parity).
+
+## P3.22 — Motion (gyro) forwarding, slice 2  🔵 PLANNED (P3.16 completion)
+test64 shipped capability detection + setting. Slice 2 = actually forward SDL sensor data via
+`LiSendControllerMotionEvent` when `forwardMotionControls` is on. Needs on-device verification of
+host DS4 mapping (device-gated tiers).
+
+## P3.23 — Touchscreen passthrough  🔵 PLANNED (P3.16 sibling)
+Forward `SDL_FINGERDOWN/UP/MOTION` via `LiSendTouchEvent` (ClassicOldSong fork symbols confirmed in
+the submodule wrapper). High value on the Legion Go touchscreen; gate behind a setting.
+
+## P3.24 — Adaptive bitrate runtime stepping (P3.12 slice 2)  🔵 PLANNED
+test62 shipped the setting + CONN_STATUS_POOR observation log. Slice 2 = conservative step-down/
+slow-recover policy at runtime (gated on moonlight-common-c runtime bitrate support — re-check the
+submodule for `LiSetVideoBitrate`-class symbols before starting; if absent, document and park the
+phase as upstream-gated, do NOT hack the control stream).
+
+## P4.1 — Stable 1.0 criteria  🔵 DEFINED (cut when all hold)
+1. TEST_CHECKLIST fully drained (all rows ☑, including test76-followup + the deferred-verification ledger triage).
+2. Zero open freeze-class bugs; Quick Menu content stack verified on-device in Game Mode.
+3. README + PHASE_STATUS current; release pipeline AppImage-only (done 2026-07-12).
+4. P4.0 repo-hygiene split executed (agent meta moved to a private repo).
+5. Cut `release/1.0` → stable, tagged from a beta that soaked ≥1 week on the device.
+
+## P4.2 — Upstream rebase cadence  🔵 STANDING
+Quarterly: merge upstream moonlight-qt, re-check the moonlight-common-c wrapper for new symbols the
+ClassicOldSong fork lacks (rswrapper/nanors/LiSendControllerTouchEvent2/LI_CCAP_DUAL_TOUCHPAD/
+LiGetMicroseconds), full clean rebuild + one regression cycle on-device.
 
 ---
 

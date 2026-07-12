@@ -489,3 +489,20 @@ void SdlInputHandler::handleTouchFingerEvent(SDL_TouchFingerEvent* event)
         handleRelativeFingerEvent(event);
     }
 }
+
+
+Uint32 SdlInputHandler::quickMenuComboEventType()
+{
+    // Registered once (thread-safe static init); the same id is used by QuickMenuManager
+    // to push and by the SDL event loop to dispatch.
+    static Uint32 s_type = SDL_RegisterEvents(1);
+    return s_type;
+}
+
+void SdlInputHandler::dispatchQuickMenuCombo(int comboCode)
+{
+    // Runs on the SDL thread (called from the event loop). Reuse the proven combo path.
+    if (comboCode >= 0 && comboCode < KeyComboMax) {
+        performSpecialKeyCombo((KeyCombo)comboCode);
+    }
+}

@@ -4,6 +4,7 @@ import QtQuick.Window 2.2
 
 import SdlGamepadKeyNavigation 1.0
 import Session 1.0
+import StreamingPreferences 1.0
 import SystemProperties 1.0
 
 Item {
@@ -13,6 +14,14 @@ Item {
                                            qsTr("Starting %1...").arg(appName)
     property bool isResume : false
     property bool quitAfter : false
+
+    // P3.21 (test80): bounded auto-reconnect after an unexpected mid-stream drop.
+    // Only armed once the stream actually started (launch failures keep the old
+    // error-dialog behavior), and capped so a dead host can't loop forever.
+    property bool streamStarted: false
+    property int reconnectAttempts: 0
+    readonly property int maxReconnectAttempts: 3
+    property Session pendingReconnectSession: null
 
     function stageStarting(stage)
     {
@@ -32,6 +41,11 @@ Item {
 
     function connectionStarted()
     {
+        // Arm auto-reconnect: the stream is genuinely up. Reset the attempt budget so
+        // each successful (re)connection gets a fresh allowance.
+        streamStarted = true
+        reconnectAttempts = 0
+
         // Hide the UI contents so the user doesn't
         // see them briefly when we pop off the StackView
         stageSpinner.visible = false
@@ -61,6 +75,25 @@ Item {
 
     function sessionFinished(portTestResult)
     {
+        // P3.21 (test80): if the stream was up and dropped unexpectedly, retry in place
+        // instead of popping back to the grid. Guarded by the setting (default off).
+        if (StreamingPreferences.autoReconnect && !quitAfter && streamStarted &&
+                session && session.wasUnexpectedTermination() &&
+                reconnectAttempts < maxReconnectAttempts) {
+            reconnectAttempts++
+            streamStarted = false
+            stageText = qsTr("Connection lost — reconnecting to %1 (attempt %2 of %3)...")
+                            .arg(appName).arg(reconnectAttempts).arg(maxReconnectAttempts)
+            stageSpinner.visible = true
+            stageLabel.visible = true
+            window.visible = true
+
+            // Build the replacement session now (the old object is still alive here);
+            // it is swapped in once the old one signals readyForDeletion.
+            pendingReconnectSession = session.createResumeSession()
+            return
+        }
+
         if (portTestResult !== 0 && portTestResult !== -1 && streamSegueErrorDialog.text) {
             streamSegueErrorDialog.text += "\n\n" + qsTr("This PC's Internet connection is blocking Moonlight. Streaming over the Internet may not work while connected to this network.")
         }
@@ -94,6 +127,28 @@ Item {
 
     function sessionReadyForDeletion()
     {
+        // P3.21 (test80): a reconnect is pending — swap in the replacement session and
+        // relaunch after a short backoff instead of tearing down the segue.
+        if (pendingReconnectSession) {
+            session = pendingReconnectSession
+            pendingReconnectSession = null
+            gc()
+
+            session.stageStarting.connect(stageStarting)
+            session.stageFailed.connect(stageFailed)
+            session.connectionStarted.connect(connectionStarted)
+            session.displayLaunchError.connect(displayLaunchError)
+            session.displayLaunchWarning.connect(displayLaunchWarning)
+            session.quitStarting.connect(quitStarting)
+            session.sessionFinished.connect(sessionFinished)
+            session.readyForDeletion.connect(sessionReadyForDeletion)
+
+            SdlGamepadKeyNavigation.disable()
+            startSessionTimer.interval = 1500 * reconnectAttempts   // simple backoff
+            startSessionTimer.start()
+            return
+        }
+
         // Garbage collect the Session object since it's pretty heavyweight
         // and keeps other libraries (like SDL_TTF) around until it is deleted.
         session = null

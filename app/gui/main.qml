@@ -29,8 +29,14 @@ ApplicationWindow {
         // in order to improve contrast between GFE's placeholder box art
         // and the background of the app grid.
         if (SystemProperties.usesMaterial3Theme) {
-            Material.background = "#303030"
+            Material.background = Theme.background
         }
+
+        // P3.19 wave 1: bridge the Material style to the Vibemis design tokens so the
+        // Material-styled pages (Computers grid, App grid, dialogs) share the same
+        // accent/background system as the token-native pages. See docs/DESIGN_SYSTEM.md.
+        Material.theme = Material.Dark
+        Material.accent = Theme.accent
 
         SdlGamepadKeyNavigation.enable()
     }

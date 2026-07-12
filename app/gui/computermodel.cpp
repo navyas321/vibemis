@@ -152,6 +152,15 @@ QVariant ComputerModel::data(const QModelIndex& index, int role) const
             details += tr("Available Commands: %1").arg(computer->serverCommands.join(", "));
         }
 
+        // Vibemis P3.13: Apollo-only save-sync awareness. Apollo hosts can sync per-app
+        // save data across clients; note the capability (host-side feature, configured on
+        // the Apollo host, not in Vibemis).
+        if (computer->isApolloServer()) {
+            details += QLatin1Char('\n');
+            details += tr("Apollo feature: per-app save sync is supported by Apollo hosts "
+                          "(enable it per-app on the host).");
+        }
+
         return details;
     }
     default:

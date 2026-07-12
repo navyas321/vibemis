@@ -145,6 +145,10 @@ SDL_Color OverlayManager::getOverlayColor(OverlayType type)
 
 void OverlayManager::setOverlayRenderer(IOverlayRenderer* renderer)
 {
+    // test81 (review fix): the renderer is swapped on the exec/render thread during
+    // decoder recreation while the Quick Menu's main-thread render timer may be inside
+    // notifyOverlayUpdated() — serialize access so we never call into a freed renderer.
+    QMutexLocker locker(&m_RendererLock);
     m_Renderer = renderer;
 }
 
@@ -158,6 +162,7 @@ void OverlayManager::updateOverlaySurface(OverlayType type, SDL_Surface* surface
         SDL_FreeSurface(oldSurface);
     }
 
+    QMutexLocker locker(&m_RendererLock);
     if (m_Renderer != nullptr) {
         m_Renderer->notifyOverlayUpdated(type);
     }
@@ -173,7 +178,10 @@ void OverlayManager::notifyOverlayUpdated(OverlayType type)
     // the renderer of the enable/disable state change — don't run the text path which
     // would clobber the externally-rendered surface.
     if (type == OverlayQuickMenu) {
-        m_Renderer->notifyOverlayUpdated(type);
+        QMutexLocker locker(&m_RendererLock);
+        if (m_Renderer != nullptr) {
+            m_Renderer->notifyOverlayUpdated(type);
+        }
         return;
     }
 
@@ -216,5 +224,8 @@ void OverlayManager::notifyOverlayUpdated(OverlayType type)
     }
 
     // Notify the renderer
-    m_Renderer->notifyOverlayUpdated(type);
+    QMutexLocker locker(&m_RendererLock);
+    if (m_Renderer != nullptr) {
+        m_Renderer->notifyOverlayUpdated(type);
+    }
 }

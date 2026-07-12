@@ -834,19 +834,14 @@ jobs:
           - **Commit**: `${{ github.sha }}`
           - **Build**: #${{ github.run_number }}
           
-          ## 🔄 Installation
-          ${{ (steps.check-artifacts.outputs.artifacts_exist == 'true' || steps.find-previous.outputs.reused_artifacts_available == 'true') && '1. Download the appropriate file for your platform
-          2. Extract the archive (if applicable)
-          3. Run the executable (may require additional setup on some platforms)' || 'No installation files are available for this release. Please check recent releases or feature branches for builds.' }}
+          ## 🔄 Installation (SteamOS / Linux)
+          ${{ (steps.check-artifacts.outputs.artifacts_exist == 'true' || steps.find-previous.outputs.reused_artifacts_available == 'true') && '1. Download the `.AppImage` below (Desktop Mode on SteamOS)
+          2. Double-click it to run — no extraction or install needed. (If your file manager asks, allow executing; or `chmod +x` it once.)
+          3. Optional: add it to Steam for Game Mode — `scripts/install-vibemis-desktop.sh` does this for you.' || 'No installation files are available for this release. Please check recent releases or feature branches for builds.' }}
+        # Ship ONLY the AppImage (maintainer directive 2026-07-11): one double-clickable
+        # artifact per release — no tarballs/zips/raw binaries cluttering the assets list.
         files: |
-          artifacts/**/*.zip
-          artifacts/**/*.exe
-          artifacts/**/*.dmg
-          artifacts/**/*.tar.gz
           artifacts/**/*.AppImage
-          artifacts/**/vibemis
-          artifacts/**/build_info.txt
-          artifacts/**/install.sh
         prerelease: ${{ needs.setup-version.outputs.is_prerelease }}
         make_latest: ${{ (needs.setup-version.outputs.release_tier == 'release' || needs.setup-version.outputs.release_tier == 'beta') && 'true' || 'false' }}
         draft: false

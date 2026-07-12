@@ -208,6 +208,7 @@ SOURCES += \
     backend/servercommandmanager.cpp \
     backend/serverpermissions.cpp \
     backend/quickmenumanager.cpp \
+    backend/appprofilemanager.cpp \
     backend/otppairingmanager.cpp \
     settings/vibemissettings.cpp \
     wm.cpp
@@ -252,6 +253,7 @@ HEADERS += \
     backend/servercommandmanager.h \
     backend/serverpermissions.h \
     backend/quickmenumanager.h \
+    backend/appprofilemanager.h \
     backend/otppairingmanager.h \
     settings/vibemissettings.h
 
