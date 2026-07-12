@@ -408,11 +408,9 @@ void QuickMenuManager::executeAction(const QString &action)
         toggleKeyboardCapture();
     } else if (action == "toggle_fullscreen") {
         toggleFullscreen();
-<<<<<<< HEAD
     } else if (action == "key_ctrl_alt_del" || action == "key_super" ||
                action == "key_alt_f4" || action == "key_esc") {
         sendSpecialKey(action);
-=======
     } else if (action == "paste_clipboard") {
         pasteClipboard();
     }
@@ -433,7 +431,6 @@ void QuickMenuManager::pasteClipboard()
         }
     } else {
         showToast(QStringLiteral("Clipboard is empty"));
->>>>>>> origin/vibemis-main
     }
 }
 
