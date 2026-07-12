@@ -1,36 +1,35 @@
-# Test-agent sweep — CORRECT redesign (beta 0.26.0+)
+# Test-agent sweep — beta 0.26.2 (black-screen fix + exact-match redesign)
 
-**(Bus truncates ~300 chars — full instructions here. `git pull` vibemis-main + read this.)**
+**(Bus truncation is FIXED now — you get full messages. Still, the full list lives here.
+`git pull` vibemis-main + read this.)**
 
-## What changed (important)
-The previously-shipped redesign DIVERGED from the design handoff. The **authoritative** source is
-`Downloads/critical pick this UP/design_handoff_vibemis_redesign/previews/` (screens `1a`–`1f`,
-1920×1200). Compare the app against **those PNGs**, not the older build.
+## The black-screen fix (THE gate)
+Root cause (from your data): a **collapsed / 0-height ApplicationWindow header black-screens under
+the gamescope WSI path** (0.25.1 with the toolbar PRESENT rendered clean; 0.25.0 + 0.26.0 with it
+collapsed went black). 0.26.2's fix: the **global toolbar is ALWAYS PRESENT at 84px and IS the
+header** — VIBEMIS wordmark on Computers, Back + title elsewhere, Add/Refresh/Help/Settings + version
+chip. Each screen's own header bar is removed (only its body section title remains), so there is no
+double header. This reproduces your known-good render condition.
 
-0.26.0 rebuilds **1a Computers** to match `previews/1a-computers.png`:
-- **VIBEMIS wordmark** top-left; 52px **Add / Refresh / Help / Settings** buttons top-right.
-- **"Computers · N hosts · M online"** section title.
-- **Rich 430px host cards**: monitor thumbnail, **● ONLINE / ● OFFLINE** pulse pill, name (Sora),
-  access line ("Paired · Full access"), **VIBEPOLLO / APOLLO / SUNSHINE** badge + **"<transport>"**
-  (LAN / Tailscale). *(Latency "4 ms" is deferred — BL-1598 — so cards show transport only for now.)*
-- The **Material-blue global toolbar is gone** — every launcher screen owns its per-screen header.
+**DO THIS FIRST on 0.26.2:** confirm **1a RENDERS (not black) under gamescope / Game Mode.**
+- If it renders → we are at the stable-1.0 gate. Proceed to the sweep below.
+- If still black → the header isn't the whole cause; capture the log (`Made gamescope surface` /
+  `Destroying swapchain: (nil)`) + report immediately. glxgears in the same gamescope = compositor OK.
 
-## CRITICAL GATE — do this FIRST
-The global toolbar collapse changed (`main.qml` redesignScreen is now DEFAULT-TRUE, so the toolbar is
-height 0 from the first frame — no 60→0 startup transition). This is the exact area that caused the
-0.25.0 gamescope black screen. **Verify 1a is NOT BLACK under gamescope / Game Mode before anything
-else.** If black: capture the log (`Made gamescope surface` / `Destroying swapchain`) and report
-immediately — I'll rework the header architecture. glxgears in the same gamescope = compositor OK.
+## Exact-match sweep (against the previews)
+The 6 screens were rebuilt to match `Downloads/critical pick this UP/design_handoff_vibemis_redesign`
+(`previews/1a..1f` + the `.dc.html`). Compare the app to **those PNGs** at **1920×1200 AND 1280×800**:
+1. **1a Computers** — VIBEMIS wordmark + Add/Refresh/Help/Settings; "Computers · N hosts · M online";
+   rich 430px cards (82×58 monitor outline, ONLINE/OFFLINE pulse pill, name, "Paired · Full access",
+   VIBEPOLLO/APOLLO/SUNSHINE badge + transport); circled hint-bar glyph badges. Pair the mock
+   (100.127.67.80:48900) so real cards show.
+2. **1b App grid** — Back + host + Refresh/Settings in the toolbar; "Apps · N available"; 320×430
+   tiles (Desktop / Steam focused w/ RESUME + Ⓐ Launch / Virtual Desktop dashed).
+3. **1c Add-PC** — 720px modal, 72px accent field, Tailscale note.
+4. **1d Host options** — 560px right sheet (Ⓧ / Menu opens it), 66px rows, red Delete.
+5. **1e Settings** — sidebar categories + Video panel (summary line, dropdown/bitrate/toggle cards),
+   version chip, LB/RB switch hint.
+6. **1f Help** — hero Quick Menu card + gamepad/keyboard/remote-play sections.
 
-## Then, against the previews
-1. **1a Computers** — wordmark header renders; **host cards match** `1a-computers.png` (pill, name,
-   access, badge = VIBEPOLLO for the mock/Navid-PC, transport). Pair the mock (100.127.67.80:48900) so
-   real cards show.
-2. **1b App grid** — header un-hidden (back + host + Settings); tiles (Desktop/Steam/Virtual Desktop).
-   *(Full 1b tile polish still in progress — flag gaps vs `1b-app-grid.png`.)*
-3. **1c/1d/1e/1f** — compare to previews; note any divergence (these are being re-checked).
-4. Both viewports **1920×1200 + 1280×800**.
-
-## Reporting
-Incremental SHORT (<250 char) bus messages, or append to `testing/TEST_AGENT_FINDINGS.md` + commit.
-The black-screen check is the release-blocking gate; everything else feeds the next hot-fix wave.
+Report the gamescope render verdict FIRST (release-blocking), then per-screen findings — short bus
+messages (full-length now) or append to `testing/TEST_AGENT_FINDINGS.md` + commit.
