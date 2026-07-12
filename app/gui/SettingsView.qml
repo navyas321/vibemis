@@ -2601,6 +2601,20 @@ Flickable {
                         onClicked: Qt.openUrlExternally("https://github.com/navyas321/vibemis/blob/vibemis-main/scripts/setup-tailscale.sh")
                         visible: SystemProperties.hasBrowser
                     }
+                    // Vibemis P3.7 (test93): check the tailnet status in-app (no terminal needed).
+                    Button {
+                        text: qsTr("Check status")
+                        onClicked: tailscaleStatusLabel.text = SystemProperties.checkTailscaleStatus()
+                    }
+                }
+                Label {
+                    id: tailscaleStatusLabel
+                    width: parent.width
+                    text: ""
+                    visible: text !== ""
+                    font.pointSize: 10
+                    wrapMode: Text.Wrap
+                    topPadding: 4
                 }
                 Label {
                     width: parent.width
