@@ -79,6 +79,34 @@ Canvas {
         } else if (kind === "pair") {
             rr(ctx, 3, cy - 4, w * 0.55, 8, 4); ctx.stroke()
             rr(ctx, w * 0.45 - 3, cy - 4, w * 0.55, 8, 4); ctx.stroke()
+        } else if (kind === "video") {
+            // film frame + play triangle
+            rr(ctx, 3, 4, w - 6, h - 8, 3); ctx.stroke()
+            ctx.beginPath(); ctx.moveTo(cx - 3, cy - 5); ctx.lineTo(cx + 5, cy); ctx.lineTo(cx - 3, cy + 5); ctx.closePath(); ctx.stroke()
+        } else if (kind === "audio") {
+            // speaker cone + two sound arcs
+            ctx.beginPath(); ctx.moveTo(5, cy - 3); ctx.lineTo(9, cy - 3); ctx.lineTo(13, cy - 6); ctx.lineTo(13, cy + 6); ctx.lineTo(9, cy + 3); ctx.lineTo(5, cy + 3); ctx.closePath(); ctx.stroke()
+            ctx.beginPath(); ctx.arc(13, cy, 4, -Math.PI / 3, Math.PI / 3); ctx.stroke()
+            ctx.beginPath(); ctx.arc(13, cy, 7, -Math.PI / 3, Math.PI / 3); ctx.stroke()
+        } else if (kind === "gamepad") {
+            // rounded controller body + two button dots
+            rr(ctx, 3, cy - 5, w - 6, 12, 6); ctx.stroke()
+            ctx.beginPath(); ctx.arc(cx - 5, cy + 1, 1.4, 0, 2 * Math.PI); ctx.fill()
+            ctx.beginPath(); ctx.arc(cx + 5, cy - 1, 1.4, 0, 2 * Math.PI); ctx.fill()
+        } else if (kind === "streaming") {
+            // broadcast: center dot + concentric side arcs
+            ctx.beginPath(); ctx.arc(cx, cy, 1.6, 0, 2 * Math.PI); ctx.fill()
+            ctx.beginPath(); ctx.arc(cx, cy, 5, -Math.PI / 4, Math.PI / 4); ctx.stroke()
+            ctx.beginPath(); ctx.arc(cx, cy, 5, Math.PI - Math.PI / 4, Math.PI + Math.PI / 4); ctx.stroke()
+            ctx.beginPath(); ctx.arc(cx, cy, 8, -Math.PI / 4, Math.PI / 4); ctx.stroke()
+            ctx.beginPath(); ctx.arc(cx, cy, 8, Math.PI - Math.PI / 4, Math.PI + Math.PI / 4); ctx.stroke()
+        } else if (kind === "advanced") {
+            // three sliders with offset knobs
+            var ys = [cy - 5, cy, cy + 5], kx = [w - 8, 8, cx + 3]
+            for (var vi = 0; vi < 3; vi++) {
+                ctx.beginPath(); ctx.moveTo(4, ys[vi]); ctx.lineTo(w - 4, ys[vi]); ctx.stroke()
+                ctx.beginPath(); ctx.arc(kx[vi], ys[vi], 2, 0, 2 * Math.PI); ctx.stroke()
+            }
         }
     }
 }

@@ -163,11 +163,11 @@ Item {
             Repeater {
                 id: sidebarRepeater
                 model: [
-                    { glyph: "▣", label: qsTr("Video") },
-                    { glyph: "♪", label: qsTr("Audio") },
-                    { glyph: "◉", label: qsTr("Input & gamepad") },
-                    { glyph: "◆", label: qsTr("Streaming (Apollo)") },
-                    { glyph: "▤", label: qsTr("Advanced") }
+                    { icon: "video",     label: qsTr("Video") },
+                    { icon: "audio",     label: qsTr("Audio") },
+                    { icon: "gamepad",   label: qsTr("Input & gamepad") },
+                    { icon: "streaming", label: qsTr("Streaming (Apollo)") },
+                    { icon: "advanced",  label: qsTr("Advanced") }
                 ]
                 delegate: Button {
                     id: catButton
@@ -205,12 +205,10 @@ Item {
 
                     contentItem: RowLayout {
                         spacing: 14
-                        Text {
-                            text: modelData.glyph
-                            font.family: VbTokens.fontBody
-                            font.pixelSize: 18
+                        VbSheetIcon {
+                            kind: modelData.icon
+                            width: 24; height: 24
                             color: catButton.selected ? VbTokens.accent : VbTokens.textDim
-                            horizontalAlignment: Text.AlignHCenter
                             Layout.preferredWidth: 22
                         }
                         Text {
