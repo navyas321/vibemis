@@ -126,6 +126,11 @@ whole Quick Menu group depends on its render path.
 - [ ] **test80** — Auto-reconnect on unexpected stream drop (3 attempts, backoff; setting default
   OFF) — **PR #153** (auto-merges) — ☐ (`testing/test80-auto-reconnect/instructions.md`)
 
+## 5b5. Quick Menu — parity (P3.20)
+
+- [ ] **test86** — On-screen text-send (Type Text → LiSendUtf8TextEvent) — **PR #164** merged 0.12.0
+  — ☐ launcher/source PASS; in-stream typing→host on the Deferred ledger.
+
 ## 5c. CLI
 
 - [x] **test78** — CLI app seek fix — **PR #148** — ☑ **PASS** (report PR #150: all 4 headless CLI

@@ -2,6 +2,7 @@
 #include "servercommandmanager.h"
 #include "clipboardmanager.h"
 #include "../streaming/session.h"
+#include "../streaming/input/input.h"
 #include "../settings/streamingpreferences.h"
 
 #include <Limelight.h>
@@ -660,8 +661,11 @@ void QuickMenuManager::toggleKeyboardCapture()
     qDebug() << "QuickMenuManager: Keyboard capture toggle requested";
     emit keyboardCaptureToggleRequested();
 
-    // For keyboard capture, we'll simulate the capture toggle
-    // This would need to be implemented in the input handler
+    // test87: toggle input capture (grab/ungrab) on the SDL thread. Mirrors the
+    // Ctrl+Alt+Shift+Z keyboard combo (KeyComboUngrabInput).
+    sendKeyCombo(KeyComboUngrabInput);
+    m_isKeyboardCaptured = !m_isKeyboardCaptured;
+    emit keyboardCaptureChanged();
 }
 
 void QuickMenuManager::toggleFullscreen()
@@ -735,7 +739,13 @@ void QuickMenuManager::onStatsVisibilityChanged()
 
 void QuickMenuManager::sendKeyCombo(int keyCombo)
 {
-    // Placeholder — integration with the input system happens via the Session/overlay
-    // toggles invoked from the action handlers above.
-    qDebug() << "QuickMenuManager: Sending key combo:" << keyCombo;
+    // test87: push a registered SDL user event so the combo runs on the SDL thread (the
+    // only thread that may touch the window / mouse-capture state). SDL_PushEvent is
+    // thread-safe. The KeyCombo enum values here mirror SdlInputHandler::KeyCombo.
+    qDebug() << "QuickMenuManager: Requesting key combo on SDL thread:" << keyCombo;
+    SDL_Event ev;
+    SDL_memset(&ev, 0, sizeof(ev));
+    ev.type = SdlInputHandler::quickMenuComboEventType();
+    ev.user.code = keyCombo;
+    SDL_PushEvent(&ev);
 }
