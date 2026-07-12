@@ -2,12 +2,14 @@
 
 **Vibemis** is the only actively maintained Linux client for the [Apollo](https://github.com/ClassicOldSong/Apollo) / [Vibepollo](https://github.com/navyas321/Vibepollo) game streaming ecosystem. There is no official Artemis client for Linux — [wjbeckett's Artemis Qt](https://github.com/wjbeckett/artemis) has been dormant since August 2025 with a broken AppImage build on current Mesa/glibc, and a native Apollo Linux client ([Apollo issue #937](https://github.com/ClassicOldSong/Apollo/issues/937)) remains in development and unreleased. Vibemis fills that gap — forked from Artemis Qt, running on current SteamOS/Mesa/AMD hardware today.
 
+**Built for SteamOS.** The primary target is SteamOS Game Mode (Gamescope) on AMD handhelds; every release is hardware-verified on a **Lenovo Legion Go S Z2** test device before it ships. It runs on any modern Linux desktop too.
+
 ## Why Vibemis?
 
 Standard Moonlight doesn't support Apollo's extended protocol features. Apollo and Vibepollo add clipboard sync, server command execution, OTP pairing, virtual display control, an in-stream Quick Menu, and per-client permission management — but without a working Linux client, those features were inaccessible on SteamOS and Linux handhelds.
 
 - **The only working Linux client for Apollo** — fills the gap left by dormant Artemis Qt
-- **Works on current SteamOS** — VAAPI/Mesa compatibility fixes for AMD hardware (tested on the Lenovo Legion Go S Z2)
+- **Works on current SteamOS** — VAAPI/Mesa compatibility fixes for AMD hardware; every cycle is verified on the Lenovo Legion Go S Z2 (including nested-Gamescope "Game Mode" runs)
 - **Tuned for Vibepollo** — pairing flow, clipboard auth, and SSL handling built for Vibepollo specifically
 - **Kept current** — merged with upstream moonlight-qt (May 2026), CI pipeline on every push
 
@@ -50,11 +52,16 @@ then double-click or run `./Vibemis-*.AppImage`.
 
 To launch Vibemis from Game Mode:
 
+Easiest: run `scripts/install-vibemis-desktop.sh` from a Desktop Mode terminal — it installs the
+AppImage to a stable path with a clean `Vibemis` desktop entry, ready to Add to Steam. Or manually:
+
 1. In **Desktop Mode**, right-click the AppImage and select **Add to Steam**
 2. Open the shortcut's **Properties** and set the name to `Vibemis`
 3. Switch to Game Mode — Vibemis appears in your library under Non-Steam Games
 
-> **Note:** Quick Menu is currently only functional in Desktop Mode. Game Mode (Gamescope) support is in active development (P3.1).
+> The in-stream **Quick Menu works in Game Mode**: it is composited into the stream itself
+> (OverlayManager surface), so it renders identically under Gamescope and on the desktop. Open it
+> with `Select + L1 + R1 + Y`; close with **B**, **Back/Select**, or **Start** ("Resume Game").
 
 ---
 
@@ -79,6 +86,29 @@ To launch Vibemis from Game Mode:
 - **Virtual Display Control** — request a virtual display on the host
 - **UUID-Based App Launching** — modern app identification with legacy fallback
 - **Permissions Viewer** — inspect host-side client permissions from the app
+
+### Added by Vibemis
+
+- **Game Mode Quick Menu** — the in-stream menu is rendered offscreen and composited into the
+  video (works under Gamescope, not just the desktop), with full gamepad navigation and a
+  discoverable "Resume Game" exit (B / Back / Start)
+- **Tailscale-first remote play** — one-command `scripts/setup-tailscale.sh`, an in-app setup
+  button, and automatic preference for tailnet addresses when reaching a host
+- **SteamOS one-click integration** — `scripts/vibemis-setup.sh` guided setup (doctor → update →
+  install → pair → add games to Steam), plus per-script helpers and a self-update command
+- **Settings export / import** — portable `.ini` backup of the full configuration
+- **Performance overlay controls** — corner anchoring, text size, optional wall clock, and a
+  data-usage estimate next to the bitrate slider
+- **Handheld quality-of-life** — battery-saver bitrate, controller-rumble suppression, motion
+  (gyro) capability detection, host software version & per-client permission surfacing, AV1 and
+  native-resolution guidance, HDR display-capability gate
+- **`vibemis selftest`** — headless smoke test used by CI and the on-device test harness
+- **Per-game stream profiles** — save resolution/FPS/bitrate/HDR per game from the app tile's
+  context menu; the profile applies automatically at launch without touching global settings
+- **Auto-reconnect** *(opt-in)* — a dropped stream retries in place (3 attempts with backoff)
+  instead of dumping you back to the game grid
+- **Unified design tokens** — one accent/surface/type system (`Theme.qml`) rolling out across all
+  screens, starting with the Computers and app grids
 
 ---
 
@@ -139,6 +169,8 @@ All shortcuts require `Ctrl + Alt + Shift`:
 | Combo | Action |
 |-------|--------|
 | `Select + L1 + R1 + Y` | Toggle Quick Menu |
+| D-pad / `A` (while menu open) | Navigate / activate menu item |
+| `B`, `Back/Select`, or `Start` (while menu open) | Close menu / resume game |
 | `Start + Select + L1 + R1` | Quit stream |
 | `Select + L1 + R1 + X` | Toggle performance stats overlay |
 | Long press `Start` | Toggle mouse emulation mode |
@@ -149,18 +181,19 @@ All shortcuts require `Ctrl + Alt + Shift`:
 
 | Issue | Workaround | Planned fix |
 |---|---|---|
-| **Quick Menu not visible in Game Mode (Gamescope)** | Use keyboard shortcuts directly; or Desktop Mode | P3.1 — SDL overlay rearchitecture |
-| **Server Commands only reachable via Quick Menu** | — | Unblocked by P3.1 |
-| **Steam library shows app name with "AppImage"** | Rename shortcut in Steam → Properties | P3.2 |
+| **CLI `vibemis stream <host> <app>` may fail app-name matching** (GUI launch works) | Launch from the GUI, or use a direct-launch Steam shortcut | Tracked (backlog) |
+| **Steam library shows app name with "AppImage"** | Use `scripts/install-vibemis-desktop.sh` (clean `Vibemis` entry), or rename the shortcut in Steam → Properties | Shipped — script path |
 
 ---
 
 ## Downloads
 
+Each release ships a single **`.AppImage`** — download and double-click; nothing to extract.
+
 | Tier | When | Use |
 |---|---|---|
-| 🔬 **Alpha** | Every push to a `fix/**` or `feat/**` branch | Test cycles during development |
-| 🧪 **Beta** | Every merge to `vibemis-main` | Regular use — current recommended build |
+| 🔬 **Alpha** | Every push to a `test<N>-*` feature branch | Hardware test cycles during development |
+| 🧪 **Beta** | Every PR merged into `vibemis-main` | Regular use — current recommended build |
 | ✅ **Release** | Explicit milestone | Verified stable |
 
 **[→ Download latest beta](https://github.com/navyas321/vibemis/releases/latest)**

@@ -2,6 +2,11 @@
 #include "servercommandmanager.h"
 #include "clipboardmanager.h"
 #include "../streaming/session.h"
+#include "../streaming/input/input.h"
+#include "../settings/streamingpreferences.h"
+
+#include <Limelight.h>
+#include <cstring>
 
 // Forward declaration of KeyCombo enum values
 enum KeyCombo {
@@ -40,6 +45,7 @@ enum KeyCombo {
 #include <QDebug>
 
 #include <SDL.h>
+#include <Limelight.h>
 
 // How often the offscreen menu is re-rendered while visible. The menu is small
 // (500x400) and this only runs while the menu is open, so a 30 Hz refresh keeps
@@ -83,12 +89,11 @@ bool QuickMenuManager::hasServerCommands() const
         return false;
     }
 
-    // Use thread-safe property access when called from QML
-    bool hasPermission = false;
-    QMetaObject::invokeMethod(m_serverCommandManager, "hasPermission",
-                              Qt::DirectConnection,  // Use DirectConnection if we're on the same thread
-                              Q_RETURN_ARG(bool, hasPermission));
-    return hasPermission;
+    // test81 (review fix): hasPermission() is a plain accessor, not Q_INVOKABLE — the
+    // old QMetaObject::invokeMethod-by-name silently failed and always returned false,
+    // which made "Server Commands" permanently read as unavailable. Both objects live
+    // on the main thread, so a direct call is correct.
+    return m_serverCommandManager->hasPermission();
 }
 
 bool QuickMenuManager::isFullscreen() const
@@ -340,10 +345,12 @@ void QuickMenuManager::teardownOverlayRenderer()
     m_qmlEngine = nullptr;
     delete m_fbo;
     m_fbo = nullptr;
-    delete m_renderControl;
-    m_renderControl = nullptr;
+    // test81 (review fix): the QQuickWindow was constructed WITH this render control and
+    // references it during its own destruction — the window must be destroyed first.
     delete m_quickWindow;
     m_quickWindow = nullptr;
+    delete m_renderControl;
+    m_renderControl = nullptr;
 
     if (m_glContext) {
         m_glContext->doneCurrent();
@@ -372,6 +379,33 @@ void QuickMenuManager::injectKey(int qtKey)
     // Re-render immediately so the selection highlight updates without waiting for the
     // next timer tick.
     renderToSurface();
+}
+
+void QuickMenuManager::injectText(const QString& text)
+{
+    if (!m_isVisible || !m_quickWindow || text.isEmpty()) {
+        return;
+    }
+    // Deliver the character(s) as a synthetic key press carrying text — a focused
+    // TextField in the offscreen scene consumes them. The key code is unimportant for
+    // text entry; Qt::Key_unknown with the text payload is sufficient.
+    QKeyEvent press(QEvent::KeyPress, Qt::Key_unknown, Qt::NoModifier, text);
+    QKeyEvent release(QEvent::KeyRelease, Qt::Key_unknown, Qt::NoModifier, text);
+    QCoreApplication::sendEvent(m_quickWindow, &press);
+    QCoreApplication::sendEvent(m_quickWindow, &release);
+    renderToSurface();
+}
+
+void QuickMenuManager::sendText(const QString& text)
+{
+    if (text.isEmpty()) {
+        return;
+    }
+    // Send the whole string to the host as a UTF-8 text event (the OSK gap on
+    // keyboard-less handhelds). moonlight-common-c takes the byte length.
+    QByteArray utf8 = text.toUtf8();
+    LiSendUtf8TextEvent(utf8.constData(), (unsigned int)utf8.size());
+    showToast(QStringLiteral("Sent text to host"));
 }
 
 void QuickMenuManager::executeAction(const QString &action)
@@ -403,7 +437,80 @@ void QuickMenuManager::executeAction(const QString &action)
         toggleKeyboardCapture();
     } else if (action == "toggle_fullscreen") {
         toggleFullscreen();
+    } else if (action == "key_ctrl_alt_del" || action == "key_super" ||
+               action == "key_alt_f4" || action == "key_esc") {
+        sendSpecialKey(action);
+    } else if (action == "paste_clipboard") {
+        pasteClipboard();
+    } else if (action == "stream_info") {
+        showStreamInfo();
     }
+}
+
+void QuickMenuManager::showStreamInfo()
+{
+    auto prefs = StreamingPreferences::get();
+    if (!prefs) {
+        return;
+    }
+
+    const char* codec;
+    switch (prefs->videoCodecConfig) {
+    case StreamingPreferences::VCC_FORCE_H264: codec = "H.264"; break;
+    case StreamingPreferences::VCC_FORCE_HEVC: codec = "HEVC";  break;
+    case StreamingPreferences::VCC_FORCE_AV1:  codec = "AV1";   break;
+    default:                                   codec = "Auto";  break;
+    }
+
+    QString info = QStringLiteral("%1x%2 @ %3 · %4 Mbps · %5")
+                       .arg(prefs->width)
+                       .arg(prefs->height)
+                       .arg(prefs->fps)
+                       .arg(prefs->bitrateKbps / 1000.0, 0, 'f', 1)
+                       .arg(codec);
+    showToast(info);
+}
+
+void QuickMenuManager::pasteClipboard()
+{
+    // Type the host clipboard's text into the remote session (mirrors the
+    // Ctrl+Alt+Shift+V keyboard shortcut), so it works from a gamepad too.
+    if (SDL_HasClipboardText()) {
+        char* text = SDL_GetClipboardText();
+        if (text != nullptr) {
+            if (text[0] != '\0') {
+                LiSendUtf8TextEvent(text, (unsigned int)strlen(text));
+                showToast(QStringLiteral("Pasted clipboard text"));
+            }
+            SDL_free(text);
+        }
+    } else {
+        showToast(QStringLiteral("Clipboard is empty"));
+    }
+}
+
+void QuickMenuManager::sendSpecialKey(const QString &action)
+{
+    // Send a special key chord to the host (remote-desktop control). Windows VK codes.
+    short vk = 0;
+    char modifiers = 0;
+    if (action == "key_ctrl_alt_del") {
+        vk = 0x2E;                                 // VK_DELETE
+        modifiers = MODIFIER_CTRL | MODIFIER_ALT;
+    } else if (action == "key_super") {
+        vk = 0x5B;                                 // VK_LWIN (Super)
+    } else if (action == "key_alt_f4") {
+        vk = 0x73;                                 // VK_F4
+        modifiers = MODIFIER_ALT;
+    } else if (action == "key_esc") {
+        vk = 0x1B;                                 // VK_ESCAPE
+    } else {
+        return;
+    }
+
+    LiSendKeyboardEvent(vk, KEY_ACTION_DOWN, modifiers);
+    LiSendKeyboardEvent(vk, KEY_ACTION_UP, modifiers);
+    showToast(QStringLiteral("Sent key to host"));
 }
 
 void QuickMenuManager::showToast(const QString &message) {
@@ -450,13 +557,17 @@ void QuickMenuManager::executeServerCommand(const QString &command)
     emit serverCommandsRequested();
 
     // Map our simplified command names to the actual ServerCommandManager command IDs
+    // test81 (review fix): ServerCommandManager::executeCommand matches against the
+    // host-provided / builtin command list ("restart", "shutdown", "sleep", ...) — the
+    // old "restart_server"/"shutdown_server"/"suspend_computer" ids matched nothing and
+    // every server command failed with "Command not found".
     QString commandId;
     if (command == "restart") {
-        commandId = "restart_server";
+        commandId = "restart";
     } else if (command == "shutdown") {
-        commandId = "shutdown_server";
+        commandId = "shutdown";
     } else if (command == "suspend") {
-        commandId = "suspend_computer";
+        commandId = "sleep";
     } else {
         qDebug() << "QuickMenuManager: Unknown server command:" << command;
         return;
@@ -466,12 +577,9 @@ void QuickMenuManager::executeServerCommand(const QString &command)
     // This ensures thread safety when accessing ServerCommandManager from QML
     if (m_serverCommandManager) {
         // First check if the server command manager has permission (thread-safe property access)
-        bool hasPermission = false;
-        // DirectConnection: QuickMenuManager and ServerCommandManager both live on
-        // the main thread (Qt singletons), so BlockingQueuedConnection would deadlock.
-        QMetaObject::invokeMethod(m_serverCommandManager, "hasPermission",
-                                  Qt::DirectConnection,
-                                  Q_RETURN_ARG(bool, hasPermission));
+        // test81 (review fix): direct call — invokeMethod-by-name on a non-invokable
+        // accessor always failed and left hasPermission false (see hasServerCommands()).
+        bool hasPermission = m_serverCommandManager->hasPermission();
 
         if (hasPermission) {
             qDebug() << "QuickMenuManager: Executing server command:" << commandId;
@@ -488,8 +596,13 @@ void QuickMenuManager::executeServerCommand(const QString &command)
                 overlayManager.setOverlayState(Overlay::OverlayServerCommands, true);
                 overlayManager.updateOverlayText(Overlay::OverlayServerCommands, "Server commands not available");
 
-                QTimer::singleShot(2000, [&overlayManager]() {
-                    overlayManager.setOverlayState(Overlay::OverlayServerCommands, false);
+                // test81 (review fix): don't capture the session-owned OverlayManager by
+                // reference — the session can be torn down inside the 2s window (UAF).
+                // Re-fetch the live session (if any) when the timer fires.
+                QTimer::singleShot(2000, []() {
+                    if (Session::get()) {
+                        Session::get()->getOverlayManager().setOverlayState(Overlay::OverlayServerCommands, false);
+                    }
                 });
             }
         }
@@ -548,8 +661,11 @@ void QuickMenuManager::toggleKeyboardCapture()
     qDebug() << "QuickMenuManager: Keyboard capture toggle requested";
     emit keyboardCaptureToggleRequested();
 
-    // For keyboard capture, we'll simulate the capture toggle
-    // This would need to be implemented in the input handler
+    // test87: toggle input capture (grab/ungrab) on the SDL thread. Mirrors the
+    // Ctrl+Alt+Shift+Z keyboard combo (KeyComboUngrabInput).
+    sendKeyCombo(KeyComboUngrabInput);
+    m_isKeyboardCaptured = !m_isKeyboardCaptured;
+    emit keyboardCaptureChanged();
 }
 
 void QuickMenuManager::toggleFullscreen()
@@ -623,7 +739,13 @@ void QuickMenuManager::onStatsVisibilityChanged()
 
 void QuickMenuManager::sendKeyCombo(int keyCombo)
 {
-    // Placeholder — integration with the input system happens via the Session/overlay
-    // toggles invoked from the action handlers above.
-    qDebug() << "QuickMenuManager: Sending key combo:" << keyCombo;
+    // test87: push a registered SDL user event so the combo runs on the SDL thread (the
+    // only thread that may touch the window / mouse-capture state). SDL_PushEvent is
+    // thread-safe. The KeyCombo enum values here mirror SdlInputHandler::KeyCombo.
+    qDebug() << "QuickMenuManager: Requesting key combo on SDL thread:" << keyCombo;
+    SDL_Event ev;
+    SDL_memset(&ev, 0, sizeof(ev));
+    ev.type = SdlInputHandler::quickMenuComboEventType();
+    ev.user.code = keyCombo;
+    SDL_PushEvent(&ev);
 }
