@@ -11,8 +11,9 @@ The whole UI was redesigned from a Claude Design prototype and implemented faith
 (dark theme, 1920×1200 canvas that scales cleanly to 1280×800), on a single design-token system, with
 a persistent **VIBEMIS** wordmark header and a controller hint bar on every screen:
 - **Computers** — rich host cards: online/offline pulse pill, host name, access line, a
-  **Vibepollo / Apollo / Sunshine** host-type badge, and transport (LAN / Tailscale); plus a live
-  `N hosts · M online` count.
+  **Vibepollo / Apollo / Sunshine** host-type badge, and transport (LAN / Tailscale); offline hosts
+  show a "Last seen …" time, and the focused card lifts with an accent glow + drop shadow; plus a
+  live `N hosts · M online` count.
 - **App grid** — larger tiles with a green RESUME badge and a "launch" hint on the running app.
 - **Add-PC dialog**, **Host-options side-sheet** (replaces the old right-click menu), **Settings**
   (a gamepad-navigable category sidebar), and **Help** — all with the accent focus-ring recipe and
