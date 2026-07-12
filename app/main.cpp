@@ -8,6 +8,7 @@
 #include <QNetworkProxyFactory>
 #include <QPalette>
 #include <QFont>
+#include <QFontDatabase>
 #include <QCursor>
 #include <QElapsedTimer>
 #include <QTemporaryFile>
@@ -749,6 +750,13 @@ int main(int argc, char *argv[])
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Detected Wayland");
         qputenv("SDL_VIDEODRIVER", "wayland");
     }
+
+    // Vibemis redesign (P3.17/P3.18): bundle the design typefaces (Sora for titles/labels,
+    // Manrope for body) so the token system renders in the intended type. Loaded here — after
+    // the QGuiApplication exists and past the selftest early-return — never in the headless path.
+    // OFL-licensed; sources in app/fonts/*-OFL.txt (variable fonts cover all weights).
+    QFontDatabase::addApplicationFont(QStringLiteral(":/fonts/Sora.ttf"));
+    QFontDatabase::addApplicationFont(QStringLiteral(":/fonts/Manrope.ttf"));
 
 #ifdef STEAM_LINK
     // Qt 5.9 from the Steam Link SDK is not able to load any fonts
