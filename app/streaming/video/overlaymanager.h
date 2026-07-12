@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QString>
+#include <QMutex>
 
 #include "SDL_compat.h"
 #include <SDL_ttf.h>
@@ -65,6 +66,7 @@ private:
         SDL_Surface* surface;
     } m_Overlays[OverlayMax];
     IOverlayRenderer* m_Renderer;
+    QMutex m_RendererLock;   // test81: guards m_Renderer swap vs cross-thread notify
     QByteArray m_FontData;
 };
 

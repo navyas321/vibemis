@@ -212,6 +212,36 @@ void SdlInputHandler::handleKeyEvent(SDL_KeyboardEvent* event)
         Session* sess = Session::get();
         bool menuOpen = sess && sess->getQuickMenuManager() && sess->getQuickMenuManager()->isVisible();
         bool noComboMods = !(event->keysym.mod & (KMOD_CTRL | KMOD_ALT | KMOD_GUI));
+        if (!menuOpen && !m_MenuConsumedKeys.isEmpty()) {
+            // Menu closed with entries pending — drop them so a stale entry can't
+            // swallow an unrelated future release.
+            m_MenuConsumedKeys.clear();
+        }
+        if (menuOpen && sess->getQuickMenuManager()->isTextInputActive() && noComboMods) {
+            // P3.20 (test86): the menu's text field is focused. Make sure SDL emits
+            // SDL_TEXTINPUT (idempotent; we're on the SDL thread) so typed characters flow
+            // to handleTextInputEvent -> injectText. Handle editing keys here; swallow the
+            // rest so the host never sees them while the user is typing into the menu.
+            if (event->state == SDL_PRESSED) {
+                SDL_StartTextInput();
+                int editKey = 0;
+                switch (event->keysym.sym) {
+                case SDLK_BACKSPACE: editKey = Qt::Key_Backspace; break;
+                case SDLK_DELETE:    editKey = Qt::Key_Delete;    break;
+                case SDLK_LEFT:      editKey = Qt::Key_Left;      break;
+                case SDLK_RIGHT:     editKey = Qt::Key_Right;     break;
+                case SDLK_RETURN:
+                case SDLK_KP_ENTER:  editKey = Qt::Key_Return;    break;  // submit (Send)
+                case SDLK_ESCAPE:    editKey = Qt::Key_Escape;    break;  // leave text mode
+                default: break;
+                }
+                if (editKey) {
+                    QMetaObject::invokeMethod(sess->getQuickMenuManager(), "injectKey",
+                                              Qt::QueuedConnection, Q_ARG(int, editKey));
+                }
+            }
+            return; // consume; printable chars arrive via SDL_TEXTINPUT
+        }
         if (menuOpen && noComboMods) {
             bool navKey = false;
             int qtKey = 0;
@@ -229,8 +259,16 @@ void SdlInputHandler::handleKeyEvent(SDL_KeyboardEvent* event)
                 if (event->state == SDL_PRESSED) {
                     QMetaObject::invokeMethod(sess->getQuickMenuManager(), "injectKey",
                                               Qt::QueuedConnection, Q_ARG(int, qtKey));
+                    m_MenuConsumedKeys.insert(event->keysym.scancode);
+                    return;
                 }
-                return; // consume both press and release so the host never sees them
+                // test81 (review fix): only swallow a RELEASE whose press we consumed.
+                // A nav key held since before the menu opened was sent DOWN to the host —
+                // eating its release left the key stuck down host-side.
+                if (m_MenuConsumedKeys.remove(event->keysym.scancode)) {
+                    return;
+                }
+                // fall through: deliver the release to the host as usual
             }
         }
     }
@@ -527,4 +565,20 @@ void SdlInputHandler::handleKeyEvent(SDL_KeyboardEvent* event)
                             KEY_ACTION_DOWN : KEY_ACTION_UP,
                         modifiers,
                         shouldNotConvertToScanCodeOnServer ? SS_KBE_FLAG_NON_NORMALIZED : 0);
+}
+
+
+void SdlInputHandler::handleTextInputEvent(SDL_TextInputEvent* event)
+{
+    // P3.20 (test86): forward typed text to the Quick Menu's focused text field. When the
+    // field isn't active the host still receives keystrokes via SDL_KEYDOWN scancodes, so
+    // we only consume text input while the menu field has focus.
+    Session* sess = Session::get();
+    if (sess && sess->getQuickMenuManager() &&
+        sess->getQuickMenuManager()->isVisible() &&
+        sess->getQuickMenuManager()->isTextInputActive()) {
+        QMetaObject::invokeMethod(sess->getQuickMenuManager(), "injectText",
+                                  Qt::QueuedConnection,
+                                  Q_ARG(QString, QString::fromUtf8(event->text)));
+    }
 }
