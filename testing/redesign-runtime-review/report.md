@@ -64,6 +64,12 @@ Swept the shipped redesign screens on the live `0.18.0-beta` build (Steam target
 
 The three new full screens (1a/1b/1c) render cleanly — the collapse defect is **specific to VbHelpView's two `fillHeight` cards**, not a general redesign/foundation problem. Font fallback (§3) applies to all of them but is legible.
 
+## 3c. Update — fonts RESOLVED (test94), Help still open (0.21.0)
+
+- **Fonts (§3): RESOLVED by test94.** The 0.21.0 `usr/bin/vibemis` binary contains `QFontDatabase::addApplicationFont` plus embedded **Sora** + **Manrope** (all weights) as qrc resources — the fonts are app-bundled (no loose `.ttf`; no system/`fc-list` install needed). This is the correct fix and supersedes my §3 "not bundled" finding (which was about the *system* font path).
+- **Help collapse (§2): STILL OPEN on 0.21.0.** `VbHelpView.qml:124` and `:157` still use `Layout.fillHeight` with no `preferredHeight`; `VbCard` still has no `implicitHeight`. Re-reproduced at **both 1920×1200 and 1280×800** (5th consistent capture) — resolution-independent, confirming the Layout-height root cause. Fix still outstanding.
+- **test86 Type Text (PR #169): STILL OPEN** — `QuickMenu.qml:323-331` fused ListElement unchanged on 0.21.0.
+
 ## 4. Recommendation
 
 - **test89: ITERATE** — fix the two `fillHeight` shortcut cards (§2). One-line-per-card change; visible, reproducible, on the shipped 0.15.0 build.
