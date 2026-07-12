@@ -245,7 +245,13 @@ ApplicationWindow {
 
     header: ToolBar {
         id: toolBar
-        height: 60
+        // Redesign: the redesigned screens (Settings 1e, Help 1f) carry their OWN per-screen header
+        // (Back + title + hint bar), so collapse the global toolbar on them to avoid a double header —
+        // matching the design previews, which show only per-screen chrome.
+        readonly property bool redesignScreen: stackView.currentItem
+            && (qmltypeof(stackView.currentItem, "SettingsView") || qmltypeof(stackView.currentItem, "VbHelpView"))
+        height: redesignScreen ? 0 : 60
+        visible: !redesignScreen
         anchors.topMargin: 5
         anchors.bottomMargin: 5
 
