@@ -2,57 +2,43 @@ import QtQuick 2.9
 import Vibemis.Redesign 1.0
 
 // Focus drop-shadow — the 3rd layer of the redesign focus-ring recipe
-// ("2px accent border + 5px accent@22% glow + drop shadow"). Qt 6.4 on the Legion Go
-// ships NO effects modules (neither QtQuick.Effects/MultiEffect nor Qt5Compat DropShadow),
-// so we cast the shadow with a Canvas — portable across every Qt 6.x the CI/device use.
+// ("2px accent border + 5px accent@22% glow + drop shadow").
 //
-// Design handoff: focused card shadow = 0 18px 48px rgba(0,0,0,0.45). Place as the FIRST
-// child of a focusable card's root Item (so it paints BEHIND the opaque surface), bind
-// `active` to focus and `radius` to the surface radius. Purely visual; no input.
+// PERF (BL-1619): the first implementation cast this with a Canvas + 48px shadowBlur.
+// On the Legion Go that software-Gaussian repainted on every focus move and STALLED the
+// launcher (home-page-only input lag — Settings, which uses no drop-shadow, stayed smooth).
+// This version fakes the depth with two stacked translucent rounded rects offset downward:
+// pure GPU compositing, zero per-move repaint cost. Softer-looking than a real blur but
+// effectively free, which matters far more on a handheld GPU.
+//
+// Place as the FIRST child of a focusable card's root Item (so it sits BEHIND the opaque
+// surface), bind `active` to focus and `radius` to the surface radius. Purely visual.
 Item {
     id: shadow
     property bool active: false
     property int radius: VbTokens.radiusCard
-    property real blur: 48
-    property real offsetY: 18
-    property color shadowColor: Qt.rgba(0, 0, 0, 0.45)
+    property int offsetY: 14
     anchors.fill: parent
     visible: active
 
-    Canvas {
-        id: cv
-        // Extend beyond the parent so the blurred shadow isn't clipped at the card edge.
+    // Outer, wider + lower + fainter.
+    Rectangle {
         anchors.fill: parent
-        anchors.margins: -(shadow.blur + shadow.offsetY)
-        onPaint: {
-            var ctx = getContext("2d");
-            ctx.clearRect(0, 0, width, height);
-            var m = shadow.blur + shadow.offsetY;   // inset back to the card's own rect
-            var x = m, y = m;
-            var w = width - 2 * m, h = height - 2 * m;
-            if (w <= 0 || h <= 0) {
-                return;
-            }
-            var r = Math.min(shadow.radius, w / 2, h / 2);
-            ctx.save();
-            ctx.shadowColor = shadow.shadowColor;
-            ctx.shadowBlur = shadow.blur;
-            ctx.shadowOffsetX = 0;
-            ctx.shadowOffsetY = shadow.offsetY;
-            ctx.fillStyle = "#000000";
-            ctx.beginPath();
-            ctx.moveTo(x + r, y);
-            ctx.arcTo(x + w, y, x + w, y + h, r);
-            ctx.arcTo(x + w, y + h, x, y + h, r);
-            ctx.arcTo(x, y + h, x, y, r);
-            ctx.arcTo(x, y, x + w, y, r);
-            ctx.closePath();
-            ctx.fill();
-            ctx.restore();
-        }
-        onWidthChanged: requestPaint()
-        onHeightChanged: requestPaint()
+        anchors.topMargin: shadow.offsetY + 8
+        anchors.bottomMargin: -(shadow.offsetY + 8)
+        anchors.leftMargin: -7
+        anchors.rightMargin: -7
+        radius: shadow.radius + 8
+        color: Qt.rgba(0, 0, 0, 0.24)
     }
-
-    onActiveChanged: if (active) { cv.requestPaint(); }
+    // Inner, tighter + darker — reads as the shadow's core.
+    Rectangle {
+        anchors.fill: parent
+        anchors.topMargin: shadow.offsetY
+        anchors.bottomMargin: -shadow.offsetY
+        anchors.leftMargin: -2
+        anchors.rightMargin: -2
+        radius: shadow.radius + 2
+        color: Qt.rgba(0, 0, 0, 0.36)
+    }
 }
