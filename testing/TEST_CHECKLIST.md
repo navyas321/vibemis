@@ -158,6 +158,15 @@ ticking a row above does NOT clear its entry here.
 > **Build agent:** when you merge a Tier-1-only PASS that has an N/A runtime tier, ADD a row here
 > (don't just close the report).
 
+- [ ] **test80** — auto-reconnect, Tier 1–2 — with a **drop lever** (host-side stream bounce or
+  client Wi-Fi drop), confirm the 3-attempt in-place reconnect + backoff + final give-up-to-grid
+  (setting default-off). Build side source-verified; needs a real mid-stream drop.
+- [ ] **test82** — motion forwarding, Tier 2 — with a **gyro/accel controller in Game Mode** + a host
+  that requests motion, confirm live gyro/accel reaches the host and honours the report rate (source-
+  confirmed by report PR #162; default-off = safe).
+- [ ] **BL-1528 (P3.23)** — touchscreen passthrough, on-device — confirm the **Legion Go touchscreen**
+  forwards native touch to an Apollo host via `LiSendTouchEvent` (code already present from upstream,
+  gated by `absoluteTouchMode`; never runtime-verified on this device).
 - [ ] **test62** — Adaptive bitrate, Tiers 2–3 — on a **degrading stream**, confirm the
   `[adaptive-bitrate]` recommendation is logged on `CONN_STATUS_POOR` and no regression to the
   slow-connection overlay. *(Note: runtime bitrate-stepping itself is still `TODO(P3.12)` — only the

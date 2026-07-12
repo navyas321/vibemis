@@ -86,7 +86,11 @@ public:
     Q_INVOKABLE void toggleMouseCapture();
     Q_INVOKABLE void toggleKeyboardCapture();
     Q_INVOKABLE void toggleFullscreen();
+<<<<<<< HEAD
     Q_INVOKABLE void sendSpecialKey(const QString &action);
+=======
+    Q_INVOKABLE void pasteClipboard();
+>>>>>>> origin/vibemis-main
 
     // Integration with other managers
     void setServerCommandManager(ServerCommandManager *manager);

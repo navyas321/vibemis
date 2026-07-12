@@ -3,6 +3,9 @@
 #include "clipboardmanager.h"
 #include "../streaming/session.h"
 
+#include <Limelight.h>
+#include <cstring>
+
 // Forward declaration of KeyCombo enum values
 enum KeyCombo {
     KeyComboQuit,
@@ -405,9 +408,32 @@ void QuickMenuManager::executeAction(const QString &action)
         toggleKeyboardCapture();
     } else if (action == "toggle_fullscreen") {
         toggleFullscreen();
+<<<<<<< HEAD
     } else if (action == "key_ctrl_alt_del" || action == "key_super" ||
                action == "key_alt_f4" || action == "key_esc") {
         sendSpecialKey(action);
+=======
+    } else if (action == "paste_clipboard") {
+        pasteClipboard();
+    }
+}
+
+void QuickMenuManager::pasteClipboard()
+{
+    // Type the host clipboard's text into the remote session (mirrors the
+    // Ctrl+Alt+Shift+V keyboard shortcut), so it works from a gamepad too.
+    if (SDL_HasClipboardText()) {
+        char* text = SDL_GetClipboardText();
+        if (text != nullptr) {
+            if (text[0] != '\0') {
+                LiSendUtf8TextEvent(text, (unsigned int)strlen(text));
+                showToast(QStringLiteral("Pasted clipboard text"));
+            }
+            SDL_free(text);
+        }
+    } else {
+        showToast(QStringLiteral("Clipboard is empty"));
+>>>>>>> origin/vibemis-main
     }
 }
 
