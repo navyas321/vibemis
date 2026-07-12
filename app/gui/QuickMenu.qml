@@ -325,8 +325,10 @@ Rectangle {
             icon: "⌨"
             action: "type_text"
             description: qsTr("Send typed text to the host")
+        }
+        ListElement {
             text: qsTr("Paste Clipboard Text")
-            icon: "⌨"
+            icon: "📋"
             action: "paste_clipboard"
             description: qsTr("Type clipboard text into the host")
         }
