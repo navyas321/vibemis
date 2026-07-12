@@ -324,6 +324,23 @@ Key implementation steps (branch: feat/quickmenu-sdl-overlay):
 **When testing:** prioritise Game Mode. Desktop Mode results are informative but secondary.
 If a feature works only in Desktop Mode, it's not ready.
 
+## Versioning / release cadence — build agent MUST keep this moving (maintainer directive 2026-07-11)
+
+`app/version.txt` is the single version source; CI derives every tag from it
+(`<base>-beta.<ts>` on `vibemis-main`, `<base>-alpha.<branch>.<ts>` on `test**`).
+**Do not let the base version lag behind shipped work** (0.6.7 sat unchanged across ~40 merged
+features — never again):
+
+- **Bump MINOR** (`0.7.0` → `0.8.0`) when a feature wave merges to `vibemis-main`
+  (one or more verified `test<N>` feature PRs).
+- **Bump PATCH** for a fix-only wave.
+- Bump `app/version.txt` **in the same push as (or immediately after) the merge** — and remember
+  the smart-build check: the push's HEAD commit must touch a code file (`.cpp/.h/.qml/.pro`) or no
+  release is produced (`.txt` alone does not count).
+- **Stable releases stay explicit** (workflow_dispatch `release_type=stable` or a `release/**`
+  branch) — cut one at milestones (e.g. after a verification wave clears); don't let stable lag
+  more than a few minor versions behind beta.
+
 ## CI / AppImage release rules — READ BEFORE PUSHING
 
 The CI smart-build check (`setup-version` → `check-changes`) sets `should_build=false`
