@@ -61,9 +61,12 @@ Item {
                     border.color: card.online ? VbTokens.text : "#5A626C"
                 }
                 Item { Layout.fillWidth: true }
-                // Status pill (green pulse ONLINE / grey OFFLINE).
+                // Status pill — always present: green-pulse ONLINE / grey OFFLINE / grey-pulse CHECKING
+                // (the CS_UNKNOWN state before the first status poll resolves). Staying on-token here
+                // (a neutral pill) replaces the old teal Material BusyIndicator that flashed on every
+                // card at launch and read as an errant "teal mark".
                 Rectangle {
-                    visible: !card.statusUnknown
+                    visible: true
                     implicitWidth: pillRow.implicitWidth + 30
                     implicitHeight: 32
                     radius: VbTokens.radiusPill
@@ -75,9 +78,10 @@ Item {
                         Rectangle {
                             anchors.verticalCenter: parent.verticalCenter
                             width: 10; height: 10; radius: 5
-                            color: card.online ? VbTokens.statusOnline : "#5A626C"
+                            color: card.online ? VbTokens.statusOnline
+                                               : (card.statusUnknown ? VbTokens.textDim : "#5A626C")
                             SequentialAnimation on opacity {
-                                running: card.online
+                                running: card.online || card.statusUnknown
                                 loops: Animation.Infinite
                                 NumberAnimation { from: 1.0; to: 0.45; duration: VbTokens.onlinePulseMs / 2 }
                                 NumberAnimation { from: 0.45; to: 1.0; duration: VbTokens.onlinePulseMs / 2 }
@@ -85,7 +89,8 @@ Item {
                         }
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
-                            text: card.online ? qsTr("ONLINE") : qsTr("OFFLINE")
+                            text: card.online ? qsTr("ONLINE")
+                                              : (card.statusUnknown ? qsTr("CHECKING") : qsTr("OFFLINE"))
                             font.family: VbTokens.fontBody
                             font.pixelSize: 14
                             font.weight: Font.Bold

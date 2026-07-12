@@ -253,8 +253,8 @@ CenteredGridView {
         property alias pcContextMenu : pcContextMenuLoader.item
 
         // Redesign 1a: the rich host card (previews/1a-computers.png). Model roles feed the pure-visual
-        // VbHostCard; the pairing/wake/menu wiring below is unchanged. A busy spinner overlays while the
-        // host state is still unknown (mirrors the old delegate's BusyIndicator).
+        // VbHostCard; the pairing/wake/menu wiring below is unchanged. The CS_UNKNOWN state is shown by
+        // the card's own neutral "CHECKING" pill (no separate teal spinner).
         VbHostCard {
             id: hostCard
             anchors.fill: parent
@@ -276,17 +276,6 @@ CenteredGridView {
             metaText: model.online
                       ? (model.latencyText !== "" ? model.latencyText + " · " + model.transport : model.transport)
                       : (model.lastSeenText !== "" ? qsTr("Last seen ") + model.lastSeenText : "")
-        }
-
-        BusyIndicator {
-            id: statusUnknownSpinner
-            anchors.right: parent.right
-            anchors.rightMargin: 20
-            anchors.top: parent.top
-            anchors.topMargin: 16
-            width: 28
-            height: 28
-            visible: model.statusUnknown
         }
 
         Loader {
