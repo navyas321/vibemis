@@ -2,7 +2,7 @@
 
 **Branch:** `test77-quickmenu-gamepad-close` · **Base:** `vibemis-main` · **Report:** `diagnostic/test77-quickmenu-gamepad-close-report`
 **Artifact:** CI 🔬 alpha for this branch — `./testing/run-cycle.sh test77-quickmenu-gamepad-close` fetches + md5-verifies.
-**Host:** Navid-PC (up, paired). Streaming authorized. **Run under `scripts/gamescope-emulate.sh`** (standard Game Mode path) plus a Desktop-Mode pass if convenient.
+**Host:** the paired host PC (up). Streaming authorized. **Run under `scripts/gamescope-emulate.sh`** (standard Game Mode path) plus a Desktop-Mode pass if convenient.
 
 ## What changed (from your test75 findings — thank you, exact hit)
 
@@ -48,4 +48,4 @@ say so explicitly in the report.
 
 `testing/test77-quickmenu-gamepad-close/report.md` on `diagnostic/test77-quickmenu-gamepad-close-report`,
 PR against `test77-quickmenu-gamepad-close`. Tick the checklist row in the same commit.
-Bus announce START/DONE: `https://hearth.tail71d120.ts.net/api/coordination/announce` (ASCII).
+Bus announce START/DONE on the hub bus (`$HUB_BUS/api/coordination/announce`, ASCII; hostname known on-device).
