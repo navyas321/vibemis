@@ -375,7 +375,7 @@ CenteredGridView {
                         visible: model.online && model.paired,
                         trigger: function() {
                             var component = Qt.createComponent("AppView.qml")
-                            var appView = component.createObject(stackView, {"computerIndex": index, "objectName": model.name, "showHiddenGames": true})
+                            var appView = component.createObject(stackView, {"computerIndex": index, "objectName": model.name, "showHiddenGames": true, "hostOnline": model.online, "hostType": model.hostType, "hostTransport": model.transport})
                             stackView.push(appView)
                         }
                     },
@@ -452,7 +452,7 @@ CenteredGridView {
                 else if (model.paired) {
                     // go to game view
                     var component = Qt.createComponent("AppView.qml")
-                    var appView = component.createObject(stackView, {"computerIndex": index, "objectName": model.name})
+                    var appView = component.createObject(stackView, {"computerIndex": index, "objectName": model.name, "hostOnline": model.online, "hostType": model.hostType, "hostTransport": model.transport})
                     stackView.push(appView)
                 }
                 else {

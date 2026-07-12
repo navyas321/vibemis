@@ -16,16 +16,23 @@ CenteredGridView {
     property bool activated
     property bool showHiddenGames
     property bool showGames
+    // Redesign 1b header status line — passed from PcView when this view is pushed so the header
+    // can show "● <hostType> · <transport>" (matching previews/1b-app-grid.png) without re-querying
+    // the ComputerModel here.
+    property bool hostOnline: true
+    property string hostType: ""
+    property string hostTransport: ""
 
     id: appGrid
     focus: true
     activeFocusOnTab: true
-    // Redesign 1b: inset the grid so it clears the fixed per-screen header (Back + host name
-    // + app count + Settings) and the bottom gamepad hint bar. The global toolbar is collapsed
-    // for AppView in main.qml (redesignScreen). Chrome block is defined below.
+    // Redesign 1b: inset the grid so it clears the fixed per-screen header (Back + host name +
+    // host status + "Apps N available" section title) and the bottom gamepad hint bar. The global
+    // toolbar is collapsed on all redesign screens (main.qml). Chrome block is defined below.
     topMargin: appChromeHeader.height + 12
     bottomMargin: (appHintBar.visible ? appHintBar.height : 0) + 12
-    cellWidth: 230; cellHeight: 297;
+    // Redesign 1b: 320px-wide tall app tiles (gap 36).
+    cellWidth: 356; cellHeight: 466;
 
     // ---- Redesign 1b chrome: per-screen header + persistent gamepad hint bar ----
     // Fixed header (does not scroll with the grid). Opaque bg so scrolled tiles pass behind it.
@@ -35,98 +42,147 @@ CenteredGridView {
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        // Redesign 1b header: Back + host name + status line, Settings on the right. The global
-        // toolbar is now collapsed on all redesign screens (main.qml redesignScreen default-true), so
-        // this per-screen header is the only one — no double header.
+        // Redesign 1b header (previews/1b-app-grid.png): row 1 = Back + host name + "● <hostType> ·
+        // <transport>" status, Refresh + Settings on the right; row 2 = "Apps" + "N available". The
+        // global toolbar is collapsed on all redesign screens (main.qml), so this is the only header.
         visible: true
-        height: 96
+        height: 134
 
         Rectangle { anchors.fill: parent; color: VbTokens.bgWindow }
 
-        RowLayout {
-            anchors.fill: parent
-            anchors.leftMargin: VbTokens.screenPadX
-            anchors.rightMargin: VbTokens.screenPadX
-            spacing: 20
-
-            // Back button (‹). Uses window.goBack() so the retranslate clearOnBack path is
-            // honoured, identical to the old global toolbar back button and gamepad Ⓑ / Esc.
-            Button {
-                id: appBackBtn
-                implicitWidth: VbTokens.iconButton
-                implicitHeight: VbTokens.iconButton
-                focusPolicy: Qt.TabFocus
-                padding: 0
-                Layout.alignment: Qt.AlignVCenter
-                background: Rectangle {
-                    radius: VbTokens.radiusIconButton
-                    color: appBackBtn.activeFocus ? VbTokens.focusedFill : (appBackBtn.hovered ? VbTokens.bgElev2 : VbTokens.bgElev)
-                    border.width: 1
-                    border.color: appBackBtn.activeFocus ? VbTokens.accent : VbTokens.stroke
+        // Token-styled 52px icon button (Back / Refresh / Settings).
+        component AppIconButton: Button {
+            property string glyphSource: ""
+            property string glyphText: ""
+            implicitWidth: VbTokens.iconButton
+            implicitHeight: VbTokens.iconButton
+            focusPolicy: Qt.TabFocus
+            padding: 0
+            background: Rectangle {
+                radius: VbTokens.radiusIconButton
+                color: parent.activeFocus ? VbTokens.focusedFill : (parent.hovered ? VbTokens.bgElev2 : VbTokens.bgElev)
+                border.width: 1
+                border.color: parent.activeFocus ? VbTokens.accent : VbTokens.stroke
+            }
+            contentItem: Item {
+                Image {
+                    anchors.centerIn: parent
+                    visible: glyphSource !== ""
+                    source: glyphSource
+                    fillMode: Image.PreserveAspectFit
+                    sourceSize.width: 22; sourceSize.height: 22
                 }
-                contentItem: Text {
-                    text: "‹"
+                Text {
+                    anchors.centerIn: parent
+                    visible: glyphText !== ""
+                    text: glyphText
                     font.family: VbTokens.fontDisplay
                     font.pixelSize: 30
                     color: VbTokens.text
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
                 }
+            }
+        }
+
+        // ---- Row 1: back + host name/status + refresh/settings ----
+        Item {
+            id: appHeaderTopRow
+            anchors.top: parent.top
+            anchors.topMargin: 20
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.leftMargin: VbTokens.screenPadX
+            anchors.rightMargin: VbTokens.screenPadX
+            height: VbTokens.iconButton
+
+            AppIconButton {
+                id: appBackBtn
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                glyphText: "‹"
                 onClicked: window.goBack()
-                ToolTip.text: qsTr("Back")
-                ToolTip.delay: 1000
-                ToolTip.visible: hovered
+                ToolTip.text: qsTr("Back"); ToolTip.delay: 1000; ToolTip.visible: hovered
             }
 
-            ColumnLayout {
-                spacing: 4
-                Layout.fillWidth: true
-                Layout.alignment: Qt.AlignVCenter
+            Row {
+                id: appHeaderBtns
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 12
+                AppIconButton {
+                    glyphSource: "qrc:/res/refresh.svg"
+                    onClicked: appModel.initialize(ComputerManager, appGrid.computerIndex, appGrid.showHiddenGames)
+                    ToolTip.text: qsTr("Refresh"); ToolTip.delay: 1000; ToolTip.visible: hovered
+                }
+                AppIconButton {
+                    glyphSource: "qrc:/res/settings.svg"
+                    onClicked: navigateTo("qrc:/gui/SettingsView.qml", "SettingsView")
+                    ToolTip.text: qsTr("Settings"); ToolTip.delay: 1000; ToolTip.visible: hovered
+                }
+            }
+
+            Column {
+                anchors.left: appBackBtn.right
+                anchors.leftMargin: 18
+                anchors.right: appHeaderBtns.left
+                anchors.rightMargin: 18
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 3
                 Text {
-                    // Host name (set as objectName when the AppView is pushed).
-                    text: appGrid.objectName
+                    text: appGrid.objectName    // host name
+                    width: parent.width
                     font.family: VbTokens.fontDisplay
                     font.weight: Font.Bold
                     font.pixelSize: VbTokens.sizeScreenTitle
                     color: VbTokens.text
                     elide: Text.ElideRight
-                    Layout.fillWidth: true
                 }
-                Text {
-                    text: appGrid.count + " " + (appGrid.count === 1 ? qsTr("app") : qsTr("apps")) + " " + qsTr("available")
-                    font.family: VbTokens.fontBody
-                    font.pixelSize: VbTokens.sizeLabel
-                    color: VbTokens.textDim
+                Row {
+                    spacing: 8
+                    Rectangle {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 9; height: 9; radius: 4.5
+                        color: appGrid.hostOnline ? VbTokens.statusOnline : VbTokens.statusOffline
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: {
+                            var badge = appGrid.hostType === "VIBEPOLLO" ? qsTr("Vibepollo")
+                                      : appGrid.hostType === "APOLLO" ? qsTr("Apollo")
+                                      : appGrid.hostType === "SUNSHINE" ? qsTr("Sunshine") : ""
+                            var t = appGrid.hostTransport
+                            return badge + (badge && t ? " · " : "") + t
+                        }
+                        font.family: VbTokens.fontBody
+                        font.pixelSize: VbTokens.sizeLabel
+                        color: VbTokens.textDim
+                    }
                 }
-            }
-
-            Button {
-                id: appSettingsBtn
-                implicitWidth: VbTokens.iconButton
-                implicitHeight: VbTokens.iconButton
-                focusPolicy: Qt.TabFocus
-                padding: 0
-                Layout.alignment: Qt.AlignVCenter
-                background: Rectangle {
-                    radius: VbTokens.radiusIconButton
-                    color: appSettingsBtn.activeFocus ? VbTokens.focusedFill : (appSettingsBtn.hovered ? VbTokens.bgElev2 : VbTokens.bgElev)
-                    border.width: 1
-                    border.color: appSettingsBtn.activeFocus ? VbTokens.accent : VbTokens.stroke
-                }
-                contentItem: Image {
-                    source: "qrc:/res/settings.svg"
-                    fillMode: Image.PreserveAspectFit
-                    sourceSize.width: 22
-                    sourceSize.height: 22
-                }
-                onClicked: navigateTo("qrc:/gui/SettingsView.qml", "SettingsView")
-                ToolTip.text: qsTr("Settings")
-                ToolTip.delay: 1000
-                ToolTip.visible: hovered
             }
         }
 
-        Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: VbTokens.strokeSoft }
+        // ---- Row 2: "Apps" section title + available count ----
+        Row {
+            anchors.top: appHeaderTopRow.bottom
+            anchors.topMargin: 12
+            anchors.left: parent.left
+            anchors.leftMargin: VbTokens.screenPadX
+            spacing: 14
+            Text {
+                id: appsTitle
+                text: qsTr("Apps")
+                font.family: VbTokens.fontDisplay
+                font.weight: Font.Bold
+                font.pixelSize: VbTokens.sizeScreenTitle
+                color: VbTokens.text
+            }
+            Text {
+                anchors.baseline: appsTitle.baseline
+                text: appGrid.count + " " + qsTr("available")
+                font.family: VbTokens.fontBody
+                font.pixelSize: VbTokens.sizeLabel
+                color: VbTokens.textDim
+            }
+        }
     }
 
     // Persistent gamepad hint bar, fixed at the bottom. Grid bottomMargin clears it.
