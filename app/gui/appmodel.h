@@ -33,6 +33,9 @@ public:
 
     Q_INVOKABLE int getRunningAppId();
 
+    // P3.8 per-game profiles: expose the host identity so QML can key profiles.
+    Q_INVOKABLE QString getComputerUuid();
+
     Q_INVOKABLE QString getRunningAppName();
 
     Q_INVOKABLE void quitRunningApp();

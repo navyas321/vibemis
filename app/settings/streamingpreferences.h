@@ -320,6 +320,13 @@ signals:
     void enableResolutionScalingChanged();
     void resolutionScaleFactorChanged();
 
+public:
+    // Create a standalone preferences instance loaded fresh from QSettings, NOT the
+    // shared singleton. Used for session-scoped overrides (e.g. per-game stream
+    // profiles) so the global object the Settings UI binds to is never mutated.
+    // Caller owns the returned object (parent it or delete it).
+    static StreamingPreferences* createDetached() { return new StreamingPreferences(nullptr); }
+
 private:
     explicit StreamingPreferences(QQmlEngine *qmlEngine);
 
