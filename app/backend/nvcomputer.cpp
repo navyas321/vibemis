@@ -264,9 +264,10 @@ NvComputer::NvComputer(NvHTTP& http, QString serverInfo)
     if (!permissionStr.isEmpty()) {
         bool ok;
         this->serverPermissions = permissionStr.toUInt(&ok);
-        if (ok) {
-            qDebug() << "Apollo server permissions:" << QString("0x%1").arg(this->serverPermissions, 0, 16) << "(" << this->serverPermissions << ")";
-        } else {
+        // NB: no success log here — this constructor runs on EVERY serverInfo parse, including
+        // the background poll every ~3s per host, and a per-parse qDebug was a top contributor
+        // to the on-device input-lag log storm (BL-1619). Keep only the rare parse-failure warning.
+        if (!ok) {
             qWarning() << "Failed to parse server permissions:" << permissionStr;
             this->serverPermissions = 0;
         }

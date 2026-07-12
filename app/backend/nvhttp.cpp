@@ -345,13 +345,16 @@ NvHTTP::getDisplayModeList(QString serverInfo)
 }
 
 QVector<NvApp>
-NvHTTP::getAppList()
+NvHTTP::getAppList(NvLogLevel logLevel)
 {
+    // logLevel defaults to NVLL_ERROR for user-initiated fetches; the background poll
+    // passes NVLL_NONE so the periodic applist request doesn't spam the log (BL-1619:
+    // the per-poll "openConnection ... Command: applist" qDebug was starving input on-device).
     QString appxml = openConnectionToString(m_BaseUrlHttps,
                                             "applist",
                                             nullptr,
                                             REQUEST_TIMEOUT_MS,
-                                            NvLogLevel::NVLL_ERROR);
+                                            logLevel);
     verifyResponseStatus(appxml);
 
     QXmlStreamReader xmlReader(appxml);

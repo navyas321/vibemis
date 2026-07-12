@@ -184,7 +184,7 @@ public:
              QString& rtspSessionUrl);
 
     QVector<NvApp>
-    getAppList();
+    getAppList(NvLogLevel logLevel = NvLogLevel::NVLL_ERROR);
 
     QImage
     getBoxArt(int appId);

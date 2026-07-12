@@ -73,7 +73,9 @@ private:
         QVector<NvApp> appList;
 
         try {
-            appList = http.getAppList();
+            // Quiet: this is the background poll's periodic applist fetch — don't spam the log
+            // on every cycle (BL-1619 input-lag flood). User-initiated fetches keep NVLL_ERROR.
+            appList = http.getAppList(NvHTTP::NVLL_NONE);
             if (appList.isEmpty()) {
                 return false;
             }
