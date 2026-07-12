@@ -1,7 +1,12 @@
 import QtQuick 2.9
-import QtQuick.Controls 2.2
+import QtQuick.Controls 2.5
 import QtQuick.Layouts 1.3
 import Vibemis.Redesign 1.0
+
+// NOTE: Controls 2.5 (not 2.2) — `Overlay.overlay` (used as this Popup's parent for a full-screen
+// scrim + right-anchored 560px panel) only exists in QtQuick.Controls 2.3+. Under 2.2 it resolved to
+// undefined, so the Popup fell back to its delegate (a ~300px host tile) as parent and the panel
+// rendered as a small cluster on the tile instead of the full-height right slide-in (the "1d bug").
 
 // Redesign screen 1d — Host options side-sheet. Replaces PcView's old right-click
 // NavigableMenu: a 560px full-height sheet that slides in from the right over a 60% scrim.
