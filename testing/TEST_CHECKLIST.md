@@ -43,9 +43,9 @@ whole Quick Menu group depends on its render path.
 ## 1. Quick Menu foundation + content (verify in this sub-order — the rest stack on test22)
 
 - [x] **test22** — Quick Menu renders in Game Mode (OverlayManager surface) — **PR #44** — base `vibemis-main` — ☑ **PASS (streaming-verified!)** (report PR #138; Quick Menu opens via `Ctrl+Alt+Shift+\` as a true in-stream overlay (offscreen OverlayManager surface, not a separate window), keyboard nav + clean teardown; first stream-verified cycle) → merged. **Unblocks test29/33/47.** Host-side Virtual Display bug noted (Apollo `0x80030023`, not a client defect).
-- [ ] **test29** — Quick Menu: Paste Clipboard — **PR #51** — base `test22` — ☐
-- [ ] **test33** — Quick Menu: Stream Info — **PR #55** — base `test29` — ☐
-- [ ] **test47** — Quick Menu: Send Special Keys (Ctrl+Alt+Del/Alt+F4/Super/Esc) — **PR #67** — base `test22` — ☐
+- [x] **test29** — Quick Menu: Paste Clipboard — **PR #51** — ☑ **PASS (source)** (report PR #163; merged 0.11.3+; runtime toast/paste → ledger)
+- [x] **test33** — Quick Menu: Stream Info — **PR #55** — ☑ **PASS (source)** (report PR #163; merged; runtime toast → ledger)
+- [x] **test47** — Quick Menu: Send Special Keys — **PR #67** — ☑ **PASS (source)** (report PR #163; merged; runtime pass → ledger)
 
 > ⚠️ **Stale alphas:** the May 🔬 alphas for all unchecked rows below (and test29/33/47 above) were
 > pruned from Releases. The build agent is re-dispatching CI per branch — if `run-cycle.sh` can't

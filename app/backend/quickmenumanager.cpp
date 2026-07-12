@@ -2,6 +2,10 @@
 #include "servercommandmanager.h"
 #include "clipboardmanager.h"
 #include "../streaming/session.h"
+#include "../settings/streamingpreferences.h"
+
+#include <Limelight.h>
+#include <cstring>
 
 // Forward declaration of KeyCombo enum values
 enum KeyCombo {
@@ -432,7 +436,80 @@ void QuickMenuManager::executeAction(const QString &action)
         toggleKeyboardCapture();
     } else if (action == "toggle_fullscreen") {
         toggleFullscreen();
+    } else if (action == "key_ctrl_alt_del" || action == "key_super" ||
+               action == "key_alt_f4" || action == "key_esc") {
+        sendSpecialKey(action);
+    } else if (action == "paste_clipboard") {
+        pasteClipboard();
+    } else if (action == "stream_info") {
+        showStreamInfo();
     }
+}
+
+void QuickMenuManager::showStreamInfo()
+{
+    auto prefs = StreamingPreferences::get();
+    if (!prefs) {
+        return;
+    }
+
+    const char* codec;
+    switch (prefs->videoCodecConfig) {
+    case StreamingPreferences::VCC_FORCE_H264: codec = "H.264"; break;
+    case StreamingPreferences::VCC_FORCE_HEVC: codec = "HEVC";  break;
+    case StreamingPreferences::VCC_FORCE_AV1:  codec = "AV1";   break;
+    default:                                   codec = "Auto";  break;
+    }
+
+    QString info = QStringLiteral("%1x%2 @ %3 · %4 Mbps · %5")
+                       .arg(prefs->width)
+                       .arg(prefs->height)
+                       .arg(prefs->fps)
+                       .arg(prefs->bitrateKbps / 1000.0, 0, 'f', 1)
+                       .arg(codec);
+    showToast(info);
+}
+
+void QuickMenuManager::pasteClipboard()
+{
+    // Type the host clipboard's text into the remote session (mirrors the
+    // Ctrl+Alt+Shift+V keyboard shortcut), so it works from a gamepad too.
+    if (SDL_HasClipboardText()) {
+        char* text = SDL_GetClipboardText();
+        if (text != nullptr) {
+            if (text[0] != '\0') {
+                LiSendUtf8TextEvent(text, (unsigned int)strlen(text));
+                showToast(QStringLiteral("Pasted clipboard text"));
+            }
+            SDL_free(text);
+        }
+    } else {
+        showToast(QStringLiteral("Clipboard is empty"));
+    }
+}
+
+void QuickMenuManager::sendSpecialKey(const QString &action)
+{
+    // Send a special key chord to the host (remote-desktop control). Windows VK codes.
+    short vk = 0;
+    char modifiers = 0;
+    if (action == "key_ctrl_alt_del") {
+        vk = 0x2E;                                 // VK_DELETE
+        modifiers = MODIFIER_CTRL | MODIFIER_ALT;
+    } else if (action == "key_super") {
+        vk = 0x5B;                                 // VK_LWIN (Super)
+    } else if (action == "key_alt_f4") {
+        vk = 0x73;                                 // VK_F4
+        modifiers = MODIFIER_ALT;
+    } else if (action == "key_esc") {
+        vk = 0x1B;                                 // VK_ESCAPE
+    } else {
+        return;
+    }
+
+    LiSendKeyboardEvent(vk, KEY_ACTION_DOWN, modifiers);
+    LiSendKeyboardEvent(vk, KEY_ACTION_UP, modifiers);
+    showToast(QStringLiteral("Sent key to host"));
 }
 
 void QuickMenuManager::showToast(const QString &message) {
