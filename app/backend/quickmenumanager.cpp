@@ -86,12 +86,11 @@ bool QuickMenuManager::hasServerCommands() const
         return false;
     }
 
-    // Use thread-safe property access when called from QML
-    bool hasPermission = false;
-    QMetaObject::invokeMethod(m_serverCommandManager, "hasPermission",
-                              Qt::DirectConnection,  // Use DirectConnection if we're on the same thread
-                              Q_RETURN_ARG(bool, hasPermission));
-    return hasPermission;
+    // test81 (review fix): hasPermission() is a plain accessor, not Q_INVOKABLE — the
+    // old QMetaObject::invokeMethod-by-name silently failed and always returned false,
+    // which made "Server Commands" permanently read as unavailable. Both objects live
+    // on the main thread, so a direct call is correct.
+    return m_serverCommandManager->hasPermission();
 }
 
 bool QuickMenuManager::isFullscreen() const
@@ -343,10 +342,12 @@ void QuickMenuManager::teardownOverlayRenderer()
     m_qmlEngine = nullptr;
     delete m_fbo;
     m_fbo = nullptr;
-    delete m_renderControl;
-    m_renderControl = nullptr;
+    // test81 (review fix): the QQuickWindow was constructed WITH this render control and
+    // references it during its own destruction — the window must be destroyed first.
     delete m_quickWindow;
     m_quickWindow = nullptr;
+    delete m_renderControl;
+    m_renderControl = nullptr;
 
     if (m_glContext) {
         m_glContext->doneCurrent();
@@ -473,13 +474,17 @@ void QuickMenuManager::executeServerCommand(const QString &command)
     emit serverCommandsRequested();
 
     // Map our simplified command names to the actual ServerCommandManager command IDs
+    // test81 (review fix): ServerCommandManager::executeCommand matches against the
+    // host-provided / builtin command list ("restart", "shutdown", "sleep", ...) — the
+    // old "restart_server"/"shutdown_server"/"suspend_computer" ids matched nothing and
+    // every server command failed with "Command not found".
     QString commandId;
     if (command == "restart") {
-        commandId = "restart_server";
+        commandId = "restart";
     } else if (command == "shutdown") {
-        commandId = "shutdown_server";
+        commandId = "shutdown";
     } else if (command == "suspend") {
-        commandId = "suspend_computer";
+        commandId = "sleep";
     } else {
         qDebug() << "QuickMenuManager: Unknown server command:" << command;
         return;
@@ -489,12 +494,9 @@ void QuickMenuManager::executeServerCommand(const QString &command)
     // This ensures thread safety when accessing ServerCommandManager from QML
     if (m_serverCommandManager) {
         // First check if the server command manager has permission (thread-safe property access)
-        bool hasPermission = false;
-        // DirectConnection: QuickMenuManager and ServerCommandManager both live on
-        // the main thread (Qt singletons), so BlockingQueuedConnection would deadlock.
-        QMetaObject::invokeMethod(m_serverCommandManager, "hasPermission",
-                                  Qt::DirectConnection,
-                                  Q_RETURN_ARG(bool, hasPermission));
+        // test81 (review fix): direct call — invokeMethod-by-name on a non-invokable
+        // accessor always failed and left hasPermission false (see hasServerCommands()).
+        bool hasPermission = m_serverCommandManager->hasPermission();
 
         if (hasPermission) {
             qDebug() << "QuickMenuManager: Executing server command:" << commandId;
@@ -511,8 +513,13 @@ void QuickMenuManager::executeServerCommand(const QString &command)
                 overlayManager.setOverlayState(Overlay::OverlayServerCommands, true);
                 overlayManager.updateOverlayText(Overlay::OverlayServerCommands, "Server commands not available");
 
-                QTimer::singleShot(2000, [&overlayManager]() {
-                    overlayManager.setOverlayState(Overlay::OverlayServerCommands, false);
+                // test81 (review fix): don't capture the session-owned OverlayManager by
+                // reference — the session can be torn down inside the 2s window (UAF).
+                // Re-fetch the live session (if any) when the timer fires.
+                QTimer::singleShot(2000, []() {
+                    if (Session::get()) {
+                        Session::get()->getOverlayManager().setOverlayState(Overlay::OverlayServerCommands, false);
+                    }
                 });
             }
         }
