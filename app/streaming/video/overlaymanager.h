@@ -11,6 +11,7 @@ enum OverlayType {
     OverlayDebug,
     OverlayStatusUpdate,
     OverlayServerCommands,
+    OverlayQuickMenu,
     OverlayMax
 };
 
@@ -37,6 +38,17 @@ public:
     SDL_Color getOverlayColor(OverlayType type);
     int getOverlayFontSize(OverlayType type);
     SDL_Surface* getUpdatedOverlaySurface(OverlayType type);
+
+    // Publish an externally-rendered RGBA surface for an overlay (e.g. the Quick Menu
+    // rendered offscreen from QML). Unlike the text overlays, the pixels are produced
+    // by the caller rather than by TTF. Takes ownership of 'surface'; the renderer
+    // consuming it via getUpdatedOverlaySurface() will free it. Thread-safe.
+    void updateOverlaySurface(OverlayType type, SDL_Surface* surface);
+
+    // Vibemis: anchor corner for the debug/performance overlay, read from user
+    // preference. Returns StreamingPreferences::PerfOverlayPosition as an int
+    // (0=TL, 1=TR, 2=BL, 3=BR). Renderers map this to their own coordinate space.
+    int getDebugOverlayAnchor();
 
     void setOverlayRenderer(IOverlayRenderer* renderer);
 
