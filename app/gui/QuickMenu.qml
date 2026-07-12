@@ -64,8 +64,11 @@ Rectangle {
             id: menuListView
             Layout.fillWidth: true
             Layout.fillHeight: true
-            focus: true
-            
+            // The root item owns keyboard focus and forwards navigation via Keys.onPressed,
+            // so the ListView must not also claim focus (events are injected to the root).
+            focus: false
+            currentIndex: 0
+
             model: currentMenu === "main" ? mainMenuModel : serverCommandsModel
             
             delegate: Button {
@@ -73,9 +76,14 @@ Rectangle {
                 height: 60
                 flat: true
 
+                // Highlight the keyboard/gamepad-selected row, not just mouse hover, so
+                // controller navigation is visible in Game Mode.
+                highlighted: ListView.isCurrentItem
+
                 background: Rectangle {
-                    color: parent.down ? "#333" : (parent.hovered ? "#444" : "transparent")
-                    border.color: parent.hovered ? "#00cccc" : "transparent"
+                    color: parent.down ? "#333"
+                                       : ((parent.hovered || parent.highlighted) ? "#444" : "transparent")
+                    border.color: (parent.hovered || parent.highlighted) ? "#00cccc" : "transparent"
                     border.width: 2
                     radius: 5
                 }
@@ -372,7 +380,16 @@ Rectangle {
             toastTimer.restart()
         }
     }
-    
+
+    // Show an arbitrary toast string (called from C++ QuickMenuManager::showToast).
+    function showToastMessage(message) {
+        if (message) {
+            toastMessage = message
+            showToast = true
+            toastTimer.restart()
+        }
+    }
+
     // Make menu focusable and reset state
     Component.onCompleted: {
         focus = true
