@@ -1,5 +1,8 @@
 <RCC>
     <qresource prefix="/">
+        <file alias="res/vibemis-mark-512.png">res/vibemis-mark-512.png</file>
+        <file alias="res/vibemis-mark-256.png">res/vibemis-mark-256.png</file>
+        <file alias="res/vibemis-mark-128.png">res/vibemis-mark-128.png</file>
         <file alias="fonts/Sora.ttf">fonts/Sora.ttf</file>
         <file alias="fonts/Manrope.ttf">fonts/Manrope.ttf</file>
         <file>res/ic_videogame_asset_white_48px.svg</file>

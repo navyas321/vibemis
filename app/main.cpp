@@ -788,7 +788,15 @@ int main(int argc, char *argv[])
 #ifndef Q_OS_DARWIN
     // Set the window icon except on macOS where we want to keep the
     // modified macOS 11 style rounded corner icon.
-    app.setWindowIcon(QIcon(":/res/vibemis.svg"));
+    // Vibemis redesign (P3.18): the new brand mark (diamond cradling a play triangle).
+    // Multi-resolution QIcon so window managers pick the right size.
+    {
+        QIcon vbIcon;
+        vbIcon.addFile(QStringLiteral(":/res/vibemis-mark-128.png"), QSize(128, 128));
+        vbIcon.addFile(QStringLiteral(":/res/vibemis-mark-256.png"), QSize(256, 256));
+        vbIcon.addFile(QStringLiteral(":/res/vibemis-mark-512.png"), QSize(512, 512));
+        app.setWindowIcon(vbIcon);
+    }
 #endif
 
     // This is necessary to show our icon correctly on Wayland
