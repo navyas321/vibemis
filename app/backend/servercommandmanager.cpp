@@ -115,12 +115,15 @@ void ServerCommandManager::refreshCommands()
         
         qDebug() << "ServerCommandManager::refreshCommands: Loaded commands from serverinfo:" << m_availableCommands;
     } else {
-        qDebug() << "ServerCommandManager::refreshCommands: No server commands in serverinfo XML, trying separate endpoint";
-        
-        // Try to fetch server commands from a separate endpoint (Apollo extension)
-        fetchAvailableCommands();
-        
-        // For now, assume Apollo server and populate with builtin commands as fallback
+        qDebug() << "ServerCommandManager::refreshCommands: No server commands in serverinfo XML, using builtins";
+
+        // test83 (review fix BL-1531): the old fetchAvailableCommands() here fired up to 6
+        // SEQUENTIAL BLOCKING HTTP probes (5s timeout each = up to 30s) against speculative
+        // endpoints ("servercommands", "commands", ...) that Apollo does NOT expose — commands
+        // arrive via the serverinfo XML (m_computer->serverCommands, handled above). The probes
+        // always failed and then we fell back to builtins anyway, so they only added latency to
+        // stream start (refreshCommands runs inside Session::initialize via BlockingQueuedConnection).
+        // Removed — go straight to the builtin fallback.
         if (isApolloServer()) {
             m_hasPermission = true;
             m_availableCommands.clear();
