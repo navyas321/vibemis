@@ -664,16 +664,17 @@ void SdlInputHandler::handleControllerDeviceEvent(SDL_ControllerDeviceEvent* eve
         state->controller = controller;
         state->jsId = SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(state->controller));
 
-        // Vibemis (P3.16): when motion forwarding is enabled, report whether this controller exposes
-        // gyro/accelerometer sensors. This is the observation-only first slice.
-        // TODO(P3.16): if sensors are present and host support is confirmed, enable them with
-        // SDL_GameControllerSetSensorEnabled() and forward samples via LiSendControllerMotionEvent().
+        // Vibemis (P3.16/P3.22): when motion forwarding is enabled, report whether this
+        // controller exposes gyro/accelerometer. Actual sensor enablement + forwarding is
+        // now wired: the host requests a report rate via setMotionEventState(), which
+        // enables the SDL sensors (gated on this same setting) and handleControllerSensorEvent()
+        // forwards samples via LiSendControllerMotionEvent().
 #if SDL_VERSION_ATLEAST(2, 0, 14)
         if (StreamingPreferences::get()->forwardMotionControls) {
             bool hasGyro = SDL_GameControllerHasSensor(controller, SDL_SENSOR_GYRO);
             bool hasAccel = SDL_GameControllerHasSensor(controller, SDL_SENSOR_ACCEL);
             SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                        "[motion] Controller '%s' sensors: gyro=%s accel=%s (forwarding pending host support — TODO P3.16)",
+                        "[motion] Controller '%s' sensors: gyro=%s accel=%s (forwarding enabled; awaits host motion request)",
                         SDL_GameControllerName(controller) ? SDL_GameControllerName(controller) : "?",
                         hasGyro ? "yes" : "no", hasAccel ? "yes" : "no");
         }
@@ -1004,6 +1005,13 @@ void SdlInputHandler::setMotionEventState(uint16_t controllerNumber, uint8_t mot
 
 #if SDL_VERSION_ATLEAST(2, 0, 14)
     if (m_GamepadState[controllerNumber].controller != nullptr) {
+        // Vibemis P3.22 (test82): honor the user's motion-forwarding setting. When it's
+        // off, ignore the host's request to enable sensors — no gyro/accel is captured or
+        // forwarded (privacy + avoids unwanted gyro-aim). This completes the test64 slice,
+        // where forwardMotionControls only affected a log line.
+        if (!StreamingPreferences::get()->forwardMotionControls) {
+            reportRateHz = 0;
+        }
         uint8_t reportPeriodMs = reportRateHz ? (1000 / reportRateHz) : 0;
 
         switch (motionType) {
