@@ -103,6 +103,12 @@ AppImage to a stable path with a clean `Vibemis` desktop entry, ready to Add to 
   (gyro) capability detection, host software version & per-client permission surfacing, AV1 and
   native-resolution guidance, HDR display-capability gate
 - **`vibemis selftest`** — headless smoke test used by CI and the on-device test harness
+- **Per-game stream profiles** — save resolution/FPS/bitrate/HDR per game from the app tile's
+  context menu; the profile applies automatically at launch without touching global settings
+- **Auto-reconnect** *(opt-in)* — a dropped stream retries in place (3 attempts with backoff)
+  instead of dumping you back to the game grid
+- **Unified design tokens** — one accent/surface/type system (`Theme.qml`) rolling out across all
+  screens, starting with the Computers and app grids
 
 ---
 
