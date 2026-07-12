@@ -487,6 +487,8 @@ void StreamingPreferences::applyPreset(int preset)
     emit enableVsyncChanged();
     emit bitrateChanged();
     emit autoAdjustBitrateChanged();
+}
+
 // test81 (review fix): the export/import round-trip must NEVER carry the device
 // identity — "key" is the client TLS PRIVATE KEY, "certificate"/"uniqueid" are the
 // pairing identity. Exporting them put the private key in a file users are told to
