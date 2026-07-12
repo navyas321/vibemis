@@ -24,6 +24,20 @@ public:
 
     void reload();
 
+    // Vibemis: one-click quality presets tuned for the Lenovo Legion Go S Z2
+    // (1920x1200 native, 120 Hz, AMD VAAPI hardware decode, HEVC). applyPreset()
+    // batch-sets the relevant streaming preferences and persists them.
+    enum VibepolloPreset
+    {
+        PRESET_QUALITY,      // 1920x1200 @ 120 — best image, native res/refresh
+        PRESET_BALANCED,     // 1920x1200 @ 90  — native res, lighter refresh
+        PRESET_PERFORMANCE,  // 1280x800  @ 120 — lower res for high fps / low latency
+        PRESET_BATTERY       // 1280x800  @ 60  — easiest on battery and network
+    };
+    Q_ENUM(VibepolloPreset)
+
+    Q_INVOKABLE void applyPreset(int preset);
+
     enum AudioConfig
     {
         AC_STEREO,
@@ -74,6 +88,24 @@ public:
         RB_OPENGL,
     };
     Q_ENUM(RendererBackend)
+
+    // Vibemis: which gamepad button combo opens the in-stream Quick Menu.
+    enum QuickMenuGamepadCombo
+    {
+        QMGC_SELECT_LB_RB_Y,  // default — Select + L1 + R1 + Y
+        QMGC_SELECT_LB_RB_B,  // Select + L1 + R1 + B
+        QMGC_L3_R3,           // click both analog sticks (L3 + R3)
+        QMGC_SELECT_START,    // Select + Start
+    };
+    Q_ENUM(QuickMenuGamepadCombo)
+    // Vibemis: how the video frame is fit to the window.
+    enum VideoScaleMode
+    {
+        SCALE_FIT,      // letterbox / pillarbox, preserve aspect (default — original behaviour)
+        SCALE_FILL,     // cover: fill the window and crop overflow, preserve aspect
+        SCALE_STRETCH,  // stretch to fill, ignore aspect ratio
+    };
+    Q_ENUM(VideoScaleMode)
 
     // New entries must go at the end of the enum
     // to avoid renumbering existing entries (which
@@ -165,6 +197,10 @@ public:
     Q_PROPERTY(bool gamepadMouse MEMBER gamepadMouse NOTIFY gamepadMouseChanged)
     Q_PROPERTY(bool detectNetworkBlocking MEMBER detectNetworkBlocking NOTIFY detectNetworkBlockingChanged)
     Q_PROPERTY(bool showPerformanceOverlay MEMBER showPerformanceOverlay NOTIFY showPerformanceOverlayChanged)
+    // Vibemis: when true, the performance overlay shows a single compact line
+    // (fps · resolution/codec · latency · drops) instead of the full multi-line block —
+    // far more legible on a small handheld screen during a stream.
+    Q_PROPERTY(bool compactPerformanceOverlay MEMBER compactPerformanceOverlay NOTIFY compactPerformanceOverlayChanged)
     Q_PROPERTY(bool preferTailscale MEMBER preferTailscale NOTIFY preferTailscaleChanged)
     Q_PROPERTY(bool forwardMotionControls MEMBER forwardMotionControls NOTIFY forwardMotionControlsChanged)
     // Vibemis (test72): optional wall-clock line at the top of the performance
@@ -195,10 +231,15 @@ public:
     Q_PROPERTY(bool swapFaceButtons MEMBER swapFaceButtons NOTIFY swapFaceButtonsChanged)
     Q_PROPERTY(bool keepAwake MEMBER keepAwake NOTIFY keepAwakeChanged)
     Q_PROPERTY(bool reduceBitrateOnBattery MEMBER reduceBitrateOnBattery NOTIFY reduceBitrateOnBatteryChanged)
+    // Vibemis P3.21 (test80): bounded auto-reconnect after an unexpected mid-stream drop.
+    Q_PROPERTY(bool autoReconnect MEMBER autoReconnect NOTIFY autoReconnectChanged)
     Q_PROPERTY(bool seenWelcomeHint MEMBER seenWelcomeHint NOTIFY seenWelcomeHintChanged)
     Q_PROPERTY(CaptureSysKeysMode captureSysKeysMode MEMBER captureSysKeysMode NOTIFY captureSysKeysModeChanged)
     Q_PROPERTY(Language language MEMBER language NOTIFY languageChanged)
     Q_PROPERTY(RendererBackend rendererBackend MEMBER rendererBackend NOTIFY rendererBackendChanged)
+    Q_PROPERTY(QuickMenuGamepadCombo quickMenuGamepadCombo MEMBER quickMenuGamepadCombo NOTIFY quickMenuGamepadComboChanged)
+
+    Q_PROPERTY(VideoScaleMode videoScaleMode MEMBER videoScaleMode NOTIFY videoScaleModeChanged)
     
     // Vibemis client-side streaming enhancements
     Q_PROPERTY(bool useVirtualDisplay MEMBER useVirtualDisplay NOTIFY useVirtualDisplayChanged)
@@ -231,6 +272,7 @@ public:
     bool gamepadMouse;
     bool detectNetworkBlocking;
     bool showPerformanceOverlay;
+    bool compactPerformanceOverlay;
     bool preferTailscale;
     bool forwardMotionControls;
     bool perfOverlayShowClock;
@@ -245,6 +287,7 @@ public:
     bool swapFaceButtons;
     bool keepAwake;
     bool reduceBitrateOnBattery;
+    bool autoReconnect;
     bool seenWelcomeHint;
     int packetSize;
     AudioConfig audioConfig;
@@ -260,7 +303,9 @@ public:
     Language language;
     CaptureSysKeysMode captureSysKeysMode;
     RendererBackend rendererBackend;
-    
+    QuickMenuGamepadCombo quickMenuGamepadCombo;
+    VideoScaleMode videoScaleMode;
+
     // Vibemis client-side streaming enhancements
     bool useVirtualDisplay;
     bool enableFractionalRefreshRate;
@@ -297,6 +342,7 @@ signals:
     void gamepadMouseChanged();
     void detectNetworkBlockingChanged();
     void showPerformanceOverlayChanged();
+    void compactPerformanceOverlayChanged();
     void preferTailscaleChanged();
     void forwardMotionControlsChanged();
     void perfOverlayShowClockChanged();
@@ -312,9 +358,13 @@ signals:
     void captureSysKeysModeChanged();
     void keepAwakeChanged();
     void reduceBitrateOnBatteryChanged();
+    void autoReconnectChanged();
     void seenWelcomeHintChanged();
     void languageChanged();
     void rendererBackendChanged();
+    void quickMenuGamepadComboChanged();
+
+    void videoScaleModeChanged();
     
     // Vibemis client-side streaming enhancement signals
     void useVirtualDisplayChanged();
@@ -322,6 +372,13 @@ signals:
     void customRefreshRateChanged();
     void enableResolutionScalingChanged();
     void resolutionScaleFactorChanged();
+
+public:
+    // Create a standalone preferences instance loaded fresh from QSettings, NOT the
+    // shared singleton. Used for session-scoped overrides (e.g. per-game stream
+    // profiles) so the global object the Settings UI binds to is never mutated.
+    // Caller owns the returned object (parent it or delete it).
+    static StreamingPreferences* createDetached() { return new StreamingPreferences(nullptr); }
 
 private:
     explicit StreamingPreferences(QQmlEngine *qmlEngine);

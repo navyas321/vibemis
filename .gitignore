@@ -79,3 +79,6 @@ config.log
 # Stray local libs dir (build scratch); never track (was accidentally added as a gitlink)
 /libs/
 /soundio/libsoundio/
+
+# test agent design-audit artifacts (screenshots for Claude Design) are allowed:
+!testing/theme-review/*.zip

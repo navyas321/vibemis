@@ -50,6 +50,7 @@
 #define SER_PACKETSIZE "packetsize"
 #define SER_DETECTNETBLOCKING "detectnetblocking"
 #define SER_SHOWPERFOVERLAY "showperfoverlay"
+#define SER_COMPACTPERFOVERLAY "compactperfoverlay"
 #define SER_PREFERTAILSCALE "prefertailscale"
 #define SER_FORWARDMOTION "forwardmotioncontrols"
 #define SER_PERFOVERLAYCLOCK "perfoverlayclock"
@@ -64,9 +65,12 @@
 #define SER_CAPTURESYSKEYS "capturesyskeys"
 #define SER_KEEPAWAKE "keepawake"
 #define SER_REDUCEBITRATEONBATTERY "reducebitrateonbattery"
+#define SER_AUTORECONNECT "autoreconnect"
 #define SER_SEENWELCOMEHINT "seenwelcomehint"
 #define SER_LANGUAGE "language"
 #define SER_RENDERERBACKEND "rendererbackend"
+#define SER_QUICKMENUGAMEPADCOMBO "quickmenugamepadcombo"
+#define SER_VIDEOSCALEMODE "videoscalemode"
 
 // Vibemis client-side streaming enhancements
 #define SER_VIRTUALDISPLAY "virtualdisplay"
@@ -167,6 +171,7 @@ void StreamingPreferences::reload()
     gamepadMouse = settings.value(SER_GAMEPADMOUSE, true).toBool();
     detectNetworkBlocking = settings.value(SER_DETECTNETBLOCKING, true).toBool();
     showPerformanceOverlay = settings.value(SER_SHOWPERFOVERLAY, false).toBool();
+    compactPerformanceOverlay = settings.value(SER_COMPACTPERFOVERLAY, false).toBool();
     preferTailscale = settings.value(SER_PREFERTAILSCALE, false).toBool();
     forwardMotionControls = settings.value(SER_FORWARDMOTION, false).toBool();
     perfOverlayShowClock = settings.value(SER_PERFOVERLAYCLOCK, false).toBool();
@@ -184,6 +189,8 @@ void StreamingPreferences::reload()
     swapFaceButtons = settings.value(SER_SWAPFACEBUTTONS, false).toBool();
     keepAwake = settings.value(SER_KEEPAWAKE, true).toBool();
     reduceBitrateOnBattery = settings.value(SER_REDUCEBITRATEONBATTERY, false).toBool();
+    // P3.21 (test80): default OFF for the first slice; flip after on-device verification.
+    autoReconnect = settings.value(SER_AUTORECONNECT, false).toBool();
     seenWelcomeHint = settings.value(SER_SEENWELCOMEHINT, false).toBool();
     enableHdr = settings.value(SER_HDR, false).toBool();
     displayHdrCapability = settings.value(SER_DISPLAY_HDR_CAPABILITY, true).toBool();
@@ -206,6 +213,10 @@ void StreamingPreferences::reload()
                                                     static_cast<int>(Language::LANG_AUTO)).toInt());
     rendererBackend = static_cast<RendererBackend>(settings.value(SER_RENDERERBACKEND,
                                                     static_cast<int>(RendererBackend::RB_AUTO)).toInt());
+    quickMenuGamepadCombo = static_cast<QuickMenuGamepadCombo>(settings.value(SER_QUICKMENUGAMEPADCOMBO,
+                                                    static_cast<int>(QuickMenuGamepadCombo::QMGC_SELECT_LB_RB_Y)).toInt());
+    videoScaleMode = static_cast<VideoScaleMode>(settings.value(SER_VIDEOSCALEMODE,
+                                                 static_cast<int>(VideoScaleMode::SCALE_FIT)).toInt());
 
     // Vibemis client-side streaming enhancements
     useVirtualDisplay = settings.value(SER_VIRTUALDISPLAY, true).toBool();
@@ -387,6 +398,7 @@ void StreamingPreferences::save()
     settings.setValue(SER_PACKETSIZE, packetSize);
     settings.setValue(SER_DETECTNETBLOCKING, detectNetworkBlocking);
     settings.setValue(SER_SHOWPERFOVERLAY, showPerformanceOverlay);
+    settings.setValue(SER_COMPACTPERFOVERLAY, compactPerformanceOverlay);
     settings.setValue(SER_PREFERTAILSCALE, preferTailscale);
     settings.setValue(SER_FORWARDMOTION, forwardMotionControls);
     settings.setValue(SER_PERFOVERLAYCLOCK, perfOverlayShowClock);
@@ -404,6 +416,8 @@ void StreamingPreferences::save()
     settings.setValue(SER_UIDISPLAYMODE, static_cast<int>(uiDisplayMode));
     settings.setValue(SER_LANGUAGE, static_cast<int>(language));
     settings.setValue(SER_RENDERERBACKEND, static_cast<int>(rendererBackend));
+    settings.setValue(SER_QUICKMENUGAMEPADCOMBO, static_cast<int>(quickMenuGamepadCombo));
+    settings.setValue(SER_VIDEOSCALEMODE, static_cast<int>(videoScaleMode));
     settings.setValue(SER_DEFAULTVER, CURRENT_DEFAULT_VER);
     settings.setValue(SER_SWAPMOUSEBUTTONS, swapMouseButtons);
     settings.setValue(SER_MUTEONFOCUSLOSS, muteOnFocusLoss);
@@ -413,6 +427,7 @@ void StreamingPreferences::save()
     settings.setValue(SER_CAPTURESYSKEYS, captureSysKeysMode);
     settings.setValue(SER_KEEPAWAKE, keepAwake);
     settings.setValue(SER_REDUCEBITRATEONBATTERY, reduceBitrateOnBattery);
+    settings.setValue(SER_AUTORECONNECT, autoReconnect);
     settings.setValue(SER_SEENWELCOMEHINT, seenWelcomeHint);
     
     // Vibemis client-side streaming enhancements
@@ -421,6 +436,64 @@ void StreamingPreferences::save()
     settings.setValue(SER_CUSTOMREFRESHRATE, customRefreshRate);
     settings.setValue(SER_RESOLUTIONSCALING, enableResolutionScaling);
     settings.setValue(SER_RESOLUTIONSCALEFACTOR, resolutionScaleFactor);
+}
+
+// Presets apply a full Legion-Go-tuned bundle and persist immediately via save()
+// (unlike individual Settings controls) so a one-tap preset survives app restart.
+void StreamingPreferences::applyPreset(int preset)
+{
+    switch (preset) {
+    case PRESET_QUALITY:
+        width = 1920; height = 1200; fps = 120;
+        break;
+    case PRESET_BALANCED:
+        width = 1920; height = 1200; fps = 90;
+        break;
+    case PRESET_PERFORMANCE:
+        width = 1280; height = 800; fps = 120;
+        break;
+    case PRESET_BATTERY:
+        width = 1280; height = 800; fps = 60;
+        break;
+    default:
+        return;
+    }
+
+    // Common Legion Go S Z2 tuning: HEVC via AMD VAAPI hardware decode, frame pacing
+    // and V-Sync on for a smooth handheld experience, SDR 8-bit 4:2:0.
+    videoCodecConfig = VCC_FORCE_HEVC;
+    videoDecoderSelection = VDS_FORCE_HARDWARE;
+    enableYUV444 = false;
+    framePacing = true;
+    enableVsync = true;
+
+    // Recompute the recommended bitrate for the new mode and let it auto-track.
+    bitrateKbps = getDefaultBitrate(width, height, fps, enableYUV444);
+    autoAdjustBitrate = true;
+
+    // Persist immediately so the preset survives even without visiting other settings.
+    save();
+
+    // Notify QML bindings of everything we touched.
+    emit displayModeChanged();
+    emit videoCodecConfigChanged();
+    emit videoDecoderSelectionChanged();
+    emit enableYUV444Changed();
+    emit framePacingChanged();
+    emit enableVsyncChanged();
+    emit bitrateChanged();
+    emit autoAdjustBitrateChanged();
+// test81 (review fix): the export/import round-trip must NEVER carry the device
+// identity — "key" is the client TLS PRIVATE KEY, "certificate"/"uniqueid" are the
+// pairing identity. Exporting them put the private key in a file users are told to
+// copy between devices; importing them clobbered THIS device's pairing with every
+// host. Host pairing data ("hosts/...") is likewise per-device and excluded.
+static bool isDeviceIdentityKey(const QString& k)
+{
+    return k == QLatin1String("key") ||
+           k == QLatin1String("certificate") ||
+           k == QLatin1String("uniqueid") ||
+           k.startsWith(QLatin1String("hosts/"));
 }
 
 QString StreamingPreferences::exportSettings()
@@ -434,6 +507,9 @@ QString StreamingPreferences::exportSettings()
     dst.clear();
     const QStringList keys = src.allKeys();
     for (const QString& k : keys) {
+        if (isDeviceIdentityKey(k)) {
+            continue;
+        }
         dst.setValue(k, src.value(k));
     }
     dst.sync();
@@ -459,6 +535,11 @@ bool StreamingPreferences::importSettings()
     QSettings dst;
     const QStringList keys = src.allKeys();
     for (const QString& k : keys) {
+        // Belt-and-braces: even if the .ini came from an old build that exported
+        // identity keys, never let an import overwrite this device's identity.
+        if (isDeviceIdentityKey(k)) {
+            continue;
+        }
         dst.setValue(k, src.value(k));
     }
     dst.sync();

@@ -2,6 +2,7 @@
 #include "settings/streamingpreferences.h"
 #include "streaming/streamutils.h"
 #include "backend/richpresencemanager.h"
+#include "backend/appprofilemanager.h"
 #include "backend/quickmenumanager.h"
 #include "backend/servercommandmanager.h"
 #include "backend/clipboardmanager.h"
@@ -639,6 +640,16 @@ Session::Session(NvComputer* computer, NvApp& app, StreamingPreferences *prefere
     m_ServerCommandManager(new ServerCommandManager()),
     m_ClipboardManager(ClipboardManager::instance())
 {
+    // P3.8 per-game stream profiles: when the user saved a profile for this app, run
+    // the session on a private preferences copy with the profile applied, so the
+    // global preferences object (shared with the Settings UI) is never mutated.
+    // An explicitly-passed preferences object (e.g. the CLI's) always wins.
+    if (!preferences && AppProfileManager::hasProfileStatic(computer->uuid, app.id)) {
+        StreamingPreferences* profilePrefs = StreamingPreferences::createDetached();
+        profilePrefs->setParent(this);
+        AppProfileManager::applyProfile(profilePrefs, computer->uuid, app.id);
+        m_Preferences = profilePrefs;
+    }
 }
 
 bool Session::initialize()
@@ -2259,6 +2270,17 @@ void Session::execInternal()
     // because we want to suspend all Qt processing until the stream is over.
     SDL_Event event;
     for (;;) {
+        // test84 (review fix BL-1533): on the NON-threaded exec path (Windows/macOS/EGLFS)
+        // this loop runs on the main thread, so nothing else pumps Qt — the queued
+        // QuickMenuManager::toggle() posted from the SDL input handler and the offscreen
+        // render timer would never run, making the Quick Menu completely dead there. Pump
+        // Qt's queued cross-thread events here. Harmless no-op on the threaded (SteamOS)
+        // path where a separate thread already pumps; ExcludeUserInputEvents keeps SDL in
+        // sole charge of input.
+        if (!m_ThreadedExec) {
+            QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+            QCoreApplication::sendPostedEvents();
+        }
 #if SDL_VERSION_ATLEAST(2, 0, 18) && !defined(STEAM_LINK)
         // SDL 2.0.18 has a proper wait event implementation that uses platform
         // support to block on events rather than polling on Windows, macOS, X11,
@@ -2269,7 +2291,9 @@ void Session::execInternal()
         // NB: This behavior was introduced in SDL 2.0.16, but had a few critical
         // issues that could cause indefinite timeouts, delayed joystick detection,
         // and other problems.
-        if (!SDL_WaitEventTimeout(&event, 1000)) {
+        // test84: shorter wait when we're also responsible for pumping Qt, so queued
+        // events (Quick Menu toggle) aren't delayed up to a full second between inputs.
+        if (!SDL_WaitEventTimeout(&event, m_ThreadedExec ? 1000 : 16)) {
             presence.runCallbacks();
             continue;
         }
@@ -2345,9 +2369,13 @@ void Session::execInternal()
                 }
                 m_InputHandler->notifyFocusLost();
                 
-                // Trigger clipboard sync from server when focus is lost
+                // Trigger clipboard sync from server when focus is lost.
+                // test81 (review fix): this runs on the SDL exec thread on Linux, but
+                // onFocusLost() uses QNetworkAccessManager + QClipboard, which are
+                // main-thread-affine — invoke queued on the manager's (main) thread.
                 if (m_ClipboardManager) {
-                    m_ClipboardManager->onFocusLost();
+                    QMetaObject::invokeMethod(m_ClipboardManager, "onFocusLost",
+                                              Qt::QueuedConnection);
                 }
                 break;
             case SDL_WINDOWEVENT_FOCUS_GAINED:
@@ -2549,6 +2577,19 @@ void Session::execInternal()
         case SDL_KEYDOWN:
             presence.runCallbacks();
             m_InputHandler->handleKeyEvent(&event.key);
+            break;
+        case SDL_TEXTINPUT:
+            // P3.20 (test86): routed to the Quick Menu's text field when it's focused;
+            // ignored otherwise (the host receives scancodes from SDL_KEYDOWN as before).
+            m_InputHandler->handleTextInputEvent(&event.text);
+            break;
+        default:
+            // P3.20b (test87): the Quick Menu (Qt thread) pushes a registered SDL user
+            // event to run fullscreen/mouse-mode/capture toggles on THIS (SDL) thread.
+            if (m_InputHandler != nullptr &&
+                event.type == SdlInputHandler::quickMenuComboEventType()) {
+                m_InputHandler->dispatchQuickMenuCombo((int)event.user.code);
+            }
             break;
         case SDL_MOUSEBUTTONDOWN:
         case SDL_MOUSEBUTTONUP:

@@ -139,9 +139,11 @@ XDG desktop integration hook was added to AppRun but didn't work on first test.
 Need to investigate: AppImageLauncher integration, steam-shortcut script, or
 direct `~/.config/systemd/user/` approach. Research proper method for SteamOS Game Mode.
 
-### P3.3 — Vibepollo presets (Phase 2.5)
-Resolution/quality profiles pre-tuned for Vibepollo on the Legion Go S Z2:
-one-click presets for common scenarios (1920×1200@120 / HEVC / VAAPI, etc.)
+### P3.3 — Vibepollo presets (Phase 2.5) — IN TEST (test23)
+Resolution/quality profiles pre-tuned for Vibepollo on the Legion Go S Z2.
+**Implemented** (PR #45): `StreamingPreferences::applyPreset()` + a "Vibepollo Presets" bar
+in SettingsView (Quality 1200p120 / Balanced 1200p90 / Performance 800p120 / Battery 800p60;
+all HEVC + hardware decode). Awaiting hardware verification.
 
 ### P3.4 — Quick Menu content (take inspiration from Artemis Qt + moonlight-qt)
 Once Quick Menu renders correctly in Game Mode, review and expand the menu items:
@@ -172,7 +174,12 @@ Vibepollo/Apollo/Sunshine log under `/mnt/c/Users/*/AppData/Roaming/{Vibepollo,A
 if empty, the C: drive may need mounting in WSL2), then record it here for future sessions.
 
 ### P3.6 — Video scale mode, pan/zoom, compact perf overlay (from original plan)
-Phases 3–7 from the original plan (see pure-purring-pillow.md)
+Phases 3–7 from the original plan (see pure-purring-pillow.md).
+- **Compact perf overlay** — DONE (IN TEST, test24/PR pending): `compactPerformanceOverlay`
+  pref + one-line branch in `FFmpegVideoDecoder::stringifyVideoStats` + Settings checkbox.
+  Uses the working `OverlayDebug` path, independent of P3.1.
+- Video scale mode + pan/zoom: still pending — these touch the renderers, so do them
+  **on top of test22** (P3.1) once it's verified, to avoid conflicts.
 
 ### P3.7 — Cross-network connectivity (Tailscale / remote play)
 Stream over the internet when client and host are not on the same LAN.

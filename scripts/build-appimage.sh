@@ -24,13 +24,13 @@ command -v qmake6 >/dev/null 2>&1 || fail "Unable to find 'qmake6' in your PATH!
 command -v $LINUXDEPLOY >/dev/null 2>&1 || fail "Unable to find '$LINUXDEPLOY' in your PATH!"
 
 echo Cleaning output directories
-rm -rf $BUILD_FOLDER
-rm -rf $DEPLOY_FOLDER
-rm -rf $INSTALLER_FOLDER
-mkdir $BUILD_ROOT
-mkdir $BUILD_FOLDER
-mkdir $DEPLOY_FOLDER
-mkdir $INSTALLER_FOLDER
+rm -rf "$BUILD_FOLDER"
+rm -rf "$DEPLOY_FOLDER"
+rm -rf "$INSTALLER_FOLDER"
+mkdir "$BUILD_ROOT"
+mkdir "$BUILD_FOLDER"
+mkdir "$DEPLOY_FOLDER"
+mkdir "$INSTALLER_FOLDER"
 
 echo Configuring the project
 pushd $BUILD_FOLDER
@@ -80,7 +80,7 @@ popd
 #
 # linuxdeploy's AppRun sources every $APPDIR/apprun-hooks/*.sh before exec'ing
 # the binary, so env vars set here propagate to the binary.
-mkdir -p $DEPLOY_FOLDER/apprun-hooks
+mkdir -p "$DEPLOY_FOLDER/apprun-hooks"
 cat > $DEPLOY_FOLDER/apprun-hooks/01-libva-driver-paths.sh <<'HOOK'
 # Vibemis AppImage runtime hook — point bundled libVA at the host's drivers,
 # AND prefer the host's libva.so.2 over our bundled one so ABI matches the

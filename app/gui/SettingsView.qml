@@ -102,6 +102,87 @@ Flickable {
         spacing: 15
 
         GroupBox {
+            id: vibepolloPresetsGroupBox
+            width: (parent.width - (parent.leftPadding + parent.rightPadding))
+            padding: 12
+            title: "<font color=\"skyblue\">" + qsTr("Vibepollo Presets") + "</font>"
+            font.pointSize: 12
+
+            // Re-sync the resolution and FPS combo selections to the current
+            // preferences after a preset is applied (the bitrate slider is already
+            // bound live). If the matching entry isn't in a combo's model yet, the
+            // selection is left as-is — the stream still uses the preference values.
+            function reconcileResolutionFps() {
+                for (var i = 0; i < resolutionListModel.count; i++) {
+                    var e = resolutionListModel.get(i)
+                    if (!e.is_custom &&
+                        parseInt(e.video_width) === StreamingPreferences.width &&
+                        parseInt(e.video_height) === StreamingPreferences.height) {
+                        resolutionComboBox.currentIndex = i
+                        break
+                    }
+                }
+                for (var j = 0; j < fpsListModel.count; j++) {
+                    var f = fpsListModel.get(j)
+                    if (!f.is_custom && parseInt(f.video_fps) === StreamingPreferences.fps) {
+                        fpsComboBox.currentIndex = j
+                        break
+                    }
+                }
+            }
+
+            function applyVibepolloPreset(presetIndex, presetName) {
+                StreamingPreferences.applyPreset(presetIndex)
+                reconcileResolutionFps()
+                presetStatusLabel.text = qsTr("Applied: %1 — takes effect on the next stream.").arg(presetName)
+            }
+
+            Column {
+                anchors.fill: parent
+                spacing: 8
+
+                Label {
+                    width: parent.width
+                    text: qsTr("One-click quality profiles tuned for the Legion Go S Z2 (HEVC, hardware decode). Adjust anything below afterwards.")
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                }
+
+                Flow {
+                    width: parent.width
+                    spacing: 8
+
+                    Button {
+                        text: qsTr("Quality · 1200p120")
+                        onClicked: vibepolloPresetsGroupBox.applyVibepolloPreset(0, qsTr("Quality"))
+                    }
+                    Button {
+                        text: qsTr("Balanced · 1200p90")
+                        onClicked: vibepolloPresetsGroupBox.applyVibepolloPreset(1, qsTr("Balanced"))
+                    }
+                    Button {
+                        text: qsTr("Performance · 800p120")
+                        onClicked: vibepolloPresetsGroupBox.applyVibepolloPreset(2, qsTr("Performance"))
+                    }
+                    Button {
+                        text: qsTr("Battery · 800p60")
+                        onClicked: vibepolloPresetsGroupBox.applyVibepolloPreset(3, qsTr("Battery Saver"))
+                    }
+                }
+
+                Label {
+                    id: presetStatusLabel
+                    width: parent.width
+                    text: ""
+                    visible: text !== ""
+                    color: "#00cccc"
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                }
+            }
+        }
+
+        GroupBox {
             id: basicSettingsGroupBox
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
             padding: 12
@@ -970,6 +1051,51 @@ Flickable {
                     ToolTip.text: qsTr("Fullscreen generally provides the best performance, but borderless windowed may work better with features like macOS Spaces, Alt+Tab, screenshot tools, on-screen overlays, etc.")
                 }
 
+                Label {
+                    width: parent.width
+                    id: videoScaleModeTitle
+                    text: qsTr("Video scaling")
+                    font.pointSize: 12
+                    wrapMode: Text.Wrap
+                }
+
+                AutoResizingComboBox {
+                    id: videoScaleModeComboBox
+                    textRole: "text"
+                    hoverEnabled: true
+                    model: ListModel {
+                        id: videoScaleModeModel
+                        ListElement { text: qsTr("Fit (preserve aspect, letterbox)"); val: 0 }
+                        ListElement { text: qsTr("Fill (crop to fill screen)"); val: 1 }
+                        ListElement { text: qsTr("Stretch (fill, ignore aspect)"); val: 2 }
+                    }
+
+                    function reinitialize() {
+                        var saved = StreamingPreferences.videoScaleMode
+                        currentIndex = 0
+                        for (var i = 0; i < videoScaleModeModel.count; i++) {
+                            if (videoScaleModeModel.get(i).val === saved) {
+                                currentIndex = i
+                                break
+                            }
+                        }
+                    }
+
+                    Component.onCompleted: {
+                        reinitialize()
+                        languageChanged.connect(reinitialize)
+                    }
+
+                    onActivated: {
+                        StreamingPreferences.videoScaleMode = videoScaleModeModel.get(currentIndex).val
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Fit shows the whole image with black bars if needed. Fill crops the image to fill the screen with no bars. Stretch fills the screen ignoring the aspect ratio.")
+                }
+
                 CheckBox {
                     id: vsyncCheck
                     width: parent.width
@@ -1812,6 +1938,52 @@ Flickable {
                 anchors.fill: parent
                 spacing: 5
 
+                Label {
+                    width: parent.width
+                    id: quickMenuComboTitle
+                    text: qsTr("Quick Menu shortcut")
+                    font.pointSize: 12
+                    wrapMode: Text.Wrap
+                }
+
+                AutoResizingComboBox {
+                    id: quickMenuComboBox
+                    textRole: "text"
+                    hoverEnabled: true
+                    model: ListModel {
+                        id: quickMenuComboModel
+                        ListElement { text: qsTr("Select + L1 + R1 + Y (default)"); val: 0 }
+                        ListElement { text: qsTr("Select + L1 + R1 + B"); val: 1 }
+                        ListElement { text: qsTr("L3 + R3 (click both sticks)"); val: 2 }
+                        ListElement { text: qsTr("Select + Start"); val: 3 }
+                    }
+
+                    function reinitialize() {
+                        var saved = StreamingPreferences.quickMenuGamepadCombo
+                        currentIndex = 0
+                        for (var i = 0; i < quickMenuComboModel.count; i++) {
+                            if (quickMenuComboModel.get(i).val === saved) {
+                                currentIndex = i
+                                break
+                            }
+                        }
+                    }
+
+                    Component.onCompleted: {
+                        reinitialize()
+                        languageChanged.connect(reinitialize)
+                    }
+
+                    onActivated: {
+                        StreamingPreferences.quickMenuGamepadCombo = quickMenuComboModel.get(currentIndex).val
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Which gamepad button combination opens the in-stream Quick Menu.")
+                }
+
                 CheckBox {
                     id: swapFaceButtonsCheck
                     width: parent.width
@@ -2244,6 +2416,14 @@ Flickable {
                 }
 
                 CheckBox {
+                    id: compactPerformanceOverlay
+                    width: parent.width
+                    text: qsTr("Compact performance overlay")
+                    font.pointSize: 12
+                    enabled: showPerformanceOverlay.checked
+                    checked: StreamingPreferences.compactPerformanceOverlay
+                    onCheckedChanged: {
+                        StreamingPreferences.compactPerformanceOverlay = checked
                     id: perfOverlayShowClock
                     width: parent.width
                     text: qsTr("Show clock in the performance overlay")
@@ -2257,6 +2437,7 @@ Flickable {
                     ToolTip.delay: 1000
                     ToolTip.timeout: 5000
                     ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Show the stats as a single compact line (fps, resolution, latency, dropped frames) instead of the full multi-line block — easier to read on a handheld screen.")
                     ToolTip.text: qsTr("Add a wall-clock time (HH:MM:SS) line to the top of the performance overlay.") + "\n\n" +
                                   qsTr("Useful on a handheld in Game Mode, where the system clock is hidden while streaming.")
                 }

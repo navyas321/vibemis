@@ -56,9 +56,17 @@ GSLOG="$(mktemp /tmp/gs-emulate.XXXXXX.log)"
 cleanup_stale() {
     pkill -9 -f "gamescope --backend headless" >/dev/null 2>&1
     pkill -9 -x mangoapp >/dev/null 2>&1
-    # Remove ONLY nested test locks/sockets (:1/:2). NEVER :0 — that's the real desktop.
+    # Remove ONLY nested test locks/sockets (:1/:2/:3). NEVER :0 — that's the real desktop.
+    # FLAKINESS FIX: killing gamescope can ORPHAN its nested Xwayland, which keeps holding
+    # /tmp/.X<n>-lock. The old `pgrep ... || rm` guard then SKIPPED removing that stale lock, so
+    # after a few cycles the next launch died with `XIO: fatal IO error 17 (File exists) on :<n>`.
+    # Fix: kill the nested Xwayland BY PID first (never :0), then clear the lock UNCONDITIONALLY.
     for n in 1 2 3; do
-        pgrep -f "Xwayland.*:${n}\b" >/dev/null 2>&1 || rm -f "/tmp/.X${n}-lock" "/tmp/.X11-unix/X${n}" 2>/dev/null
+        for p in $(pgrep -f "Xwayland.*:${n}\b" 2>/dev/null); do kill -9 "$p" 2>/dev/null; done
+    done
+    sleep 1   # let the killed PIDs reap before clearing their locks
+    for n in 1 2 3; do
+        rm -f "/tmp/.X${n}-lock" "/tmp/.X11-unix/X${n}" 2>/dev/null
     done
     rm -f "$XDG_RUNTIME_DIR"/gamescope-0 "$XDG_RUNTIME_DIR"/gamescope-0.lock 2>/dev/null
 }

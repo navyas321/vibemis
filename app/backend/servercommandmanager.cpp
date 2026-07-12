@@ -39,7 +39,15 @@ ServerCommandManager::~ServerCommandManager()
 void ServerCommandManager::setConnection(NvComputer *computer, NvHTTP *http)
 {
     m_computer = computer;
+    // test81 (review fix): take ownership of the NvHTTP handed to us — the previous one
+    // (and its QNetworkAccessManager) leaked on every new streaming session.
+    if (m_http && m_http != http && m_http->parent() == this) {
+        delete m_http;
+    }
     m_http = http;
+    if (m_http && !m_http->parent()) {
+        m_http->setParent(this);
+    }
     
     bool oldPermission = m_hasPermission;
     
@@ -107,12 +115,15 @@ void ServerCommandManager::refreshCommands()
         
         qDebug() << "ServerCommandManager::refreshCommands: Loaded commands from serverinfo:" << m_availableCommands;
     } else {
-        qDebug() << "ServerCommandManager::refreshCommands: No server commands in serverinfo XML, trying separate endpoint";
-        
-        // Try to fetch server commands from a separate endpoint (Apollo extension)
-        fetchAvailableCommands();
-        
-        // For now, assume Apollo server and populate with builtin commands as fallback
+        qDebug() << "ServerCommandManager::refreshCommands: No server commands in serverinfo XML, using builtins";
+
+        // test83 (review fix BL-1531): the old fetchAvailableCommands() here fired up to 6
+        // SEQUENTIAL BLOCKING HTTP probes (5s timeout each = up to 30s) against speculative
+        // endpoints ("servercommands", "commands", ...) that Apollo does NOT expose — commands
+        // arrive via the serverinfo XML (m_computer->serverCommands, handled above). The probes
+        // always failed and then we fell back to builtins anyway, so they only added latency to
+        // stream start (refreshCommands runs inside Session::initialize via BlockingQueuedConnection).
+        // Removed — go straight to the builtin fallback.
         if (isApolloServer()) {
             m_hasPermission = true;
             m_availableCommands.clear();
@@ -384,15 +395,12 @@ void ServerCommandManager::sendCommandExecution(const QString &commandId)
         return;
     }
 
-    // Use available commands (either from server or builtin fallback)
+    // test81 (review fix): LiSendExecServerCmd() sends an INDEX into the HOST's command
+    // list. The old builtin-list fallback sent an index into OUR local list, so on a
+    // host whose list differs, "shutdown" could execute whatever the host had at that
+    // slot. Only ever index into the host-provided list; without one, refuse.
     QStringList serverCommands = m_computer->serverCommands;
-    if (serverCommands.isEmpty()) {
-        // Fall back to using our available commands list
-        serverCommands = m_availableCommands;
-        qDebug() << "ServerCommandManager: Using builtin commands as fallback:" << serverCommands;
-    } else {
-        qDebug() << "ServerCommandManager: Using server-provided commands:" << serverCommands;
-    }
+    qDebug() << "ServerCommandManager: Using server-provided commands:" << serverCommands;
     
     if (serverCommands.isEmpty()) {
         qWarning() << "ServerCommandManager: No server commands available";

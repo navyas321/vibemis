@@ -4,6 +4,8 @@
 #include <QQmlEngine>
 #include <QSize>
 
+#include <atomic>
+
 class NvComputer;
 class NvHTTP;
 #include "backend/servercommandmanager.h"
@@ -72,6 +74,18 @@ public:
     // (it is simply ignored).
     Q_INVOKABLE void injectKey(int qtKey);
 
+    // P3.20 (test86): deliver typed text into the offscreen menu's focused TextField
+    // (called from the SDL keyboard handler when text input is active), and send an
+    // assembled string to the host as UTF-8 text via LiSendUtf8TextEvent.
+    Q_INVOKABLE void injectText(const QString& text);
+    Q_INVOKABLE void sendText(const QString& text);
+
+    // True while the Quick Menu's on-screen text field has focus. Set from QML; read by
+    // the SDL keyboard handler so it forwards printable characters instead of swallowing
+    // them. Atomic — written on the Qt main thread, read on the SDL input thread.
+    bool isTextInputActive() const { return m_textInputActive; }
+    Q_INVOKABLE void setTextInputActive(bool active) { m_textInputActive = active; }
+
     // Action handlers
     Q_INVOKABLE void executeAction(const QString &action);
     Q_INVOKABLE void disconnect();
@@ -84,6 +98,9 @@ public:
     Q_INVOKABLE void toggleMouseCapture();
     Q_INVOKABLE void toggleKeyboardCapture();
     Q_INVOKABLE void toggleFullscreen();
+    Q_INVOKABLE void sendSpecialKey(const QString &action);
+    Q_INVOKABLE void pasteClipboard();
+    Q_INVOKABLE void showStreamInfo();
 
     // Integration with other managers
     void setServerCommandManager(ServerCommandManager *manager);
@@ -128,7 +145,10 @@ private:
     void teardownOverlayRenderer();
     void sendKeyCombo(int keyCombo);
 
-    bool m_isVisible;
+    // test81 (review fix): read from the SDL input thread (gamepad/keyboard intercepts)
+    // while written on the Qt main thread — must be atomic.
+    std::atomic<bool> m_isVisible;
+    std::atomic<bool> m_textInputActive{false};
 
     ServerCommandManager *m_serverCommandManager;
     ClipboardManager *m_clipboardManager;
