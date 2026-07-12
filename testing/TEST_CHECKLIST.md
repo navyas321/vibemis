@@ -54,12 +54,12 @@ whole Quick Menu group depends on its render path.
 
 ## 2. Streaming quality / video
 
-- [ ] **test23** — Vibepollo quality presets — **PR #45** — base `vibemis-main` — ☐
-- [ ] **test24** — Compact performance overlay — **PR #46** — base `vibemis-main` — ☐
-- [ ] **test25** — Video scale mode (Fit/Fill/Stretch) — **PR #47** — base `vibemis-main` — ☐
-- [ ] **test31** — In-stream video zoom — **PR #53** — base `test25` — ☐
-- [ ] **test32** — In-stream video pan — **PR #54** — base `test31` — ☐
-- [ ] **test40** — Battery-saver bitrate — **PR #60** — base `vibemis-main` — ☐
+- [x] **test23** — Vibepollo quality presets — **PR #45** — ☑ **PASS (source, #165)** → merged; runtime → ledger
+- [x] **test24** — Compact performance overlay — **PR #46** — ☑ **PASS (source, #165)** → merged
+- [x] **test25** — Video scale mode — **PR #47** — ☑ **PASS (source, #165)** → merged
+- [x] **test31** — In-stream video zoom — **PR #53** — ☑ **PASS (source, #165)** → merged
+- [x] **test32** — In-stream video pan — **PR #54** — ☑ **PASS (source, #165)** → merged
+- [x] **test40** — Battery-saver bitrate — **PR #60** — ☑ **PASS (source, #165)** → merged
 - [x] **test53** — Settings performance-guidance advisories (sw-decode / high-bitrate) — **PR #73** — base `vibemis-main` — ☑ **PASS** (report on diagnostic/test53-perf-guidance-report; all 3 tiers, no false positives) → merged
 - [x] **test59** — Data-usage estimate under the bitrate slider — **PR #79** — base `vibemis-main` — ☑ **PASS** (report PR #101; 9.0 GB/hr@20Mbps, 22.5@50Mbps — math verified) → merged
 - [x] **test62** — Adaptive bitrate (experimental) first slice (P3.12) — **PR #82** — base `vibemis-main` — ☑ **PASS (Tier 1)** (report PR #107; checkbox visible + default off + persists; Tiers 2/3 N/A — need a degrading stream, re-check later) → merged. Note: QSettings may skip writing `adaptivebitrate` when false/default — read path verified, harmless.
@@ -73,8 +73,8 @@ whole Quick Menu group depends on its render path.
 
 ## 3. Input / controls
 
-- [ ] **test26** — Configurable Quick Menu gamepad shortcut — **PR #48** — base `vibemis-main` — ☐
-- [ ] **test36** — Back-paddle Quick Menu combos — **PR #56** — base `test26` — ☐
+- [x] **test26** — Configurable Quick Menu shortcut — **PR #48** — ☑ **PASS (source, #165)** → merged
+- [ ] **test36** — Back-paddle Quick Menu combos — **PR #56** — ☐ (stacks on test26; re-sync + verify)
 - [x] **test57** — Disable controller rumble (P3.13) — **PR #77** — base `vibemis-main` — ☑ **PASS (Tier 1)** (report PR #112; toggle in Gamepad Settings, default OFF, `suppresscontrollerrumble` persists; Tier 2 in-stream suppression N/A → ledger) → merged
 - [x] **test64** — Motion-control (gyro) capability detection (P3.16) — **PR #84** — base `vibemis-main` — ☑ **PASS (Tier 1)** (report PR #116; gyro toggle renders in Gamepad Settings, `forwardmotioncontrols` persists; Tier 2 `[motion]` log needs a controller/Game Mode → ledger) → merged. ⚠ Report also flagged a **pre-existing mDNS auto-exit bug** (tracked separately).
 
