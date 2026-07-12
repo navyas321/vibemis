@@ -75,6 +75,15 @@ public:
     };
     Q_ENUM(RendererBackend)
 
+    // Vibemis: which gamepad button combo opens the in-stream Quick Menu.
+    enum QuickMenuGamepadCombo
+    {
+        QMGC_SELECT_LB_RB_Y,  // default — Select + L1 + R1 + Y
+        QMGC_SELECT_LB_RB_B,  // Select + L1 + R1 + B
+        QMGC_L3_R3,           // click both analog sticks (L3 + R3)
+        QMGC_SELECT_START,    // Select + Start
+    };
+    Q_ENUM(QuickMenuGamepadCombo)
     // Vibemis: how the video frame is fit to the window.
     enum VideoScaleMode
     {
@@ -213,6 +222,8 @@ public:
     Q_PROPERTY(CaptureSysKeysMode captureSysKeysMode MEMBER captureSysKeysMode NOTIFY captureSysKeysModeChanged)
     Q_PROPERTY(Language language MEMBER language NOTIFY languageChanged)
     Q_PROPERTY(RendererBackend rendererBackend MEMBER rendererBackend NOTIFY rendererBackendChanged)
+    Q_PROPERTY(QuickMenuGamepadCombo quickMenuGamepadCombo MEMBER quickMenuGamepadCombo NOTIFY quickMenuGamepadComboChanged)
+
     Q_PROPERTY(VideoScaleMode videoScaleMode MEMBER videoScaleMode NOTIFY videoScaleModeChanged)
     
     // Vibemis client-side streaming enhancements
@@ -276,6 +287,7 @@ public:
     Language language;
     CaptureSysKeysMode captureSysKeysMode;
     RendererBackend rendererBackend;
+    QuickMenuGamepadCombo quickMenuGamepadCombo;
     VideoScaleMode videoScaleMode;
 
     // Vibemis client-side streaming enhancements
@@ -333,6 +345,8 @@ signals:
     void seenWelcomeHintChanged();
     void languageChanged();
     void rendererBackendChanged();
+    void quickMenuGamepadComboChanged();
+
     void videoScaleModeChanged();
     
     // Vibemis client-side streaming enhancement signals

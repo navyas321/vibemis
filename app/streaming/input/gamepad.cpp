@@ -4,6 +4,27 @@
 #include <Limelight.h>
 #include "SDL_compat.h"
 #include "settings/mappingmanager.h"
+#include "settings/streamingpreferences.h"
+
+// Map the configured Quick Menu gamepad combo preference to its button-flag mask.
+static int quickMenuComboMask()
+{
+    int combo = StreamingPreferences::QMGC_SELECT_LB_RB_Y;
+    if (auto prefs = StreamingPreferences::get()) {
+        combo = prefs->quickMenuGamepadCombo;
+    }
+    switch (combo) {
+    case StreamingPreferences::QMGC_SELECT_LB_RB_B:
+        return BACK_FLAG | LB_FLAG | RB_FLAG | B_FLAG;
+    case StreamingPreferences::QMGC_L3_R3:
+        return LS_CLK_FLAG | RS_CLK_FLAG;
+    case StreamingPreferences::QMGC_SELECT_START:
+        return BACK_FLAG | PLAY_FLAG;
+    case StreamingPreferences::QMGC_SELECT_LB_RB_Y:
+    default:
+        return BACK_FLAG | LB_FLAG | RB_FLAG | Y_FLAG;
+    }
+}
 
 #include <QCoreApplication>
 #include <QGuiApplication>
@@ -477,8 +498,8 @@ void SdlInputHandler::handleControllerButtonEvent(SDL_ControllerButtonEvent* eve
         return;
     }
 
-    // Handle Select+L1+R1+Y as a gamepad quick menu combo
-    if (state->buttons == (BACK_FLAG | LB_FLAG | RB_FLAG | Y_FLAG)) {
+    // Handle the configurable gamepad combo for the Quick Menu (default Select+L1+R1+Y)
+    if (state->buttons == quickMenuComboMask()) {
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                     "Detected quick menu toggle gamepad combo");
 

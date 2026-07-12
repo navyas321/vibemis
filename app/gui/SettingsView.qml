@@ -1843,6 +1843,52 @@ Flickable {
                 anchors.fill: parent
                 spacing: 5
 
+                Label {
+                    width: parent.width
+                    id: quickMenuComboTitle
+                    text: qsTr("Quick Menu shortcut")
+                    font.pointSize: 12
+                    wrapMode: Text.Wrap
+                }
+
+                AutoResizingComboBox {
+                    id: quickMenuComboBox
+                    textRole: "text"
+                    hoverEnabled: true
+                    model: ListModel {
+                        id: quickMenuComboModel
+                        ListElement { text: qsTr("Select + L1 + R1 + Y (default)"); val: 0 }
+                        ListElement { text: qsTr("Select + L1 + R1 + B"); val: 1 }
+                        ListElement { text: qsTr("L3 + R3 (click both sticks)"); val: 2 }
+                        ListElement { text: qsTr("Select + Start"); val: 3 }
+                    }
+
+                    function reinitialize() {
+                        var saved = StreamingPreferences.quickMenuGamepadCombo
+                        currentIndex = 0
+                        for (var i = 0; i < quickMenuComboModel.count; i++) {
+                            if (quickMenuComboModel.get(i).val === saved) {
+                                currentIndex = i
+                                break
+                            }
+                        }
+                    }
+
+                    Component.onCompleted: {
+                        reinitialize()
+                        languageChanged.connect(reinitialize)
+                    }
+
+                    onActivated: {
+                        StreamingPreferences.quickMenuGamepadCombo = quickMenuComboModel.get(currentIndex).val
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Which gamepad button combination opens the in-stream Quick Menu.")
+                }
+
                 CheckBox {
                     id: swapFaceButtonsCheck
                     width: parent.width
