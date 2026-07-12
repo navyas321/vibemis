@@ -21,6 +21,10 @@ their own header + hint bar — no double header.
   title (`objectName`) + **"K apps available"** count + **Settings** icon button. Footer = `VbHintBar`
   `Ⓐ Launch  Ⓑ Back  Ⓧ App options … ☰ Settings`. Import `QtQuick.Layouts` added.
 - `app/version.txt` — `0.24.2` → `0.25.0` (MINOR: feature wave).
+- `app/gui/computermodel.h` — `Q_ENUM(Roles)` (enum moved to `public`) so `ComputerModel.OnlineRole`
+  resolves in QML for the live host count. Also fixes a latent bug where the `ComputerModel.NameRole`
+  int-role lookups (post-pair navigation, OTP dialog title) silently fell back because the enum was
+  never registered with the meta-object.
 
 Additive only: the card delegates, `ComputerModel`/`AppModel`, all dialogs (pairing, OTP, rename,
 delete, details, test-network, quit), the `1d` host-options sheet (`VbHostSheet`), and the redesign

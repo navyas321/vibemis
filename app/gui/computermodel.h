@@ -7,6 +7,7 @@ class ComputerModel : public QAbstractListModel
 {
     Q_OBJECT
 
+public:
     enum Roles
     {
         NameRole = Qt::UserRole,
@@ -21,8 +22,11 @@ class ComputerModel : public QAbstractListModel
         IsApolloServerRole,
         PermissionSummaryRole
     };
+    // Expose the role enum to QML so ComputerModel.OnlineRole / NameRole resolve to their
+    // int values (used by PcView's live host-count and the existing data(index, role) calls,
+    // which previously fell back silently because the enum was never registered).
+    Q_ENUM(Roles)
 
-public:
     explicit ComputerModel(QObject* object = nullptr);
 
     // Must be called before any QAbstractListModel functions
