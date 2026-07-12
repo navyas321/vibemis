@@ -2473,6 +2473,10 @@ Item {
                         ListElement { text: qsTr("Select + L1 + R1 + B"); val: 1 }
                         ListElement { text: qsTr("L3 + R3 (click both sticks)"); val: 2 }
                         ListElement { text: qsTr("Select + Start"); val: 3 }
+                        ListElement { text: qsTr("Back paddle P1"); val: 4 }
+                        ListElement { text: qsTr("Back paddle P2"); val: 5 }
+                        ListElement { text: qsTr("Back paddle P3"); val: 6 }
+                        ListElement { text: qsTr("Back paddle P4"); val: 7 }
                     }
 
                     function reinitialize() {

@@ -96,6 +96,10 @@ public:
         QMGC_SELECT_LB_RB_B,  // Select + L1 + R1 + B
         QMGC_L3_R3,           // click both analog sticks (L3 + R3)
         QMGC_SELECT_START,    // Select + Start
+        QMGC_PADDLE1,         // back paddle P1 (Xbox Elite / Legion Go / other paddle pads)
+        QMGC_PADDLE2,         // back paddle P2
+        QMGC_PADDLE3,         // back paddle P3
+        QMGC_PADDLE4,         // back paddle P4
     };
     Q_ENUM(QuickMenuGamepadCombo)
     // Vibemis: how the video frame is fit to the window.

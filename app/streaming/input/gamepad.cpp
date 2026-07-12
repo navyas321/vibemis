@@ -20,6 +20,16 @@ static int quickMenuComboMask()
         return LS_CLK_FLAG | RS_CLK_FLAG;
     case StreamingPreferences::QMGC_SELECT_START:
         return BACK_FLAG | PLAY_FLAG;
+    // Back-paddle triggers (Xbox Elite / Legion Go / other paddle-equipped pads). Exact-match, so
+    // only a clean paddle press (no other buttons held) opens the Quick Menu.
+    case StreamingPreferences::QMGC_PADDLE1:
+        return PADDLE1_FLAG;
+    case StreamingPreferences::QMGC_PADDLE2:
+        return PADDLE2_FLAG;
+    case StreamingPreferences::QMGC_PADDLE3:
+        return PADDLE3_FLAG;
+    case StreamingPreferences::QMGC_PADDLE4:
+        return PADDLE4_FLAG;
     case StreamingPreferences::QMGC_SELECT_LB_RB_Y:
     default:
         return BACK_FLAG | LB_FLAG | RB_FLAG | Y_FLAG;
