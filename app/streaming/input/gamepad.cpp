@@ -162,6 +162,15 @@ Uint32 SdlInputHandler::mouseEmulationTimerCallback(Uint32 interval, void *param
 {
     auto gamepad = reinterpret_cast<GamepadState*>(param);
 
+    // test81 (review fix): freeze emulated mouse motion while the Quick Menu is open.
+    {
+        Session* sess = Session::get();
+        if (sess && sess->getQuickMenuManager() &&
+            sess->getQuickMenuManager()->isVisible()) {
+            return interval;
+        }
+    }
+
     int rawX;
     int rawY;
 
@@ -199,6 +208,17 @@ void SdlInputHandler::handleControllerAxisEvent(SDL_ControllerAxisEvent* event)
     GamepadState* state = findStateForGamepad(gameControllerId);
     if (state == NULL) {
         return;
+    }
+
+    // test81 (review fix): while the Quick Menu is open, buttons are intercepted but
+    // sticks/triggers used to keep streaming to the host — the game kept walking/aiming
+    // under the menu. Swallow axis input too; state resyncs on the next event after close.
+    {
+        Session* sess = Session::get();
+        if (sess && sess->getQuickMenuManager() &&
+            sess->getQuickMenuManager()->isVisible()) {
+            return;
+        }
     }
 
     // Batch all pending axis motion events for this gamepad to save CPU time
@@ -322,10 +342,23 @@ void SdlInputHandler::handleControllerButtonEvent(SDL_ControllerButtonEvent* eve
                 // inject the navigation key straight into it on the Qt main thread.
                 QMetaObject::invokeMethod(sess->getQuickMenuManager(), "injectKey",
                                           Qt::QueuedConnection, Q_ARG(int, (int)qtKey));
+                // test81 (review fix): remember the consumed press so its RELEASE is
+                // swallowed too (see below) — otherwise the release leaked into the
+                // normal handlers with stale state (Start release toggled mouse
+                // emulation; A/B releases sent stray mouse buttons in emulation mode).
+                state->buttonsConsumedByMenu |= k_ButtonMap[event->button];
                 return; // consumed — don't update game controller state
             }
+            state->buttonsConsumedByMenu |= k_ButtonMap[event->button];
             return; // any other button: also swallow while menu is open
         }
+    }
+
+    // test81 (review fix): swallow the release of any press the Quick Menu consumed.
+    if (event->state == SDL_RELEASED &&
+        (state->buttonsConsumedByMenu & k_ButtonMap[event->button])) {
+        state->buttonsConsumedByMenu &= ~k_ButtonMap[event->button];
+        return;
     }
 
     if (event->state == SDL_PRESSED) {
@@ -631,16 +664,17 @@ void SdlInputHandler::handleControllerDeviceEvent(SDL_ControllerDeviceEvent* eve
         state->controller = controller;
         state->jsId = SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(state->controller));
 
-        // Vibemis (P3.16): when motion forwarding is enabled, report whether this controller exposes
-        // gyro/accelerometer sensors. This is the observation-only first slice.
-        // TODO(P3.16): if sensors are present and host support is confirmed, enable them with
-        // SDL_GameControllerSetSensorEnabled() and forward samples via LiSendControllerMotionEvent().
+        // Vibemis (P3.16/P3.22): when motion forwarding is enabled, report whether this
+        // controller exposes gyro/accelerometer. Actual sensor enablement + forwarding is
+        // now wired: the host requests a report rate via setMotionEventState(), which
+        // enables the SDL sensors (gated on this same setting) and handleControllerSensorEvent()
+        // forwards samples via LiSendControllerMotionEvent().
 #if SDL_VERSION_ATLEAST(2, 0, 14)
         if (StreamingPreferences::get()->forwardMotionControls) {
             bool hasGyro = SDL_GameControllerHasSensor(controller, SDL_SENSOR_GYRO);
             bool hasAccel = SDL_GameControllerHasSensor(controller, SDL_SENSOR_ACCEL);
             SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                        "[motion] Controller '%s' sensors: gyro=%s accel=%s (forwarding pending host support — TODO P3.16)",
+                        "[motion] Controller '%s' sensors: gyro=%s accel=%s (forwarding enabled; awaits host motion request)",
                         SDL_GameControllerName(controller) ? SDL_GameControllerName(controller) : "?",
                         hasGyro ? "yes" : "no", hasAccel ? "yes" : "no");
         }
@@ -971,6 +1005,13 @@ void SdlInputHandler::setMotionEventState(uint16_t controllerNumber, uint8_t mot
 
 #if SDL_VERSION_ATLEAST(2, 0, 14)
     if (m_GamepadState[controllerNumber].controller != nullptr) {
+        // Vibemis P3.22 (test82): honor the user's motion-forwarding setting. When it's
+        // off, ignore the host's request to enable sensors — no gyro/accel is captured or
+        // forwarded (privacy + avoids unwanted gyro-aim). This completes the test64 slice,
+        // where forwardMotionControls only affected a log line.
+        if (!StreamingPreferences::get()->forwardMotionControls) {
+            reportRateHz = 0;
+        }
         uint8_t reportPeriodMs = reportRateHz ? (1000 / reportRateHz) : 0;
 
         switch (motionType) {

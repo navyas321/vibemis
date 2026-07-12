@@ -104,6 +104,11 @@ bool AppProfileManager::applyProfile(StreamingPreferences* prefs, const QString&
     prefs->enableHdr = settings.value(SER_PROF_HDR, prefs->enableHdr).toBool();
     settings.endGroup();
 
+    // test81 (review fix): a profile pins the exact stream shape — don't let the global
+    // resolution-scaling toggle silently rescale it (e.g. a saved 1920x1200 profile
+    // streaming at 960x600 because global 50% scaling was enabled later).
+    prefs->enableResolutionScaling = false;
+
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                 "AppProfileManager: applying per-app profile for app %d on %s: %dx%d@%d %d kbps HDR=%d",
                 appId, computerUuid.toUtf8().constData(),
