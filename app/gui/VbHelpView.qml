@@ -23,10 +23,12 @@ Item {
         anchors.fill: parent
         spacing: 0
 
-        // ---- Header: Back + title ----
+        // ---- Header (Back + "Help") MOVED to the always-present global toolbar (main.qml), kept
+        // present so it renders under gamescope. Hidden here to avoid a double header. ----
         Item {
+            visible: false
             Layout.fillWidth: true
-            Layout.preferredHeight: VbTokens.headerH
+            Layout.preferredHeight: 0
             RowLayout {
                 anchors.fill: parent
                 anchors.leftMargin: VbTokens.screenPadX
@@ -43,7 +45,7 @@ Item {
                     }
                     contentItem: Text {
                         text: "‹"; anchors.centerIn: parent
-                        font.family: VbTokens.fontDisplay; font.pixelSize: 30
+                        font.family: VbTokens.fontDisplay; font.pixelSize: 24
                         color: VbTokens.text; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
                     }
                     onClicked: stackView.pop()
@@ -58,59 +60,91 @@ Item {
             Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: VbTokens.strokeSoft }
         }
 
-        // ---- Body: two columns ----
+        // ---- Body: two columns (left is slightly wider — flex:1.1 vs flex:1 in the HTML) ----
         RowLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            Layout.margins: VbTokens.screenPadX
+            Layout.topMargin: VbTokens.screenPadY
+            Layout.bottomMargin: VbTokens.screenPadY
+            Layout.leftMargin: VbTokens.screenPadX
+            Layout.rightMargin: VbTokens.screenPadX
             spacing: VbTokens.cardGap
 
             // LEFT column: Quick Menu hero + gamepad shortcuts
             ColumnLayout {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                Layout.preferredWidth: 1
-                spacing: VbTokens.cardGap
+                Layout.preferredWidth: 1.1
+                spacing: 22
 
-                // Hero Quick Menu card (accent gradient wash + accent border)
+                // Hero Quick Menu card (accent gradient wash + accent border, 20px radius)
                 VbCard {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 240
+                    Layout.preferredHeight: heroCol.implicitHeight + 64
+                    radius: 20
                     baseColor: VbTokens.bgElev
                     Rectangle {
-                        anchors.fill: parent; radius: VbTokens.radiusCard
-                        border.width: 1; border.color: VbTokens.accent
+                        anchors.fill: parent; radius: 20
+                        border.width: 1
+                        border.color: Qt.rgba(VbTokens.accent.r, VbTokens.accent.g, VbTokens.accent.b, 0.3)
+                        // Approximates the HTML's linear-gradient(135deg, color-mix(ac 20%, bgElev), bgElev);
+                        // QtQuick 2.9's Gradient has no angle, so this fades top-to-bottom instead of diagonally.
                         gradient: Gradient {
-                            GradientStop { position: 0.0; color: Qt.rgba(VbTokens.accent.r, VbTokens.accent.g, VbTokens.accent.b, 0.14) }
-                            GradientStop { position: 1.0; color: "transparent" }
+                            GradientStop {
+                                position: 0.0
+                                color: Qt.rgba(VbTokens.accent.r * 0.2 + VbTokens.bgElev.r * 0.8,
+                                               VbTokens.accent.g * 0.2 + VbTokens.bgElev.g * 0.8,
+                                               VbTokens.accent.b * 0.2 + VbTokens.bgElev.b * 0.8, 1.0)
+                            }
+                            GradientStop { position: 1.0; color: VbTokens.bgElev }
                         }
                     }
                     ColumnLayout {
-                        anchors.fill: parent; anchors.margins: 28; spacing: 12
+                        id: heroCol
+                        anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
+                        anchors.margins: 32; spacing: 14
                         Text {
-                            text: qsTr("Quick Menu")
-                            font.family: VbTokens.fontDisplay; font.weight: Font.Bold; font.pixelSize: VbTokens.sizeSectionTitle
+                            text: qsTr("QUICK MENU")
+                            font.family: VbTokens.fontBody; font.weight: Font.ExtraBold; font.pixelSize: 14
+                            font.letterSpacing: 1.4
                             color: VbTokens.accent
                         }
                         Text {
-                            text: qsTr("Open the in-stream overlay to paste, send text, run server commands, and control the stream.")
-                            font.family: VbTokens.fontBody; font.pixelSize: VbTokens.sizeBody
-                            color: VbTokens.textDim; wrapMode: Text.WordWrap; Layout.fillWidth: true
+                            text: qsTr("Open the in-stream overlay")
+                            font.family: VbTokens.fontDisplay; font.weight: Font.Bold; font.pixelSize: 24
+                            color: VbTokens.text
                         }
-                        Item { Layout.fillHeight: true }
-                        // Chord as key-caps: Select + L1 + R1 + Ⓨ
+                        Text {
+                            text: qsTr("Clipboard sync, server commands, and stream controls — any time during a session.")
+                            font.family: VbTokens.fontBody; font.pixelSize: VbTokens.sizeBody; lineHeight: 1.5
+                            color: VbTokens.textMute; wrapMode: Text.WordWrap; Layout.fillWidth: true
+                        }
+                        // Chord as key-caps: Select + L1 + R1 + (Y in a circle), "+" separators between
                         RowLayout {
-                            spacing: 8
+                            spacing: 10
                             Repeater {
-                                model: ["Select", "L1", "R1", "ⓨ"]
-                                delegate: Rectangle {
-                                    implicitWidth: chordText.implicitWidth + 20; implicitHeight: 34
-                                    radius: 8; color: VbTokens.bgElev2
-                                    border.width: 1; border.color: VbTokens.stroke
+                                model: ["Select", "L1", "R1", "Y"]
+                                delegate: RowLayout {
+                                    Layout.alignment: Qt.AlignVCenter
+                                    spacing: 10
+                                    Rectangle {
+                                        implicitWidth: modelData === "Y" ? 38 : (chordText.implicitWidth + 28)
+                                        implicitHeight: 38
+                                        radius: modelData === "Y" ? 19 : 9
+                                        color: VbTokens.bgWindow
+                                        border.width: 1; border.color: Qt.rgba(1, 1, 1, 0.14)
+                                        Text {
+                                            id: chordText; anchors.centerIn: parent; text: modelData
+                                            font.family: VbTokens.fontBody; font.pixelSize: 15
+                                            font.weight: modelData === "Y" ? Font.ExtraBold : Font.Bold
+                                            color: VbTokens.text
+                                        }
+                                    }
                                     Text {
-                                        id: chordText; anchors.centerIn: parent; text: modelData
-                                        font.family: VbTokens.fontBody; font.pixelSize: 15; font.bold: true
-                                        color: modelData === "ⓨ" ? VbTokens.accent : VbTokens.textMute
+                                        visible: index < 3
+                                        text: "+"
+                                        font.family: VbTokens.fontBody; font.pixelSize: 15
+                                        color: VbTokens.textDim
                                     }
                                 }
                             }
@@ -122,25 +156,29 @@ Item {
                 // so a fillHeight card starves to 0 when the column has no surplus space).
                 VbCard {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: gpCol.implicitHeight + 48
+                    Layout.preferredHeight: gpCol.implicitHeight + 56
                     ColumnLayout {
                         id: gpCol
                         anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
-                        anchors.margins: 24; spacing: 14
+                        anchors.margins: 28; spacing: 18
                         Text {
                             text: qsTr("Gamepad shortcuts")
-                            font.family: VbTokens.fontDisplay; font.weight: Font.Bold; font.pixelSize: 20; color: VbTokens.text
+                            font.family: VbTokens.fontDisplay; font.weight: Font.Bold; font.pixelSize: 19; color: VbTokens.text
                         }
-                        Repeater {
-                            model: [
-                                { k: "Start + Select + L1 + R1", v: qsTr("Quit stream") },
-                                { k: "Select + L1 + R1 + ⓧ", v: qsTr("Performance stats") },
-                                { k: qsTr("Long-press Start"), v: qsTr("Mouse emulation") }
-                            ]
-                            delegate: RowLayout {
-                                Layout.fillWidth: true; spacing: 16
-                                Text { text: modelData.v; font.family: VbTokens.fontBody; font.pixelSize: VbTokens.sizeBody; color: VbTokens.textDim; Layout.fillWidth: true }
-                                Text { text: modelData.k; font.family: VbTokens.fontBody; font.pixelSize: VbTokens.sizeLabel; font.bold: true; color: VbTokens.textMute }
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 14
+                            Repeater {
+                                model: [
+                                    { k: "Start + Select + L1 + R1", v: qsTr("Quit stream") },
+                                    { k: "Select + L1 + R1 + X", v: qsTr("Performance stats") },
+                                    { k: qsTr("Long press Start"), v: qsTr("Mouse emulation") }
+                                ]
+                                delegate: RowLayout {
+                                    Layout.fillWidth: true; spacing: 16
+                                    Text { text: modelData.v; font.family: VbTokens.fontBody; font.pixelSize: VbTokens.sizeBody; color: VbTokens.textMute; Layout.fillWidth: true }
+                                    Text { text: modelData.k; font.family: VbTokens.fontBody; font.pixelSize: VbTokens.sizeLabel; font.weight: Font.DemiBold; color: VbTokens.textDim }
+                                }
                             }
                         }
                     }
@@ -152,38 +190,43 @@ Item {
             ColumnLayout {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                Layout.preferredWidth: 1
-                spacing: VbTokens.cardGap
+                Layout.preferredWidth: 1.0
+                spacing: 22
 
                 VbCard {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: kbCol.implicitHeight + 48
+                    Layout.preferredHeight: kbCol.implicitHeight + 56
                     ColumnLayout {
                         id: kbCol
                         anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
-                        anchors.margins: 24; spacing: 14
+                        anchors.margins: 28; spacing: 18
                         Text {
                             text: qsTr("Keyboard shortcuts")
-                            font.family: VbTokens.fontDisplay; font.weight: Font.Bold; font.pixelSize: 20; color: VbTokens.text
+                            font.family: VbTokens.fontDisplay; font.weight: Font.Bold; font.pixelSize: 19; color: VbTokens.text
                         }
                         Text {
-                            text: qsTr("All require Ctrl + Alt + Shift")
+                            textFormat: Text.StyledText
+                            text: qsTr("All require <font color='%1'>Ctrl + Alt + Shift</font>").arg(VbTokens.textMute)
                             font.family: VbTokens.fontBody; font.pixelSize: VbTokens.sizeLabel; color: VbTokens.textDim
                         }
-                        Repeater {
-                            model: [
-                                { k: "\\", v: qsTr("Toggle Quick Menu") },
-                                { k: "Q", v: qsTr("Quit stream") },
-                                { k: "X", v: qsTr("Toggle fullscreen") },
-                                { k: "V", v: qsTr("Paste clipboard text") }
-                            ]
-                            delegate: RowLayout {
-                                Layout.fillWidth: true; spacing: 16
-                                Text { text: modelData.v; font.family: VbTokens.fontBody; font.pixelSize: VbTokens.sizeBody; color: VbTokens.textDim; Layout.fillWidth: true }
-                                Rectangle {
-                                    implicitWidth: 34; implicitHeight: 30; radius: 8; color: VbTokens.bgElev2
-                                    border.width: 1; border.color: VbTokens.stroke
-                                    Text { anchors.centerIn: parent; text: modelData.k; font.family: VbTokens.fontBody; font.pixelSize: 15; font.bold: true; color: VbTokens.accent }
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 12
+                            Repeater {
+                                model: [
+                                    { k: "\\", v: qsTr("Toggle Quick Menu") },
+                                    { k: "Q", v: qsTr("Quit stream") },
+                                    { k: "X", v: qsTr("Toggle fullscreen") },
+                                    { k: "V", v: qsTr("Paste clipboard") }
+                                ]
+                                delegate: RowLayout {
+                                    Layout.fillWidth: true; spacing: 16
+                                    Text { text: modelData.v; font.family: VbTokens.fontBody; font.pixelSize: VbTokens.sizeBody; color: VbTokens.textMute; Layout.fillWidth: true }
+                                    Rectangle {
+                                        implicitWidth: 34; implicitHeight: 34; radius: 8; color: VbTokens.bgWindow
+                                        border.width: 1; border.color: Qt.rgba(1, 1, 1, 0.14)
+                                        Text { anchors.centerIn: parent; text: modelData.k; font.family: VbTokens.fontBody; font.pixelSize: 15; font.weight: Font.Bold; color: VbTokens.text }
+                                    }
                                 }
                             }
                         }
@@ -192,19 +235,21 @@ Item {
 
                 VbCard {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: rpCol.implicitHeight + 40
+                    Layout.preferredHeight: rpCol.implicitHeight + 56
                     ColumnLayout {
                         id: rpCol
                         anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
-                        anchors.margins: 24; spacing: 12
+                        anchors.margins: 28; spacing: 12
                         Text {
                             text: qsTr("Remote play")
-                            font.family: VbTokens.fontDisplay; font.weight: Font.Bold; font.pixelSize: 20; color: VbTokens.text
+                            font.family: VbTokens.fontDisplay; font.weight: Font.Bold; font.pixelSize: 19; color: VbTokens.text
                         }
                         Text {
-                            text: qsTr("Stream across networks with Tailscale — put the host and this device on the same tailnet, then add the host by its 100.x address. No port forwarding.")
-                            font.family: VbTokens.fontBody; font.pixelSize: VbTokens.sizeBody
-                            color: VbTokens.textDim; wrapMode: Text.WordWrap; Layout.fillWidth: true
+                            textFormat: Text.StyledText
+                            text: qsTr("Streaming over LAN works out of the box. For a different network, put both devices on <font color='%1'><b>Tailscale</b></font> and add the host by its Tailscale address — no port forwarding.")
+                                  .arg(VbTokens.accent)
+                            font.family: VbTokens.fontBody; font.pixelSize: 16; lineHeight: 1.6
+                            color: VbTokens.textMute; wrapMode: Text.WordWrap; Layout.fillWidth: true
                         }
                     }
                 }

@@ -23,7 +23,7 @@ CenteredGridView {
     topMargin: pcChromeHeader.height + 12
     bottomMargin: (pcHintBar.visible ? pcHintBar.height : 0) + 12
     // Redesign 1a: 430px rich host cards (gap 32) in a centered wrapping row.
-    cellWidth: 462; cellHeight: 182;
+    cellWidth: 462; cellHeight: 274;
     objectName: qsTr("Computers")
 
     // ---- Redesign 1a chrome: per-screen header + persistent gamepad hint bar ----
@@ -70,12 +70,10 @@ CenteredGridView {
         }
     }
 
-    // Fixed per-screen header (does not scroll with the grid). Opaque bg so scrolled cards
-    // pass behind it. Height ~ headerH * 1.4 to fit the two-line title + count block.
-    // Redesign 1a header (previews/1a-computers.png): row 1 = VIBEMIS wordmark (left) + 52px icon
-    // buttons (Add / Refresh / Help / Settings) right; row 2 = "Computers" + live "N hosts · M online".
-    // The global toolbar is collapsed for the redesign screens in main.qml, so this is the only header
-    // (no double). Opaque bg so scrolled cards pass behind it.
+    // Redesign 1a body section title: "Computers · N hosts · M online". The VIBEMIS wordmark +
+    // Add/Refresh/Help/Settings buttons live in the ALWAYS-PRESENT global toolbar (main.qml) — kept
+    // present at 84px so it renders under gamescope (a collapsed header black-screens on the WSI path).
+    // So this is just the body section title below the toolbar; there is no double header.
     Item {
         id: pcChromeHeader
         z: 10
@@ -83,83 +81,15 @@ CenteredGridView {
         anchors.left: parent.left
         anchors.right: parent.right
         visible: true
-        height: 134
+        height: 78
 
         Rectangle { anchors.fill: parent; color: VbTokens.bgWindow }
 
-        // ---- Row 1: wordmark + icon buttons ----
-        Item {
-            id: headerTopRow
-            anchors.top: parent.top
-            anchors.topMargin: 22
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.leftMargin: VbTokens.screenPadX
-            anchors.rightMargin: VbTokens.screenPadX
-            height: VbTokens.iconButton
-
-            Row {
-                anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 11
-                Image {
-                    anchors.verticalCenter: parent.verticalCenter
-                    source: "qrc:/res/vibemis-mark-128.png"
-                    sourceSize.width: 26; sourceSize.height: 26
-                    fillMode: Image.PreserveAspectFit
-                }
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "VIBEMIS"
-                    font.family: VbTokens.fontDisplay
-                    font.weight: Font.Bold
-                    font.pixelSize: VbTokens.sizeWordmark
-                    font.letterSpacing: 2
-                    color: VbTokens.text
-                }
-            }
-
-            Row {
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 12
-                PcIconButton {
-                    glyphSource: "qrc:/res/ic_add_to_queue_white_48px.svg"
-                    onClicked: addPcDialog.open()
-                    ToolTip.text: qsTr("Add PC manually"); ToolTip.delay: 1000; ToolTip.visible: hovered
-                }
-                PcIconButton {
-                    glyphSource: "qrc:/res/refresh.svg"
-                    onClicked: ComputerManager.startPolling()
-                    ToolTip.text: qsTr("Refresh"); ToolTip.delay: 1000; ToolTip.visible: hovered
-                }
-                PcIconButton {
-                    visible: SystemProperties.hasBrowser
-                    glyphSource: "qrc:/res/question_mark.svg"
-                    onClicked: {
-                        var comp = Qt.createComponent("qrc:/gui/VbHelpView.qml")
-                        if (comp.status === Component.Ready) {
-                            stackView.push(comp)
-                        } else {
-                            Qt.openUrlExternally("https://github.com/navyas321/vibemis")
-                        }
-                    }
-                    ToolTip.text: qsTr("Help"); ToolTip.delay: 1000; ToolTip.visible: hovered
-                }
-                PcIconButton {
-                    glyphSource: "qrc:/res/settings.svg"
-                    onClicked: navigateTo("qrc:/gui/SettingsView.qml", "SettingsView")
-                    ToolTip.text: qsTr("Settings"); ToolTip.delay: 1000; ToolTip.visible: hovered
-                }
-            }
-        }
-
-        // ---- Row 2: section title + live host count ----
         Row {
-            anchors.top: headerTopRow.bottom
-            anchors.topMargin: 14
             anchors.left: parent.left
             anchors.leftMargin: VbTokens.screenPadX
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 6
             spacing: 14
             Text {
                 id: sectionTitle
@@ -187,15 +117,29 @@ CenteredGridView {
         anchors.bottom: parent.bottom
         anchors.left: parent.left
         anchors.right: parent.right
-        // Hints reflect the ACTUAL launcher gamepad map (sdlgamepadkeynavigation.cpp,
-        // swapFaceButtons off): A=Return(connect), X=Menu(host options), Start(☰)=Hangup(settings).
-        // Add-computer has no button shortcut — the focusable "+" tile self-documents — so it is not
-        // listed here (previously mis-labelled as Ⓨ, which actually maps to Settings). See BL-1594.
+        // Matches the design handoff 1a hint bar exactly (dc.html lines 100-104):
+        // Ⓐ Connect · Ⓧ Host options · Ⓨ Add computer · (right) ☰ Settings. Ⓨ is wired to the
+        // Add-PC dialog via Keys.onYPressed on the grid below; ☰/Start opens Settings.
         hints: [
             { glyph: "Ⓐ", label: qsTr("Connect") },
-            { glyph: "Ⓧ", label: qsTr("Host options") }
+            { glyph: "Ⓧ", label: qsTr("Host options") },
+            { glyph: "Ⓨ", label: qsTr("Add computer") }
         ]
         hintsRight: [ { glyph: "☰", label: qsTr("Settings") } ]
+    }
+
+    // Redesign 1a: Ⓨ (mapped to Key_Yellow in sdlgamepadkeynavigation.cpp) opens the Add-PC dialog,
+    // matching the "Ⓨ Add computer" hint. Keyboard 'A' also adds a computer as a convenience.
+    Keys.onPressed: {
+        if (event.key === Qt.Key_Yellow) {
+            addPcDialog.open()
+            event.accepted = true
+        }
+    }
+
+    // Called by the global toolbar's Refresh button (main.qml) — re-poll for hosts.
+    function refreshView() {
+        ComputerManager.startPolling()
     }
 
     Component.onCompleted: {
@@ -314,7 +258,7 @@ CenteredGridView {
     model: computerModel
 
     delegate: NavigableItemDelegate {
-        width: 430; height: 150;
+        width: 430; height: 242;
         grid: pcGrid
 
         property alias pcContextMenu : pcContextMenuLoader.item

@@ -223,6 +223,7 @@ ApplicationWindow {
     function qmltypeof(obj, className) { // QtObject, string -> bool
         // className plus "(" is the class instance without modification
         // className plus "_QML" is the class instance with user-defined properties
+        if (!obj) return false;   // currentItem is null during the first frame at startup
         var str = obj.toString();
         return str.startsWith(className + "(") || str.startsWith(className + "_QML");
     }
@@ -257,15 +258,21 @@ ApplicationWindow {
         // from the very first frame and NEVER transitions 60->0 at startup. It expands to 60 only for the
         // legacy fullscreen stream/quit segues, whose transitions happen after the window is stable and
         // on a separate render path. Test agent: verify 1a renders (not black) under gamescope.
-        readonly property bool redesignScreen: !stackView.currentItem
-            || qmltypeof(stackView.currentItem, "PcView")
-            || qmltypeof(stackView.currentItem, "AppView")
-            || qmltypeof(stackView.currentItem, "SettingsView")
-            || qmltypeof(stackView.currentItem, "VbHelpView")
-        height: redesignScreen ? 0 : 60
-        visible: !redesignScreen
-        anchors.topMargin: 5
-        anchors.bottomMargin: 5
+        // Redesign header architecture (BLACK-SCREEN FIX): the global ApplicationWindow toolbar is
+        // ALWAYS PRESENT at 84px and IS the per-screen header. It must never collapse to height 0 — a
+        // 0-height / hidden header black-screens under the gamescope WSI path (test-agent-verified:
+        // 0.25.1 with the toolbar PRESENT rendered clean; 0.25.0 + 0.26.0 with it collapsed went
+        // black). So it stays visible on every screen and renders that screen's header content
+        // (VIBEMIS wordmark on Computers; Back + title elsewhere). The redesign screens no longer draw
+        // their own header BAR (only their body section title), so there is no double header.
+        readonly property bool onPcView: qmltypeof(stackView.currentItem, "PcView")
+        readonly property bool onSettings: qmltypeof(stackView.currentItem, "SettingsView")
+        readonly property bool onHelp: qmltypeof(stackView.currentItem, "VbHelpView")
+        readonly property bool onAppView: qmltypeof(stackView.currentItem, "AppView")
+        height: 84
+        visible: true
+        anchors.topMargin: 0
+        anchors.bottomMargin: 0
 
         // Redesign: dark token-styled surface. This global toolbar stays visible on the home screens
         // (1a Computers / 1b app grid) — where it can't collapse without resizing the window during
@@ -274,7 +281,7 @@ ApplicationWindow {
         // clashing with the dark UI below it. Height is constant on the home screens (no runtime
         // geometry change) so the black-screen fix is preserved.
         background: Rectangle {
-            color: VbTokens.bg
+            color: VbTokens.bgWindow
             Rectangle {
                 anchors.bottom: parent.bottom
                 width: parent.width
@@ -283,11 +290,40 @@ ApplicationWindow {
             }
         }
 
+        // VIBEMIS wordmark (diamond + wordmark), shown on the Computers screen in place of a title,
+        // matching the handoff 1a header. Left-aligned at the HTML's 40px padding.
+        Row {
+            visible: toolBar.onPcView
+            anchors.left: parent.left
+            anchors.leftMargin: 40
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 11
+            Rectangle {
+                anchors.verticalCenter: parent.verticalCenter
+                width: 13; height: 13
+                color: VbTokens.accent
+                rotation: 45
+            }
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: "VIBEMIS"
+                font.family: VbTokens.fontDisplay
+                font.weight: Font.ExtraBold
+                font.pixelSize: 21
+                font.letterSpacing: 3
+                color: VbTokens.text
+            }
+        }
+
         Label {
             id: titleLabel
-            visible: toolBar.width > 700
+            // Hidden on Computers (the wordmark stands in). On the other redesign screens it shows the
+            // screen name; the streaming segues keep their default objectName title.
+            visible: !toolBar.onPcView && toolBar.width > 700
             anchors.fill: parent
-            text: stackView.currentItem.objectName
+            text: toolBar.onSettings ? qsTr("Settings")
+                : toolBar.onHelp ? qsTr("Help")
+                : stackView.currentItem ? stackView.currentItem.objectName : ""
             font.pointSize: 20
             font.family: VbTokens.fontDisplay
             font.weight: Font.Bold
@@ -329,10 +365,15 @@ ApplicationWindow {
                 verticalAlignment: Qt.AlignVCenter
                 Layout.fillWidth: true
 
-                // We need this label to always be visible so it can occupy
-                // the remaining space in the RowLayout. To "hide" it, we
-                // just set the text to empty string.
-                text: !titleLabel.visible ? stackView.currentItem.objectName : ""
+                // We need this label to always be visible so it can occupy the remaining space in the
+                // RowLayout. To "hide" it, we set the text to empty. On Computers the wordmark stands in
+                // (never a title); otherwise it mirrors titleLabel's text only when titleLabel is hidden
+                // by a narrow window.
+                text: toolBar.onPcView ? ""
+                    : (titleLabel.visible ? ""
+                       : toolBar.onSettings ? qsTr("Settings")
+                       : toolBar.onHelp ? qsTr("Help")
+                       : (stackView.currentItem ? stackView.currentItem.objectName : ""))
             }
 
             // Redesign 1e: the Settings version indicator as a token-styled chip
@@ -398,6 +439,24 @@ ApplicationWindow {
                     addPcDialog.open()
                 }
 
+                Keys.onDownPressed: {
+                    stackView.currentItem.forceActiveFocus(Qt.TabFocus)
+                }
+            }
+
+            // Redesign: Refresh (re-poll hosts on Computers / reload the app list on App grid).
+            NavigableToolButton {
+                id: refreshButton
+                visible: toolBar.onPcView || toolBar.onAppView
+                iconSource: "qrc:/res/refresh.svg"
+                ToolTip.delay: 1000
+                ToolTip.timeout: 3000
+                ToolTip.visible: hovered
+                ToolTip.text: qsTr("Refresh")
+                onClicked: {
+                    if (stackView.currentItem && stackView.currentItem.refreshView)
+                        stackView.currentItem.refreshView()
+                }
                 Keys.onDownPressed: {
                     stackView.currentItem.forceActiveFocus(Qt.TabFocus)
                 }
@@ -641,14 +700,14 @@ ApplicationWindow {
         }
 
         ColumnLayout {
-            spacing: 20
+            spacing: 28    // handoff 1c modal gap
             width: parent ? parent.width : 620
 
             Label {
                 text: qsTr("Add a computer")
                 font.family: VbTokens.fontDisplay
                 font.weight: Font.Bold
-                font.pixelSize: VbTokens.sizeSectionTitle
+                font.pixelSize: 30    // handoff 1c title
                 color: VbTokens.text
             }
             Label {

@@ -22,9 +22,9 @@ Rectangle {
 
     RowLayout {
         anchors.fill: parent
-        anchors.leftMargin: VbTokens.screenPadX
-        anchors.rightMargin: VbTokens.screenPadX
-        spacing: 28
+        anchors.leftMargin: 44          // HTML hint bar padding (0 44px)
+        anchors.rightMargin: 44
+        spacing: 36                     // HTML gap between hint items
 
         Repeater {
             model: bar.hints
@@ -37,14 +37,23 @@ Rectangle {
         }
     }
 
-    // Inline component: one glyph + label pair. LB/RB render as rounded key-caps; the
-    // circled letters render as glyphs at the gamepad glyph diameter.
+    // Inline component: one glyph + label pair. Matches the design handoff exactly (dc.html
+    // lines 100-104): face buttons + ☰ render as a 30px circular OUTLINE badge (2px textDim
+    // border) with the bare letter inside (ExtraBold, primary text); LB/RB render as rounded
+    // key-caps. Callers pass the circled-letter unicode (Ⓐ/Ⓑ/Ⓧ/Ⓨ) which is mapped to the bare
+    // letter here so existing hint arrays keep working.
     component VbHintItem: RowLayout {
         property string glyph: ""
         property string label: ""
-        spacing: 8
+        spacing: 11
         readonly property bool keyCap: glyph === "LB" || glyph === "RB"
+        readonly property string capLetter: glyph === "Ⓐ" ? "A"
+                                          : glyph === "Ⓑ" ? "B"
+                                          : glyph === "Ⓧ" ? "X"
+                                          : glyph === "Ⓨ" ? "Y"
+                                          : glyph   // ☰ or an already-bare glyph
 
+        // LB / RB rounded key-cap.
         Rectangle {
             visible: keyCap
             implicitWidth: capText.implicitWidth + 16
@@ -59,17 +68,28 @@ Rectangle {
                 color: VbTokens.textMute
             }
         }
-        Text {
+        // Circular outline badge for face buttons + ☰.
+        Rectangle {
             visible: !keyCap
-            text: glyph
-            font.family: VbTokens.fontBody
-            font.pixelSize: VbTokens.buttonGlyphD
-            color: VbTokens.accent
+            implicitWidth: 30
+            implicitHeight: 30
+            radius: 15
+            color: "transparent"
+            border.width: 2
+            border.color: VbTokens.textDim
+            Text {
+                anchors.centerIn: parent
+                text: capLetter
+                font.family: VbTokens.fontBody
+                font.pixelSize: capLetter === "☰" ? 13 : 14
+                font.weight: Font.ExtraBold
+                color: VbTokens.text
+            }
         }
         Text {
             text: label
             font.family: VbTokens.fontBody
-            font.pixelSize: VbTokens.sizeLabel
+            font.pixelSize: 16          // HTML hint label size
             color: VbTokens.textDim
         }
     }

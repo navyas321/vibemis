@@ -187,10 +187,14 @@ void SdlGamepadKeyNavigation::onPollingTimerFired()
                 sendKey(type, Qt::Key_Menu);
                 break;
             case SDL_CONTROLLER_BUTTON_Y:
+                // Redesign 1a: Ⓨ is "Add computer" on the Computers screen (design handoff hint bar).
+                // A distinct keycode from Start lets PcView bind it (Keys.onPressed Key_Yellow) without
+                // hijacking Settings; screens that don't handle it simply ignore it.
+                sendKey(type, Qt::Key_Yellow);
+                break;
             case SDL_CONTROLLER_BUTTON_START:
-                // HACK: We use this keycode to inform main.qml
-                // to show the settings when Key_Menu is handled
-                // by the control in focus.
+                // HACK: We use this keycode to inform main.qml to show the settings when Key_Menu is
+                // handled by the control in focus. ☰ / Start = Settings on every screen.
                 sendKey(type, Qt::Key_Hangup);
                 break;
             default:

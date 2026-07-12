@@ -36,7 +36,7 @@ Rectangle {
             font.family: VbTokens.fontBody
             font.pixelSize: VbTokens.sizeBadge
             font.bold: true
-            font.letterSpacing: VbTokens.badgeSpacing
+            font.letterSpacing: 0.7   // handoff pill spacing (badge uses 1.2)
             color: pill.online ? VbTokens.statusOnline : VbTokens.textDim
         }
     }

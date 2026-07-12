@@ -29,10 +29,13 @@ CenteredGridView {
     // Redesign 1b: inset the grid so it clears the fixed per-screen header (Back + host name +
     // host status + "Apps N available" section title) and the bottom gamepad hint bar. The global
     // toolbar is collapsed on all redesign screens (main.qml). Chrome block is defined below.
-    topMargin: appChromeHeader.height + 12
-    bottomMargin: (appHintBar.visible ? appHintBar.height : 0) + 12
-    // Redesign 1b: 320px-wide tall app tiles (gap 36).
-    cellWidth: 356; cellHeight: 466;
+    // Gap between the "Apps" title row and the tile row is 30 (HTML body flex gap), and the
+    // bottom clearance matches the body's own bottom padding (screenPadY = 52).
+    topMargin: appChromeHeader.height + 30
+    bottomMargin: (appHintBar.visible ? appHintBar.height : 0) + VbTokens.screenPadY
+    // Redesign 1b: 320x430 app tiles (HTML #1b), gap 36 horizontal; cellHeight adds room for the
+    // 16px-gap + "Ⓐ Launch" hint row (or app name) below the focused tile.
+    cellWidth: 356; cellHeight: 474;
 
     // ---- Redesign 1b chrome: per-screen header + persistent gamepad hint bar ----
     // Fixed header (does not scroll with the grid). Opaque bg so scrolled tiles pass behind it.
@@ -42,18 +45,33 @@ CenteredGridView {
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        // Redesign 1b header (previews/1b-app-grid.png): row 1 = Back + host name + "● <hostType> ·
-        // <transport>" status, Refresh + Settings on the right; row 2 = "Apps" + "N available". The
-        // global toolbar is collapsed on all redesign screens (main.qml), so this is the only header.
+        // Redesign 1b header (previews/1b-app-grid.png, lines 111-178): row 1 is a fixed 84px band
+        // (padding 0 40, bottom divider) = Back + host name + "● <hostType> · <transport>" status,
+        // Refresh + Settings on the right; row 2 = "Apps" + "N available", offset by the body's own
+        // top padding (screenPadY = 52) below the divider. The global toolbar is collapsed on all
+        // redesign screens (main.qml), so this is the only header.
         visible: true
-        height: 134
+        height: appsTitleRow.y + appsTitleRow.height
 
         Rectangle { anchors.fill: parent; color: VbTokens.bgWindow }
+
+        // Header BAR (back + host + status + buttons) now lives in the always-present global toolbar
+        // (main.qml), so its in-screen divider is not drawn here.
+        Rectangle {
+            visible: false
+            anchors.top: parent.top
+            anchors.topMargin: VbTokens.headerH - 1
+            width: parent.width
+            height: 1
+            color: VbTokens.strokeSoft
+        }
 
         // Token-styled 52px icon button (Back / Refresh / Settings).
         component AppIconButton: Button {
             property string glyphSource: ""
             property string glyphText: ""
+            property int glyphPixelSize: 24
+            property color glyphColor: VbTokens.text
             implicitWidth: VbTokens.iconButton
             implicitHeight: VbTokens.iconButton
             focusPolicy: Qt.TabFocus
@@ -70,28 +88,30 @@ CenteredGridView {
                     visible: glyphSource !== ""
                     source: glyphSource
                     fillMode: Image.PreserveAspectFit
-                    sourceSize.width: 22; sourceSize.height: 22
+                    sourceSize.width: 21; sourceSize.height: 21
                 }
                 Text {
                     anchors.centerIn: parent
                     visible: glyphText !== ""
                     text: glyphText
                     font.family: VbTokens.fontDisplay
-                    font.pixelSize: 30
-                    color: VbTokens.text
+                    font.pixelSize: glyphPixelSize
+                    color: glyphColor
                 }
             }
         }
 
-        // ---- Row 1: back + host name/status + refresh/settings ----
+        // ---- Row 1 (back + host name/status + refresh/settings) MOVED to the global toolbar
+        // (main.qml) which is the always-present header bar; hidden here to avoid a double header. ----
         Item {
             id: appHeaderTopRow
+            visible: false
             anchors.top: parent.top
-            anchors.topMargin: 20
+            anchors.topMargin: (VbTokens.headerH - VbTokens.iconButton) / 2
             anchors.left: parent.left
             anchors.right: parent.right
-            anchors.leftMargin: VbTokens.screenPadX
-            anchors.rightMargin: VbTokens.screenPadX
+            anchors.leftMargin: 40
+            anchors.rightMargin: 40
             height: VbTokens.iconButton
 
             AppIconButton {
@@ -99,6 +119,8 @@ CenteredGridView {
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
                 glyphText: "‹"
+                glyphPixelSize: 24
+                glyphColor: VbTokens.text
                 onClicked: window.goBack()
                 ToolTip.text: qsTr("Back"); ToolTip.delay: 1000; ToolTip.visible: hovered
             }
@@ -122,17 +144,17 @@ CenteredGridView {
 
             Column {
                 anchors.left: appBackBtn.right
-                anchors.leftMargin: 18
+                anchors.leftMargin: 20
                 anchors.right: appHeaderBtns.left
-                anchors.rightMargin: 18
+                anchors.rightMargin: 20
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 3
+                spacing: 2
                 Text {
                     text: appGrid.objectName    // host name
                     width: parent.width
                     font.family: VbTokens.fontDisplay
                     font.weight: Font.Bold
-                    font.pixelSize: VbTokens.sizeScreenTitle
+                    font.pixelSize: 20
                     color: VbTokens.text
                     elide: Text.ElideRight
                 }
@@ -153,17 +175,18 @@ CenteredGridView {
                             return badge + (badge && t ? " · " : "") + t
                         }
                         font.family: VbTokens.fontBody
-                        font.pixelSize: VbTokens.sizeLabel
+                        font.pixelSize: 15
                         color: VbTokens.textDim
                     }
                 }
             }
         }
 
-        // ---- Row 2: "Apps" section title + available count ----
+        // ---- Row 2: "Apps" section title + available count (body top padding = screenPadY) ----
         Row {
-            anchors.top: appHeaderTopRow.bottom
-            anchors.topMargin: 12
+            id: appsTitleRow
+            anchors.top: parent.top
+            anchors.topMargin: 34
             anchors.left: parent.left
             anchors.leftMargin: VbTokens.screenPadX
             spacing: 14
@@ -179,7 +202,7 @@ CenteredGridView {
                 anchors.baseline: appsTitle.baseline
                 text: appGrid.count + " " + qsTr("available")
                 font.family: VbTokens.fontBody
-                font.pixelSize: VbTokens.sizeLabel
+                font.pixelSize: 18
                 color: VbTokens.textDim
             }
         }
@@ -198,6 +221,11 @@ CenteredGridView {
             { glyph: "Ⓧ", label: qsTr("App options") }
         ]
         hintsRight: [ { glyph: "☰", label: qsTr("Settings") } ]
+    }
+
+    // Called by the global toolbar's Refresh button (main.qml) — reload the host's app list.
+    function refreshView() {
+        appModel.initialize(ComputerManager, computerIndex, showHiddenGames)
     }
 
     function computerLost()
@@ -251,7 +279,8 @@ CenteredGridView {
     model: appModel
 
     delegate: NavigableItemDelegate {
-        width: 220; height: 287;
+        id: appDelegate
+        width: 320; height: 430;
         grid: appGrid
 
         property alias appContextMenu: appContextMenuLoader.item
@@ -260,126 +289,192 @@ CenteredGridView {
         // Dim the app if it's hidden
         opacity: model.hidden ? 0.4 : 1.0
 
-        Image {
-            property bool isPlaceholder: false
+        // Redesign 1b tile card (previews/1b-app-grid.png): 320x430, radius 20, bg elev / focused
+        // fill + accent ring via VbCard's built-in VbFocusRing recipe (see VbCard.qml — "used by
+        // ... app tiles (1b)"). Box art fills the card with a small inset so the rounded frame and
+        // border remain visible, matching the HTML tile chrome.
+        VbCard {
+            id: tileCard
+            anchors.fill: parent
+            radius: 20
+            focused: appDelegate.highlighted
 
-            id: appIcon
-            anchors.horizontalCenter: parent.horizontalCenter
-            y: 10
-            source: model.boxart
+            Image {
+                property bool isPlaceholder: false
 
-            onSourceSizeChanged: {
-                // Nearly all of Nvidia's official box art does not match the dimensions of placeholder
-                // images, however the one known exception is Overcooked. Therefore, we only execute
-                // the image size checks if this is not an app collector game. We know the officially
-                // supported games all have box art, so this check is not required.
-                if (!model.isAppCollectorGame &&
-                    ((sourceSize.width === 130 && sourceSize.height === 180) || // GFE 2.0 placeholder image
-                     (sourceSize.width === 628 && sourceSize.height === 888) || // GFE 3.0 placeholder image
-                     (sourceSize.width === 200 && sourceSize.height === 266)))  // Our no_app_image.png
-                {
-                    isPlaceholder = true
+                id: appIcon
+                anchors.fill: parent
+                anchors.margins: 5
+                source: model.boxart
+
+                onSourceSizeChanged: {
+                    // Nearly all of Nvidia's official box art does not match the dimensions of placeholder
+                    // images, however the one known exception is Overcooked. Therefore, we only execute
+                    // the image size checks if this is not an app collector game. We know the officially
+                    // supported games all have box art, so this check is not required.
+                    if (!model.isAppCollectorGame &&
+                        ((sourceSize.width === 130 && sourceSize.height === 180) || // GFE 2.0 placeholder image
+                         (sourceSize.width === 628 && sourceSize.height === 888) || // GFE 3.0 placeholder image
+                         (sourceSize.width === 200 && sourceSize.height === 266)))  // Our no_app_image.png
+                    {
+                        isPlaceholder = true
+                    }
+                    else
+                    {
+                        isPlaceholder = false
+                    }
                 }
-                else
-                {
-                    isPlaceholder = false
-                }
 
-                width = 200
-                height = 267
+                // Display a tooltip with the full name if it's truncated
+                ToolTip.text: model.name
+                ToolTip.delay: 1000
+                ToolTip.timeout: 5000
+                ToolTip.visible: (appDelegate.hovered || appDelegate.highlighted) && (!appNameText || appNameText.truncated)
             }
 
-            // Display a tooltip with the full name if it's truncated
-            ToolTip.text: model.name
-            ToolTip.delay: 1000
-            ToolTip.timeout: 5000
-            ToolTip.visible: (parent.hovered || parent.highlighted) && (!appNameText || appNameText.truncated)
-        }
+            Loader {
+                active: model.running
+                asynchronous: true
+                anchors.fill: appIcon
 
-        Loader {
-            active: model.running
-            asynchronous: true
-            anchors.fill: appIcon
+                sourceComponent: Item {
+                    RoundButton {
+                        // Don't steal focus from the toolbar buttons
+                        focusPolicy: Qt.NoFocus
 
-            sourceComponent: Item {
-                RoundButton {
-                    // Don't steal focus from the toolbar buttons
-                    focusPolicy: Qt.NoFocus
+                        anchors.horizontalCenterOffset: appIcon.isPlaceholder ? -47 : 0
+                        anchors.verticalCenterOffset: appIcon.isPlaceholder ? -75 : -60
+                        anchors.centerIn: parent
+                        implicitWidth: 85
+                        implicitHeight: 85
 
-                    anchors.horizontalCenterOffset: appIcon.isPlaceholder ? -47 : 0
-                    anchors.verticalCenterOffset: appIcon.isPlaceholder ? -75 : -60
-                    anchors.centerIn: parent
-                    implicitWidth: 85
-                    implicitHeight: 85
+                        icon.source: "qrc:/res/play_arrow_FILL1_wght700_GRAD200_opsz48.svg"
+                        icon.width: 75
+                        icon.height: 75
 
-                    icon.source: "qrc:/res/play_arrow_FILL1_wght700_GRAD200_opsz48.svg"
-                    icon.width: 75
-                    icon.height: 75
+                        onClicked: {
+                            launchOrResumeSelectedApp(true)
+                        }
 
-                    onClicked: {
-                        launchOrResumeSelectedApp(true)
+                        ToolTip.text: qsTr("Resume Game")
+                        ToolTip.delay: 1000
+                        ToolTip.timeout: 3000
+                        ToolTip.visible: hovered
+
+                        Material.background: Qt.rgba(Theme.surfaceAlt.r, Theme.surfaceAlt.g, Theme.surfaceAlt.b, 0.82)
                     }
 
-                    ToolTip.text: qsTr("Resume Game")
-                    ToolTip.delay: 1000
-                    ToolTip.timeout: 3000
-                    ToolTip.visible: hovered
+                    RoundButton {
+                        // Don't steal focus from the toolbar buttons
+                        focusPolicy: Qt.NoFocus
 
-                    Material.background: Qt.rgba(Theme.surfaceAlt.r, Theme.surfaceAlt.g, Theme.surfaceAlt.b, 0.82)
+                        anchors.horizontalCenterOffset: appIcon.isPlaceholder ? 47 : 0
+                        anchors.verticalCenterOffset: appIcon.isPlaceholder ? -75 : 60
+                        anchors.centerIn: parent
+                        implicitWidth: 85
+                        implicitHeight: 85
+
+                        icon.source: "qrc:/res/stop_FILL1_wght700_GRAD200_opsz48.svg"
+                        icon.width: 75
+                        icon.height: 75
+
+                        onClicked: {
+                            doQuitGame()
+                        }
+
+                        ToolTip.text: qsTr("Quit Game")
+                        ToolTip.delay: 1000
+                        ToolTip.timeout: 3000
+                        ToolTip.visible: hovered
+
+                        Material.background: Qt.rgba(Theme.surfaceAlt.r, Theme.surfaceAlt.g, Theme.surfaceAlt.b, 0.82)
+                    }
                 }
+            }
 
-                RoundButton {
-                    // Don't steal focus from the toolbar buttons
-                    focusPolicy: Qt.NoFocus
+            Loader {
+                id: appNameTextLoader
+                active: appIcon.isPlaceholder
 
-                    anchors.horizontalCenterOffset: appIcon.isPlaceholder ? 47 : 0
-                    anchors.verticalCenterOffset: appIcon.isPlaceholder ? -75 : 60
+                // This loader is not asynchronous to avoid noticeable differences
+                // in the time in which the text loads for each game.
+
+                width: appIcon.width
+                height: model.running ? 175 : appIcon.height
+
+                anchors.left: appIcon.left
+                anchors.right: appIcon.right
+                anchors.bottom: appIcon.bottom
+
+                sourceComponent: Label {
+                    id: appNameText
+                    text: model.name
+                    font.pointSize: 22
+                    leftPadding: 20
+                    rightPadding: 20
+                    verticalAlignment: Text.AlignVCenter
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.Wrap
+                    elide: Text.ElideRight
+                }
+            }
+
+            // Redesign 1b: solid RESUME badge, top-left of the tile (HTML: top:18/left:18,
+            // bg #3ED598 solid, dark text, radius 6 — not the translucent/centered pill used before).
+            Rectangle {
+                visible: model.running
+                anchors.left: parent.left
+                anchors.top: parent.top
+                anchors.leftMargin: 18
+                anchors.topMargin: 18
+                z: 5
+                implicitWidth: resumeLbl.implicitWidth + 20
+                implicitHeight: resumeLbl.implicitHeight + 8
+                radius: 6
+                color: VbTokens.statusOnline
+                Text {
+                    id: resumeLbl
                     anchors.centerIn: parent
-                    implicitWidth: 85
-                    implicitHeight: 85
-
-                    icon.source: "qrc:/res/stop_FILL1_wght700_GRAD200_opsz48.svg"
-                    icon.width: 75
-                    icon.height: 75
-
-                    onClicked: {
-                        doQuitGame()
-                    }
-
-                    ToolTip.text: qsTr("Quit Game")
-                    ToolTip.delay: 1000
-                    ToolTip.timeout: 3000
-                    ToolTip.visible: hovered
-
-                    Material.background: Qt.rgba(Theme.surfaceAlt.r, Theme.surfaceAlt.g, Theme.surfaceAlt.b, 0.82)
+                    text: qsTr("RESUME")
+                    font.family: VbTokens.fontBody
+                    font.pixelSize: VbTokens.sizeBadge
+                    font.bold: true
+                    font.letterSpacing: VbTokens.badgeSpacing
+                    color: VbTokens.bgWindow
                 }
             }
         }
 
-        Loader {
-            id: appNameTextLoader
-            active: appIcon.isPlaceholder
-
-            // This loader is not asynchronous to avoid noticeable differences
-            // in the time in which the text loads for each game.
-
-            width: appIcon.width
-            height: model.running ? 175 : appIcon.height
-
-            anchors.left: appIcon.left
-            anchors.right: appIcon.right
-            anchors.bottom: appIcon.bottom
-
-            sourceComponent: Label {
-                id: appNameText
-                text: model.name
-                font.pointSize: 22
-                leftPadding: 20
-                rightPadding: 20
-                verticalAlignment: Text.AlignVCenter
-                horizontalAlignment: Text.AlignHCenter
-                wrapMode: Text.Wrap
-                elide: Text.ElideRight
+        // Redesign 1b: "Ⓐ Launch" hint under the focused tile (HTML: circled accent "A" + bold
+        // "Launch", 16px below the card). Shown only while this tile is the current selection.
+        Row {
+            visible: appDelegate.highlighted
+            anchors.top: tileCard.bottom
+            anchors.topMargin: 16
+            anchors.horizontalCenter: tileCard.horizontalCenter
+            spacing: 11
+            Rectangle {
+                anchors.verticalCenter: parent.verticalCenter
+                width: 28; height: 28; radius: 14
+                color: "transparent"
+                border.width: 2
+                border.color: VbTokens.accent
+                Text {
+                    anchors.centerIn: parent
+                    text: "A"
+                    font.family: VbTokens.fontBody
+                    font.pixelSize: 13
+                    font.bold: true
+                    color: VbTokens.accent
+                }
+            }
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: qsTr("Launch")
+                font.family: VbTokens.fontBody
+                font.weight: Font.Bold
+                font.pixelSize: 18
+                color: VbTokens.text
             }
         }
 
@@ -425,38 +520,6 @@ CenteredGridView {
             else {
                 // Qt 5.9 doesn't have popup()
                 appContextMenu.open()
-            }
-        }
-
-        // Redesign 1b: token focus-ring over the tile art + a green RESUME badge on running
-        // games. Purely visual overlays; the box-art/launch/context-menu wiring is untouched.
-        VbFocusRing {
-            active: highlighted
-            radius: VbTokens.radiusCard
-            anchors.fill: appIcon
-            anchors.margins: -6
-        }
-        Rectangle {
-            visible: model.running
-            anchors.horizontalCenter: appIcon.horizontalCenter
-            anchors.top: appIcon.top
-            anchors.topMargin: 8
-            z: 5
-            implicitWidth: resumeLbl.implicitWidth + 20
-            implicitHeight: 26
-            radius: VbTokens.radiusPill
-            color: Qt.rgba(VbTokens.statusOnline.r, VbTokens.statusOnline.g, VbTokens.statusOnline.b, 0.16)
-            border.width: 1
-            border.color: VbTokens.statusOnline
-            Text {
-                id: resumeLbl
-                anchors.centerIn: parent
-                text: qsTr("RESUME")
-                font.family: VbTokens.fontBody
-                font.pixelSize: VbTokens.sizeBadge
-                font.bold: true
-                font.letterSpacing: VbTokens.badgeSpacing
-                color: VbTokens.statusOnline
             }
         }
 

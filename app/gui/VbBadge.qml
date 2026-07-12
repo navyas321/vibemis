@@ -12,7 +12,9 @@ Rectangle {
     radius: VbTokens.radiusBadge
     color: "transparent"
     border.width: 1
-    border.color: neutral ? VbTokens.textDim : VbTokens.accent
+    // Match the design handoff exactly: Apollo-lineage = accent@55% outline, Sunshine = white@14%.
+    border.color: neutral ? Qt.rgba(1, 1, 1, 0.14)
+                          : Qt.rgba(VbTokens.accent.r, VbTokens.accent.g, VbTokens.accent.b, 0.55)
 
     Text {
         id: label

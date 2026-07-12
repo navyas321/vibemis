@@ -102,15 +102,18 @@ Popup {
                 spacing: 0
 
                 // ---- Header ----
+                // HTML: padding 44px 44px 28px, column, gap 18px between the icon/pill row
+                // and the name+badge column below it (which is NOT indented past the icon —
+                // both rows share the same 44px left padding, confirmed by the 1d preview PNG).
                 Item {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 150
+                    Layout.preferredHeight: 210
 
                     // Monitor glyph box, top-left.
                     Rectangle {
                         id: monoBox
-                        x: VbTokens.screenPadX - 8
-                        y: 22
+                        x: 44
+                        y: 44
                         width: 56; height: 56
                         radius: VbTokens.radiusControl
                         color: VbTokens.bgElev2
@@ -124,25 +127,26 @@ Popup {
                         }
                     }
 
-                    // Online/offline pill, top-right.
+                    // Online/offline pill, top-right — vertically centered against the icon box
+                    // (HTML row1: align-items:center; justify-content:space-between).
                     VbStatusPill {
                         online: sheet.online
                         anchors.right: parent.right
-                        anchors.rightMargin: VbTokens.screenPadX - 8
-                        anchors.top: parent.top
-                        anchors.topMargin: 36
+                        anchors.rightMargin: 44
+                        anchors.verticalCenter: monoBox.verticalCenter
                     }
 
-                    // Host name.
+                    // Host name — starts below the icon row, left-aligned to the same 44px
+                    // padding as the icon (not offset to the icon's right).
                     Text {
                         id: nameText
                         text: sheet.hostName
-                        anchors.left: monoBox.right
-                        anchors.leftMargin: 18
+                        anchors.left: parent.left
+                        anchors.leftMargin: 44
                         anchors.right: parent.right
-                        anchors.rightMargin: VbTokens.screenPadX - 8
-                        anchors.top: parent.top
-                        anchors.topMargin: 30
+                        anchors.rightMargin: 44
+                        anchors.top: monoBox.bottom
+                        anchors.topMargin: 18
                         font.family: VbTokens.fontDisplay
                         font.weight: Font.Bold
                         font.pixelSize: VbTokens.sizeSectionTitle
@@ -152,13 +156,13 @@ Popup {
 
                     // Host-type badge + access/transport subtitle.
                     RowLayout {
-                        anchors.left: monoBox.right
-                        anchors.leftMargin: 18
+                        anchors.left: parent.left
+                        anchors.leftMargin: 44
                         anchors.top: nameText.bottom
-                        anchors.topMargin: 8
+                        anchors.topMargin: 5
                         anchors.right: parent.right
-                        anchors.rightMargin: VbTokens.screenPadX - 8
-                        spacing: 12
+                        anchors.rightMargin: 44
+                        spacing: 10
                         VbBadge {
                             text: sheet.hostBadge
                             neutral: !sheet.apolloHost
@@ -168,7 +172,7 @@ Popup {
                             visible: sheet.subtitleLine !== ""
                             Layout.fillWidth: true
                             font.family: VbTokens.fontBody
-                            font.pixelSize: VbTokens.sizeLabel
+                            font.pixelSize: 16
                             color: VbTokens.textDim
                             elide: Text.ElideRight
                             verticalAlignment: Text.AlignVCenter
@@ -183,7 +187,8 @@ Popup {
                     id: list
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    Layout.topMargin: 12
+                    Layout.topMargin: 22
+                    spacing: 8
                     clip: true
                     focus: true
                     keyNavigationEnabled: true
@@ -203,23 +208,26 @@ Popup {
                         readonly property bool danger: modelData.danger === true
                         readonly property bool firstDanger: danger && (index === 0 || !(sheet.visibleActions[index - 1].danger === true))
                         readonly property bool current: ListView.isCurrentItem
-                        height: VbTokens.listRowH + (firstDanger ? 17 : 0)
+                        // HTML divider: height:1 + margin:8px 0 (top/bottom). The ListView's own
+                        // 8px inter-row `spacing` already supplies the gap above the divider, so
+                        // only the divider's own height (1) + its bottom gap (8) are added here.
+                        height: VbTokens.listRowH + (firstDanger ? 9 : 0)
 
-                        // Divider above the first danger row.
+                        // Divider above the first danger row. Inset 22px — matches the HTML
+                        // action-list container's own 22px padding.
                         Rectangle {
                             visible: rowRoot.firstDanger
                             anchors.top: parent.top
-                            anchors.topMargin: 8
-                            x: VbTokens.screenPadX - 8
-                            width: parent.width - 2 * (VbTokens.screenPadX - 8)
+                            x: 22
+                            width: parent.width - 44
                             height: 1
                             color: VbTokens.strokeSoft
                         }
 
                         Rectangle {
                             id: rowFill
-                            x: 18
-                            width: parent.width - 36
+                            x: 22
+                            width: parent.width - 44
                             height: VbTokens.listRowH
                             anchors.bottom: parent.bottom
                             radius: VbTokens.radiusControl
@@ -232,21 +240,22 @@ Popup {
 
                             Row {
                                 anchors.left: parent.left
-                                anchors.leftMargin: 18
+                                anchors.leftMargin: 22
                                 anchors.verticalCenter: parent.verticalCenter
                                 spacing: 16
                                 VbSheetIcon {
                                     anchors.verticalCenter: parent.verticalCenter
                                     kind: modelData.icon
                                     color: rowRoot.danger ? VbTokens.statusDanger
-                                                          : (rowRoot.current ? VbTokens.accent : VbTokens.textMute)
+                                                          : (rowRoot.current ? VbTokens.accent : VbTokens.textDim)
                                 }
                                 Text {
                                     anchors.verticalCenter: parent.verticalCenter
                                     text: modelData.label
                                     font.family: VbTokens.fontBody
-                                    font.pixelSize: VbTokens.sizeBody
-                                    font.bold: rowRoot.current
+                                    font.pixelSize: 18
+                                    font.weight: rowRoot.danger ? Font.DemiBold
+                                                                : (rowRoot.current ? Font.Bold : Font.Normal)
                                     color: rowRoot.danger ? VbTokens.statusDanger : VbTokens.text
                                 }
                             }

@@ -56,13 +56,16 @@ Item {
         StreamingPreferences.save()
     }
 
-    // ---- Header: Back + "Settings" title + version chip (redesign 1e) ----
+    // ---- Header (Back + "Settings" + version chip) MOVED to the always-present global toolbar
+    // (main.qml), which is the header bar kept present so it renders under gamescope. Hidden here so
+    // there is no double header; the sidebar/panel (anchored to header.bottom) shift up to the top. ----
     Item {
         id: header
+        visible: false
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        height: VbTokens.headerH
+        height: 0
         z: 2
 
         RowLayout {
@@ -103,21 +106,21 @@ Item {
                 Layout.fillWidth: true
             }
 
-            // Version chip (e.g. "Version 0.24.0").
+            // Version chip (e.g. "Version 0.24.0"). Redesign 1e: accent-tinted pill —
+            // accent text on a 12%-accent background, 8px radius (not a full pill).
             Rectangle {
-                implicitHeight: 30
-                implicitWidth: versionChipText.implicitWidth + 24
-                radius: VbTokens.radiusPill
-                color: VbTokens.bgElev
-                border.width: 1
-                border.color: VbTokens.stroke
+                implicitHeight: versionChipText.implicitHeight + 12
+                implicitWidth: versionChipText.implicitWidth + 28
+                radius: 8
+                color: Qt.rgba(VbTokens.accent.r, VbTokens.accent.g, VbTokens.accent.b, 0.12)
                 Text {
                     id: versionChipText
                     anchors.centerIn: parent
                     text: qsTr("Version %1").arg(SystemProperties.versionString)
                     font.family: VbTokens.fontBody
+                    font.weight: Font.DemiBold
                     font.pixelSize: VbTokens.sizeLabel
-                    color: VbTokens.textDim
+                    color: VbTokens.accent
                 }
             }
         }
@@ -155,10 +158,10 @@ Item {
             anchors.top: parent.top
             anchors.left: parent.left
             anchors.right: parent.right
-            anchors.topMargin: 16
-            anchors.leftMargin: 16
-            anchors.rightMargin: 16
-            spacing: 8
+            anchors.topMargin: 28
+            anchors.leftMargin: 20
+            anchors.rightMargin: 20
+            spacing: 6
 
             Repeater {
                 id: sidebarRepeater
@@ -179,12 +182,13 @@ Item {
                     readonly property bool selected: settingsPage.category === index
 
                     background: Item {
-                        // Focus glow (accent @ 22%), just outside the row.
+                        // Selection/focus glow (accent @ 22%), just outside the row. The HTML spec
+                        // keeps this glow on the selected row persistently (not just while focused).
                         Rectangle {
                             anchors.fill: parent
                             anchors.margins: -VbTokens.focusGlow
                             radius: VbTokens.radiusControl + VbTokens.focusGlow
-                            visible: catButton.activeFocus
+                            visible: catButton.activeFocus || catButton.selected
                             color: "transparent"
                             border.width: VbTokens.focusGlow
                             border.color: VbTokens.focusGlowColor
@@ -299,18 +303,59 @@ Item {
         }
 
     Column {
-        padding: 10
+        padding: 40
         id: settingsColumn1
         width: settingsFlick.width - 20
-        spacing: 15
+        spacing: 20
+
+        // ---- Category title (redesign 1e). "Video" / "Audio" / etc, Sora 28px bold, matching
+        // the currently-selected sidebar row's label. ----
+        Text {
+            width: parent.width - (parent.leftPadding + parent.rightPadding)
+            text: sidebarRepeater.model[settingsPage.category].label
+            font.family: VbTokens.fontDisplay
+            font.weight: Font.Bold
+            font.pixelSize: VbTokens.sizeSectionTitle
+            color: VbTokens.text
+        }
+
+        // ---- Live stream summary line (redesign 1e), relocated here (was inside Basic
+        // Settings) so it sits directly under the "Video" title like the HTML handoff.
+        // Numbers render in accent; the rest stays dim. Content/bindings unchanged.
+        Text {
+            id: streamSummaryLabel
+            visible: settingsPage.category === 0
+            width: parent.width - (parent.leftPadding + parent.rightPadding)
+            textFormat: Text.RichText
+            function codecName(v) {
+                if (v === StreamingPreferences.VCC_FORCE_H264) return "H.264"
+                if (v === StreamingPreferences.VCC_FORCE_HEVC ||
+                    v === StreamingPreferences.VCC_FORCE_HEVC_HDR_DEPRECATED) return "HEVC"
+                if (v === StreamingPreferences.VCC_FORCE_AV1) return "AV1"
+                return qsTr("Auto codec")
+            }
+            text: "<font color=\"" + VbTokens.accent + "\"><b>" + StreamingPreferences.width + "×" + StreamingPreferences.height + "</b></font> · " +
+                  "<font color=\"" + VbTokens.accent + "\"><b>" + StreamingPreferences.fps + " fps</b></font> · " +
+                  "<font color=\"" + VbTokens.accent + "\"><b>" + (StreamingPreferences.bitrateKbps / 1000).toFixed(0) + " Mbps</b></font>" +
+                  "<font color=\"" + VbTokens.textDim + "\"> — " + codecName(StreamingPreferences.videoCodecConfig) +
+                  (StreamingPreferences.enableHdr ? " · HDR" : "") + "</font>"
+            font.family: VbTokens.fontBody
+            font.pixelSize: VbTokens.sizeBody
+            wrapMode: Text.Wrap
+        }
 
         GroupBox {
             id: vibepolloPresetsGroupBox
             visible: settingsPage.category === 0
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
-            padding: 12
-            title: "<font color=\"skyblue\">" + qsTr("Vibepollo Presets") + "</font>"
-            font.pointSize: 12
+            padding: 24
+            label: Item {}
+            background: Rectangle {
+                color: VbTokens.bgElev
+                radius: VbTokens.radiusCard
+                border.width: 1
+                border.color: VbTokens.stroke
+            }
 
             // Re-sync the resolution and FPS combo selections to the current
             // preferences after a preset is applied (the bitrate slider is already
@@ -344,6 +389,15 @@ Item {
             Column {
                 anchors.fill: parent
                 spacing: 8
+
+                Text {
+                    width: parent.width
+                    text: qsTr("Vibepollo Presets")
+                    font.family: VbTokens.fontBody
+                    font.weight: Font.DemiBold
+                    font.pixelSize: VbTokens.sizeLabel
+                    color: VbTokens.textDim
+                }
 
                 Label {
                     width: parent.width
@@ -390,13 +444,13 @@ Item {
             id: basicSettingsGroupBox
             visible: settingsPage.category === 0
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
-            padding: 12
-            title: "<font color=\"skyblue\">" + qsTr("Basic Settings") + "</font>"
-            font.pointSize: 12
+            padding: 0
+            label: Item {}
+            background: Item {}
 
             Column {
                 anchors.fill: parent
-                spacing: 5
+                spacing: 20
 
                 // Vibemis: recommend this device's native resolution so users pick the sharpest
                 // option without guesswork.
@@ -420,51 +474,63 @@ Item {
                     bottomPadding: 4
                 }
 
-                // Vibemis: live one-line summary of the effective stream config, so the user can
-                // see resolution/fps/bitrate/codec/HDR at a glance without reading every control.
-                Label {
-                    id: streamSummaryLabel
-                    width: parent.width
-                    function codecName(v) {
-                        if (v === StreamingPreferences.VCC_FORCE_H264) return "H.264"
-                        if (v === StreamingPreferences.VCC_FORCE_HEVC ||
-                            v === StreamingPreferences.VCC_FORCE_HEVC_HDR_DEPRECATED) return "HEVC"
-                        if (v === StreamingPreferences.VCC_FORCE_AV1) return "AV1"
-                        return qsTr("Auto codec")
-                    }
-                    text: "▶ " + StreamingPreferences.width + "×" + StreamingPreferences.height +
-                          " @ " + StreamingPreferences.fps + " fps · " +
-                          (StreamingPreferences.bitrateKbps / 1000).toFixed(0) + " Mbps · " +
-                          codecName(StreamingPreferences.videoCodecConfig) +
-                          (StreamingPreferences.enableHdr ? " · HDR" : "")
-                    font.pointSize: 11
-                    font.bold: true
-                    wrapMode: Text.Wrap
-                    color: "#00CCCC"
-                    bottomPadding: 4
-                }
-
-                Label {
-                    width: parent.width
-                    id: resFPStitle
-                    text: qsTr("Resolution and FPS")
-                    font.pointSize: 12
-                    wrapMode: Text.Wrap
-                }
-
+                // Vibemis: extra detail beyond the live summary line (which now lives at the top
+                // of the panel, redesign 1e). Kept as contextual copy above the resolution/FPS cards.
                 Label {
                     width: parent.width
                     id: resFPSdesc
                     text: qsTr("Setting values too high for your PC or network connection may cause lag, stuttering, or errors.")
                     font.pointSize: 9
                     wrapMode: Text.Wrap
+                    color: VbTokens.textDim
                 }
 
+                // ---- Resolution / Frame rate cards (redesign 1e) ----
                 Row {
-                    spacing: 5
+                    spacing: 20
                     width: parent.width
 
                     AutoResizingComboBox {
+                        // Redesign 1e: card look (bgElev, radius16, accent focus ring) — visual only.
+                        // Model/functions/dialog below are unchanged.
+                        width: (parent.width - parent.spacing) / 2
+                        padding: 0
+                        background: Rectangle {
+                            color: VbTokens.bgElev
+                            radius: VbTokens.radiusCard
+                            border.width: resolutionComboBox.activeFocus ? VbTokens.focusBorder : 1
+                            border.color: resolutionComboBox.activeFocus ? VbTokens.accent : VbTokens.stroke
+                        }
+                        indicator: Item { width: 0; height: 0 }
+                        contentItem: Column {
+                            anchors.fill: parent
+                            anchors.margins: 24
+                            spacing: 10
+                            Text {
+                                text: qsTr("Resolution")
+                                font.family: VbTokens.fontBody
+                                font.weight: Font.DemiBold
+                                font.pixelSize: VbTokens.sizeLabel
+                                color: VbTokens.textDim
+                            }
+                            Row {
+                                width: parent.width
+                                Text {
+                                    width: parent.width - 26
+                                    text: resolutionComboBox.displayText
+                                    font.family: VbTokens.fontBody
+                                    font.weight: Font.Bold
+                                    font.pixelSize: 20
+                                    color: VbTokens.text
+                                    elide: Text.ElideRight
+                                }
+                                Text {
+                                    text: "⌄"
+                                    font.pixelSize: 20
+                                    color: VbTokens.textDim
+                                }
+                            }
+                        }
                         property int lastIndexValue
 
                         function addDetectedResolution(friendlyNamePrefix, rect) {
@@ -775,6 +841,45 @@ Item {
                     }
 
                     AutoResizingComboBox {
+                        // Redesign 1e: card look, matching the Resolution card. Visual only.
+                        width: (parent.width - parent.spacing) / 2
+                        padding: 0
+                        background: Rectangle {
+                            color: VbTokens.bgElev
+                            radius: VbTokens.radiusCard
+                            border.width: fpsComboBox.activeFocus ? VbTokens.focusBorder : 1
+                            border.color: fpsComboBox.activeFocus ? VbTokens.accent : VbTokens.stroke
+                        }
+                        indicator: Item { width: 0; height: 0 }
+                        contentItem: Column {
+                            anchors.fill: parent
+                            anchors.margins: 24
+                            spacing: 10
+                            Text {
+                                text: qsTr("Frame rate")
+                                font.family: VbTokens.fontBody
+                                font.weight: Font.DemiBold
+                                font.pixelSize: VbTokens.sizeLabel
+                                color: VbTokens.textDim
+                            }
+                            Row {
+                                width: parent.width
+                                Text {
+                                    width: parent.width - 26
+                                    text: fpsComboBox.displayText
+                                    font.family: VbTokens.fontBody
+                                    font.weight: Font.Bold
+                                    font.pixelSize: 20
+                                    color: VbTokens.text
+                                    elide: Text.ElideRight
+                                }
+                                Text {
+                                    text: "⌄"
+                                    font.pixelSize: 20
+                                    color: VbTokens.textDim
+                                }
+                            }
+                        }
                         property int lastIndexValue
 
                         function updateBitrateForSelection() {
@@ -1065,95 +1170,181 @@ Item {
 
                 Label {
                     width: parent.width
-                    id: bitrateTitle
-                    text: qsTr("Video bitrate:")
-                    font.pointSize: 12
-                    wrapMode: Text.Wrap
-                }
-
-                Label {
-                    width: parent.width
                     id: bitrateDesc
                     text: qsTr("Lower the bitrate on slower connections. Raise the bitrate to increase image quality.")
                     font.pointSize: 9
                     wrapMode: Text.Wrap
+                    color: VbTokens.textDim
                 }
 
-                Row {
+                // ---- Video bitrate card (redesign 1e) ----
+                Rectangle {
                     width: parent.width
-                    spacing: 5
+                    height: bitrateCardColumn.implicitHeight + 52
+                    radius: VbTokens.radiusCard
+                    color: VbTokens.bgElev
+                    border.width: 1
+                    border.color: VbTokens.stroke
 
-                    Slider {
-                        id: slider
+                    Column {
+                        id: bitrateCardColumn
+                        anchors.fill: parent
+                        anchors.margins: 26
+                        spacing: 16
 
-                        value: StreamingPreferences.bitrateKbps
+                        Item {
+                            width: parent.width
+                            height: Math.max(bitrateTitle.implicitHeight, bitrateValueText.implicitHeight)
 
-                        stepSize: 500
-                        from : 500
-                        to: StreamingPreferences.unlockBitrate ? 500000 : 150000
-
-                        snapMode: "SnapOnRelease"
-                        width: Math.min(bitrateDesc.implicitWidth, parent.width - (resetBitrateButton.visible ? resetBitrateButton.width + parent.spacing : 0))
-
-                        onValueChanged: {
-                            bitrateTitle.text = qsTr("Video bitrate: %1 Mbps").arg(value / 1000.0)
-                            StreamingPreferences.bitrateKbps = value
+                            Text {
+                                id: bitrateTitle
+                                anchors.left: parent.left
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: qsTr("Video bitrate")
+                                font.family: VbTokens.fontBody
+                                font.weight: Font.DemiBold
+                                font.pixelSize: 17
+                                color: VbTokens.text
+                            }
+                            Text {
+                                id: bitrateValueText
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: qsTr("%1 Mbps").arg((StreamingPreferences.bitrateKbps / 1000).toFixed(0))
+                                font.family: VbTokens.fontBody
+                                font.weight: Font.ExtraBold
+                                font.pixelSize: 17
+                                color: VbTokens.accent
+                            }
                         }
 
-                        onMoved: {
-                            StreamingPreferences.autoAdjustBitrate = false
+                        Row {
+                            width: parent.width
+                            spacing: 12
+
+                            Slider {
+                                id: slider
+
+                                value: StreamingPreferences.bitrateKbps
+
+                                stepSize: 500
+                                from : 500
+                                to: StreamingPreferences.unlockBitrate ? 500000 : 150000
+
+                                snapMode: "SnapOnRelease"
+                                width: parent.width - (resetBitrateButton.visible ? resetBitrateButton.width + parent.spacing : 0)
+
+                                background: Rectangle {
+                                    x: slider.leftPadding
+                                    y: slider.topPadding + slider.availableHeight / 2 - height / 2
+                                    width: slider.availableWidth
+                                    height: 10
+                                    radius: 6
+                                    color: VbTokens.bgWindow
+                                    Rectangle {
+                                        width: slider.visualPosition * parent.width
+                                        height: parent.height
+                                        radius: 6
+                                        color: VbTokens.accent
+                                    }
+                                }
+                                handle: Rectangle {
+                                    x: slider.leftPadding + slider.visualPosition * (slider.availableWidth - width)
+                                    y: slider.topPadding + slider.availableHeight / 2 - height / 2
+                                    width: 26
+                                    height: 26
+                                    radius: 13
+                                    color: VbTokens.text
+                                }
+
+                                onValueChanged: {
+                                    StreamingPreferences.bitrateKbps = value
+                                }
+
+                                onMoved: {
+                                    StreamingPreferences.autoAdjustBitrate = false
+                                }
+                            }
+
+                            Button {
+                                id: resetBitrateButton
+                                font.capitalization: Font.MixedCase   // Vibemis: no ALL-CAPS "USE DEFAULT (30 MBPS)"
+                                text: qsTr("Use Default (%1 Mbps)").arg(StreamingPreferences.getDefaultBitrate(StreamingPreferences.width, StreamingPreferences.height, StreamingPreferences.fps, StreamingPreferences.enableYUV444) / 1000.0)
+                                visible: StreamingPreferences.bitrateKbps !== StreamingPreferences.getDefaultBitrate(StreamingPreferences.width, StreamingPreferences.height, StreamingPreferences.fps, StreamingPreferences.enableYUV444)
+                                onClicked: {
+                                    var defaultBitrate = StreamingPreferences.getDefaultBitrate(StreamingPreferences.width, StreamingPreferences.height, StreamingPreferences.fps, StreamingPreferences.enableYUV444)
+                                    StreamingPreferences.bitrateKbps = defaultBitrate
+                                    StreamingPreferences.autoAdjustBitrate = true
+                                    slider.value = defaultBitrate
+                                }
+                            }
                         }
 
-                        Component.onCompleted: {
-                            // Refresh the text after translations change
-                            languageChanged.connect(valueChanged)
-                        }
-                    }
-
-                    Button {
-                        id: resetBitrateButton
-                        font.capitalization: Font.MixedCase   // Vibemis: no ALL-CAPS "USE DEFAULT (30 MBPS)"
-                        text: qsTr("Use Default (%1 Mbps)").arg(StreamingPreferences.getDefaultBitrate(StreamingPreferences.width, StreamingPreferences.height, StreamingPreferences.fps, StreamingPreferences.enableYUV444) / 1000.0)
-                        visible: StreamingPreferences.bitrateKbps !== StreamingPreferences.getDefaultBitrate(StreamingPreferences.width, StreamingPreferences.height, StreamingPreferences.fps, StreamingPreferences.enableYUV444)
-                        onClicked: {
-                            var defaultBitrate = StreamingPreferences.getDefaultBitrate(StreamingPreferences.width, StreamingPreferences.height, StreamingPreferences.fps, StreamingPreferences.enableYUV444)
-                            StreamingPreferences.bitrateKbps = defaultBitrate
-                            StreamingPreferences.autoAdjustBitrate = true
-                            slider.value = defaultBitrate
+                        // Vibemis: rough data-usage estimate for the chosen bitrate. Helps users on
+                        // metered connections or marginal Wi-Fi gauge cost/feasibility. Video only
+                        // (audio/overhead excluded). GB/hour = kbps * 3600 / 8 / 1e6 = kbps * 0.00045.
+                        // This is the HTML handoff's "≈ N GB/hour..." card description line.
+                        Text {
+                            width: parent.width
+                            text: "≈ " + qsTr("%1 GB/hour at this bitrate (video only). Lower on slower connections.")
+                                  .arg((StreamingPreferences.bitrateKbps * 0.00045).toFixed(1))
+                            font.family: VbTokens.fontBody
+                            font.pixelSize: VbTokens.sizeLabel
+                            wrapMode: Text.Wrap
+                            color: VbTokens.textDim
                         }
                     }
                 }
 
                 // Vibemis (P3.12): adaptive bitrate (experimental). Currently logs a recommendation
                 // when the host reports a poor connection; runtime auto-adjust is pending protocol
-                // support (see TODO(P3.12) in session.cpp).
+                // support (see TODO(P3.12) in session.cpp). Redesign 1e toggle-row visual.
                 CheckBox {
                     id: adaptiveBitrateCheck
                     width: parent.width
-                    text: qsTr("Adaptive bitrate (experimental)")
-                    font.pointSize: 12
+                    height: 70
                     checked: StreamingPreferences.adaptiveBitrate
                     onCheckedChanged: {
                         StreamingPreferences.adaptiveBitrate = checked
+                    }
+
+                    indicator: Item {}
+                    background: Rectangle {
+                        anchors.bottom: parent.bottom
+                        width: parent.width
+                        height: 1
+                        color: VbTokens.strokeSoft
+                    }
+                    contentItem: Item {
+                        anchors.fill: parent
+                        Text {
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: qsTr("Adaptive bitrate (experimental)")
+                            font.family: VbTokens.fontBody
+                            font.weight: Font.DemiBold
+                            font.pixelSize: 18
+                            color: VbTokens.text
+                        }
+                        Rectangle {
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 60; height: 34; radius: 999
+                            color: adaptiveBitrateCheck.checked ? VbTokens.accent : "#2A2F37"
+                            Rectangle {
+                                width: 26; height: 26; radius: 13
+                                anchors.verticalCenter: parent.verticalCenter
+                                x: adaptiveBitrateCheck.checked ? parent.width - width - 4 : 4
+                                color: adaptiveBitrateCheck.checked ? "#08090B" : VbTokens.textDim
+                                Behavior on x { NumberAnimation { duration: 120 } }
+                            }
+                        }
                     }
 
                     ToolTip.delay: 1000
                     ToolTip.timeout: 5000
                     ToolTip.visible: hovered
                     ToolTip.text: qsTr("Experimental: when the connection to the host degrades, Vibemis notes a recommendation to lower the bitrate. Automatic runtime adjustment is still in development.")
-                }
-
-                // Vibemis: rough data-usage estimate for the chosen bitrate. Helps users on
-                // metered connections or marginal Wi-Fi gauge cost/feasibility. Video only
-                // (audio/overhead excluded). GB/hour = kbps * 3600 / 8 / 1e6 = kbps * 0.00045.
-                Label {
-                    width: parent.width
-                    text: qsTr("Uses roughly %1 GB/hour of data at this bitrate (video only).")
-                          .arg((StreamingPreferences.bitrateKbps * 0.00045).toFixed(1))
-                    font.pointSize: 9
-                    wrapMode: Text.Wrap
-                    color: "#aaaaaa"
-                    topPadding: 2
                 }
 
                 // Vibemis (perf guidance): advise when the bitrate is set well above the recommended
@@ -1301,15 +1492,61 @@ Item {
                     ToolTip.text: qsTr("Fit shows the whole image with black bars if needed. Fill crops the image to fill the screen with no bars. Stretch fills the screen ignoring the aspect ratio.")
                 }
 
+                // Redesign 1e toggle-row (title + sublabel + pill switch). Matches the HTML
+                // handoff's "V-Sync" row text exactly; the fuller explanation moves to the tooltip.
                 CheckBox {
                     id: vsyncCheck
                     width: parent.width
+                    height: 70
                     hoverEnabled: true
-                    text: qsTr("V-Sync")
-                    font.pointSize:  12
                     checked: StreamingPreferences.enableVsync
                     onCheckedChanged: {
                         StreamingPreferences.enableVsync = checked
+                    }
+
+                    indicator: Item {}
+                    background: Rectangle {
+                        anchors.bottom: parent.bottom
+                        width: parent.width
+                        height: 1
+                        color: VbTokens.strokeSoft
+                    }
+                    contentItem: Item {
+                        anchors.fill: parent
+                        Column {
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: parent.width - 80
+                            spacing: 2
+                            Text {
+                                text: qsTr("V-Sync")
+                                font.family: VbTokens.fontBody
+                                font.weight: Font.DemiBold
+                                font.pixelSize: 18
+                                color: VbTokens.text
+                            }
+                            Text {
+                                width: parent.width
+                                text: qsTr("Reduces tearing; may add latency")
+                                font.family: VbTokens.fontBody
+                                font.pixelSize: VbTokens.sizeLabel
+                                color: VbTokens.textDim
+                                wrapMode: Text.Wrap
+                            }
+                        }
+                        Rectangle {
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 60; height: 34; radius: 999
+                            color: vsyncCheck.checked ? VbTokens.accent : "#2A2F37"
+                            Rectangle {
+                                width: 26; height: 26; radius: 13
+                                anchors.verticalCenter: parent.verticalCenter
+                                x: vsyncCheck.checked ? parent.width - width - 4 : 4
+                                color: vsyncCheck.checked ? "#08090B" : VbTokens.textDim
+                                Behavior on x { NumberAnimation { duration: 120 } }
+                            }
+                        }
                     }
 
                     ToolTip.delay: 1000
@@ -1318,17 +1555,65 @@ Item {
                     ToolTip.text: qsTr("Disabling V-Sync allows sub-frame rendering latency, but it can display visible tearing")
                 }
 
+                // Redesign 1e toggle-row. Extra setting beyond the HTML mock — same visual
+                // language as V-Sync above for consistency.
                 CheckBox {
                     id: framePacingCheck
                     width: parent.width
+                    height: 70
                     hoverEnabled: true
-                    text: qsTr("Frame pacing")
-                    font.pointSize:  12
                     enabled: StreamingPreferences.enableVsync
+                    opacity: enabled ? 1.0 : 0.5
                     checked: StreamingPreferences.enableVsync && StreamingPreferences.framePacing
                     onCheckedChanged: {
                         StreamingPreferences.framePacing = checked
                     }
+
+                    indicator: Item {}
+                    background: Rectangle {
+                        anchors.bottom: parent.bottom
+                        width: parent.width
+                        height: 1
+                        color: VbTokens.strokeSoft
+                    }
+                    contentItem: Item {
+                        anchors.fill: parent
+                        Column {
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: parent.width - 80
+                            spacing: 2
+                            Text {
+                                text: qsTr("Frame pacing")
+                                font.family: VbTokens.fontBody
+                                font.weight: Font.DemiBold
+                                font.pixelSize: 18
+                                color: VbTokens.text
+                            }
+                            Text {
+                                width: parent.width
+                                text: qsTr("Reduces micro-stutter by delaying early frames")
+                                font.family: VbTokens.fontBody
+                                font.pixelSize: VbTokens.sizeLabel
+                                color: VbTokens.textDim
+                                wrapMode: Text.Wrap
+                            }
+                        }
+                        Rectangle {
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 60; height: 34; radius: 999
+                            color: framePacingCheck.checked ? VbTokens.accent : "#2A2F37"
+                            Rectangle {
+                                width: 26; height: 26; radius: 13
+                                anchors.verticalCenter: parent.verticalCenter
+                                x: framePacingCheck.checked ? parent.width - width - 4 : 4
+                                color: framePacingCheck.checked ? "#08090B" : VbTokens.textDim
+                                Behavior on x { NumberAnimation { duration: 120 } }
+                            }
+                        }
+                    }
+
                     ToolTip.delay: 1000
                     ToolTip.timeout: 5000
                     ToolTip.visible: hovered
@@ -2994,15 +3279,22 @@ Item {
     }
 
     // ---- Gamepad hint bar (redesign 1e) ----
-    // Note: LB/RB category-switch is not wired to the shoulder buttons; the sidebar rows are
-    // focusable (D-pad/Tab reachable, Ⓐ/Return/click to select), which makes every category
-    // gamepad-reachable. Ⓑ / Esc pop the view via the StackView's key handlers.
+    // Note: the LB/RB hint below matches the HTML handoff, but shoulder buttons are NOT yet
+    // forwarded by SdlGamepadKeyNavigation (sdlgamepadkeynavigation.cpp has no
+    // SDL_CONTROLLER_BUTTON_LEFTSHOULDER/RIGHTSHOULDER case) — that's a C++ change outside this
+    // QML file's scope. Today the sidebar rows are still focusable (D-pad/Tab reachable,
+    // Ⓐ/Return/click to select), which makes every category gamepad-reachable in the meantime.
+    // Ⓑ / Esc pop the view via the StackView's key handlers.
     VbHintBar {
         id: hintBar
         anchors.bottom: parent.bottom
         width: parent.width
         hints: [
-            { glyph: "Ⓐ", label: qsTr("Toggle / adjust") },
+            { glyph: "LB", label: "" },
+            { glyph: "RB", label: qsTr("Switch category") },
+            { glyph: "Ⓐ", label: qsTr("Toggle / adjust") }
+        ]
+        hintsRight: [
             { glyph: "Ⓑ", label: qsTr("Back") }
         ]
     }
