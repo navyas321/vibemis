@@ -97,6 +97,7 @@ public:
     void setWindow(SDL_Window* window);
 
     void handleKeyEvent(SDL_KeyboardEvent* event);
+    void handleTextInputEvent(SDL_TextInputEvent* event);   // P3.20 (test86)
 
     void handleMouseButtonEvent(SDL_MouseButtonEvent* event);
 
