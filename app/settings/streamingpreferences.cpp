@@ -50,6 +50,7 @@
 #define SER_PACKETSIZE "packetsize"
 #define SER_DETECTNETBLOCKING "detectnetblocking"
 #define SER_SHOWPERFOVERLAY "showperfoverlay"
+#define SER_COMPACTPERFOVERLAY "compactperfoverlay"
 #define SER_PREFERTAILSCALE "prefertailscale"
 #define SER_FORWARDMOTION "forwardmotioncontrols"
 #define SER_PERFOVERLAYCLOCK "perfoverlayclock"
@@ -167,6 +168,7 @@ void StreamingPreferences::reload()
     gamepadMouse = settings.value(SER_GAMEPADMOUSE, true).toBool();
     detectNetworkBlocking = settings.value(SER_DETECTNETBLOCKING, true).toBool();
     showPerformanceOverlay = settings.value(SER_SHOWPERFOVERLAY, false).toBool();
+    compactPerformanceOverlay = settings.value(SER_COMPACTPERFOVERLAY, false).toBool();
     preferTailscale = settings.value(SER_PREFERTAILSCALE, false).toBool();
     forwardMotionControls = settings.value(SER_FORWARDMOTION, false).toBool();
     perfOverlayShowClock = settings.value(SER_PERFOVERLAYCLOCK, false).toBool();
@@ -388,6 +390,7 @@ void StreamingPreferences::save()
     settings.setValue(SER_PACKETSIZE, packetSize);
     settings.setValue(SER_DETECTNETBLOCKING, detectNetworkBlocking);
     settings.setValue(SER_SHOWPERFOVERLAY, showPerformanceOverlay);
+    settings.setValue(SER_COMPACTPERFOVERLAY, compactPerformanceOverlay);
     settings.setValue(SER_PREFERTAILSCALE, preferTailscale);
     settings.setValue(SER_FORWARDMOTION, forwardMotionControls);
     settings.setValue(SER_PERFOVERLAYCLOCK, perfOverlayShowClock);

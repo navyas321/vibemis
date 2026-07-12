@@ -165,6 +165,10 @@ public:
     Q_PROPERTY(bool gamepadMouse MEMBER gamepadMouse NOTIFY gamepadMouseChanged)
     Q_PROPERTY(bool detectNetworkBlocking MEMBER detectNetworkBlocking NOTIFY detectNetworkBlockingChanged)
     Q_PROPERTY(bool showPerformanceOverlay MEMBER showPerformanceOverlay NOTIFY showPerformanceOverlayChanged)
+    // Vibemis: when true, the performance overlay shows a single compact line
+    // (fps · resolution/codec · latency · drops) instead of the full multi-line block —
+    // far more legible on a small handheld screen during a stream.
+    Q_PROPERTY(bool compactPerformanceOverlay MEMBER compactPerformanceOverlay NOTIFY compactPerformanceOverlayChanged)
     Q_PROPERTY(bool preferTailscale MEMBER preferTailscale NOTIFY preferTailscaleChanged)
     Q_PROPERTY(bool forwardMotionControls MEMBER forwardMotionControls NOTIFY forwardMotionControlsChanged)
     // Vibemis (test72): optional wall-clock line at the top of the performance
@@ -232,6 +236,7 @@ public:
     bool gamepadMouse;
     bool detectNetworkBlocking;
     bool showPerformanceOverlay;
+    bool compactPerformanceOverlay;
     bool preferTailscale;
     bool forwardMotionControls;
     bool perfOverlayShowClock;
@@ -298,6 +303,7 @@ signals:
     void gamepadMouseChanged();
     void detectNetworkBlockingChanged();
     void showPerformanceOverlayChanged();
+    void compactPerformanceOverlayChanged();
     void preferTailscaleChanged();
     void forwardMotionControlsChanged();
     void perfOverlayShowClockChanged();
