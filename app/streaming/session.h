@@ -128,6 +128,14 @@ public:
 
     Q_INVOKABLE void exec(QWindow* qtWindow);
 
+    // P3.21 (test80): true when the stream was cut unexpectedly (connection loss),
+    // as opposed to a user-initiated quit — used by the auto-reconnect logic in QML.
+    Q_INVOKABLE bool wasUnexpectedTermination() const { return m_UnexpectedTermination; }
+
+    // P3.21 (test80): a fresh Session for the same host+app (per-game profiles and
+    // preferences re-apply automatically). QML takes ownership of the returned object.
+    Q_INVOKABLE Session* createResumeSession() { return new Session(m_Computer, m_App); }
+
     static
     void getDecoderInfo(SDL_Window* window,
                         bool& isHardwareAccelerated, bool& isFullScreenOnly,
