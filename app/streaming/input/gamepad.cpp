@@ -310,6 +310,11 @@ void SdlInputHandler::handleControllerButtonEvent(SDL_ControllerButtonEvent* eve
             case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: qtKey = Qt::Key_Right;  break;
             case SDL_CONTROLLER_BUTTON_A:          qtKey = Qt::Key_Return; break;
             case SDL_CONTROLLER_BUTTON_B:          qtKey = Qt::Key_Escape; break;
+            // test77: Back/Select(View) and Start also close the menu and return to the
+            // game. Back was previously swallowed unmapped, which left gamepad-only users
+            // (Game Mode) with no discoverable way out of the menu — it read as a freeze.
+            case SDL_CONTROLLER_BUTTON_BACK:       qtKey = Qt::Key_Escape; break;
+            case SDL_CONTROLLER_BUTTON_START:      qtKey = Qt::Key_Escape; break;
             default: break;
             }
             if (qtKey != Qt::Key_unknown) {
@@ -414,9 +419,11 @@ void SdlInputHandler::handleControllerButtonEvent(SDL_ControllerButtonEvent* eve
         event.quit.timestamp = SDL_GetTicks();
         SDL_PushEvent(&event);
 
-        // Clear buttons down on this gamepad
+        // Clear buttons down on this gamepad — locally too (test77), otherwise the
+        // held combo is re-sent to the host by the next axis/state update.
         LiSendMultiControllerEvent(state->index, m_GamepadMask,
                                    0, 0, 0, 0, 0, 0, 0);
+        state->buttons = 0;
         return;
     }
 
@@ -429,9 +436,11 @@ void SdlInputHandler::handleControllerButtonEvent(SDL_ControllerButtonEvent* eve
         Session::get()->getOverlayManager().setOverlayState(Overlay::OverlayDebug,
                                                             !Session::get()->getOverlayManager().isOverlayEnabled(Overlay::OverlayDebug));
 
-        // Clear buttons down on this gamepad
+        // Clear buttons down on this gamepad — locally too (test77), otherwise the
+        // held combo is re-sent to the host by the next axis/state update.
         LiSendMultiControllerEvent(state->index, m_GamepadMask,
                                    0, 0, 0, 0, 0, 0, 0);
+        state->buttons = 0;
         return;
     }
 
@@ -443,9 +452,12 @@ void SdlInputHandler::handleControllerButtonEvent(SDL_ControllerButtonEvent* eve
         // Toggle the quick menu
         Session::get()->toggleQuickMenu();
 
-        // Clear buttons down on this gamepad
+        // Clear buttons down on this gamepad — locally too (test77). Without the local
+        // clear the held Select+L1+R1+Y was re-sent to the host on every axis update
+        // (stuck buttons in-game) while the menu sat open.
         LiSendMultiControllerEvent(state->index, m_GamepadMask,
                                    0, 0, 0, 0, 0, 0, 0);
+        state->buttons = 0;
         return;
     }
 
