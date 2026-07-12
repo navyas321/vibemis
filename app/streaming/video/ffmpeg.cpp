@@ -4,6 +4,8 @@
 #include "backend/systemproperties.h"
 #include "settings/streamingpreferences.h"
 
+#include <ctime>
+
 #include <h264_stream.h>
 
 extern "C" {
@@ -835,6 +837,35 @@ void FFmpegVideoDecoder::stringifyVideoStats(VIDEO_STATS& stats, char* output, i
 
     // Start with an empty string
     output[offset] = 0;
+
+    // Vibemis (test72): optional wall-clock line at the top of the performance
+    // overlay. Handy on a handheld in Game Mode, which hides the system clock.
+    // Gated behind a setting; off by default so the overlay is unchanged for
+    // existing users.
+    if (auto prefs = StreamingPreferences::get()) {
+        if (prefs->perfOverlayShowClock) {
+            time_t rawTime = time(nullptr);
+            struct tm localTm;
+#ifdef Q_OS_WIN
+            bool haveTm = (localtime_s(&localTm, &rawTime) == 0);
+#else
+            bool haveTm = (localtime_r(&rawTime, &localTm) != nullptr);
+#endif
+            char clockString[16];
+            if (haveTm && strftime(clockString, sizeof(clockString), "%H:%M:%S", &localTm) > 0) {
+                ret = snprintf(&output[offset],
+                               length - offset,
+                               "Time: %s\n",
+                               clockString);
+                if (ret < 0 || ret >= length - offset) {
+                    SDL_assert(false);
+                    return;
+                }
+
+                offset += ret;
+            }
+        }
+    }
 
     switch (m_VideoFormat)
     {
