@@ -17,10 +17,150 @@ CenteredGridView {
     id: pcGrid
     focus: true
     activeFocusOnTab: true
-    topMargin: 20
-    bottomMargin: 5
+    // Redesign 1a: the grid content is inset so it clears the fixed per-screen header
+    // (title + host count + icon buttons) and the bottom gamepad hint bar. See the chrome
+    // block below. The global toolbar is collapsed for PcView in main.qml (redesignScreen).
+    topMargin: pcChromeHeader.height + 12
+    bottomMargin: (pcHintBar.visible ? pcHintBar.height : 0) + 12
     cellWidth: 310; cellHeight: 330;
     objectName: qsTr("Computers")
+
+    // ---- Redesign 1a chrome: per-screen header + persistent gamepad hint bar ----
+    // Live "N hosts · M online" count. QML can't bind an aggregate over model rows, so
+    // onlineRev bumps on any model change to force the count to re-compute.
+    property int onlineRev: 0
+    function onlineHostCount() {
+        onlineRev; // re-eval dependency
+        var n = 0
+        for (var i = 0; i < pcGrid.count; i++) {
+            if (computerModel.data(computerModel.index(i, 0), ComputerModel.OnlineRole))
+                n++
+        }
+        return n
+    }
+    Connections {
+        target: computerModel
+        function onDataChanged() { pcGrid.onlineRev++ }
+        function onRowsInserted() { pcGrid.onlineRev++ }
+        function onRowsRemoved() { pcGrid.onlineRev++ }
+        function onModelReset() { pcGrid.onlineRev++ }
+    }
+
+    // Token-styled icon button used in the header (Add / Help / Settings). Reuses the SVGs
+    // and the exact onClicked handlers of the old global toolbar so behaviour is unchanged.
+    component PcIconButton: Button {
+        id: pib
+        property string glyphSource: ""
+        implicitWidth: VbTokens.iconButton
+        implicitHeight: VbTokens.iconButton
+        focusPolicy: Qt.TabFocus
+        padding: 0
+        background: Rectangle {
+            radius: VbTokens.radiusIconButton
+            color: pib.activeFocus ? VbTokens.focusedFill : (pib.hovered ? VbTokens.bgElev2 : VbTokens.bgElev)
+            border.width: 1
+            border.color: pib.activeFocus ? VbTokens.accent : VbTokens.stroke
+        }
+        contentItem: Image {
+            source: pib.glyphSource
+            fillMode: Image.PreserveAspectFit
+            sourceSize.width: 22
+            sourceSize.height: 22
+        }
+    }
+
+    // Fixed per-screen header (does not scroll with the grid). Opaque bg so scrolled cards
+    // pass behind it. Height ~ headerH * 1.4 to fit the two-line title + count block.
+    Item {
+        id: pcChromeHeader
+        z: 10
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: VbTokens.headerH * 1.4
+
+        Rectangle { anchors.fill: parent; color: VbTokens.bgWindow }
+
+        RowLayout {
+            anchors.fill: parent
+            anchors.leftMargin: VbTokens.screenPadX
+            anchors.rightMargin: VbTokens.screenPadX
+            spacing: 20
+
+            ColumnLayout {
+                spacing: 4
+                Layout.alignment: Qt.AlignVCenter
+                Text {
+                    text: qsTr("Computers")
+                    font.family: VbTokens.fontDisplay
+                    font.weight: Font.Bold
+                    font.pixelSize: VbTokens.sizeScreenTitle
+                    color: VbTokens.text
+                }
+                Text {
+                    text: pcGrid.count + " " + (pcGrid.count === 1 ? qsTr("host") : qsTr("hosts")) +
+                          " · " + pcGrid.onlineHostCount() + " " + qsTr("online")
+                    font.family: VbTokens.fontBody
+                    font.pixelSize: VbTokens.sizeLabel
+                    color: VbTokens.textDim
+                }
+            }
+
+            Item { Layout.fillWidth: true }
+
+            Row {
+                spacing: 12
+                Layout.alignment: Qt.AlignVCenter
+                PcIconButton {
+                    glyphSource: "qrc:/res/ic_add_to_queue_white_48px.svg"
+                    onClicked: addPcDialog.open()
+                    ToolTip.text: qsTr("Add PC manually")
+                    ToolTip.delay: 1000
+                    ToolTip.visible: hovered
+                }
+                PcIconButton {
+                    visible: SystemProperties.hasBrowser
+                    glyphSource: "qrc:/res/question_mark.svg"
+                    // Redesign 1f: push the in-app Help screen (same handler as the old toolbar).
+                    onClicked: {
+                        var comp = Qt.createComponent("qrc:/gui/VbHelpView.qml")
+                        if (comp.status === Component.Ready) {
+                            stackView.push(comp)
+                        } else {
+                            Qt.openUrlExternally("https://github.com/navyas321/vibemis")
+                        }
+                    }
+                    ToolTip.text: qsTr("Help")
+                    ToolTip.delay: 1000
+                    ToolTip.visible: hovered
+                }
+                PcIconButton {
+                    glyphSource: "qrc:/res/settings.svg"
+                    onClicked: navigateTo("qrc:/gui/SettingsView.qml", "SettingsView")
+                    ToolTip.text: qsTr("Settings")
+                    ToolTip.delay: 1000
+                    ToolTip.visible: hovered
+                }
+            }
+        }
+
+        Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: VbTokens.strokeSoft }
+    }
+
+    // Persistent gamepad hint bar, fixed at the bottom. Grid bottomMargin clears it.
+    VbHintBar {
+        id: pcHintBar
+        z: 10
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        hints: [
+            { glyph: "Ⓐ", label: qsTr("Connect") },
+            { glyph: "Ⓧ", label: qsTr("Host options") },
+            { glyph: "Ⓨ", label: qsTr("Add computer") }
+        ]
+        hintsRight: [ { glyph: "☰", label: qsTr("Settings") } ]
+    }
 
     Component.onCompleted: {
         // Don't show any highlighted item until interacting with them.

@@ -245,11 +245,13 @@ ApplicationWindow {
 
     header: ToolBar {
         id: toolBar
-        // Redesign: the redesigned screens (Settings 1e, Help 1f) carry their OWN per-screen header
-        // (Back + title + hint bar), so collapse the global toolbar on them to avoid a double header —
-        // matching the design previews, which show only per-screen chrome.
+        // Redesign: the redesigned screens carry their OWN per-screen header (Back/wordmark + title
+        // + hint bar), so collapse the global toolbar on them to avoid a double header — matching the
+        // design previews, which show only per-screen chrome. Screens 1a (PcView / Computers) and 1b
+        // (AppView / app grid) own their full chrome as of test107, joining Settings (1e) + Help (1f).
         readonly property bool redesignScreen: stackView.currentItem
-            && (qmltypeof(stackView.currentItem, "SettingsView") || qmltypeof(stackView.currentItem, "VbHelpView"))
+            && (qmltypeof(stackView.currentItem, "SettingsView") || qmltypeof(stackView.currentItem, "VbHelpView")
+                || qmltypeof(stackView.currentItem, "PcView") || qmltypeof(stackView.currentItem, "AppView"))
         height: redesignScreen ? 0 : 60
         visible: !redesignScreen
         anchors.topMargin: 5

@@ -1,6 +1,7 @@
 import QtQuick 2.9
 import QtQuick.Controls 2.2
 import QtQuick.Controls.Material 2.2
+import QtQuick.Layouts 1.3
 
 import Theme 1.0
 import Vibemis.Redesign 1.0
@@ -19,9 +20,125 @@ CenteredGridView {
     id: appGrid
     focus: true
     activeFocusOnTab: true
-    topMargin: 20
-    bottomMargin: 5
+    // Redesign 1b: inset the grid so it clears the fixed per-screen header (Back + host name
+    // + app count + Settings) and the bottom gamepad hint bar. The global toolbar is collapsed
+    // for AppView in main.qml (redesignScreen). Chrome block is defined below.
+    topMargin: appChromeHeader.height + 12
+    bottomMargin: (appHintBar.visible ? appHintBar.height : 0) + 12
     cellWidth: 230; cellHeight: 297;
+
+    // ---- Redesign 1b chrome: per-screen header + persistent gamepad hint bar ----
+    // Fixed header (does not scroll with the grid). Opaque bg so scrolled tiles pass behind it.
+    Item {
+        id: appChromeHeader
+        z: 10
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: VbTokens.headerH * 1.4
+
+        Rectangle { anchors.fill: parent; color: VbTokens.bgWindow }
+
+        RowLayout {
+            anchors.fill: parent
+            anchors.leftMargin: VbTokens.screenPadX
+            anchors.rightMargin: VbTokens.screenPadX
+            spacing: 20
+
+            // Back button (‹). Uses window.goBack() so the retranslate clearOnBack path is
+            // honoured, identical to the old global toolbar back button and gamepad Ⓑ / Esc.
+            Button {
+                id: appBackBtn
+                implicitWidth: VbTokens.iconButton
+                implicitHeight: VbTokens.iconButton
+                focusPolicy: Qt.TabFocus
+                padding: 0
+                Layout.alignment: Qt.AlignVCenter
+                background: Rectangle {
+                    radius: VbTokens.radiusIconButton
+                    color: appBackBtn.activeFocus ? VbTokens.focusedFill : (appBackBtn.hovered ? VbTokens.bgElev2 : VbTokens.bgElev)
+                    border.width: 1
+                    border.color: appBackBtn.activeFocus ? VbTokens.accent : VbTokens.stroke
+                }
+                contentItem: Text {
+                    text: "‹"
+                    font.family: VbTokens.fontDisplay
+                    font.pixelSize: 30
+                    color: VbTokens.text
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+                onClicked: window.goBack()
+                ToolTip.text: qsTr("Back")
+                ToolTip.delay: 1000
+                ToolTip.visible: hovered
+            }
+
+            ColumnLayout {
+                spacing: 4
+                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignVCenter
+                Text {
+                    // Host name (set as objectName when the AppView is pushed).
+                    text: appGrid.objectName
+                    font.family: VbTokens.fontDisplay
+                    font.weight: Font.Bold
+                    font.pixelSize: VbTokens.sizeScreenTitle
+                    color: VbTokens.text
+                    elide: Text.ElideRight
+                    Layout.fillWidth: true
+                }
+                Text {
+                    text: appGrid.count + " " + (appGrid.count === 1 ? qsTr("app") : qsTr("apps")) + " " + qsTr("available")
+                    font.family: VbTokens.fontBody
+                    font.pixelSize: VbTokens.sizeLabel
+                    color: VbTokens.textDim
+                }
+            }
+
+            Button {
+                id: appSettingsBtn
+                implicitWidth: VbTokens.iconButton
+                implicitHeight: VbTokens.iconButton
+                focusPolicy: Qt.TabFocus
+                padding: 0
+                Layout.alignment: Qt.AlignVCenter
+                background: Rectangle {
+                    radius: VbTokens.radiusIconButton
+                    color: appSettingsBtn.activeFocus ? VbTokens.focusedFill : (appSettingsBtn.hovered ? VbTokens.bgElev2 : VbTokens.bgElev)
+                    border.width: 1
+                    border.color: appSettingsBtn.activeFocus ? VbTokens.accent : VbTokens.stroke
+                }
+                contentItem: Image {
+                    source: "qrc:/res/settings.svg"
+                    fillMode: Image.PreserveAspectFit
+                    sourceSize.width: 22
+                    sourceSize.height: 22
+                }
+                onClicked: navigateTo("qrc:/gui/SettingsView.qml", "SettingsView")
+                ToolTip.text: qsTr("Settings")
+                ToolTip.delay: 1000
+                ToolTip.visible: hovered
+            }
+        }
+
+        Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: VbTokens.strokeSoft }
+    }
+
+    // Persistent gamepad hint bar, fixed at the bottom. Grid bottomMargin clears it.
+    VbHintBar {
+        id: appHintBar
+        z: 10
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        hints: [
+            { glyph: "Ⓐ", label: qsTr("Launch") },
+            { glyph: "Ⓑ", label: qsTr("Back") },
+            { glyph: "Ⓧ", label: qsTr("App options") }
+        ]
+        hintsRight: [ { glyph: "☰", label: qsTr("Settings") } ]
+    }
 
     function computerLost()
     {
