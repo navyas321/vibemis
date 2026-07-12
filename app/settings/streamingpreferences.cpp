@@ -217,8 +217,10 @@ void StreamingPreferences::reload()
                                                     static_cast<int>(QuickMenuGamepadCombo::QMGC_SELECT_LB_RB_Y)).toInt());
     videoScaleMode = static_cast<VideoScaleMode>(settings.value(SER_VIDEOSCALEMODE,
                                                  static_cast<int>(VideoScaleMode::SCALE_FIT)).toInt());
-    // Transient: always start un-zoomed (not persisted).
+    // Transient: always start un-zoomed and centered (not persisted).
     videoZoomFactor = 1.0;
+    videoPanX = 0.0;
+    videoPanY = 0.0;
 
     // Vibemis client-side streaming enhancements
     useVirtualDisplay = settings.value(SER_VIRTUALDISPLAY, true).toBool();

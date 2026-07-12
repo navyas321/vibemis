@@ -183,6 +183,10 @@ private:
         KeyComboZoomIn,
         KeyComboZoomOut,
         KeyComboZoomReset,
+        KeyComboPanLeft,
+        KeyComboPanRight,
+        KeyComboPanUp,
+        KeyComboPanDown,
         KeyComboMax
     };
 

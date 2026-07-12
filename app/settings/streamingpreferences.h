@@ -305,9 +305,12 @@ public:
     RendererBackend rendererBackend;
     QuickMenuGamepadCombo quickMenuGamepadCombo;
     VideoScaleMode videoScaleMode;
-    // Vibemis: transient in-stream zoom factor (1.0 = no zoom). Not serialized — resets
-    // each launch. Adjusted live by the zoom key combos; read by StreamUtils.
+    // Vibemis: transient in-stream zoom factor (1.0 = no zoom) and pan offset (x/y in
+    // [-1,1], 0 = centered; only meaningful while zoomed). Not serialized — reset each
+    // launch. Adjusted live by the zoom/pan key combos; read by StreamUtils.
     double videoZoomFactor;
+    double videoPanX;
+    double videoPanY;
 
     // Vibemis client-side streaming enhancements
     bool useVirtualDisplay;

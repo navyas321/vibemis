@@ -183,7 +183,34 @@ void SdlInputHandler::performSpecialKeyCombo(KeyCombo combo)
             if (z < 1.0) z = 1.0;
             if (z > 4.0) z = 4.0;
             prefs->videoZoomFactor = z;
+            if (combo == KeyComboZoomReset || z <= 1.0) {
+                // Re-center the pan when zoom is reset / back to 1x.
+                prefs->videoPanX = 0.0;
+                prefs->videoPanY = 0.0;
+            }
             SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Video zoom set to %.2fx", z);
+        }
+        break;
+    }
+
+    case KeyComboPanLeft:
+    case KeyComboPanRight:
+    case KeyComboPanUp:
+    case KeyComboPanDown: {
+        // Vibemis in-stream pan (only visibly effective while zoomed). Read by StreamUtils.
+        auto prefs = StreamingPreferences::get();
+        if (prefs) {
+            const double step = 0.2;
+            if (combo == KeyComboPanLeft)  prefs->videoPanX -= step;
+            if (combo == KeyComboPanRight) prefs->videoPanX += step;
+            if (combo == KeyComboPanUp)    prefs->videoPanY -= step;
+            if (combo == KeyComboPanDown)  prefs->videoPanY += step;
+            if (prefs->videoPanX < -1.0) prefs->videoPanX = -1.0;
+            if (prefs->videoPanX >  1.0) prefs->videoPanX =  1.0;
+            if (prefs->videoPanY < -1.0) prefs->videoPanY = -1.0;
+            if (prefs->videoPanY >  1.0) prefs->videoPanY =  1.0;
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Video pan set to (%.2f, %.2f)",
+                        prefs->videoPanX, prefs->videoPanY);
         }
         break;
     }
