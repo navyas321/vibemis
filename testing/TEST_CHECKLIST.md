@@ -131,9 +131,10 @@ whole Quick Menu group depends on its render path.
 - [x] **test78** — CLI app seek fix — **PR #148** — ☑ **PASS** (report PR #150: all 4 headless CLI
   cases on the real host — exact, substring, not-found w/ app list, ambiguity) → merged; zero-width
   app-name sanitization follow-up shipped in test81.
-- [ ] **test81** — repo-review fix wave regression cycle (server commands UNBROKEN, export identity
-  exclusion, menu input gating, UAF fixes) — **PR #152** (auto-merges) — ☐
-  (`testing/test81-review-fixes/instructions.md` — post-merge gate)
+- [x] **test81** — repo-review fix wave — **PR #152** — ☑ **PASS** (report PR #156 on real Apollo
+  host: Server Commands revived (lists "Bubbles", no Command-not-found), TLS private-key export leak
+  gone, renderer-swap race stable 17×8 toggles / 0 coredumps) → merged, 0.10.1. Tier-2 controller +
+  Settings-UAF nav deferred (headless-harness gaps).
 
 ## 6. Config / SteamOS helpers
 
