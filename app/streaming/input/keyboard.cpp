@@ -189,6 +189,11 @@ void SdlInputHandler::handleKeyEvent(SDL_KeyboardEvent* event)
         Session* sess = Session::get();
         bool menuOpen = sess && sess->getQuickMenuManager() && sess->getQuickMenuManager()->isVisible();
         bool noComboMods = !(event->keysym.mod & (KMOD_CTRL | KMOD_ALT | KMOD_GUI));
+        if (!menuOpen && !m_MenuConsumedKeys.isEmpty()) {
+            // Menu closed with entries pending — drop them so a stale entry can't
+            // swallow an unrelated future release.
+            m_MenuConsumedKeys.clear();
+        }
         if (menuOpen && noComboMods) {
             bool navKey = false;
             int qtKey = 0;
@@ -206,8 +211,16 @@ void SdlInputHandler::handleKeyEvent(SDL_KeyboardEvent* event)
                 if (event->state == SDL_PRESSED) {
                     QMetaObject::invokeMethod(sess->getQuickMenuManager(), "injectKey",
                                               Qt::QueuedConnection, Q_ARG(int, qtKey));
+                    m_MenuConsumedKeys.insert(event->keysym.scancode);
+                    return;
                 }
-                return; // consume both press and release so the host never sees them
+                // test81 (review fix): only swallow a RELEASE whose press we consumed.
+                // A nav key held since before the menu opened was sent DOWN to the host —
+                // eating its release left the key stuck down host-side.
+                if (m_MenuConsumedKeys.remove(event->keysym.scancode)) {
+                    return;
+                }
+                // fall through: deliver the release to the host as usual
             }
         }
     }

@@ -424,6 +424,19 @@ void StreamingPreferences::save()
     settings.setValue(SER_RESOLUTIONSCALEFACTOR, resolutionScaleFactor);
 }
 
+// test81 (review fix): the export/import round-trip must NEVER carry the device
+// identity — "key" is the client TLS PRIVATE KEY, "certificate"/"uniqueid" are the
+// pairing identity. Exporting them put the private key in a file users are told to
+// copy between devices; importing them clobbered THIS device's pairing with every
+// host. Host pairing data ("hosts/...") is likewise per-device and excluded.
+static bool isDeviceIdentityKey(const QString& k)
+{
+    return k == QLatin1String("key") ||
+           k == QLatin1String("certificate") ||
+           k == QLatin1String("uniqueid") ||
+           k.startsWith(QLatin1String("hosts/"));
+}
+
 QString StreamingPreferences::exportSettings()
 {
     // Persist current in-memory values first, then copy the live settings into a portable .ini.
@@ -435,6 +448,9 @@ QString StreamingPreferences::exportSettings()
     dst.clear();
     const QStringList keys = src.allKeys();
     for (const QString& k : keys) {
+        if (isDeviceIdentityKey(k)) {
+            continue;
+        }
         dst.setValue(k, src.value(k));
     }
     dst.sync();
@@ -460,6 +476,11 @@ bool StreamingPreferences::importSettings()
     QSettings dst;
     const QStringList keys = src.allKeys();
     for (const QString& k : keys) {
+        // Belt-and-braces: even if the .ini came from an old build that exported
+        // identity keys, never let an import overwrite this device's identity.
+        if (isDeviceIdentityKey(k)) {
+            continue;
+        }
         dst.setValue(k, src.value(k));
     }
     dst.sync();

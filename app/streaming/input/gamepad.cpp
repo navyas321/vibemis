@@ -162,6 +162,15 @@ Uint32 SdlInputHandler::mouseEmulationTimerCallback(Uint32 interval, void *param
 {
     auto gamepad = reinterpret_cast<GamepadState*>(param);
 
+    // test81 (review fix): freeze emulated mouse motion while the Quick Menu is open.
+    {
+        Session* sess = Session::get();
+        if (sess && sess->getQuickMenuManager() &&
+            sess->getQuickMenuManager()->isVisible()) {
+            return interval;
+        }
+    }
+
     int rawX;
     int rawY;
 
@@ -199,6 +208,17 @@ void SdlInputHandler::handleControllerAxisEvent(SDL_ControllerAxisEvent* event)
     GamepadState* state = findStateForGamepad(gameControllerId);
     if (state == NULL) {
         return;
+    }
+
+    // test81 (review fix): while the Quick Menu is open, buttons are intercepted but
+    // sticks/triggers used to keep streaming to the host — the game kept walking/aiming
+    // under the menu. Swallow axis input too; state resyncs on the next event after close.
+    {
+        Session* sess = Session::get();
+        if (sess && sess->getQuickMenuManager() &&
+            sess->getQuickMenuManager()->isVisible()) {
+            return;
+        }
     }
 
     // Batch all pending axis motion events for this gamepad to save CPU time
@@ -322,10 +342,23 @@ void SdlInputHandler::handleControllerButtonEvent(SDL_ControllerButtonEvent* eve
                 // inject the navigation key straight into it on the Qt main thread.
                 QMetaObject::invokeMethod(sess->getQuickMenuManager(), "injectKey",
                                           Qt::QueuedConnection, Q_ARG(int, (int)qtKey));
+                // test81 (review fix): remember the consumed press so its RELEASE is
+                // swallowed too (see below) — otherwise the release leaked into the
+                // normal handlers with stale state (Start release toggled mouse
+                // emulation; A/B releases sent stray mouse buttons in emulation mode).
+                state->buttonsConsumedByMenu |= k_ButtonMap[event->button];
                 return; // consumed — don't update game controller state
             }
+            state->buttonsConsumedByMenu |= k_ButtonMap[event->button];
             return; // any other button: also swallow while menu is open
         }
+    }
+
+    // test81 (review fix): swallow the release of any press the Quick Menu consumed.
+    if (event->state == SDL_RELEASED &&
+        (state->buttonsConsumedByMenu & k_ButtonMap[event->button])) {
+        state->buttonsConsumedByMenu &= ~k_ButtonMap[event->button];
+        return;
     }
 
     if (event->state == SDL_PRESSED) {

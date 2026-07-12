@@ -133,7 +133,7 @@ public:
                 // self-diagnosing from the CLI output.
                 QStringList available;
                 for (const NvApp &a : m_Computer->appList) {
-                    available.append(a.name);
+                    available.append(sanitizeAppName(a.name));
                 }
                 emit q->failed(QObject::tr("Failed to find application %1").arg(m_AppName)
                                + (available.isEmpty()
@@ -163,12 +163,27 @@ public:
         }
     }
 
+    // test81 (test-agent finding on test78): host app names can carry zero-width /
+    // format Unicode characters that break both matching and readable error output.
+    // Strip format-category chars and trim before comparing or displaying.
+    static QString sanitizeAppName(const QString& name)
+    {
+        QString out;
+        out.reserve(name.size());
+        for (const QChar& c : name) {
+            if (c.category() != QChar::Other_Format) {
+                out.append(c);
+            }
+        }
+        return out.trimmed();
+    }
+
     int getAppIndex() const
     {
-        // Exact match first (trimmed + case-insensitive)...
-        const QString wanted = m_AppName.trimmed().toLower();
+        // Exact match first (sanitized + case-insensitive)...
+        const QString wanted = sanitizeAppName(m_AppName).toLower();
         for (int i = 0; i < m_Computer->appList.length(); i++) {
-            if (m_Computer->appList[i].name.trimmed().toLower() == wanted) {
+            if (sanitizeAppName(m_Computer->appList[i].name).toLower() == wanted) {
                 return i;
             }
         }
@@ -177,7 +192,7 @@ public:
         // prefixes still fail (and the timeout message lists the candidates).
         int found = -1;
         for (int i = 0; i < m_Computer->appList.length(); i++) {
-            if (m_Computer->appList[i].name.trimmed().toLower().contains(wanted)) {
+            if (sanitizeAppName(m_Computer->appList[i].name).toLower().contains(wanted)) {
                 if (found != -1) {
                     return -1; // ambiguous — require an exact name
                 }

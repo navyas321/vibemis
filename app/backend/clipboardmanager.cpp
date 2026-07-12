@@ -84,7 +84,15 @@ ClipboardManager* ClipboardManager::create(QQmlEngine *qmlEngine, QJSEngine *jsE
 void ClipboardManager::setConnection(NvComputer *computer, NvHTTP *http)
 {
     m_computer = computer;
+    // test81 (review fix, same as ServerCommandManager): own the NvHTTP we're handed --
+    // the previous one (and its QNetworkAccessManager) leaked on every new session.
+    if (m_http && m_http != http && m_http->parent() == this) {
+        delete m_http;
+    }
     m_http = http;
+    if (m_http && !m_http->parent()) {
+        m_http->setParent(this);
+    }
     
     bool wasConnected = m_connected;
     m_connected = (computer != nullptr && http != nullptr);
