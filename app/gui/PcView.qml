@@ -22,7 +22,8 @@ CenteredGridView {
     // block below. The global toolbar is collapsed for PcView in main.qml (redesignScreen).
     topMargin: pcChromeHeader.height + 12
     bottomMargin: (pcHintBar.visible ? pcHintBar.height : 0) + 12
-    cellWidth: 310; cellHeight: 330;
+    // Redesign 1a: 430px rich host cards (gap 32) in a centered wrapping row.
+    cellWidth: 462; cellHeight: 182;
     objectName: qsTr("Computers")
 
     // ---- Redesign 1a chrome: per-screen header + persistent gamepad hint bar ----
@@ -71,63 +72,70 @@ CenteredGridView {
 
     // Fixed per-screen header (does not scroll with the grid). Opaque bg so scrolled cards
     // pass behind it. Height ~ headerH * 1.4 to fit the two-line title + count block.
+    // Redesign 1a header (previews/1a-computers.png): row 1 = VIBEMIS wordmark (left) + 52px icon
+    // buttons (Add / Refresh / Help / Settings) right; row 2 = "Computers" + live "N hosts · M online".
+    // The global toolbar is collapsed for the redesign screens in main.qml, so this is the only header
+    // (no double). Opaque bg so scrolled cards pass behind it.
     Item {
         id: pcChromeHeader
         z: 10
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        // Hidden for now: the global toolbar had to stay on the home screens (its collapse was the
-        // 0.25.0 gamescope black-screen cause), and it already provides the title + Add/Settings/Help
-        // buttons — so this per-screen header would double it. The bottom hint bar (redesign) stays.
-        // TODO(BL-1590 follow-up): restore the per-screen header once the toolbar collapse is made
-        // gamescope-WSI-safe (so 1a/1b get their full per-screen chrome without a double header).
-        visible: false
-        height: 0
+        visible: true
+        height: 134
 
         Rectangle { anchors.fill: parent; color: VbTokens.bgWindow }
 
-        RowLayout {
-            anchors.fill: parent
+        // ---- Row 1: wordmark + icon buttons ----
+        Item {
+            id: headerTopRow
+            anchors.top: parent.top
+            anchors.topMargin: 22
+            anchors.left: parent.left
+            anchors.right: parent.right
             anchors.leftMargin: VbTokens.screenPadX
             anchors.rightMargin: VbTokens.screenPadX
-            spacing: 20
+            height: VbTokens.iconButton
 
-            ColumnLayout {
-                spacing: 4
-                Layout.alignment: Qt.AlignVCenter
-                Text {
-                    text: qsTr("Computers")
-                    font.family: VbTokens.fontDisplay
-                    font.weight: Font.Bold
-                    font.pixelSize: VbTokens.sizeScreenTitle
-                    color: VbTokens.text
+            Row {
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 11
+                Image {
+                    anchors.verticalCenter: parent.verticalCenter
+                    source: "qrc:/res/vibemis-mark-128.png"
+                    sourceSize.width: 26; sourceSize.height: 26
+                    fillMode: Image.PreserveAspectFit
                 }
                 Text {
-                    text: pcGrid.count + " " + (pcGrid.count === 1 ? qsTr("host") : qsTr("hosts")) +
-                          " · " + pcGrid.onlineHostCount() + " " + qsTr("online")
-                    font.family: VbTokens.fontBody
-                    font.pixelSize: VbTokens.sizeLabel
-                    color: VbTokens.textDim
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "VIBEMIS"
+                    font.family: VbTokens.fontDisplay
+                    font.weight: Font.Bold
+                    font.pixelSize: VbTokens.sizeWordmark
+                    font.letterSpacing: 2
+                    color: VbTokens.text
                 }
             }
 
-            Item { Layout.fillWidth: true }
-
             Row {
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
                 spacing: 12
-                Layout.alignment: Qt.AlignVCenter
                 PcIconButton {
                     glyphSource: "qrc:/res/ic_add_to_queue_white_48px.svg"
                     onClicked: addPcDialog.open()
-                    ToolTip.text: qsTr("Add PC manually")
-                    ToolTip.delay: 1000
-                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Add PC manually"); ToolTip.delay: 1000; ToolTip.visible: hovered
+                }
+                PcIconButton {
+                    glyphSource: "qrc:/res/refresh.svg"
+                    onClicked: ComputerManager.startPolling()
+                    ToolTip.text: qsTr("Refresh"); ToolTip.delay: 1000; ToolTip.visible: hovered
                 }
                 PcIconButton {
                     visible: SystemProperties.hasBrowser
                     glyphSource: "qrc:/res/question_mark.svg"
-                    // Redesign 1f: push the in-app Help screen (same handler as the old toolbar).
                     onClicked: {
                         var comp = Qt.createComponent("qrc:/gui/VbHelpView.qml")
                         if (comp.status === Component.Ready) {
@@ -136,21 +144,40 @@ CenteredGridView {
                             Qt.openUrlExternally("https://github.com/navyas321/vibemis")
                         }
                     }
-                    ToolTip.text: qsTr("Help")
-                    ToolTip.delay: 1000
-                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Help"); ToolTip.delay: 1000; ToolTip.visible: hovered
                 }
                 PcIconButton {
                     glyphSource: "qrc:/res/settings.svg"
                     onClicked: navigateTo("qrc:/gui/SettingsView.qml", "SettingsView")
-                    ToolTip.text: qsTr("Settings")
-                    ToolTip.delay: 1000
-                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Settings"); ToolTip.delay: 1000; ToolTip.visible: hovered
                 }
             }
         }
 
-        Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: VbTokens.strokeSoft }
+        // ---- Row 2: section title + live host count ----
+        Row {
+            anchors.top: headerTopRow.bottom
+            anchors.topMargin: 14
+            anchors.left: parent.left
+            anchors.leftMargin: VbTokens.screenPadX
+            spacing: 14
+            Text {
+                id: sectionTitle
+                text: qsTr("Computers")
+                font.family: VbTokens.fontDisplay
+                font.weight: Font.Bold
+                font.pixelSize: VbTokens.sizeScreenTitle
+                color: VbTokens.text
+            }
+            Text {
+                anchors.baseline: sectionTitle.baseline
+                text: pcGrid.count + " " + (pcGrid.count === 1 ? qsTr("host") : qsTr("hosts")) +
+                      " · " + pcGrid.onlineHostCount() + " " + qsTr("online")
+                font.family: VbTokens.fontBody
+                font.pixelSize: VbTokens.sizeLabel
+                color: VbTokens.textDim
+            }
+        }
     }
 
     // Persistent gamepad hint bar, fixed at the bottom. Grid bottomMargin clears it.
@@ -287,82 +314,46 @@ CenteredGridView {
     model: computerModel
 
     delegate: NavigableItemDelegate {
-        width: 300; height: 320;
+        width: 430; height: 150;
         grid: pcGrid
 
         property alias pcContextMenu : pcContextMenuLoader.item
 
-        Image {
-            id: pcIcon
-            anchors.horizontalCenter: parent.horizontalCenter
-            source: "qrc:/res/desktop_windows-48px.svg"
-            sourceSize {
-                width: 200
-                height: 200
-            }
-        }
-
-        Image {
-            // TODO: Tooltip
-            id: stateIcon
-            anchors.horizontalCenter: pcIcon.horizontalCenter
-            anchors.verticalCenter: pcIcon.verticalCenter
-            anchors.verticalCenterOffset: !model.online ? -18 : -16
-            visible: !model.statusUnknown && (!model.online || !model.paired)
-            source: !model.online ? "qrc:/res/warning_FILL1_wght300_GRAD200_opsz24.svg" : "qrc:/res/baseline-lock-24px.svg"
-            sourceSize {
-                width: !model.online ? 75 : 70
-                height: !model.online ? 75 : 70
-            }
+        // Redesign 1a: the rich host card (previews/1a-computers.png). Model roles feed the pure-visual
+        // VbHostCard; the pairing/wake/menu wiring below is unchanged. A busy spinner overlays while the
+        // host state is still unknown (mirrors the old delegate's BusyIndicator).
+        VbHostCard {
+            id: hostCard
+            anchors.fill: parent
+            hostName: model.name
+            online: model.online
+            paired: model.paired
+            statusUnknown: model.statusUnknown
+            focused: highlighted
+            // Access line: paired hosts show their permission summary (Apollo grants "Full access" to
+            // the first client, view/input-only to later ones); unpaired hosts prompt to pair.
+            accessText: model.paired
+                        ? (model.permissionSummary && model.permissionSummary !== ""
+                           ? qsTr("Paired · ") + model.permissionSummary
+                           : qsTr("Paired"))
+                        : (model.online ? qsTr("Tap to pair") : "")
+            hostBadge: model.hostType
+            badgeAccent: model.hostType !== "SUNSHINE"
+            // Online → "4 ms · LAN" (latency + transport); offline → "Last seen …".
+            metaText: model.online
+                      ? (model.latencyText !== "" ? model.latencyText + " · " + model.transport : model.transport)
+                      : (model.lastSeenText !== "" ? qsTr("Last seen ") + model.lastSeenText : "")
         }
 
         BusyIndicator {
             id: statusUnknownSpinner
-            anchors.horizontalCenter: pcIcon.horizontalCenter
-            anchors.verticalCenter: pcIcon.verticalCenter
-            anchors.verticalCenterOffset: -15
-            width: 75
-            height: 75
-            visible: model.statusUnknown
-        }
-
-        // Redesign 1a: token focus-ring + online/offline status pill + host-type badge.
-        // Visual overlays bound to the real model roles; pairing/wake/menu wiring is untouched.
-        VbFocusRing {
-            active: highlighted
-            radius: VbTokens.radiusCard
-            anchors.fill: parent
-            anchors.margins: 4
-        }
-        VbStatusPill {
-            visible: !model.statusUnknown
-            online: model.online
-            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.right: parent.right
+            anchors.rightMargin: 20
             anchors.top: parent.top
-            anchors.topMargin: 8
-            z: 5
-        }
-        VbBadge {
-            visible: model.online && model.paired
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.top: pcIcon.bottom
-            anchors.topMargin: -4
-            z: 5
-            neutral: !model.isApolloServer
-            text: model.isApolloServer ? qsTr("APOLLO") : qsTr("SUNSHINE")
-        }
-
-        Label {
-            id: pcNameText
-            text: model.name
-
-            width: parent.width
-            anchors.top: pcIcon.bottom
-            anchors.bottom: parent.bottom
-            font.pointSize: 36
-            horizontalAlignment: Text.AlignHCenter
-            wrapMode: Text.Wrap
-            elide: Text.ElideRight
+            anchors.topMargin: 16
+            width: 28
+            height: 28
+            visible: model.statusUnknown
         }
 
         Loader {

@@ -71,6 +71,41 @@ QVariant ComputerModel::data(const QModelIndex& index, int role) const
             return tr("View only");
         }
     }
+    case HostTypeRole: {
+        // Redesign 1a host-type badge. Detection is best-effort (Vibepollo deliberately mimics
+        // Sunshine's serverinfo — no ApolloVersion, state=SUNSHINE_SERVER_FREE), so we key on the
+        // Apollo-lineage PERMISSION model: Apollo advertises ApolloVersion; Vibepollo does not but
+        // still exposes serverPermissions once paired; vanilla Sunshine has no permission model.
+        if (!computer->apolloVersion.isEmpty()) {
+            return QStringLiteral("APOLLO");
+        }
+        else if (computer->serverPermissions != 0) {
+            return QStringLiteral("VIBEPOLLO");
+        }
+        else {
+            return QStringLiteral("SUNSHINE");
+        }
+    }
+    case TransportRole: {
+        // Tailscale hands out addresses in the 100.64.0.0/10 CGNAT range (100.64.x – 100.127.x);
+        // anything else on the active path is treated as LAN.
+        QString addr = computer->activeAddress.address();
+        if (addr.startsWith(QStringLiteral("100."))) {
+            bool ok = false;
+            int second = addr.section('.', 1, 1).toInt(&ok);
+            if (ok && second >= 64 && second <= 127) {
+                return QStringLiteral("Tailscale");
+            }
+        }
+        return QStringLiteral("LAN");
+    }
+    case LatencyTextRole:
+        // TODO(BL-1598): surface a measured RTT here (e.g. "4 ms"). Empty for now so the card shows
+        // transport only rather than a fabricated number.
+        return QString();
+    case LastSeenTextRole:
+        // TODO: track a lastSeen timestamp on NvComputer to render "2 h ago" for offline hosts.
+        return QString();
     case DetailsRole: {
         QString state, pairState;
 
@@ -194,6 +229,10 @@ QHash<int, QByteArray> ComputerModel::roleNames() const
     names[ApolloVersionRole] = "apolloVersion";
     names[IsApolloServerRole] = "isApolloServer";
     names[PermissionSummaryRole] = "permissionSummary";
+    names[HostTypeRole] = "hostType";
+    names[TransportRole] = "transport";
+    names[LatencyTextRole] = "latencyText";
+    names[LastSeenTextRole] = "lastSeenText";
 
     return names;
 }

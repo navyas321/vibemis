@@ -20,7 +20,12 @@ public:
         DetailsRole,
         ApolloVersionRole,
         IsApolloServerRole,
-        PermissionSummaryRole
+        PermissionSummaryRole,
+        // Redesign 1a: rich host-card fields (host-type badge + transport + last-seen).
+        HostTypeRole,       // "VIBEPOLLO" / "APOLLO" / "SUNSHINE"
+        TransportRole,      // "LAN" / "Tailscale"
+        LatencyTextRole,    // e.g. "4 ms" (empty until RTT measurement lands — BL-1598)
+        LastSeenTextRole    // e.g. "2 h ago" (empty until a lastSeen timestamp is tracked)
     };
     // Expose the role enum to QML so ComputerModel.OnlineRole / NameRole resolve to their
     // int values (used by PcView's live host-count and the existing data(index, role) calls,

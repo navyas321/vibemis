@@ -245,21 +245,43 @@ ApplicationWindow {
 
     header: ToolBar {
         id: toolBar
-        // Redesign: the redesigned screens carry their OWN per-screen header (Back/wordmark + title
-        // + hint bar), so collapse the global toolbar on them to avoid a double header — matching the
-        // design previews, which show only per-screen chrome. Screens 1a (PcView / Computers) and 1b
-        // (AppView / app grid) own their full chrome as of test107, joining Settings (1e) + Help (1f).
-        // BL: 0.25.0 black-screen regression under Game-Mode gamescope (WSI/Vulkan swapchain). Collapsing
-        // the toolbar on the STARTUP screen (PcView) resized the window while the gamescope swapchain was
-        // being created -> "Destroying swapchain: (nil)" -> black. 0.24.x (toolbar stays on PcView/AppView)
-        // rendered fine, so the home/list screens keep the global toolbar; only the navigated-to Settings
-        // (1e) + Help (1f) collapse it (they were fine in 0.24.2).
-        readonly property bool redesignScreen: stackView.currentItem
-            && (qmltypeof(stackView.currentItem, "SettingsView") || qmltypeof(stackView.currentItem, "VbHelpView"))
+        // Redesign: EVERY redesigned launcher screen (1a Computers, 1b App grid, 1e Settings, 1f Help)
+        // carries its OWN per-screen header (wordmark/back + title + icon buttons + hint bar), matching
+        // the design handoff previews. So the global toolbar is collapsed on all of them — the previews
+        // show only per-screen chrome, never a global bar.
+        //
+        // BLACK-SCREEN SAFETY (the 0.25.0 gamescope/WSI regression): collapsing the toolbar 60->0 on the
+        // STARTUP screen resized the window during Vulkan swapchain creation -> "Destroying swapchain:
+        // (nil)" -> black. The fix here is to make `redesignScreen` DEFAULT-TRUE — collapsed when
+        // currentItem is still null (startup) AND on every redesign screen — so the toolbar is height 0
+        // from the very first frame and NEVER transitions 60->0 at startup. It expands to 60 only for the
+        // legacy fullscreen stream/quit segues, whose transitions happen after the window is stable and
+        // on a separate render path. Test agent: verify 1a renders (not black) under gamescope.
+        readonly property bool redesignScreen: !stackView.currentItem
+            || qmltypeof(stackView.currentItem, "PcView")
+            || qmltypeof(stackView.currentItem, "AppView")
+            || qmltypeof(stackView.currentItem, "SettingsView")
+            || qmltypeof(stackView.currentItem, "VbHelpView")
         height: redesignScreen ? 0 : 60
         visible: !redesignScreen
         anchors.topMargin: 5
         anchors.bottomMargin: 5
+
+        // Redesign: dark token-styled surface. This global toolbar stays visible on the home screens
+        // (1a Computers / 1b app grid) — where it can't collapse without resizing the window during
+        // gamescope swapchain creation (the 0.25.0 black-screen cause) — so it must LOOK like the
+        // redesign rather than the default Material indigo, which read as an "ugly blue" header
+        // clashing with the dark UI below it. Height is constant on the home screens (no runtime
+        // geometry change) so the black-screen fix is preserved.
+        background: Rectangle {
+            color: VbTokens.bg
+            Rectangle {
+                anchors.bottom: parent.bottom
+                width: parent.width
+                height: 1
+                color: VbTokens.strokeSoft
+            }
+        }
 
         Label {
             id: titleLabel
@@ -267,6 +289,9 @@ ApplicationWindow {
             anchors.fill: parent
             text: stackView.currentItem.objectName
             font.pointSize: 20
+            font.family: VbTokens.fontDisplay
+            font.weight: Font.Bold
+            color: VbTokens.text
             elide: Label.ElideRight
             horizontalAlignment: Qt.AlignHCenter
             verticalAlignment: Qt.AlignVCenter
@@ -296,6 +321,9 @@ ApplicationWindow {
             Label {
                 id: titleRowLabel
                 font.pointSize: titleLabel.font.pointSize
+                font.family: VbTokens.fontDisplay
+                font.weight: Font.Bold
+                color: VbTokens.text
                 elide: Label.ElideRight
                 horizontalAlignment: Qt.AlignHCenter
                 verticalAlignment: Qt.AlignVCenter

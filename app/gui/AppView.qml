@@ -35,12 +35,11 @@ CenteredGridView {
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        // Hidden for now (see PcView): the global toolbar stays on the home screens (its collapse was
-        // the 0.25.0 gamescope black-screen cause) and provides Back + title, so this per-screen header
-        // would double it. The bottom hint bar stays. TODO(BL-1590 follow-up): restore once the toolbar
-        // collapse is gamescope-WSI-safe.
-        visible: false
-        height: 0
+        // Redesign 1b header: Back + host name + status line, Settings on the right. The global
+        // toolbar is now collapsed on all redesign screens (main.qml redesignScreen default-true), so
+        // this per-screen header is the only one — no double header.
+        visible: true
+        height: 96
 
         Rectangle { anchors.fill: parent; color: VbTokens.bgWindow }
 
