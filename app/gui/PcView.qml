@@ -47,29 +47,6 @@ CenteredGridView {
         function onModelReset() { pcGrid.onlineRev++ }
     }
 
-    // Token-styled icon button used in the header (Add / Help / Settings). Reuses the SVGs
-    // and the exact onClicked handlers of the old global toolbar so behaviour is unchanged.
-    component PcIconButton: Button {
-        id: pib
-        property string glyphSource: ""
-        implicitWidth: VbTokens.iconButton
-        implicitHeight: VbTokens.iconButton
-        focusPolicy: Qt.TabFocus
-        padding: 0
-        background: Rectangle {
-            radius: VbTokens.radiusIconButton
-            color: pib.activeFocus ? VbTokens.focusedFill : (pib.hovered ? VbTokens.bgElev2 : VbTokens.bgElev)
-            border.width: 1
-            border.color: pib.activeFocus ? VbTokens.accent : VbTokens.stroke
-        }
-        contentItem: Image {
-            source: pib.glyphSource
-            fillMode: Image.PreserveAspectFit
-            sourceSize.width: 22
-            sourceSize.height: 22
-        }
-    }
-
     // Redesign 1a body section title: "Computers · N hosts · M online". The VIBEMIS wordmark +
     // Add/Refresh/Help/Settings buttons live in the ALWAYS-PRESENT global toolbar (main.qml) — kept
     // present at 84px so it renders under gamescope (a collapsed header black-screens on the WSI path).
@@ -104,7 +81,7 @@ CenteredGridView {
                 text: pcGrid.count + " " + (pcGrid.count === 1 ? qsTr("host") : qsTr("hosts")) +
                       " · " + pcGrid.onlineHostCount() + " " + qsTr("online")
                 font.family: VbTokens.fontBody
-                font.pixelSize: VbTokens.sizeLabel
+                font.pixelSize: 18
                 color: VbTokens.textDim
             }
         }
@@ -449,6 +426,86 @@ CenteredGridView {
             deletePcDialog.pcIndex = index
             deletePcDialog.pcName = model.name
             deletePcDialog.open()
+        }
+    }
+
+    // Redesign 1a: "Add a computer" ghost card (dc.html #1a, 3rd card slot / previews/1a-computers.png).
+    // NOTE on approach: GridView.footer was tried first but doesn't fit here — Qt always positions the
+    // footer at lastPosition() (the last row's y plus one full row height), i.e. it starts a brand-new
+    // row even when the last row still has empty cell slots, so it can never sit inline as "the next
+    // card" the way the handoff shows. Instead this Item is parented straight into the grid's own
+    // contentItem and manually placed at the "next" cell slot (index === pcGrid.count), using the same
+    // col/row × cellWidth/cellHeight math GridView uses internally for its delegates. That makes it
+    // render as a real trailing grid cell — inline right after the last host card, top-left aligned
+    // within its 462×274 cell exactly like the delegate (430×242, same 32px gap) — and it scrolls with
+    // the grid content automatically since it lives in contentItem's coordinate space.
+    Item {
+        id: addPcCardSlot
+        parent: pcGrid.contentItem
+        property int columns: Math.max(1, pcGrid.itemsPerRow)
+        x: (pcGrid.count % columns) * pcGrid.cellWidth
+        y: Math.floor(pcGrid.count / columns) * pcGrid.cellHeight
+        width: 430
+        height: 242
+        z: 2
+
+        Canvas {
+            id: addPcDashedBorder
+            anchors.fill: parent
+            antialiasing: true
+            onPaint: {
+                var ctx = getContext("2d")
+                ctx.reset()
+                ctx.strokeStyle = Qt.rgba(1, 1, 1, 0.14)
+                ctx.lineWidth = 2
+                ctx.setLineDash([6, 6])
+                var r = 20, w = width, h = height
+                ctx.beginPath()
+                ctx.moveTo(r, 1)
+                ctx.arcTo(w - 1, 1, w - 1, h - 1, r)
+                ctx.arcTo(w - 1, h - 1, 1, h - 1, r)
+                ctx.arcTo(1, h - 1, 1, 1, r)
+                ctx.arcTo(1, 1, w - 1, 1, r)
+                ctx.closePath()
+                ctx.stroke()
+            }
+        }
+
+        ColumnLayout {
+            anchors.centerIn: parent
+            spacing: 16
+
+            Rectangle {
+                Layout.alignment: Qt.AlignHCenter
+                width: 64
+                height: 64
+                radius: 32
+                color: VbTokens.bgElev
+                border.width: 1
+                border.color: VbTokens.stroke
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "+"
+                    font.family: VbTokens.fontBody
+                    font.pixelSize: 32
+                    color: VbTokens.textDim
+                }
+            }
+
+            Text {
+                Layout.alignment: Qt.AlignHCenter
+                text: qsTr("Add a computer")
+                font.family: VbTokens.fontBody
+                font.pixelSize: 18
+                color: VbTokens.textDim
+            }
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            cursorShape: Qt.PointingHandCursor
+            onClicked: addPcDialog.open()
         }
     }
 

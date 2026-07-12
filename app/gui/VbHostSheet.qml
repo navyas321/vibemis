@@ -109,22 +109,17 @@ Popup {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 210
 
-                    // Monitor glyph box, top-left.
+                    // Monitor glyph, top-left — bare outline (no fill/box), matching the 1a
+                    // card's monitor rect (VbHostCard.qml): transparent, 5px border, radius 9.
                     Rectangle {
                         id: monoBox
                         x: 44
                         y: 44
-                        width: 56; height: 56
-                        radius: VbTokens.radiusControl
-                        color: VbTokens.bgElev2
-                        border.width: 1
-                        border.color: VbTokens.stroke
-                        VbSheetIcon {
-                            anchors.centerIn: parent
-                            width: 30; height: 30
-                            kind: "monitor"
-                            color: sheet.online ? VbTokens.text : VbTokens.statusOffline
-                        }
+                        width: 70; height: 50
+                        radius: 9
+                        color: "transparent"
+                        border.width: 5
+                        border.color: sheet.online ? VbTokens.text : "#5A626C"
                     }
 
                     // Online/offline pill, top-right — vertically centered against the icon box

@@ -317,9 +317,10 @@ ApplicationWindow {
 
         Label {
             id: titleLabel
-            // Hidden on Computers (the wordmark stands in). On the other redesign screens it shows the
-            // screen name; the streaming segues keep their default objectName title.
-            visible: !toolBar.onPcView && toolBar.width > 700
+            // Hidden on Computers (the wordmark stands in) and on the App grid (which shows a
+            // left-aligned host + status block instead). On Settings/Help it shows the screen name;
+            // the streaming segues keep their default objectName title.
+            visible: !toolBar.onPcView && !toolBar.onAppView && toolBar.width > 700
             anchors.fill: parent
             text: toolBar.onSettings ? qsTr("Settings")
                 : toolBar.onHelp ? qsTr("Help")
@@ -352,6 +353,49 @@ ApplicationWindow {
                 }
             }
 
+            // App grid (1b) header: host name + online-dot + "Vibepollo · LAN" (host-type · transport),
+            // left-aligned — the design's "‹ Navid-PC / ● Vibepollo · 4 ms". Reads the current AppView's
+            // hostOnline/hostType/hostTransport properties (passed in by PcView when the view is pushed).
+            ColumnLayout {
+                visible: toolBar.onAppView
+                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignVCenter
+                spacing: 2
+                Text {
+                    text: (toolBar.onAppView && stackView.currentItem) ? stackView.currentItem.objectName : ""
+                    font.family: VbTokens.fontDisplay
+                    font.weight: Font.Bold
+                    font.pixelSize: 20
+                    color: VbTokens.text
+                    elide: Text.ElideRight
+                    Layout.fillWidth: true
+                }
+                RowLayout {
+                    spacing: 8
+                    Rectangle {
+                        Layout.alignment: Qt.AlignVCenter
+                        width: 9; height: 9; radius: 4.5
+                        color: (toolBar.onAppView && stackView.currentItem && stackView.currentItem.hostOnline)
+                               ? VbTokens.statusOnline : VbTokens.statusOffline
+                    }
+                    Text {
+                        Layout.alignment: Qt.AlignVCenter
+                        text: {
+                            var it = toolBar.onAppView ? stackView.currentItem : null
+                            if (!it) return ""
+                            var badge = it.hostType === "VIBEPOLLO" ? qsTr("Vibepollo")
+                                      : it.hostType === "APOLLO" ? qsTr("Apollo")
+                                      : it.hostType === "SUNSHINE" ? qsTr("Sunshine") : ""
+                            var t = it.hostTransport || ""
+                            return badge + (badge && t ? " · " : "") + t
+                        }
+                        font.family: VbTokens.fontBody
+                        font.pixelSize: 14
+                        color: VbTokens.textDim
+                    }
+                }
+            }
+
             // This label will appear when the window gets too small and
             // we need to ensure the toolbar controls don't collide
             Label {
@@ -369,7 +413,7 @@ ApplicationWindow {
                 // RowLayout. To "hide" it, we set the text to empty. On Computers the wordmark stands in
                 // (never a title); otherwise it mirrors titleLabel's text only when titleLabel is hidden
                 // by a narrow window.
-                text: toolBar.onPcView ? ""
+                text: (toolBar.onPcView || toolBar.onAppView) ? ""
                     : (titleLabel.visible ? ""
                        : toolBar.onSettings ? qsTr("Settings")
                        : toolBar.onHelp ? qsTr("Help")
@@ -381,12 +425,11 @@ ApplicationWindow {
             Rectangle {
                 id: versionLabel
                 visible: qmltypeof(stackView.currentItem, "SettingsView")
-                implicitWidth: versionChipText.implicitWidth + 24
-                implicitHeight: 30
-                radius: VbTokens.radiusPill
-                color: VbTokens.bgElev2
-                border.width: 1
-                border.color: VbTokens.stroke
+                implicitWidth: versionChipText.implicitWidth + 28
+                implicitHeight: versionChipText.implicitHeight + 12
+                // Handoff 1e: accent-tinted pill (12% accent bg, radius 8, no border).
+                radius: 8
+                color: Qt.rgba(VbTokens.accent.r, VbTokens.accent.g, VbTokens.accent.b, 0.12)
                 Layout.alignment: Qt.AlignVCenter
                 Text {
                     id: versionChipText

@@ -37,7 +37,6 @@ Item {
                 Button {
                     id: backBtn
                     implicitWidth: VbTokens.iconButton; implicitHeight: VbTokens.iconButton
-                    focus: true
                     background: Rectangle {
                         radius: VbTokens.radiusIconButton
                         color: backBtn.activeFocus ? VbTokens.focusedFill : VbTokens.bgElev
@@ -157,6 +156,7 @@ Item {
                 VbCard {
                     Layout.fillWidth: true
                     Layout.preferredHeight: gpCol.implicitHeight + 56
+                    radius: 20
                     ColumnLayout {
                         id: gpCol
                         anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
@@ -196,6 +196,7 @@ Item {
                 VbCard {
                     Layout.fillWidth: true
                     Layout.preferredHeight: kbCol.implicitHeight + 56
+                    radius: 20
                     ColumnLayout {
                         id: kbCol
                         anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
@@ -236,6 +237,7 @@ Item {
                 VbCard {
                     Layout.fillWidth: true
                     Layout.preferredHeight: rpCol.implicitHeight + 56
+                    radius: 20
                     ColumnLayout {
                         id: rpCol
                         anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top

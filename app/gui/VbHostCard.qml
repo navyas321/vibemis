@@ -135,7 +135,7 @@ Item {
                         text: card.hostBadge
                         font.family: VbTokens.fontBody
                         font.pixelSize: 13
-                        font.weight: Font.Bold
+                        font.weight: Font.ExtraBold
                         font.letterSpacing: 1.2
                         color: card.badgeAccent ? VbTokens.accent : VbTokens.textDim
                     }
