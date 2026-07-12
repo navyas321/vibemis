@@ -295,16 +295,27 @@ ApplicationWindow {
                 text: !titleLabel.visible ? stackView.currentItem.objectName : ""
             }
 
-            Label {
+            // Redesign 1e: the Settings version indicator as a token-styled chip
+            // (matches the prototype's "Version 0.6.7" chip in the Settings header).
+            Rectangle {
                 id: versionLabel
                 visible: qmltypeof(stackView.currentItem, "SettingsView")
-                text: qsTr("Version %1").arg(SystemProperties.versionString)
-                // P3.17: first use of the Theme design-token singleton (proves it resolves at
-                // runtime). The version text on the Settings screen now uses the Vibemis accent.
-                font.pointSize: Theme.fontSection
-                color: Theme.accent
-                horizontalAlignment: Qt.AlignRight
-                verticalAlignment: Qt.AlignVCenter
+                implicitWidth: versionChipText.implicitWidth + 24
+                implicitHeight: 30
+                radius: VbTokens.radiusPill
+                color: VbTokens.bgElev2
+                border.width: 1
+                border.color: VbTokens.stroke
+                anchors.verticalCenter: parent ? parent.verticalCenter : undefined
+                Text {
+                    id: versionChipText
+                    anchors.centerIn: parent
+                    text: qsTr("Version %1").arg(SystemProperties.versionString)
+                    font.family: VbTokens.fontBody
+                    font.pixelSize: VbTokens.sizeLabel
+                    font.bold: true
+                    color: VbTokens.accent
+                }
             }
 
             NavigableToolButton {
