@@ -1,35 +1,30 @@
 name: Development Build
 
 # This workflow handles development builds with intelligent build skipping:
-# - Feature branches: Build artifacts, no releases (testing only)
-# - vibemis-main / develop: Build + publish beta releases when code changes are merged
-# - release/** / main / master: ALWAYS build + create production releases
+# - test** branches: build a 🔬 alpha pre-release (for the test agent)
+# - vibemis-main: publish a 🧪 beta ONLY when a PR is MERGED in (HEAD is a merge commit) and the
+#   merge touched non-docs files. Direct/regular pushes to vibemis-main (docs, CI tweaks, hotfix
+#   commits) do NOT build a beta — this is what keeps the Releases page quiet.
+# - release/** / main / master / workflow_dispatch: ALWAYS build + create production releases
 #
-# Smart merge detection prevents redundant builds by:
-# - release/main/master: Always builds (never skip releases!)
-# - vibemis-main: Skips if HEAD only touches .md files (e.g. README-only docs commits)
-# - Detecting merge commits vs regular commits
-# - For merges: Analyzing actual changes being merged (not just the merge commit)
-# - For regular commits: Comparing against previous commit
-# - Skipping builds when only documentation/config files changed (.md, .txt, .yml, .yaml, .github/)
-# - Respecting [skip ci] or [ci skip] in commit messages (except on release/main/master)
-#
-# This ensures vibemis-main BUILDS when code lands but does NOT rebuild for README-only commits.
+# Beta policy = "beta tracks PR merges into vibemis-main, nothing else." A superseded beta/alpha is
+# auto-pruned at the end (see "Prune superseded releases"), so at most one beta is ever live.
 
 on:
   push:
     branches:
-      - develop
-      - dev
+      # Keep this list TIGHT to avoid noisy builds/releases. Only:
+      #  - vibemis-main : integration branch → 🧪 beta (latest)
+      #  - test**       : test cycle branches → 🔬 alpha (pre-release, for the test agent)
+      #  - release/**   : explicit stable ship → ✅ release
+      #  - main/master  : stable
+      # fix/**, feat/**, hotfix/**, chore/**, develop, etc. intentionally do NOT build
+      # (they produced the old noisy alpha/dev/hotfix prereleases).
       - main
       - master
-      - 'feature/**'
-      - 'feat/**'
-      - 'fix/**'
-      - 'chore/**'
+      - vibemis-main
       - 'test**'
-      - 'vibemis-**'
-      - 'release/**'   # production release branch — builds stable AppImage
+      - 'release/**'
   workflow_dispatch:
     inputs:
       release_type:
@@ -60,6 +55,11 @@ jobs:
       
       - name: Check for meaningful changes
         id: check-changes
+        env:
+          # Pass the commit message via env, NOT inline ${{ }} interpolation. A commit body with
+          # backticks/parens/quotes injected directly into the shell caused a parse error here and
+          # failed the whole job (e.g. test62). Reading it from an env var is injection-safe.
+          HEAD_COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
           # Always build on true release branches and workflow_dispatch.
           if [[ "${{ github.ref_name }}" == "main" || \
@@ -71,33 +71,36 @@ jobs:
             exit 0
           fi
 
-          # vibemis-main (beta integration branch): skip md-only commits to avoid
-          # redundant AppImage builds after README/docs-only pushes.
+          # vibemis-main (beta integration branch): a 🧪 beta is published ONLY when a PR is
+          # merged in — i.e. the pushed HEAD is a MERGE COMMIT (>1 parent). Direct/regular pushes
+          # to vibemis-main (docs, CI tweaks, hotfix commits) do NOT build a beta. This is what
+          # keeps the Releases page quiet — betas track PR merges, nothing else.
           if [[ "${{ github.ref_name }}" == "vibemis-main" || "${{ github.ref_name }}" == "develop" ]]; then
             PARENT_COUNT=$(git rev-list --parents -n 1 HEAD | wc -w)
             PARENT_COUNT=$((PARENT_COUNT - 1))
-            if [ "$PARENT_COUNT" -gt 1 ]; then
-              FIRST_PARENT=$(git rev-parse HEAD^1)
-              CODE_FILES=$(git diff --name-only $FIRST_PARENT HEAD | grep -v -E "(\.md$|\.txt$|\.yml$|\.yaml$)" | wc -l)
-              WORKFLOW_FILES=$(git diff --name-only $FIRST_PARENT HEAD | grep -E "^\.github/workflows/.*\.(yml|yaml)$" | wc -l)
-            else
-              CODE_FILES=$(git diff --name-only HEAD~1 HEAD | grep -v -E "(\.md$|\.txt$|\.yml$|\.yaml$)" | wc -l)
-              WORKFLOW_FILES=$(git diff --name-only HEAD~1 HEAD | grep -E "^\.github/workflows/.*\.(yml|yaml)$" | wc -l)
+            if [ "$PARENT_COUNT" -le 1 ]; then
+              echo "should_build=false" >> $GITHUB_OUTPUT
+              echo "Skipping beta — HEAD is a direct (non-merge) push to vibemis-main, not a PR merge"
+              exit 0
             fi
+            # Merge commit = a PR landed. Still skip if the merge only touched docs/config.
+            FIRST_PARENT=$(git rev-parse HEAD^1)
+            CODE_FILES=$(git diff --name-only $FIRST_PARENT HEAD | grep -v -E "(\.md$|\.txt$|\.yml$|\.yaml$)" | wc -l)
+            WORKFLOW_FILES=$(git diff --name-only $FIRST_PARENT HEAD | grep -E "^\.github/workflows/.*\.(yml|yaml)$" | wc -l)
             TOTAL=$((CODE_FILES + WORKFLOW_FILES))
             if [ "$TOTAL" -eq 0 ]; then
               echo "should_build=false" >> $GITHUB_OUTPUT
-              echo "Skipping beta build — docs-only commit on vibemis-main"
+              echo "Skipping beta — merged PR touched only docs/config"
               exit 0
             else
               echo "should_build=true" >> $GITHUB_OUTPUT
-              echo "Building on vibemis-main — $TOTAL meaningful file(s) changed"
+              echo "Building beta — PR merge into vibemis-main with $TOTAL meaningful file(s)"
               exit 0
             fi
           fi
 
           # Skip builds if commit message contains [skip ci] or [ci skip]
-          if echo "${{ github.event.head_commit.message }}" | grep -E "\[(skip ci|ci skip)\]" > /dev/null; then
+          if echo "$HEAD_COMMIT_MSG" | grep -E "\[(skip ci|ci skip)\]" > /dev/null; then
             echo "should_build=false" >> $GITHUB_OUTPUT
             echo "Build skipped due to [skip ci] in commit message"
             exit 0
@@ -198,9 +201,11 @@ jobs:
             IS_PRERELEASE="false"
             RELEASE_TIER="beta"
 
-          elif [[ "$BRANCH_NAME" =~ ^(fix|hotfix|feat|feature)/ ]]; then
-            # 🔬 Alpha — work-in-progress fix/feature branch, test before merging
-            VERSION="$BASE_VERSION-alpha.$TIMESTAMP.$BUILD_NUMBER+$COMMIT_SHORT"
+          elif [[ "$BRANCH_NAME" =~ ^test || "$BRANCH_NAME" =~ ^(fix|hotfix|feat|feature)/ ]]; then
+            # 🔬 Alpha — test cycle (test**) or fix/feature branch. Pre-release (NOT latest) so
+            # the Legion Go test agent can download the AppImage straight from GitHub Releases.
+            # Branch name is in the version so each test PR gets its own findable alpha.
+            VERSION="$BASE_VERSION-alpha.$BRANCH_SANITIZED.$TIMESTAMP.$BUILD_NUMBER+$COMMIT_SHORT"
             RELEASE_TIER="alpha"
 
           else
@@ -642,13 +647,9 @@ jobs:
     if: >-
       needs.setup-version.outputs.should_build == 'true' && (
         github.ref == 'refs/heads/vibemis-main' ||
-        github.ref == 'refs/heads/develop' ||
         github.ref == 'refs/heads/main' ||
         github.ref == 'refs/heads/master' ||
-        startsWith(github.ref, 'refs/heads/fix/') ||
-        startsWith(github.ref, 'refs/heads/hotfix/') ||
-        startsWith(github.ref, 'refs/heads/feat/') ||
-        startsWith(github.ref, 'refs/heads/feature/') ||
+        startsWith(github.ref, 'refs/heads/test') ||
         startsWith(github.ref, 'refs/heads/release/') ||
         (github.event_name == 'workflow_dispatch' && github.event.inputs.release_type == 'stable')
       )
@@ -851,3 +852,38 @@ jobs:
         draft: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    # ── Keep the Releases page tidy ─────────────────────────────────────────
+    # Without this, every vibemis-main push leaves its 🧪 beta behind forever and
+    # every test-branch push leaves another 🔬 alpha — the Releases list balloons.
+    # Policy:
+    #   • beta    → keep ONLY the newest beta (the one we just published); delete the rest.
+    #   • alpha   → keep ONLY the newest alpha FOR THIS test branch; other branches untouched.
+    #   • release → never pruned (production history is permanent).
+    - name: Prune superseded releases
+      if: needs.setup-version.outputs.release_tier == 'beta' || needs.setup-version.outputs.release_tier == 'alpha'
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        TIER: ${{ needs.setup-version.outputs.release_tier }}
+        KEEP_TAG: ${{ needs.setup-version.outputs.version }}
+        BRANCH: ${{ github.ref_name }}
+      run: |
+        set -u
+        if [ "$TIER" = "beta" ]; then
+          PATTERN='-beta\.'
+          echo "Pruning all betas except $KEEP_TAG"
+        else
+          SANITIZED=$(echo "$BRANCH" | sed 's/[^a-zA-Z0-9._-]/-/g')
+          PATTERN="-alpha\.${SANITIZED}\."
+          echo "Pruning alphas for branch '$SANITIZED' except $KEEP_TAG"
+        fi
+        # gh release list is newest-first; we keep KEEP_TAG and delete the rest that match.
+        gh release list --limit 200 --json tagName --jq '.[].tagName' \
+          | grep -E -- "$PATTERN" \
+          | grep -v -x -F "$KEEP_TAG" \
+          | while read -r tag; do
+              [ -z "$tag" ] && continue
+              echo "  deleting superseded release: $tag"
+              gh release delete "$tag" --yes --cleanup-tag || echo "    (delete failed for $tag, continuing)"
+            done
+        echo "Prune complete."

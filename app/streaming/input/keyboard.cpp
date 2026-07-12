@@ -1,4 +1,5 @@
 #include "streaming/session.h"
+#include "backend/quickmenumanager.h"
 
 #include <Limelight.h>
 #include "SDL_compat.h"
@@ -179,6 +180,36 @@ void SdlInputHandler::handleKeyEvent(SDL_KeyboardEvent* event)
         // Ignore repeat key down events
         SDL_assert(event->state == SDL_PRESSED);
         return;
+    }
+
+    // When the Quick Menu is open, route unmodified navigation keys into it instead of
+    // sending them to the host. The toggle combo (Ctrl+Alt+Shift+\) still reaches the
+    // special-combo handler below because we only intercept keys with no combo modifiers.
+    {
+        Session* sess = Session::get();
+        bool menuOpen = sess && sess->getQuickMenuManager() && sess->getQuickMenuManager()->isVisible();
+        bool noComboMods = !(event->keysym.mod & (KMOD_CTRL | KMOD_ALT | KMOD_GUI));
+        if (menuOpen && noComboMods) {
+            bool navKey = false;
+            int qtKey = 0;
+            switch (event->keysym.sym) {
+            case SDLK_UP:       qtKey = Qt::Key_Up;     navKey = true; break;
+            case SDLK_DOWN:     qtKey = Qt::Key_Down;   navKey = true; break;
+            case SDLK_LEFT:     qtKey = Qt::Key_Left;   navKey = true; break;
+            case SDLK_RIGHT:    qtKey = Qt::Key_Right;  navKey = true; break;
+            case SDLK_RETURN:   qtKey = Qt::Key_Return; navKey = true; break;
+            case SDLK_KP_ENTER: qtKey = Qt::Key_Enter;  navKey = true; break;
+            case SDLK_ESCAPE:   qtKey = Qt::Key_Escape; navKey = true; break;
+            default: break;
+            }
+            if (navKey) {
+                if (event->state == SDL_PRESSED) {
+                    QMetaObject::invokeMethod(sess->getQuickMenuManager(), "injectKey",
+                                              Qt::QueuedConnection, Q_ARG(int, qtKey));
+                }
+                return; // consume both press and release so the host never sees them
+            }
+        }
     }
 
     // Check for our special key combos

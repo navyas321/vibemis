@@ -235,16 +235,23 @@ void EGLRenderer::renderOverlay(Overlay::OverlayType type, int viewportWidth, in
             overlayRect.y = 0;
         }
         else if (type == Overlay::OverlayDebug) {
-            // Top left
-            overlayRect.x = 0;
-            overlayRect.y = viewportHeight - newSurface->h;
+            // Vibemis: user-configurable corner. NB: OpenGL origin is lower-left,
+            // so "top" is the high-Y edge here.
+            int anchor = Session::get()->getOverlayManager().getDebugOverlayAnchor();
+            bool right = (anchor == 1 || anchor == 3);  // TR or BR
+            bool bottom = (anchor == 2 || anchor == 3); // BL or BR
+            overlayRect.x = right ? (viewportWidth - newSurface->w) : 0;
+            overlayRect.y = bottom ? 0 : (viewportHeight - newSurface->h);
         }
-        else if (type == Overlay::OverlayServerCommands) {
+        else if (type == Overlay::OverlayServerCommands || type == Overlay::OverlayQuickMenu) {
             // Center
             overlayRect.x = (viewportWidth - newSurface->w) / 2;
             overlayRect.y = (viewportHeight - newSurface->h) / 2;
         } else {
-            SDL_assert(false);
+            // Unknown overlay type — center it rather than asserting, so new overlay
+            // types degrade gracefully instead of crashing in debug builds.
+            overlayRect.x = (viewportWidth - newSurface->w) / 2;
+            overlayRect.y = (viewportHeight - newSurface->h) / 2;
         }
 
         overlayRect.w = newSurface->w;
