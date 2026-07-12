@@ -51,6 +51,19 @@ VbTokens singleton + 5 Vb* components are correctly wired (registered `main.cpp`
 
 ---
 
+## 3b. Full new-screen sweep (0.18.0-beta, headless)
+
+Swept the shipped redesign screens on the live `0.18.0-beta` build (Steam target) via gamescope emulation. Evidence PNGs in this dir.
+
+| Screen | Cycle | Result | Notes |
+|---|---|---|---|
+| Computers / home | test92 (1a) | ✅ PASS | `computers-1a-test92.png` — "● ONLINE" status pill + teal "APOLLO" host-type badge render correctly on the host tile |
+| Add-PC dialog | test90 (1c) | ✅ PASS | `addpc-1c-test90.png` — accent-focus field, Tailscale remote-play hint (teal link), OK/Cancel. Minor nit: placeholder text sits a few px high in the field |
+| App grid | test91 (1b) | ✅ PASS | `appgrid-1b-test91.png` — DESKTOP/STEAM/VIRTUAL DESKTOP tiles; **RESUME badge works** (green pill + play/stop overlay on the live Virtual Desktop session). Captured via `getAppList` only on the paired real host — no stream started |
+| Help | test89 (1f) | ❌ ITERATE | `help-...png` — shortcut cards still collapse (§2); 4th consistent repro on 0.18.0, fix not yet shipped |
+
+The three new full screens (1a/1b/1c) render cleanly — the collapse defect is **specific to VbHelpView's two `fillHeight` cards**, not a general redesign/foundation problem. Font fallback (§3) applies to all of them but is legible.
+
 ## 4. Recommendation
 
 - **test89: ITERATE** — fix the two `fillHeight` shortcut cards (§2). One-line-per-card change; visible, reproducible, on the shipped 0.15.0 build.
