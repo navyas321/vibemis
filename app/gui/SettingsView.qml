@@ -10,75 +10,36 @@ import SystemProperties 1.0
 import ClipboardManager 1.0
 import ServerCommandManager 1.0
 
-Flickable {
+import Vibemis.Redesign 1.0
+
+Item {
     id: settingsPage
     objectName: qsTr("Settings")
 
+    // Redesign 1e (sidebar categories). The root was a Flickable; it is now an Item hosting a
+    // fixed header + a 340px category sidebar + a right-hand Flickable panel (settingsFlick)
+    // that shows one category's GroupBoxes at a time, gated by `category`. Every GroupBox and
+    // its StreamingPreferences/ComputerManager/SystemProperties bindings are unchanged — only
+    // the outer container, header, sidebar and per-category visibility were added.
+    property int category: 0
+
     signal languageChanged()
 
-    boundsBehavior: Flickable.OvershootBounds
+    // Full-bleed window background.
+    Rectangle { anchors.fill: parent; color: VbTokens.bgWindow }
 
-    contentWidth: settingsColumn1.width > settingsColumn2.width ? settingsColumn1.width : settingsColumn2.width
-    contentHeight: (settingsColumn1.height > settingsColumn2.height ? settingsColumn1.height : settingsColumn2.height) + 50
-
-    ScrollBar.vertical: ScrollBar {
-        anchors {
-            left: parent.right
-            leftMargin: -10
-        }
-    }
-
-    function isChildOfFlickable(item) {
-        while (item) {
-            if (item.parent === contentItem) {
-                return true
-            }
-
-            item = item.parent
-        }
-        return false
-    }
-
-    NumberAnimation on contentY {
-        id: autoScrollAnimation
-        duration: 100
-    }
-
-    Window.onActiveFocusItemChanged: {
-        var item = Window.activeFocusItem
-        if (item) {
-            // Ignore non-child elements like the toolbar buttons
-            if (!isChildOfFlickable(item)) {
-                return
-            }
-
-            // Map the focus item's position into our content item's coordinate space
-            var pos = item.mapToItem(contentItem, 0, 0)
-
-            // Ensure some extra space is visible around the element we're scrolling to
-            var scrollMargin = height > 100 ? 50 : 0
-
-            if (pos.y - scrollMargin < contentY) {
-                autoScrollAnimation.from = contentY
-                autoScrollAnimation.to = Math.max(pos.y - scrollMargin, 0)
-                autoScrollAnimation.start()
-            }
-            else if (pos.y + item.height + scrollMargin > contentY + height) {
-                autoScrollAnimation.from = contentY
-                autoScrollAnimation.to = Math.min(pos.y + item.height + scrollMargin - height, contentHeight - height)
-                autoScrollAnimation.start()
-            }
-        }
-    }
-
+    // StackView attached handlers must stay on the pushed page (the Item root).
     StackView.onActivated: {
         // This enables Tab and BackTab based navigation rather than arrow keys.
         // It is required to shift focus between controls on the settings page.
         SdlGamepadKeyNavigation.setUiNavMode(true)
 
-        // Highlight the first item if a gamepad is connected
-        if (SdlGamepadKeyNavigation.getConnectedGamepads() > 0) {
-            resolutionComboBox.forceActiveFocus(Qt.TabFocus)
+        // Highlight the first sidebar category row if a gamepad is connected.
+        if (SdlGamepadKeyNavigation.getConnectedGamepads() > 0 && sidebarRepeater.count > 0) {
+            var firstRow = sidebarRepeater.itemAt(0)
+            if (firstRow) {
+                firstRow.forceActiveFocus(Qt.TabFocus)
+            }
         }
     }
 
@@ -95,14 +56,259 @@ Flickable {
         StreamingPreferences.save()
     }
 
+    // ---- Header: Back + "Settings" title + version chip (redesign 1e) ----
+    Item {
+        id: header
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: VbTokens.headerH
+        z: 2
+
+        RowLayout {
+            anchors.fill: parent
+            anchors.leftMargin: VbTokens.screenPadX
+            anchors.rightMargin: VbTokens.screenPadX
+            spacing: 20
+
+            Button {
+                id: backBtn
+                implicitWidth: VbTokens.iconButton
+                implicitHeight: VbTokens.iconButton
+                background: Rectangle {
+                    radius: VbTokens.radiusIconButton
+                    color: backBtn.activeFocus ? VbTokens.focusedFill : VbTokens.bgElev
+                    border.width: 1
+                    border.color: backBtn.activeFocus ? VbTokens.accent : VbTokens.stroke
+                }
+                contentItem: Text {
+                    text: "‹"
+                    font.family: VbTokens.fontDisplay
+                    font.pixelSize: 30
+                    color: VbTokens.text
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+                // Use goBack() rather than a bare stackView.pop() so the retranslate
+                // clearOnBack path still pops all AppView pages — identical to gamepad Ⓑ / Esc.
+                onClicked: window.goBack()
+            }
+
+            Text {
+                text: qsTr("Settings")
+                font.family: VbTokens.fontDisplay
+                font.weight: Font.Bold
+                font.pixelSize: VbTokens.sizeScreenTitle
+                color: VbTokens.text
+                Layout.fillWidth: true
+            }
+
+            // Version chip (e.g. "Version 0.24.0").
+            Rectangle {
+                implicitHeight: 30
+                implicitWidth: versionChipText.implicitWidth + 24
+                radius: VbTokens.radiusPill
+                color: VbTokens.bgElev
+                border.width: 1
+                border.color: VbTokens.stroke
+                Text {
+                    id: versionChipText
+                    anchors.centerIn: parent
+                    text: qsTr("Version %1").arg(SystemProperties.versionString)
+                    font.family: VbTokens.fontBody
+                    font.pixelSize: VbTokens.sizeLabel
+                    color: VbTokens.textDim
+                }
+            }
+        }
+
+        // Header hairline.
+        Rectangle {
+            anchors.bottom: parent.bottom
+            width: parent.width
+            height: 1
+            color: VbTokens.strokeSoft
+        }
+    }
+
+    // ---- Sidebar: 5 focusable category rows (redesign 1e) ----
+    Rectangle {
+        id: sidebar
+        anchors.top: header.bottom
+        anchors.left: parent.left
+        anchors.bottom: hintBar.top
+        width: 340
+        color: VbTokens.bgWindow
+        z: 2
+
+        // Vertical hairline between the sidebar and the panel.
+        Rectangle {
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            width: 1
+            color: VbTokens.strokeSoft
+        }
+
+        Column {
+            id: sidebarColumn
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.topMargin: 16
+            anchors.leftMargin: 16
+            anchors.rightMargin: 16
+            spacing: 8
+
+            Repeater {
+                id: sidebarRepeater
+                model: [
+                    { glyph: "▣", label: qsTr("Video") },
+                    { glyph: "♪", label: qsTr("Audio") },
+                    { glyph: "◉", label: qsTr("Input & gamepad") },
+                    { glyph: "◆", label: qsTr("Streaming (Apollo)") },
+                    { glyph: "▤", label: qsTr("Advanced") }
+                ]
+                delegate: Button {
+                    id: catButton
+                    width: sidebarColumn.width
+                    height: 58
+                    padding: 0
+                    leftPadding: 16
+                    rightPadding: 16
+                    readonly property bool selected: settingsPage.category === index
+
+                    background: Item {
+                        // Focus glow (accent @ 22%), just outside the row.
+                        Rectangle {
+                            anchors.fill: parent
+                            anchors.margins: -VbTokens.focusGlow
+                            radius: VbTokens.radiusControl + VbTokens.focusGlow
+                            visible: catButton.activeFocus
+                            color: "transparent"
+                            border.width: VbTokens.focusGlow
+                            border.color: VbTokens.focusGlowColor
+                            antialiasing: true
+                        }
+                        // Row fill + border. Selected OR focused shows the accent ring.
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: VbTokens.radiusControl
+                            color: catButton.selected ? VbTokens.focusedFill
+                                 : (catButton.activeFocus ? VbTokens.bgElev2 : "transparent")
+                            border.width: (catButton.selected || catButton.activeFocus) ? VbTokens.focusBorder : 1
+                            border.color: (catButton.selected || catButton.activeFocus) ? VbTokens.accent : VbTokens.stroke
+                            antialiasing: true
+                            Behavior on color { ColorAnimation { duration: 120 } }
+                        }
+                    }
+
+                    contentItem: RowLayout {
+                        spacing: 14
+                        Text {
+                            text: modelData.glyph
+                            font.family: VbTokens.fontBody
+                            font.pixelSize: 18
+                            color: catButton.selected ? VbTokens.accent : VbTokens.textDim
+                            horizontalAlignment: Text.AlignHCenter
+                            Layout.preferredWidth: 22
+                        }
+                        Text {
+                            text: modelData.label
+                            font.family: VbTokens.fontBody
+                            font.pixelSize: VbTokens.sizeBody
+                            font.weight: catButton.selected ? Font.DemiBold : Font.Medium
+                            color: catButton.selected ? VbTokens.text : VbTokens.textMute
+                            elide: Text.ElideRight
+                            verticalAlignment: Text.AlignVCenter
+                            Layout.fillWidth: true
+                        }
+                    }
+
+                    // onClicked fires on mouse/touch, Return/Space, and gamepad Ⓐ (UI nav mode).
+                    onClicked: settingsPage.category = index
+                }
+            }
+        }
+    }
+
+    // ---- Panel: the two settings columns, scrollable (redesign 1e). The flickable-specific
+    // logic (bounds, content sizing, autoscroll-to-focus, scrollbar) lives here so bare
+    // contentY / contentItem / contentHeight / height resolve to settingsFlick. ----
+    Flickable {
+        id: settingsFlick
+        anchors.top: header.bottom
+        anchors.left: sidebar.right
+        anchors.right: parent.right
+        anchors.bottom: hintBar.top
+
+        boundsBehavior: Flickable.OvershootBounds
+
+        contentWidth: settingsFlick.width
+        // Columns now stack vertically (settingsColumn2 anchors under settingsColumn1), so the
+        // visible category's height is the sum of both columns (each auto-sizes to its visible
+        // children only).
+        contentHeight: settingsColumn1.height + settingsColumn2.height + 50
+
+        ScrollBar.vertical: ScrollBar {
+            anchors {
+                left: parent.right
+                leftMargin: -10
+            }
+        }
+
+        function isChildOfFlickable(item) {
+            while (item) {
+                if (item.parent === contentItem) {
+                    return true
+                }
+
+                item = item.parent
+            }
+            return false
+        }
+
+        NumberAnimation on contentY {
+            id: autoScrollAnimation
+            duration: 100
+        }
+
+        Window.onActiveFocusItemChanged: {
+            var item = Window.activeFocusItem
+            if (item) {
+                // Ignore non-child elements like the toolbar buttons / header / sidebar rows
+                if (!isChildOfFlickable(item)) {
+                    return
+                }
+
+                // Map the focus item's position into our content item's coordinate space
+                var pos = item.mapToItem(contentItem, 0, 0)
+
+                // Ensure some extra space is visible around the element we're scrolling to
+                var scrollMargin = height > 100 ? 50 : 0
+
+                if (pos.y - scrollMargin < contentY) {
+                    autoScrollAnimation.from = contentY
+                    autoScrollAnimation.to = Math.max(pos.y - scrollMargin, 0)
+                    autoScrollAnimation.start()
+                }
+                else if (pos.y + item.height + scrollMargin > contentY + height) {
+                    autoScrollAnimation.from = contentY
+                    autoScrollAnimation.to = Math.min(pos.y + item.height + scrollMargin - height, contentHeight - height)
+                    autoScrollAnimation.start()
+                }
+            }
+        }
+
     Column {
         padding: 10
         id: settingsColumn1
-        width: settingsPage.width / 2
+        width: settingsFlick.width - 20
         spacing: 15
 
         GroupBox {
             id: vibepolloPresetsGroupBox
+            visible: settingsPage.category === 0
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
             padding: 12
             title: "<font color=\"skyblue\">" + qsTr("Vibepollo Presets") + "</font>"
@@ -184,6 +390,7 @@ Flickable {
 
         GroupBox {
             id: basicSettingsGroupBox
+            visible: settingsPage.category === 0
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
             padding: 12
             title: "<font color=\"skyblue\">" + qsTr("Basic Settings") + "</font>"
@@ -1157,6 +1364,7 @@ Flickable {
 
         GroupBox {
             id: artemisStreamingGroupBox
+            visible: settingsPage.category === 3
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
             padding: 12
             title: "<font color=\"skyblue\">" + qsTr("Vibemis Streaming Enhancements") + "</font>"
@@ -1276,6 +1484,7 @@ Flickable {
         GroupBox {
 
             id: audioSettingsGroupBox
+            visible: settingsPage.category === 1
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
             padding: 12
             title: "<font color=\"skyblue\">" + qsTr("Audio Settings") + "</font>"
@@ -1369,6 +1578,7 @@ Flickable {
 
         GroupBox {
             id: hostSettingsGroupBox
+            visible: settingsPage.category === 3
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
             padding: 12
             title: "<font color=\"skyblue\">" + qsTr("Host Settings") + "</font>"
@@ -1409,6 +1619,7 @@ Flickable {
 
         GroupBox {
             id: uiSettingsGroupBox
+            visible: settingsPage.category === 4
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
             padding: 12
             title: "<font color=\"skyblue\">" + qsTr("UI Settings") + "</font>"
@@ -1719,6 +1930,8 @@ Flickable {
                     ToolTip.timeout: 5000
                     ToolTip.visible: hovered
                     ToolTip.text: qsTr("When this device is running on battery, start streams at a lower bitrate (60% of the configured value) to save power and reduce heat. Plugged-in streams are unaffected.")
+                }
+
                 Label {
                     width: parent.width
                     text: qsTr("Settings backup")
@@ -1774,13 +1987,15 @@ Flickable {
         padding: 10
         rightPadding: 20
         bottomPadding: 30
-        anchors.left: settingsColumn1.right
+        anchors.top: settingsColumn1.bottom
+        anchors.left: settingsColumn1.left
         id: settingsColumn2
-        width: settingsPage.width / 2
+        width: settingsFlick.width - 20
         spacing: 15
 
         GroupBox {
             id: inputSettingsGroupBox
+            visible: settingsPage.category === 2
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
             padding: 12
             title: "<font color=\"skyblue\">" + qsTr("Input Settings") + "</font>"
@@ -1929,6 +2144,7 @@ Flickable {
 
         GroupBox {
             id: gamepadSettingsGroupBox
+            visible: settingsPage.category === 2
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
             padding: 12
             title: "<font color=\"skyblue\">" + qsTr("Gamepad Settings") + "</font>"
@@ -2082,6 +2298,7 @@ Flickable {
 
         GroupBox {
             id: advancedSettingsGroupBox
+            visible: settingsPage.category === 4
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
             padding: 12
             title: "<font color=\"skyblue\">" + qsTr("Advanced Settings") + "</font>"
@@ -2424,6 +2641,15 @@ Flickable {
                     checked: StreamingPreferences.compactPerformanceOverlay
                     onCheckedChanged: {
                         StreamingPreferences.compactPerformanceOverlay = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Show the stats as a single compact line (fps, resolution, latency, dropped frames) instead of the full multi-line block — easier to read on a handheld screen.")
+                }
+
+                CheckBox {
                     id: perfOverlayShowClock
                     width: parent.width
                     text: qsTr("Show clock in the performance overlay")
@@ -2437,7 +2663,6 @@ Flickable {
                     ToolTip.delay: 1000
                     ToolTip.timeout: 5000
                     ToolTip.visible: hovered
-                    ToolTip.text: qsTr("Show the stats as a single compact line (fps, resolution, latency, dropped frames) instead of the full multi-line block — easier to read on a handheld screen.")
                     ToolTip.text: qsTr("Add a wall-clock time (HH:MM:SS) line to the top of the performance overlay.") + "\n\n" +
                                   qsTr("Useful on a handheld in Game Mode, where the system clock is hidden while streaming.")
                 }
@@ -2548,6 +2773,7 @@ Flickable {
 
         GroupBox {
             id: artemisSettingsGroupBox
+            visible: settingsPage.category === 3
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
             padding: 12
             title: "<font color=\"skyblue\">" + qsTr("Vibemis Features") + "</font>"
@@ -2641,6 +2867,7 @@ Flickable {
         // platform, and capability at a glance. Pure QML over the already-exposed SystemProperties.
         GroupBox {
             id: systemInfoGroupBox
+            visible: settingsPage.category === 4
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
             padding: 12
             title: "<font color=\"skyblue\">" + qsTr("System Information") + "</font>"
@@ -2693,6 +2920,7 @@ Flickable {
 
         GroupBox {
             id: aboutGroupBox
+            visible: settingsPage.category === 4
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
             padding: 12
             title: "<font color=\"skyblue\">" + qsTr("About") + "</font>"
@@ -2732,7 +2960,7 @@ Flickable {
         // Desktop Mode; in Game Mode the buttons simply do nothing if no browser is present.
         GroupBox {
             id: helpLinksGroupBox
-            visible: SystemProperties.hasBrowser
+            visible: SystemProperties.hasBrowser && settingsPage.category === 4
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
             padding: 12
             title: "<font color=\"skyblue\">" + qsTr("Help & Links") + "</font>"
@@ -2764,5 +2992,20 @@ Flickable {
                 }
             }
         }
+    }
+    }
+
+    // ---- Gamepad hint bar (redesign 1e) ----
+    // Note: LB/RB category-switch is not wired to the shoulder buttons; the sidebar rows are
+    // focusable (D-pad/Tab reachable, Ⓐ/Return/click to select), which makes every category
+    // gamepad-reachable. Ⓑ / Esc pop the view via the StackView's key handlers.
+    VbHintBar {
+        id: hintBar
+        anchors.bottom: parent.bottom
+        width: parent.width
+        hints: [
+            { glyph: "Ⓐ", label: qsTr("Toggle / adjust") },
+            { glyph: "Ⓑ", label: qsTr("Back") }
+        ]
     }
 }
