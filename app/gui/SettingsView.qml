@@ -1051,6 +1051,51 @@ Flickable {
                     ToolTip.text: qsTr("Fullscreen generally provides the best performance, but borderless windowed may work better with features like macOS Spaces, Alt+Tab, screenshot tools, on-screen overlays, etc.")
                 }
 
+                Label {
+                    width: parent.width
+                    id: videoScaleModeTitle
+                    text: qsTr("Video scaling")
+                    font.pointSize: 12
+                    wrapMode: Text.Wrap
+                }
+
+                AutoResizingComboBox {
+                    id: videoScaleModeComboBox
+                    textRole: "text"
+                    hoverEnabled: true
+                    model: ListModel {
+                        id: videoScaleModeModel
+                        ListElement { text: qsTr("Fit (preserve aspect, letterbox)"); val: 0 }
+                        ListElement { text: qsTr("Fill (crop to fill screen)"); val: 1 }
+                        ListElement { text: qsTr("Stretch (fill, ignore aspect)"); val: 2 }
+                    }
+
+                    function reinitialize() {
+                        var saved = StreamingPreferences.videoScaleMode
+                        currentIndex = 0
+                        for (var i = 0; i < videoScaleModeModel.count; i++) {
+                            if (videoScaleModeModel.get(i).val === saved) {
+                                currentIndex = i
+                                break
+                            }
+                        }
+                    }
+
+                    Component.onCompleted: {
+                        reinitialize()
+                        languageChanged.connect(reinitialize)
+                    }
+
+                    onActivated: {
+                        StreamingPreferences.videoScaleMode = videoScaleModeModel.get(currentIndex).val
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Fit shows the whole image with black bars if needed. Fill crops the image to fill the screen with no bars. Stretch fills the screen ignoring the aspect ratio.")
+                }
+
                 CheckBox {
                     id: vsyncCheck
                     width: parent.width
@@ -1879,6 +1924,52 @@ Flickable {
                 anchors.fill: parent
                 spacing: 5
 
+                Label {
+                    width: parent.width
+                    id: quickMenuComboTitle
+                    text: qsTr("Quick Menu shortcut")
+                    font.pointSize: 12
+                    wrapMode: Text.Wrap
+                }
+
+                AutoResizingComboBox {
+                    id: quickMenuComboBox
+                    textRole: "text"
+                    hoverEnabled: true
+                    model: ListModel {
+                        id: quickMenuComboModel
+                        ListElement { text: qsTr("Select + L1 + R1 + Y (default)"); val: 0 }
+                        ListElement { text: qsTr("Select + L1 + R1 + B"); val: 1 }
+                        ListElement { text: qsTr("L3 + R3 (click both sticks)"); val: 2 }
+                        ListElement { text: qsTr("Select + Start"); val: 3 }
+                    }
+
+                    function reinitialize() {
+                        var saved = StreamingPreferences.quickMenuGamepadCombo
+                        currentIndex = 0
+                        for (var i = 0; i < quickMenuComboModel.count; i++) {
+                            if (quickMenuComboModel.get(i).val === saved) {
+                                currentIndex = i
+                                break
+                            }
+                        }
+                    }
+
+                    Component.onCompleted: {
+                        reinitialize()
+                        languageChanged.connect(reinitialize)
+                    }
+
+                    onActivated: {
+                        StreamingPreferences.quickMenuGamepadCombo = quickMenuComboModel.get(currentIndex).val
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Which gamepad button combination opens the in-stream Quick Menu.")
+                }
+
                 CheckBox {
                     id: swapFaceButtonsCheck
                     width: parent.width
@@ -2311,6 +2402,14 @@ Flickable {
                 }
 
                 CheckBox {
+                    id: compactPerformanceOverlay
+                    width: parent.width
+                    text: qsTr("Compact performance overlay")
+                    font.pointSize: 12
+                    enabled: showPerformanceOverlay.checked
+                    checked: StreamingPreferences.compactPerformanceOverlay
+                    onCheckedChanged: {
+                        StreamingPreferences.compactPerformanceOverlay = checked
                     id: perfOverlayShowClock
                     width: parent.width
                     text: qsTr("Show clock in the performance overlay")
@@ -2324,6 +2423,7 @@ Flickable {
                     ToolTip.delay: 1000
                     ToolTip.timeout: 5000
                     ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Show the stats as a single compact line (fps, resolution, latency, dropped frames) instead of the full multi-line block — easier to read on a handheld screen.")
                     ToolTip.text: qsTr("Add a wall-clock time (HH:MM:SS) line to the top of the performance overlay.") + "\n\n" +
                                   qsTr("Useful on a handheld in Game Mode, where the system clock is hidden while streaming.")
                 }

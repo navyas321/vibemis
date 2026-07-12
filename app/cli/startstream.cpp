@@ -4,6 +4,7 @@
 #include "streaming/session.h"
 
 #include <QCoreApplication>
+#include <QStringList>
 #include <QTimer>
 
 #define COMPUTER_SEEK_TIMEOUT 30000
@@ -51,8 +52,6 @@ public:
     void handleEvent(Event event)
     {
         Q_Q(Launcher);
-        Session* session;
-        NvApp app;
 
         switch (event.type) {
         // Occurs when CliStartStreamSegue becomes visible and the UI calls launcher's execute()
@@ -84,6 +83,13 @@ public:
                     m_Computer = event.computer;
                     m_TimeoutTimer->start(APP_SEEK_TIMEOUT);
                     emit q->searchingApp();
+
+                    // test78: the app list is often already cached for a known host, and no
+                    // further computerStateChanged may arrive within the seek window — which
+                    // used to time out with "Failed to find application" even though the app
+                    // was present. Try the cached list immediately instead of waiting for
+                    // the next update event.
+                    trySeekApp(q);
                 } else {
                     m_State = StateFailure;
                     QString msg = QObject::tr("Computer %1 has not been paired. "
@@ -96,18 +102,7 @@ public:
         // Occurs when a computer is updated
         case Event::ComputerUpdated:
             if (m_State == StateSeekApp) {
-                int index = getAppIndex();
-                if (-1 != index) {
-                    app = m_Computer->appList[index];
-                    m_TimeoutTimer->stop();
-                    if (isNotStreaming() || isStreamingApp(app)) {
-                        m_State = StateStartSession;
-                        session = new Session(m_Computer, app, m_Preferences);
-                        emit q->sessionCreated(app.name, session);
-                    } else {
-                        emit q->appQuitRequired(getCurrentAppName());
-                    }
-                }
+                trySeekApp(q);
             }
             break;
         // Occurs when there was another app running on computer and user accepted quit
@@ -134,20 +129,77 @@ public:
             }
             if (m_State == StateSeekApp) {
                 m_State = StateFailure;
-                emit q->failed(QObject::tr("Failed to find application %1").arg(m_AppName));
+                // test78: name the apps that ARE available so a typo'd/renamed app is
+                // self-diagnosing from the CLI output.
+                QStringList available;
+                for (const NvApp &a : m_Computer->appList) {
+                    available.append(sanitizeAppName(a.name));
+                }
+                emit q->failed(QObject::tr("Failed to find application %1").arg(m_AppName)
+                               + (available.isEmpty()
+                                  ? QObject::tr(" (the host returned an empty app list)")
+                                  : QObject::tr(" (available: %1)").arg(available.join(", "))));
             }
             break;
         }
     }
 
+    // test78: run one seek attempt against the computer's current app list. Called on
+    // entry to StateSeekApp (cached list) and on every ComputerUpdated. Starts the
+    // session / requests a quit exactly like the old inline ComputerUpdated handler.
+    void trySeekApp(Launcher *q)
+    {
+        int index = getAppIndex();
+        if (-1 != index) {
+            NvApp app = m_Computer->appList[index];
+            m_TimeoutTimer->stop();
+            if (isNotStreaming() || isStreamingApp(app)) {
+                m_State = StateStartSession;
+                Session* session = new Session(m_Computer, app, m_Preferences);
+                emit q->sessionCreated(app.name, session);
+            } else {
+                emit q->appQuitRequired(getCurrentAppName());
+            }
+        }
+    }
+
+    // test81 (test-agent finding on test78): host app names can carry zero-width /
+    // format Unicode characters that break both matching and readable error output.
+    // Strip format-category chars and trim before comparing or displaying.
+    static QString sanitizeAppName(const QString& name)
+    {
+        QString out;
+        out.reserve(name.size());
+        for (const QChar& c : name) {
+            if (c.category() != QChar::Other_Format) {
+                out.append(c);
+            }
+        }
+        return out.trimmed();
+    }
+
     int getAppIndex() const
     {
+        // Exact match first (sanitized + case-insensitive)...
+        const QString wanted = sanitizeAppName(m_AppName).toLower();
         for (int i = 0; i < m_Computer->appList.length(); i++) {
-            if (m_Computer->appList[i].name.toLower() == m_AppName.toLower()) {
+            if (sanitizeAppName(m_Computer->appList[i].name).toLower() == wanted) {
                 return i;
             }
         }
-        return -1;
+        // ...then a UNIQUE substring match ("desk" -> "Desktop") so minor host-side
+        // renames ("Desktop (Virtual)") don't break scripted launches. Ambiguous
+        // prefixes still fail (and the timeout message lists the candidates).
+        int found = -1;
+        for (int i = 0; i < m_Computer->appList.length(); i++) {
+            if (sanitizeAppName(m_Computer->appList[i].name).toLower().contains(wanted)) {
+                if (found != -1) {
+                    return -1; // ambiguous — require an exact name
+                }
+                found = i;
+            }
+        }
+        return found;
     }
 
     bool isNotStreaming() const

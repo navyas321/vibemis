@@ -34,16 +34,18 @@ whole Quick Menu group depends on its render path.
   (report PR #142: NOT a global freeze; keyboard path passes in-stream under gamescope emulation.
   Real defect = no gamepad close/return: Back/Select swallowed unmapped, only B closes, hint
   keyboard-only; plus the open-combo left stuck buttons on the host. Fix shipped as **test77**.)
-- [ ] **test77** — Quick Menu gamepad close/return-to-game (Back/Start→close, combo state clear,
-  "Resume Game" hint) — **PR #144** — base `vibemis-main` — ☐  ⭐ **RUN THIS FIRST** (re-run of the
-  test75 scenario on the fix; `testing/test77-quickmenu-gamepad-close/instructions.md`)
+- [x] **test77** — Quick Menu gamepad close/return-to-game — **PR #144** — ☑ **PASS** (report
+  PR #145: verified in-stream under gamescope emulation — "Resume Game (Ⓑ / Back / Esc)" hint,
+  Esc/Back close+resume, submenu Esc→main, exactly 1 combo-detect per open, 0 coredumps; physical-
+  controller Game Mode pass optional follow-up) → **merged**, ships in 0.7.1-beta. **Unblocks
+  test29/33/47 (rebase onto the fix before verifying).**
 
 ## 1. Quick Menu foundation + content (verify in this sub-order — the rest stack on test22)
 
 - [x] **test22** — Quick Menu renders in Game Mode (OverlayManager surface) — **PR #44** — base `vibemis-main` — ☑ **PASS (streaming-verified!)** (report PR #138; Quick Menu opens via `Ctrl+Alt+Shift+\` as a true in-stream overlay (offscreen OverlayManager surface, not a separate window), keyboard nav + clean teardown; first stream-verified cycle) → merged. **Unblocks test29/33/47.** Host-side Virtual Display bug noted (Apollo `0x80030023`, not a client defect).
-- [ ] **test29** — Quick Menu: Paste Clipboard — **PR #51** — base `test22` — ☐
-- [ ] **test33** — Quick Menu: Stream Info — **PR #55** — base `test29` — ☐
-- [ ] **test47** — Quick Menu: Send Special Keys (Ctrl+Alt+Del/Alt+F4/Super/Esc) — **PR #67** — base `test22` — ☐
+- [x] **test29** — Quick Menu: Paste Clipboard — **PR #51** — ☑ **PASS (source)** (report PR #163; merged 0.11.3+; runtime toast/paste → ledger)
+- [x] **test33** — Quick Menu: Stream Info — **PR #55** — ☑ **PASS (source)** (report PR #163; merged; runtime toast → ledger)
+- [x] **test47** — Quick Menu: Send Special Keys — **PR #67** — ☑ **PASS (source)** (report PR #163; merged; runtime pass → ledger)
 
 > ⚠️ **Stale alphas:** the May 🔬 alphas for all unchecked rows below (and test29/33/47 above) were
 > pruned from Releases. The build agent is re-dispatching CI per branch — if `run-cycle.sh` can't
@@ -101,8 +103,43 @@ whole Quick Menu group depends on its render path.
 
 ## 5b. Parity features (P3.8)
 
-- [ ] **test76** — Per-game stream profiles (save/apply/clear per host+app; detached prefs at
-  launch) — **PR #143** — base `vibemis-main` — ☐ (`testing/test76-per-game-profiles/instructions.md`)
+- [x] **test76** — Per-game stream profiles — **PR #143** — ☑ **PARTIAL→merged with maintainer
+  approval** (report PR #146: selftest PASS + full wiring source-confirmed; runtime context-menu
+  CRUD not drivable headlessly — harness limit, no code defect) → **merged**, ships in 0.8.0-beta.
+- [ ] **test76-followup** — Per-game profiles on-device runtime pass *(2 min, needs the physical
+  device/controller)*: open a game tile's menu → Save profile → `grep appprofiles` conf → stream
+  applies profile (log line + negotiated shape) → Clear — ☐
+
+## 5b2. UI / design system (P3.19)
+
+- [ ] **test79** — Theme-token migration wave 1 (PcView + AppView + Material bridge) — **PR #149**
+  — base `vibemis-main` — ☐ (launcher-only screenshot diff vs your audit zip;
+  `testing/test79-theme-wave1/instructions.md`; auto-merges on green CI — report = post-merge gate)
+
+## 5b4. Input / handheld (P3.22)
+
+- [ ] **test82** — Motion forwarding slice 2: gate gyro/accel enablement on the setting — **PR #157**
+  (auto-merges) — ☐ device-gated Tier 2 (`testing/test82-motion-forward/instructions.md`)
+
+## 5b3. Streaming resilience (P3.21)
+
+- [ ] **test80** — Auto-reconnect on unexpected stream drop (3 attempts, backoff; setting default
+  OFF) — **PR #153** (auto-merges) — ☐ (`testing/test80-auto-reconnect/instructions.md`)
+
+## 5b5. Quick Menu — parity (P3.20)
+
+- [ ] **test86** — On-screen text-send (Type Text → LiSendUtf8TextEvent) — **PR #164** merged 0.12.0
+  — ☐ launcher/source PASS; in-stream typing→host on the Deferred ledger.
+
+## 5c. CLI
+
+- [x] **test78** — CLI app seek fix — **PR #148** — ☑ **PASS** (report PR #150: all 4 headless CLI
+  cases on the real host — exact, substring, not-found w/ app list, ambiguity) → merged; zero-width
+  app-name sanitization follow-up shipped in test81.
+- [x] **test81** — repo-review fix wave — **PR #152** — ☑ **PASS** (report PR #156 on real Apollo
+  host: Server Commands revived (lists "Bubbles", no Command-not-found), TLS private-key export leak
+  gone, renderer-swap race stable 17×8 toggles / 0 coredumps) → merged, 0.10.1. Tier-2 controller +
+  Settings-UAF nav deferred (headless-harness gaps).
 
 ## 6. Config / SteamOS helpers
 
@@ -126,6 +163,15 @@ ticking a row above does NOT clear its entry here.
 > **Build agent:** when you merge a Tier-1-only PASS that has an N/A runtime tier, ADD a row here
 > (don't just close the report).
 
+- [ ] **test80** — auto-reconnect, Tier 1–2 — with a **drop lever** (host-side stream bounce or
+  client Wi-Fi drop), confirm the 3-attempt in-place reconnect + backoff + final give-up-to-grid
+  (setting default-off). Build side source-verified; needs a real mid-stream drop.
+- [ ] **test82** — motion forwarding, Tier 2 — with a **gyro/accel controller in Game Mode** + a host
+  that requests motion, confirm live gyro/accel reaches the host and honours the report rate (source-
+  confirmed by report PR #162; default-off = safe).
+- [ ] **BL-1528 (P3.23)** — touchscreen passthrough, on-device — confirm the **Legion Go touchscreen**
+  forwards native touch to an Apollo host via `LiSendTouchEvent` (code already present from upstream,
+  gated by `absoluteTouchMode`; never runtime-verified on this device).
 - [ ] **test62** — Adaptive bitrate, Tiers 2–3 — on a **degrading stream**, confirm the
   `[adaptive-bitrate]` recommendation is logged on `CONN_STATUS_POOR` and no regression to the
   slow-connection overlay. *(Note: runtime bitrate-stepping itself is still `TODO(P3.12)` — only the

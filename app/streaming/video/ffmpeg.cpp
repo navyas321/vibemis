@@ -935,6 +935,27 @@ void FFmpegVideoDecoder::stringifyVideoStats(VIDEO_STATS& stats, char* output, i
         break;
     }
 
+    // Vibemis: compact single-line overlay (fps · resolution/codec · net · decode · drop).
+    // Far more legible than the full multi-line block on a small handheld screen.
+    if (auto prefs = StreamingPreferences::get()) {
+        if (prefs->compactPerformanceOverlay) {
+            int w = m_VideoDecoderCtx ? m_VideoDecoderCtx->width : 0;
+            int h = m_VideoDecoderCtx ? m_VideoDecoderCtx->height : 0;
+            float netDrop = stats.totalFrames ? (float)stats.networkDroppedFrames / stats.totalFrames * 100 : 0.0f;
+            float decodeMs = stats.decodedFrames ? (float)stats.totalDecodeTime / stats.decodedFrames : 0.0f;
+            char rttPart[24];
+            if (stats.lastRtt != 0) {
+                snprintf(rttPart, sizeof(rttPart), "net %u ms", stats.lastRtt);
+            } else {
+                snprintf(rttPart, sizeof(rttPart), "net N/A");
+            }
+            snprintf(output, length,
+                     "%.0f fps \xC2\xB7 %dx%d %s \xC2\xB7 %s \xC2\xB7 dec %.1f ms \xC2\xB7 drop %.1f%%",
+                     stats.totalFps, w, h, codecString, rttPart, decodeMs, netDrop);
+            return;
+        }
+    }
+
     if (stats.receivedFps > 0) {
         if (m_VideoDecoderCtx != nullptr) {
             ret = snprintf(&output[offset],

@@ -34,7 +34,16 @@ Rectangle {
     // Handle keyboard input for navigation
     Keys.onPressed: function(event) {
         if (event.key === Qt.Key_Escape) {
-            closeMenu()
+            // test77: from a submenu, Esc/B/Back returns to the main menu (matching the
+            // on-screen "← Back" button); from the main menu it resumes the game.
+            if (currentMenu === "text_send") {
+                if (typeof quickMenuManager !== 'undefined') quickMenuManager.setTextInputActive(false)
+                currentMenu = "main"
+            } else if (currentMenu !== "main") {
+                currentMenu = "main"
+            } else {
+                closeMenu()
+            }
         } else if (event.key === Qt.Key_Up) {
             menuListView.decrementCurrentIndex()
         } else if (event.key === Qt.Key_Down) {
@@ -52,7 +61,8 @@ Rectangle {
 
         // Title
         Text {
-            text: currentMenu === "main" ? qsTr("Quick Menu") : qsTr("Server Commands")
+            text: currentMenu === "text_send" ? qsTr("Send Text to Host")
+                  : (currentMenu === "main" ? qsTr("Quick Menu") : qsTr("Server Commands"))
             font.pointSize: 24
             font.bold: true
             color: "#00cccc"
@@ -62,6 +72,7 @@ Rectangle {
         // Menu items
         ListView {
             id: menuListView
+            visible: currentMenu !== "text_send"
             Layout.fillWidth: true
             Layout.fillHeight: true
             // The root item owns keyboard focus and forwards navigation via Keys.onPressed,
@@ -130,9 +141,66 @@ Rectangle {
             }
         }
 
-        // Back/Close button
+        // P3.20 (test86): on-screen text-send view. A focused TextField receives typed
+        // characters routed from SDL_TEXTINPUT via QuickMenuManager::injectText; Send (or
+        // Enter) ships the string to the host as a UTF-8 text event. Fills the OSK gap on
+        // keyboard-less handhelds (works with a physical keyboard or the platform OSK).
+        ColumnLayout {
+            visible: currentMenu === "text_send"
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            spacing: 12
+
+            TextField {
+                id: sendTextField
+                Layout.fillWidth: true
+                placeholderText: qsTr("Type text to send to the host…")
+                color: "white"
+                font.pointSize: 14
+                selectByMouse: true
+                background: Rectangle {
+                    color: "#1e1e1e"
+                    border.color: sendTextField.activeFocus ? "#00cccc" : "#444"
+                    border.width: 2
+                    radius: 5
+                }
+                onActiveFocusChanged: {
+                    if (typeof quickMenuManager !== 'undefined')
+                        quickMenuManager.setTextInputActive(activeFocus)
+                }
+                onAccepted: quickMenu.sendTypedText()
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 10
+                Button {
+                    text: qsTr("Send")
+                    Layout.fillWidth: true
+                    enabled: sendTextField.text.length > 0
+                    onClicked: quickMenu.sendTypedText()
+                }
+                Button {
+                    text: qsTr("Clear")
+                    onClicked: sendTextField.text = ""
+                }
+            }
+
+            Text {
+                text: qsTr("Enter sends • Esc returns to the menu")
+                font.pointSize: 9
+                color: "#999999"
+                Layout.alignment: Qt.AlignHCenter
+            }
+
+            Item { Layout.fillHeight: true }
+        }
+
+        // Back/Close button. test77: name the action ("Resume Game") and show the GAMEPAD
+        // buttons that trigger it — the old "Close (Esc)" keyboard-only hint left
+        // controller users with no discoverable way back to the game.
         Button {
-            text: currentMenu === "main" ? qsTr("Close (Esc)") : qsTr("← Back")
+            text: currentMenu === "main" ? qsTr("Resume Game (Ⓑ / Back / Esc)") : qsTr("← Back (Ⓑ)")
             Layout.alignment: Qt.AlignHCenter
             onClicked: {
                 if (currentMenu === "main") {
@@ -253,6 +321,22 @@ Rectangle {
             description: qsTr("Fetch clipboard from server")
         }
         ListElement {
+            text: qsTr("Type Text")
+            icon: "⌨"
+            action: "type_text"
+            description: qsTr("Send typed text to the host")
+            text: qsTr("Paste Clipboard Text")
+            icon: "⌨"
+            action: "paste_clipboard"
+            description: qsTr("Type clipboard text into the host")
+        }
+        ListElement {
+            text: qsTr("Stream Info")
+            icon: "ℹ"
+            action: "stream_info"
+            description: qsTr("Show current resolution, FPS, bitrate and codec")
+        }
+        ListElement {
             text: qsTr("Toggle Performance Stats")
             icon: "📊"
             action: "toggle_stats"
@@ -276,8 +360,49 @@ Rectangle {
             action: "toggle_fullscreen"
             description: qsTr("Toggle fullscreen mode")
         }
+        ListElement {
+            text: qsTr("Send Ctrl+Alt+Del")
+            icon: "⌨"
+            action: "key_ctrl_alt_del"
+            description: qsTr("Send Ctrl+Alt+Del to the host")
+        }
+        ListElement {
+            text: qsTr("Send Alt+F4")
+            icon: "✖"
+            action: "key_alt_f4"
+            description: qsTr("Close the focused window on the host")
+        }
+        ListElement {
+            text: qsTr("Send Super (Win) key")
+            icon: "⊞"
+            action: "key_super"
+            description: qsTr("Open the host start menu / launcher")
+        }
+        ListElement {
+            text: qsTr("Send Esc")
+            icon: "⎋"
+            action: "key_esc"
+            description: qsTr("Send the Escape key to the host")
+        }
     }
     
+    // P3.20 (test86): ship the field contents to the host and return to the main menu.
+    function sendTypedText() {
+        if (typeof quickMenuManager === 'undefined') return
+        if (sendTextField.text.length > 0) {
+            quickMenuManager.sendText(sendTextField.text)
+            sendTextField.text = ""
+        }
+        quickMenuManager.setTextInputActive(false)
+        currentMenu = "main"
+    }
+
+    Timer {
+        id: sendTextFocusTimer
+        interval: 50
+        onTriggered: sendTextField.forceActiveFocus()
+    }
+
     function closeMenuDelayed() {
         closeTimer.restart();
     }
@@ -286,6 +411,7 @@ Rectangle {
     function closeMenu() {
         // Only call backend hide - don't set QML invisible
             if (typeof quickMenuManager !== 'undefined') {
+                quickMenuManager.setTextInputActive(false)   // P3.20: leave text mode
                 showActionFeedback("Closing menu...")  // Feedback when closing
             quickMenuManager.hide();
         }
@@ -302,6 +428,12 @@ Rectangle {
         console.log("Executing action:", action)
         
         // Handle navigation actions
+        if (action === "type_text") {
+            currentMenu = "text_send"
+            // Focus the field so injected text lands in it (deferred so it exists).
+            sendTextFocusTimer.restart()
+            return;
+        }
         if (action === "server_commands") {
             if (quickMenuManager.serverCommandManager && quickMenuManager.serverCommandManager.hasPermission) {
                 currentMenu = "server_commands";

@@ -121,12 +121,25 @@ public:
             m_ServerCommandManager = nullptr;
         }
         if (m_ClipboardManager) {
-            delete m_ClipboardManager;
+            // test81 (review fix): m_ClipboardManager is the ClipboardManager::instance()
+            // SINGLETON, also owned by the QML engine (main.cpp registers it via
+            // ClipboardManager::create). Deleting it here left QML holding a dangling
+            // pointer (crash on the next Settings open) and caused a double-delete at
+            // shutdown. Just drop our connection state; never delete the singleton.
+            m_ClipboardManager->disconnect();
             m_ClipboardManager = nullptr;
         }
     };
 
     Q_INVOKABLE void exec(QWindow* qtWindow);
+
+    // P3.21 (test80): true when the stream was cut unexpectedly (connection loss),
+    // as opposed to a user-initiated quit — used by the auto-reconnect logic in QML.
+    Q_INVOKABLE bool wasUnexpectedTermination() const { return m_UnexpectedTermination; }
+
+    // P3.21 (test80): a fresh Session for the same host+app (per-game profiles and
+    // preferences re-apply automatically). QML takes ownership of the returned object.
+    Q_INVOKABLE Session* createResumeSession() { return new Session(m_Computer, m_App); }
 
     static
     void getDecoderInfo(SDL_Window* window,

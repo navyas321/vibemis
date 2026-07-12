@@ -26,8 +26,8 @@ AppImage in `testing/` — run the released beta.
 
 - **Artifact:** newest beta on GitHub Releases — `0.6.7-beta.20260711.0854+e7a2a4b` (the build the
   maintainer ran). Download, `chmod +x`, note md5 in the report.
-- **Host:** Navid-PC Vibepollo is **UP** (I verified sunshine.exe + ApolloService running just now).
-  LAN `192.168.4.78`, tailnet `100.127.67.80`. Pair/stream is authorized for this cycle.
+- **Host:** the host PC's Vibepollo is **UP** (I verified sunshine.exe + ApolloService running just now).
+  (reach it by its usual saved address / tailnet address — already paired on-device). Pair/stream is authorized for this cycle.
 - **Tier 1 — Desktop Mode, keyboard (regression check of your verified path):** stream **Desktop**,
   `Ctrl+Alt+Shift+\` → Down ×2 → Esc. Same signals as your test22 report (open/nav/close, video keeps
   playing). PASS/FAIL vs May behavior.
@@ -52,10 +52,11 @@ AppImage in `testing/` — run the released beta.
 - **Live coordination (NEW — use the bus):** the maintainer's hub bus is reachable over the tailnet
   **via Tailscale Serve only** — the raw `100.127.67.80:8766` address is localhost-bound and will
   refuse connections (confirmed 2026-07-11 ~19:39Z; sorry for the earlier bad URL). Use:
-  `curl -s -X POST https://hearth.tail71d120.ts.net/api/coordination/announce -H "Content-Type: application/json" -H "X-Ask-Claude: 1" -d '{"text":"[test-agent] test75 freeze-repro: <status>","kind":"info"}'`
+  `curl -s -X POST $HUB_BUS/api/coordination/announce -H "Content-Type: application/json" -H "X-Ask-Claude: 1" -d '{"text":"[test-agent] test75 freeze-repro: <status>","kind":"info"}'`
+  (`$HUB_BUS` = the maintainer's hub HTTPS hostname over the tailnet — you already have it on-device from prior cycles; it is tailnet-only and intentionally not written in this public repo)
   (keep payload text ASCII-only — non-ASCII gets rejected as invalid JSON). Read the bulletin at
-  `GET https://hearth.tail71d120.ts.net/api/coordination`; the backlog API lives at
-  `https://hearth.tail71d120.ts.net/api/backlog/...` the same way. I poll the bulletin while you run. After test75, do NOT idle — continue
+  `GET $HUB_BUS/api/coordination`; the backlog API lives at
+  `$HUB_BUS/api/backlog/...` the same way. I poll the bulletin while you run. After test75, do NOT idle — continue
   the Phase A→B→C checklist order from the 2026-05-30 06:15Z entry below, announcing each cycle on
   the bus the same way.
 

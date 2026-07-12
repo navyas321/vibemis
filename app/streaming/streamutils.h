@@ -8,8 +8,15 @@ public:
     static
     Uint32 getPlatformWindowFlags();
 
+    // Fit the source rect into the destination rect. The 2-arg form applies the user's
+    // configured video scale mode (StreamingPreferences::videoScaleMode); the 3-arg form
+    // takes an explicit mode. Using the configured mode for BOTH video rendering and input
+    // coordinate mapping keeps absolute mouse/touch aligned with what's on screen.
     static
     void scaleSourceToDestinationSurface(SDL_Rect* src, SDL_Rect* dst);
+
+    static
+    void scaleSourceToDestinationSurface(SDL_Rect* src, SDL_Rect* dst, int scaleMode);
 
     static
     void screenSpaceToNormalizedDeviceCoords(SDL_FRect* rect, int viewportWidth, int viewportHeight);
