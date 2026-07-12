@@ -3,6 +3,7 @@
         <file>gui/Theme.qml</file>
         <file>gui/VbTokens.qml</file>
         <file>gui/VbFocusRing.qml</file>
+        <file>gui/VbDropShadow.qml</file>
         <file>gui/VbHintBar.qml</file>
         <file>gui/VbBadge.qml</file>
         <file>gui/VbStatusPill.qml</file>

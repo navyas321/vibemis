@@ -3,6 +3,7 @@
 #include "settings/vibemissettings.h"
 
 #include <QThreadPool>
+#include <QDateTime>
 
 ComputerModel::ComputerModel(QObject* object)
     : QAbstractListModel(object) {}
@@ -103,9 +104,31 @@ QVariant ComputerModel::data(const QModelIndex& index, int role) const
         // TODO(BL-1598): surface a measured RTT here (e.g. "4 ms"). Empty for now so the card shows
         // transport only rather than a fabricated number.
         return QString();
-    case LastSeenTextRole:
-        // TODO: track a lastSeen timestamp on NvComputer to render "2 h ago" for offline hosts.
-        return QString();
+    case LastSeenTextRole: {
+        // Bare relative delta ("just now" / "3 min ago" / "2 h ago" / "5 d ago); the PcView
+        // delegate prepends the "Last seen " label. Only meaningful for an offline host we
+        // actually saw online at least once this session (lastSeenMs > 0).
+        if (computer->state == NvComputer::CS_ONLINE || computer->lastSeenMs <= 0) {
+            return QString();
+        }
+        qint64 deltaMs = QDateTime::currentMSecsSinceEpoch() - computer->lastSeenMs;
+        if (deltaMs < 0) {
+            deltaMs = 0;
+        }
+        qint64 mins = deltaMs / 60000;
+        if (mins < 1) {
+            return tr("just now");
+        }
+        else if (mins < 60) {
+            return tr("%n min ago", "", (int)mins);
+        }
+        qint64 hours = mins / 60;
+        if (hours < 24) {
+            return tr("%n h ago", "", (int)hours);
+        }
+        qint64 days = hours / 24;
+        return tr("%n d ago", "", (int)days);
+    }
     case DetailsRole: {
         QString state, pairState;
 

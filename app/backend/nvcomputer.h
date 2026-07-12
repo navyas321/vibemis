@@ -89,6 +89,7 @@ public:
 
     // Ephemeral traits
     ComputerState state;
+    qint64 lastSeenMs;   // epoch ms the host was last seen online (0 = never this session)
     PairState pairState;
     NvAddress activeAddress;
     uint16_t activeHttpsPort;

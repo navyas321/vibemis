@@ -23,6 +23,12 @@ Item {
     implicitWidth: 430
     implicitHeight: 242
 
+    // Behind the surface: the focus drop-shadow (3rd focus-ring layer). First child = paints first.
+    VbDropShadow {
+        active: card.focused
+        radius: 20
+    }
+
     Rectangle {
         id: surface
         anchors.fill: parent

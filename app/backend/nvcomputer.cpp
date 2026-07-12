@@ -5,6 +5,7 @@
 
 #include <QUdpSocket>
 #include <QHostInfo>
+#include <QDateTime>
 #include <QNetworkInterface>
 #include <QNetworkProxy>
 
@@ -86,6 +87,7 @@ NvComputer::NvComputer(QSettings& settings)
     this->currentGameId = 0;
     this->pairState = PS_UNKNOWN;
     this->state = CS_UNKNOWN;
+    this->lastSeenMs = 0;
     this->gfeVersion = nullptr;
     this->appVersion = nullptr;
     this->maxLumaPixelsHEVC = 0;
@@ -250,6 +252,7 @@ NvComputer::NvComputer(NvHTTP& http, QString serverInfo)
     this->gpuModel = NvHTTP::getXmlString(serverInfo, "gputype");
     this->activeAddress = http.address();
     this->state = NvComputer::CS_ONLINE;
+    this->lastSeenMs = QDateTime::currentMSecsSinceEpoch();  // for the offline "Last seen …" card label
     this->pendingQuit = false;
     this->isSupportedServerVersion = CompatFetcher::isGfeVersionSupported(this->gfeVersion);
     
@@ -642,6 +645,13 @@ bool NvComputer::update(const NvComputer& that)
     ASSIGN_IF_CHANGED_AND_NONEMPTY(displayModes);
     ASSIGN_IF_CHANGED(serverCommands);
     ASSIGN_IF_CHANGED(serverPermissions);
+
+    // Carry forward the most recent "seen online" timestamp, but do NOT flag `changed`:
+    // it advances on every successful poll and would otherwise spam computerStateChanged
+    // and re-serialization. The offline "Last seen …" label reads whatever was last stored.
+    if (that.lastSeenMs > this->lastSeenMs) {
+        this->lastSeenMs = that.lastSeenMs;
+    }
 
     if (!that.appList.isEmpty()) {
         // updateAppList() handles merging client-side attributes

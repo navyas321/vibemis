@@ -13,6 +13,12 @@ Item {
     property real contentOpacity: 1.0
     default property alias content: holder.data
 
+    // Behind everything: the focus drop-shadow (3rd focus-ring layer). First child = paints first.
+    VbDropShadow {
+        active: card.focused
+        radius: card.radius
+    }
+
     Rectangle {
         id: surface
         anchors.fill: parent
