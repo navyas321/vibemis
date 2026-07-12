@@ -103,8 +103,8 @@ Apollo (our host) has capabilities mainline Sunshine lacks; surface/expose them 
 - **Done:** suppress controller rumble (test57); host software version in PC details (test58);
   per-client **permission level** in the PC context menu (test60); **virtual-display
   resolution-match** clarifying notes (test61).
-- **Remaining:** optional **per-app save-sync** awareness (Apollo host feature — document it in
-  the host details / a help note). Largely complete otherwise.
+- **Done (2026-07-12):** per-app save-sync awareness surfaced in the Computer Details dialog for
+  Apollo hosts (test85, #161). **P3.13 complete.**
 - Sources: Apollo README + XDA Apollo coverage (see bottom).
 
 ## P3.14 / P3.15 — merged (plan pruned)
