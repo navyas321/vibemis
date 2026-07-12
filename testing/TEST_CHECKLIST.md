@@ -116,6 +116,11 @@ whole Quick Menu group depends on its render path.
   — base `vibemis-main` — ☐ (launcher-only screenshot diff vs your audit zip;
   `testing/test79-theme-wave1/instructions.md`; auto-merges on green CI — report = post-merge gate)
 
+## 5b4. Input / handheld (P3.22)
+
+- [ ] **test82** — Motion forwarding slice 2: gate gyro/accel enablement on the setting — **PR #157**
+  (auto-merges) — ☐ device-gated Tier 2 (`testing/test82-motion-forward/instructions.md`)
+
 ## 5b3. Streaming resilience (P3.21)
 
 - [ ] **test80** — Auto-reconnect on unexpected stream drop (3 attempts, backoff; setting default
