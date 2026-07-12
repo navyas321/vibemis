@@ -716,7 +716,10 @@ ApplicationWindow {
         id: addPcDialog
         property string label: qsTr("Enter the IP address of your host PC:")
 
-        standardButtons: Dialog.Ok | Dialog.Cancel
+        // Custom Ⓐ Connect / Ⓑ Cancel pill buttons live in the content (handoff 1c) — no stock
+        // DialogButtonBox. A = Return (accepted by the field / Connect button), B = Esc (closePolicy).
+        standardButtons: Dialog.NoButton
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
         implicitWidth: 720
         padding: 48
 
@@ -801,6 +804,62 @@ ApplicationWindow {
                 textFormat: Text.StyledText
                 text: qsTr("On the same network, use the host's local IP. To stream across networks, put both devices on <font color='%1'>Tailscale</font> and enter the host's <font color='%2'>100.x.x.x</font> address or MagicDNS name.")
                       .arg(VbTokens.accent).arg(VbTokens.textMute)
+            }
+
+            // ---- Custom footer: Ⓑ Cancel + Ⓐ Connect pill buttons (handoff 1c, lines 198-201) ----
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.topMargin: 4
+                spacing: 14
+                Item { Layout.fillWidth: true }   // right-align the buttons
+
+                Button {
+                    id: cancelBtn
+                    implicitHeight: 56
+                    leftPadding: 28; rightPadding: 28
+                    focusPolicy: Qt.TabFocus
+                    background: Rectangle {
+                        radius: VbTokens.radiusControl
+                        color: cancelBtn.activeFocus ? VbTokens.focusedFill : VbTokens.bgElev2
+                        border.width: 1
+                        border.color: cancelBtn.activeFocus ? VbTokens.accent : VbTokens.stroke
+                    }
+                    contentItem: Row {
+                        spacing: 10
+                        Rectangle {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 26; height: 26; radius: 13
+                            color: "transparent"; border.width: 2; border.color: VbTokens.textDim
+                            Text { anchors.centerIn: parent; text: "B"; font.family: VbTokens.fontBody; font.pixelSize: 12; font.weight: Font.ExtraBold; color: VbTokens.textMute }
+                        }
+                        Text { anchors.verticalCenter: parent.verticalCenter; text: qsTr("Cancel"); font.family: VbTokens.fontBody; font.pixelSize: 17; font.weight: Font.DemiBold; color: VbTokens.textMute }
+                    }
+                    onClicked: addPcDialog.reject()
+                }
+
+                Button {
+                    id: connectBtn
+                    implicitHeight: 56
+                    leftPadding: 32; rightPadding: 32
+                    focusPolicy: Qt.TabFocus
+                    background: Rectangle {
+                        radius: VbTokens.radiusControl
+                        color: VbTokens.accent
+                        border.width: connectBtn.activeFocus ? 2 : 0
+                        border.color: VbTokens.accentHi
+                    }
+                    contentItem: Row {
+                        spacing: 10
+                        Rectangle {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 26; height: 26; radius: 13
+                            color: "transparent"; border.width: 2; border.color: VbTokens.textOnAccent
+                            Text { anchors.centerIn: parent; text: "A"; font.family: VbTokens.fontBody; font.pixelSize: 12; font.weight: Font.ExtraBold; color: VbTokens.textOnAccent }
+                        }
+                        Text { anchors.verticalCenter: parent.verticalCenter; text: qsTr("Connect"); font.family: VbTokens.fontBody; font.pixelSize: 17; font.weight: Font.ExtraBold; color: VbTokens.textOnAccent }
+                    }
+                    onClicked: addPcDialog.accept()
+                }
             }
         }
     }
