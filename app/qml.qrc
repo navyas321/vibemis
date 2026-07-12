@@ -1,6 +1,12 @@
 <RCC>
     <qresource prefix="/">
         <file>gui/Theme.qml</file>
+        <file>gui/VbTokens.qml</file>
+        <file>gui/VbFocusRing.qml</file>
+        <file>gui/VbHintBar.qml</file>
+        <file>gui/VbBadge.qml</file>
+        <file>gui/VbStatusPill.qml</file>
+        <file>gui/VbCard.qml</file>
         <file>gui/main.qml</file>
         <file>gui/PcView.qml</file>
         <file>gui/AppView.qml</file>
