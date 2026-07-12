@@ -110,6 +110,11 @@ whole Quick Menu group depends on its render path.
   device/controller)*: open a game tile's menu → Save profile → `grep appprofiles` conf → stream
   applies profile (log line + negotiated shape) → Clear — ☐
 
+## 5c. CLI
+
+- [ ] **test78** — CLI app seek: cached-list immediate seek + robust matching (fixes YOUR test75
+  finding; fully headless) — **PR #148** — base `vibemis-main` — ☐ (`testing/test78-cli-app-seek/instructions.md`)
+
 ## 6. Config / SteamOS helpers
 
 - [x] **test41** — Settings export / import — **PR #61** — base `vibemis-main` — ☑ **PASS** (report PR #129; export+import work end-to-end, import restores via reload(), status messages correct) → merged
