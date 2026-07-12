@@ -3,6 +3,7 @@ import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
 import QtQuick.Window 2.2
 import QtQuick.Controls.Material 2.2
+import Vibemis.Redesign 1.0
 
 import ComputerManager 1.0
 import AutoUpdateChecker 1.0
@@ -557,10 +558,21 @@ ApplicationWindow {
     }
 
     NavigableDialog {
+        // Redesign 1c: Add-PC dialog restyled on the VbTokens system (docs/design/redesign).
+        // Wiring unchanged — accept still calls ComputerManager.addNewHostManually().
         id: addPcDialog
         property string label: qsTr("Enter the IP address of your host PC:")
 
         standardButtons: Dialog.Ok | Dialog.Cancel
+        implicitWidth: 720
+        padding: 48
+
+        background: Rectangle {
+            color: VbTokens.bgElev
+            radius: VbTokens.radiusDialog
+            border.width: 1
+            border.color: VbTokens.stroke
+        }
 
         onOpened: {
             // Force keyboard focus on the textbox so keyboard navigation works
@@ -578,33 +590,64 @@ ApplicationWindow {
         }
 
         ColumnLayout {
+            spacing: 20
+            width: parent ? parent.width : 620
+
             Label {
-                text: addPcDialog.label
-                font.bold: true
+                text: qsTr("Add a computer")
+                font.family: VbTokens.fontDisplay
+                font.weight: Font.Bold
+                font.pixelSize: VbTokens.sizeSectionTitle
+                color: VbTokens.text
+            }
+            Label {
+                text: qsTr("Enter the host's IP address or hostname to pair and stream.")
+                font.family: VbTokens.fontBody
+                font.pixelSize: VbTokens.sizeBody
+                color: VbTokens.textDim
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
             }
 
-            TextField {
-                id: editText
+            // 72px token-styled field with a focus ring.
+            Item {
                 Layout.fillWidth: true
-                focus: true
-
-                Keys.onReturnPressed: {
-                    addPcDialog.accept()
+                implicitHeight: 72
+                Rectangle {
+                    anchors.fill: parent
+                    radius: VbTokens.radiusControl
+                    color: editText.activeFocus ? VbTokens.focusedFill : VbTokens.bgWindow
+                    border.width: editText.activeFocus ? VbTokens.focusBorder : 1
+                    border.color: editText.activeFocus ? VbTokens.accent : VbTokens.stroke
                 }
-
-                Keys.onEnterPressed: {
-                    addPcDialog.accept()
+                TextField {
+                    id: editText
+                    anchors.fill: parent
+                    anchors.leftMargin: 20
+                    anchors.rightMargin: 20
+                    verticalAlignment: TextInput.AlignVCenter
+                    focus: true
+                    placeholderText: "192.168.1.42"
+                    color: VbTokens.text
+                    placeholderTextColor: VbTokens.textDim
+                    font.family: VbTokens.fontBody
+                    font.pixelSize: 20
+                    background: Item {}   // the surrounding Rectangle is the visual frame
+                    Keys.onReturnPressed: addPcDialog.accept()
+                    Keys.onEnterPressed: addPcDialog.accept()
                 }
             }
 
-            // Vibemis: hint that remote (off-LAN) hosts work via a Tailscale address.
+            // Tailscale hint — Tailscale in accent, the 100.x address in the muted tone.
             Label {
                 Layout.fillWidth: true
-                Layout.maximumWidth: 360
-                wrapMode: Text.Wrap
-                font.pointSize: 9
-                opacity: 0.7
-                text: qsTr("On the same network, use the host's local IP. To stream from a different network, put both devices on Tailscale and enter the host's Tailscale IP (100.x.x.x) or MagicDNS name.")
+                wrapMode: Text.WordWrap
+                font.family: VbTokens.fontBody
+                font.pixelSize: VbTokens.sizeLabel
+                color: VbTokens.textDim
+                textFormat: Text.StyledText
+                text: qsTr("On the same network, use the host's local IP. To stream across networks, put both devices on <font color='%1'>Tailscale</font> and enter the host's <font color='%2'>100.x.x.x</font> address or MagicDNS name.")
+                      .arg(VbTokens.accent).arg(VbTokens.textMute)
             }
         }
     }
