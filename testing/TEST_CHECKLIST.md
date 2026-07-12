@@ -116,6 +116,11 @@ whole Quick Menu group depends on its render path.
   — base `vibemis-main` — ☐ (launcher-only screenshot diff vs your audit zip;
   `testing/test79-theme-wave1/instructions.md`; auto-merges on green CI — report = post-merge gate)
 
+## 5b3. Streaming resilience (P3.21)
+
+- [ ] **test80** — Auto-reconnect on unexpected stream drop (3 attempts, backoff; setting default
+  OFF) — **PR #153** (auto-merges) — ☐ (`testing/test80-auto-reconnect/instructions.md`)
+
 ## 5c. CLI
 
 - [x] **test78** — CLI app seek fix — **PR #148** — ☑ **PASS** (report PR #150: all 4 headless CLI
