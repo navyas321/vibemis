@@ -1705,6 +1705,20 @@ Flickable {
                     ToolTip.text: qsTr("Prevents the screensaver from starting or the display from going to sleep while streaming.")
                 }
 
+                CheckBox {
+                    id: reduceBitrateOnBatteryCheck
+                    width: parent.width
+                    text: qsTr("Reduce bitrate when on battery")
+                    font.pointSize: 12
+                    checked: StreamingPreferences.reduceBitrateOnBattery
+                    onCheckedChanged: {
+                        StreamingPreferences.reduceBitrateOnBattery = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("When this device is running on battery, start streams at a lower bitrate (60% of the configured value) to save power and reduce heat. Plugged-in streams are unaffected.")
                 Label {
                     width: parent.width
                     text: qsTr("Settings backup")

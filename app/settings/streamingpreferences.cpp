@@ -64,6 +64,7 @@
 #define SER_SWAPFACEBUTTONS "swapfacebuttons"
 #define SER_CAPTURESYSKEYS "capturesyskeys"
 #define SER_KEEPAWAKE "keepawake"
+#define SER_REDUCEBITRATEONBATTERY "reducebitrateonbattery"
 #define SER_AUTORECONNECT "autoreconnect"
 #define SER_SEENWELCOMEHINT "seenwelcomehint"
 #define SER_LANGUAGE "language"
@@ -187,6 +188,7 @@ void StreamingPreferences::reload()
     reverseScrollDirection = settings.value(SER_REVERSESCROLL, false).toBool();
     swapFaceButtons = settings.value(SER_SWAPFACEBUTTONS, false).toBool();
     keepAwake = settings.value(SER_KEEPAWAKE, true).toBool();
+    reduceBitrateOnBattery = settings.value(SER_REDUCEBITRATEONBATTERY, false).toBool();
     // P3.21 (test80): default OFF for the first slice; flip after on-device verification.
     autoReconnect = settings.value(SER_AUTORECONNECT, false).toBool();
     seenWelcomeHint = settings.value(SER_SEENWELCOMEHINT, false).toBool();
@@ -424,6 +426,7 @@ void StreamingPreferences::save()
     settings.setValue(SER_SWAPFACEBUTTONS, swapFaceButtons);
     settings.setValue(SER_CAPTURESYSKEYS, captureSysKeysMode);
     settings.setValue(SER_KEEPAWAKE, keepAwake);
+    settings.setValue(SER_REDUCEBITRATEONBATTERY, reduceBitrateOnBattery);
     settings.setValue(SER_AUTORECONNECT, autoReconnect);
     settings.setValue(SER_SEENWELCOMEHINT, seenWelcomeHint);
     

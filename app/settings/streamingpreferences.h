@@ -230,6 +230,7 @@ public:
     Q_PROPERTY(bool reverseScrollDirection MEMBER reverseScrollDirection NOTIFY reverseScrollDirectionChanged)
     Q_PROPERTY(bool swapFaceButtons MEMBER swapFaceButtons NOTIFY swapFaceButtonsChanged)
     Q_PROPERTY(bool keepAwake MEMBER keepAwake NOTIFY keepAwakeChanged)
+    Q_PROPERTY(bool reduceBitrateOnBattery MEMBER reduceBitrateOnBattery NOTIFY reduceBitrateOnBatteryChanged)
     // Vibemis P3.21 (test80): bounded auto-reconnect after an unexpected mid-stream drop.
     Q_PROPERTY(bool autoReconnect MEMBER autoReconnect NOTIFY autoReconnectChanged)
     Q_PROPERTY(bool seenWelcomeHint MEMBER seenWelcomeHint NOTIFY seenWelcomeHintChanged)
@@ -285,6 +286,7 @@ public:
     bool reverseScrollDirection;
     bool swapFaceButtons;
     bool keepAwake;
+    bool reduceBitrateOnBattery;
     bool autoReconnect;
     bool seenWelcomeHint;
     int packetSize;
@@ -355,6 +357,7 @@ signals:
     void swapFaceButtonsChanged();
     void captureSysKeysModeChanged();
     void keepAwakeChanged();
+    void reduceBitrateOnBatteryChanged();
     void autoReconnectChanged();
     void seenWelcomeHintChanged();
     void languageChanged();
