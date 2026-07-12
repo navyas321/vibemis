@@ -267,6 +267,12 @@ Rectangle {
             description: qsTr("Type clipboard text into the host")
         }
         ListElement {
+            text: qsTr("Stream Info")
+            icon: "ℹ"
+            action: "stream_info"
+            description: qsTr("Show current resolution, FPS, bitrate and codec")
+        }
+        ListElement {
             text: qsTr("Toggle Performance Stats")
             icon: "📊"
             action: "toggle_stats"

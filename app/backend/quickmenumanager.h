@@ -88,6 +88,7 @@ public:
     Q_INVOKABLE void toggleFullscreen();
     Q_INVOKABLE void sendSpecialKey(const QString &action);
     Q_INVOKABLE void pasteClipboard();
+    Q_INVOKABLE void showStreamInfo();
 
     // Integration with other managers
     void setServerCommandManager(ServerCommandManager *manager);

@@ -2,6 +2,7 @@
 #include "servercommandmanager.h"
 #include "clipboardmanager.h"
 #include "../streaming/session.h"
+#include "../settings/streamingpreferences.h"
 
 #include <Limelight.h>
 #include <cstring>
@@ -413,7 +414,33 @@ void QuickMenuManager::executeAction(const QString &action)
         sendSpecialKey(action);
     } else if (action == "paste_clipboard") {
         pasteClipboard();
+    } else if (action == "stream_info") {
+        showStreamInfo();
     }
+}
+
+void QuickMenuManager::showStreamInfo()
+{
+    auto prefs = StreamingPreferences::get();
+    if (!prefs) {
+        return;
+    }
+
+    const char* codec;
+    switch (prefs->videoCodecConfig) {
+    case StreamingPreferences::VCC_FORCE_H264: codec = "H.264"; break;
+    case StreamingPreferences::VCC_FORCE_HEVC: codec = "HEVC";  break;
+    case StreamingPreferences::VCC_FORCE_AV1:  codec = "AV1";   break;
+    default:                                   codec = "Auto";  break;
+    }
+
+    QString info = QStringLiteral("%1x%2 @ %3 · %4 Mbps · %5")
+                       .arg(prefs->width)
+                       .arg(prefs->height)
+                       .arg(prefs->fps)
+                       .arg(prefs->bitrateKbps / 1000.0, 0, 'f', 1)
+                       .arg(codec);
+    showToast(info);
 }
 
 void QuickMenuManager::pasteClipboard()
