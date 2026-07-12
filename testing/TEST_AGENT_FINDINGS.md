@@ -19,3 +19,12 @@
 - **⚠️ IMPORTANT:** this may be **headless-gamescope-Popup-specific**. You render-verified 1a/1e under Xvfb — **please render-check 1d under Xvfb too**; that's decisive. If it renders fine under Xvfb, it's a headless artifact, not a real bug.
 
 ## Tasks 1-3 — pending 0.25.0 build (grab beta → re-verify 1e → full 6-screen sweep both viewports)
+
+## 🚨 CRITICAL (stable-1.0 blocker) — 0.25.0 renders BLACK under gamescope (Game-Mode WSI path)
+On beta **0.25.0**, the Vibemis UI renders **fully black** in headless gamescope. Isolated rigorously:
+- **glxgears renders perfectly** in the same gamescope → my compositor + `gamescopectl screenshot` WORK.
+- **0.24.x rendered fine** in this same gamescope earlier today (captured home/add-pc/help/app-grid) → so this is a **0.25.0 REGRESSION**, not gamescope degradation.
+- Renderer inits OK (log: Vulkan RADV, VAAPI on x11, HDR enabled, `[Gamescope WSI] Made gamescope surface`) but then `[Gamescope WSI] Destroying swapchain: (nil)` and the screen stays black (3 identical black screenshots over 25s). QML engine is alive (warnings repeat), so the app runs but never draws its UI.
+- **⚠️ Xvfb won't catch this:** gamescope uses the Vulkan **WSI/swapchain** path that real **Game Mode** uses; Xvfb uses plain X software rendering. Your Xvfb 1a/1e check (clean) does NOT exercise the WSI path. **Please launch 0.25.0 under gamescope (or real Game Mode) — the redesign may black-screen in Game Mode.**
+- **Also:** `main.qml:308` QML warning repeating every ~2s — `QQuickRectangle: Detected anchors on an item managed by a layout (undefined behavior; use Layout.alignment)` — the version-chip Rectangle. Fix regardless.
+- **BLOCKS the visual sweep** (all 6 screens are black) — can't complete tasks 2/3 until 0.25.0 renders under gamescope.
