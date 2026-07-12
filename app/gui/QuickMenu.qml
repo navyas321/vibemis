@@ -261,6 +261,12 @@ Rectangle {
             description: qsTr("Fetch clipboard from server")
         }
         ListElement {
+            text: qsTr("Paste Clipboard Text")
+            icon: "⌨"
+            action: "paste_clipboard"
+            description: qsTr("Type clipboard text into the host")
+        }
+        ListElement {
             text: qsTr("Toggle Performance Stats")
             icon: "📊"
             action: "toggle_stats"
