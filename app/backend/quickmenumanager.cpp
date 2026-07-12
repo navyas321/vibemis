@@ -21,43 +21,60 @@ enum KeyCombo {
 
 #include <QQmlContext>
 #include <QQmlEngine>
+#include <QQmlComponent>
 #include <QGuiApplication>
-#include <QQuickView>
 #include <QQuickItem>
+#include <QQuickWindow>
+#include <QQuickRenderControl>
+#include <QQuickRenderTarget>
+#include <QQuickGraphicsDevice>
+#include <QOpenGLContext>
+#include <QOffscreenSurface>
+#include <QOpenGLFramebufferObject>
+#include <QSurfaceFormat>
+#include <QImage>
+#include <QKeyEvent>
+#include <QTimer>
 #include <QWindow>
 #include <QUrl>
 #include <QDebug>
-#include <QTimer>
+
+#include <SDL.h>
+
+// How often the offscreen menu is re-rendered while visible. The menu is small
+// (500x400) and this only runs while the menu is open, so a 30 Hz refresh keeps
+// animations/selection highlights smooth at negligible cost.
+static const int kRenderIntervalMs = 33;
 
 QuickMenuManager::QuickMenuManager(QObject *parent)
     : QObject(parent)
     , m_isVisible(false)
-    , m_window(nullptr)
-    , m_quickView(nullptr)
-    , m_quickMenuItem(nullptr)
     , m_serverCommandManager(nullptr)
     , m_clipboardManager(nullptr)
     , m_isFullscreen(false)
     , m_isMouseCaptured(false)
     , m_isKeyboardCaptured(false)
     , m_isStatsVisible(false)
-    , m_windowX(0)
-    , m_windowY(0)
-    , m_windowWidth(800)
-    , m_windowHeight(600)
-    , m_hasWindowGeometry(false)
-    , m_ToastWindow(nullptr)
+    , m_glContext(nullptr)
+    , m_offscreenSurface(nullptr)
+    , m_renderControl(nullptr)
+    , m_quickWindow(nullptr)
+    , m_qmlEngine(nullptr)
+    , m_qmlComponent(nullptr)
+    , m_rootItem(nullptr)
+    , m_fbo(nullptr)
+    , m_renderTimer(nullptr)
+    , m_overlaySize(500, 400)
+    , m_overlayReady(false)
 {
+    m_renderTimer = new QTimer(this);
+    m_renderTimer->setInterval(kRenderIntervalMs);
+    connect(m_renderTimer, &QTimer::timeout, this, &QuickMenuManager::renderToSurface);
 }
 
 QuickMenuManager::~QuickMenuManager()
 {
-    if (m_quickView) {
-        delete m_quickView;
-    }
-    if (m_ToastWindow) {
-        delete m_ToastWindow;
-    }
+    teardownOverlayRenderer();
 }
 
 bool QuickMenuManager::hasServerCommands() const
@@ -65,10 +82,10 @@ bool QuickMenuManager::hasServerCommands() const
     if (!m_serverCommandManager) {
         return false;
     }
-    
+
     // Use thread-safe property access when called from QML
     bool hasPermission = false;
-    QMetaObject::invokeMethod(m_serverCommandManager, "hasPermission", 
+    QMetaObject::invokeMethod(m_serverCommandManager, "hasPermission",
                               Qt::DirectConnection,  // Use DirectConnection if we're on the same thread
                               Q_RETURN_ARG(bool, hasPermission));
     return hasPermission;
@@ -99,33 +116,39 @@ void QuickMenuManager::setVisible(bool visible)
     if (m_isVisible == visible) {
         return;
     }
-    
+
     m_isVisible = visible;
 
     if (visible) {
-        // Release ALL SDL pointer capture before showing the overlay.
-        // moonlight-qt renders overlays as SDL textures inside the stream window —
-        // the architecturally correct approach on Linux. We use a separate QQuickView
-        // which requires three SDL calls to hand mouse control back to the OS/Qt:
-        //  SDL_SetRelativeMouseMode(FALSE) — exits relative/locked cursor mode
-        //  SDL_CaptureMouse(FALSE)         — releases SDL's soft mouse capture
-        //  SDL_ShowCursor(ENABLE)          — makes the cursor visible on screen
-        // Without all three, the Qt overlay receives no mouse press events in
-        // KDE Plasma / SteamOS Desktop Mode even with Qt::WindowStaysOnTopHint.
-        SDL_SetRelativeMouseMode(SDL_FALSE);
-        SDL_CaptureMouse(SDL_FALSE);
-        SDL_ShowCursor(SDL_ENABLE);
-
-        createQuickView();
-    } else {
-        if (m_quickView) {
-            m_quickView->hide();
+        // Lazily build the offscreen renderer on first show (main thread).
+        if (!initOverlayRenderer()) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                         "QuickMenuManager: failed to initialize offscreen overlay renderer");
+            m_isVisible = false;
+            emit visibilityChanged();
+            return;
         }
-        // Note: we do NOT re-grab the mouse here — the user's intent when
-        // dismissing the menu may be to stay in desktop/pointer mode. The
-        // "Toggle Mouse Capture" item in the menu handles re-enabling capture.
+
+        // Reset to the main menu each time it opens.
+        if (m_rootItem) {
+            m_rootItem->setProperty("currentMenu", "main");
+            m_rootItem->setProperty("focus", true);
+            QMetaObject::invokeMethod(m_rootItem, "forceActiveFocus");
+        }
+
+        // Enable the overlay slot, render the first frame, and start the refresh loop.
+        if (Session::get()) {
+            Session::get()->getOverlayManager().setOverlayState(Overlay::OverlayQuickMenu, true);
+        }
+        renderToSurface();
+        m_renderTimer->start();
+    } else {
+        m_renderTimer->stop();
+        if (Session::get()) {
+            Session::get()->getOverlayManager().setOverlayState(Overlay::OverlayQuickMenu, false);
+        }
     }
-    
+
     emit visibilityChanged();
 }
 
@@ -144,10 +167,217 @@ void QuickMenuManager::hide()
     setVisible(false);
 }
 
+bool QuickMenuManager::initOverlayRenderer()
+{
+    if (m_overlayReady) {
+        return true;
+    }
+
+    // 1. Dedicated OpenGL context + offscreen surface. This context is independent of
+    //    SDL's video context — we render the menu to an FBO and read it back to the CPU,
+    //    so there is no GL resource sharing and no dependency on a visible window.
+    m_glContext = new QOpenGLContext();
+    QSurfaceFormat fmt;
+    fmt.setDepthBufferSize(16);
+    fmt.setStencilBufferSize(8);
+    m_glContext->setFormat(fmt);
+    if (!m_glContext->create()) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                     "QuickMenuManager: QOpenGLContext::create() failed");
+        teardownOverlayRenderer();
+        return false;
+    }
+
+    m_offscreenSurface = new QOffscreenSurface();
+    m_offscreenSurface->setFormat(m_glContext->format());
+    m_offscreenSurface->create();
+    if (!m_offscreenSurface->isValid()) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                     "QuickMenuManager: QOffscreenSurface is not valid");
+        teardownOverlayRenderer();
+        return false;
+    }
+
+    // 2. Render control + offscreen QQuickWindow.
+    m_renderControl = new QQuickRenderControl(this);
+    m_quickWindow = new QQuickWindow(m_renderControl);
+    m_quickWindow->setColor(Qt::transparent);
+
+    if (!m_glContext->makeCurrent(m_offscreenSurface)) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                     "QuickMenuManager: makeCurrent() failed during init");
+        teardownOverlayRenderer();
+        return false;
+    }
+
+    // Bind our GL context to Qt Quick's RHI so fromOpenGLTexture refers to it.
+    m_quickWindow->setGraphicsDevice(QQuickGraphicsDevice::fromOpenGLContext(m_glContext));
+
+    if (!m_renderControl->initialize()) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                     "QuickMenuManager: QQuickRenderControl::initialize() failed");
+        m_glContext->doneCurrent();
+        teardownOverlayRenderer();
+        return false;
+    }
+
+    // 3. Framebuffer object as the render target.
+    QOpenGLFramebufferObjectFormat fboFormat;
+    fboFormat.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
+    m_fbo = new QOpenGLFramebufferObject(m_overlaySize, fboFormat);
+    m_quickWindow->setRenderTarget(
+        QQuickRenderTarget::fromOpenGLTexture(m_fbo->texture(), m_overlaySize));
+
+    // 4. Load the QML scene into our own engine.
+    m_qmlEngine = new QQmlEngine(this);
+    if (!m_qmlEngine->incubationController()) {
+        m_qmlEngine->setIncubationController(m_quickWindow->incubationController());
+    }
+    m_qmlEngine->rootContext()->setContextProperty("quickMenuManager", this);
+
+    m_qmlComponent = new QQmlComponent(m_qmlEngine, QUrl(QStringLiteral("qrc:/gui/QuickMenu.qml")), this);
+    if (m_qmlComponent->isError()) {
+        for (const QQmlError& err : m_qmlComponent->errors()) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                         "QuickMenuManager: QML error: %s", err.toString().toUtf8().constData());
+        }
+        m_glContext->doneCurrent();
+        teardownOverlayRenderer();
+        return false;
+    }
+
+    QObject* rootObject = m_qmlComponent->create();
+    m_rootItem = qobject_cast<QQuickItem*>(rootObject);
+    if (!m_rootItem) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                     "QuickMenuManager: QML root is not a QQuickItem");
+        delete rootObject;
+        m_glContext->doneCurrent();
+        teardownOverlayRenderer();
+        return false;
+    }
+
+    m_rootItem->setParentItem(m_quickWindow->contentItem());
+    m_quickWindow->contentItem()->setSize(m_overlaySize);
+    m_quickWindow->setGeometry(0, 0, m_overlaySize.width(), m_overlaySize.height());
+    m_rootItem->setSize(m_overlaySize);
+
+    m_glContext->doneCurrent();
+
+    m_overlayReady = true;
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "QuickMenuManager: offscreen overlay renderer initialized (%dx%d)",
+                m_overlaySize.width(), m_overlaySize.height());
+    return true;
+}
+
+void QuickMenuManager::renderToSurface()
+{
+    if (!m_overlayReady || !m_isVisible || !m_glContext || !m_fbo) {
+        return;
+    }
+
+    if (!m_glContext->makeCurrent(m_offscreenSurface)) {
+        return;
+    }
+
+    m_renderControl->polishItems();
+    m_renderControl->beginFrame();
+    m_renderControl->sync();
+    m_renderControl->render();
+    m_renderControl->endFrame();
+
+    QImage image = m_fbo->toImage();
+    m_glContext->doneCurrent();
+
+    if (image.isNull()) {
+        return;
+    }
+
+    // SDL_PIXELFORMAT_ARGB8888 on little-endian == QImage::Format_ARGB32 byte order.
+    if (image.format() != QImage::Format_ARGB32) {
+        image = image.convertToFormat(QImage::Format_ARGB32);
+    }
+
+    SDL_Surface* surface = SDL_CreateRGBSurfaceWithFormat(
+        0, image.width(), image.height(), 32, SDL_PIXELFORMAT_ARGB8888);
+    if (!surface) {
+        return;
+    }
+
+    const int rowBytes = image.width() * 4;
+    for (int y = 0; y < image.height(); ++y) {
+        memcpy(static_cast<uint8_t*>(surface->pixels) + y * surface->pitch,
+               image.constScanLine(y),
+               rowBytes);
+    }
+
+    if (Session::get()) {
+        Session::get()->getOverlayManager().updateOverlaySurface(Overlay::OverlayQuickMenu, surface);
+    } else {
+        SDL_FreeSurface(surface);
+    }
+}
+
+void QuickMenuManager::teardownOverlayRenderer()
+{
+    if (m_renderTimer) {
+        m_renderTimer->stop();
+    }
+
+    // Make the context current so GL resources tear down cleanly.
+    if (m_glContext && m_offscreenSurface && m_offscreenSurface->isValid()) {
+        m_glContext->makeCurrent(m_offscreenSurface);
+    }
+
+    if (m_rootItem) {
+        m_rootItem->deleteLater();
+        m_rootItem = nullptr;
+    }
+    delete m_qmlComponent;
+    m_qmlComponent = nullptr;
+    delete m_qmlEngine;
+    m_qmlEngine = nullptr;
+    delete m_fbo;
+    m_fbo = nullptr;
+    delete m_renderControl;
+    m_renderControl = nullptr;
+    delete m_quickWindow;
+    m_quickWindow = nullptr;
+
+    if (m_glContext) {
+        m_glContext->doneCurrent();
+    }
+    delete m_offscreenSurface;
+    m_offscreenSurface = nullptr;
+    delete m_glContext;
+    m_glContext = nullptr;
+
+    m_overlayReady = false;
+}
+
+void QuickMenuManager::injectKey(int qtKey)
+{
+    if (!m_isVisible || !m_quickWindow) {
+        return;
+    }
+
+    // Deliver synthetic key press+release to the offscreen window. It is never shown,
+    // so it never holds OS focus; events must be posted to it explicitly.
+    QKeyEvent press(QEvent::KeyPress, qtKey, Qt::NoModifier);
+    QKeyEvent release(QEvent::KeyRelease, qtKey, Qt::NoModifier);
+    QCoreApplication::sendEvent(m_quickWindow, &press);
+    QCoreApplication::sendEvent(m_quickWindow, &release);
+
+    // Re-render immediately so the selection highlight updates without waiting for the
+    // next timer tick.
+    renderToSurface();
+}
+
 void QuickMenuManager::executeAction(const QString &action)
 {
     qDebug() << "QuickMenuManager: Executing action:" << action;
-    
+
     if (action == "disconnect") {
         disconnect();
     } else if (action == "quit") {
@@ -177,22 +407,12 @@ void QuickMenuManager::executeAction(const QString &action)
 }
 
 void QuickMenuManager::showToast(const QString &message) {
-    // Updated implementation, now displays outside QuickMenu
-    if (!m_ToastWindow) {
-        m_ToastWindow = new QQuickView();
-        m_ToastWindow->setSource(QUrl("qrc:/gui/Toast.qml"));
-        m_ToastWindow->setColor(QColor(Qt::transparent));
-        m_ToastWindow->setFlags(Qt::ToolTip | Qt::FramelessWindowHint);
-        m_ToastWindow->setResizeMode(QQuickView::SizeRootObjectToView);
+    // Route the toast through the in-menu QML toast (visible while the menu is open).
+    // The old standalone QQuickView toast window did not composite in Game Mode.
+    if (m_rootItem) {
+        QMetaObject::invokeMethod(m_rootItem, "showToastMessage",
+                                  Q_ARG(QVariant, message));
     }
-
-    QVariant retVal;
-    QMetaObject::invokeMethod(m_ToastWindow->rootObject(), "showToast",
-                              Q_RETURN_ARG(QVariant, retVal),
-                              Q_ARG(QVariant, message));
-    m_ToastWindow->show();
-    QTimer::singleShot(3000, m_ToastWindow, &QQuickView::hide);
-
     qDebug() << "QuickMenuManager: showToast(" << message << ")";
 }
 
@@ -200,7 +420,7 @@ void QuickMenuManager::disconnect()
 {
     qDebug() << "QuickMenuManager: Disconnect requested";
     emit disconnectRequested();
-    
+
     // Send SDL quit event to disconnect
     SDL_Event quitEvent;
     quitEvent.type = SDL_QUIT;
@@ -212,12 +432,12 @@ void QuickMenuManager::quit()
 {
     qDebug() << "QuickMenuManager: Quit requested";
     emit quitRequested();
-    
+
     // Set flag to exit after quit and send quit event
     if (Session::get()) {
         Session::get()->setShouldExitAfterQuit();
     }
-    
+
     SDL_Event quitEvent;
     quitEvent.type = SDL_QUIT;
     quitEvent.quit.timestamp = SDL_GetTicks();
@@ -228,7 +448,7 @@ void QuickMenuManager::executeServerCommand(const QString &command)
 {
     qDebug() << "QuickMenuManager: Server command requested:" << command;
     emit serverCommandsRequested();
-    
+
     // Map our simplified command names to the actual ServerCommandManager command IDs
     QString commandId;
     if (command == "restart") {
@@ -241,7 +461,7 @@ void QuickMenuManager::executeServerCommand(const QString &command)
         qDebug() << "QuickMenuManager: Unknown server command:" << command;
         return;
     }
-    
+
     // Use QMetaObject::invokeMethod to safely execute the server command from any thread
     // This ensures thread safety when accessing ServerCommandManager from QML
     if (m_serverCommandManager) {
@@ -252,22 +472,22 @@ void QuickMenuManager::executeServerCommand(const QString &command)
         QMetaObject::invokeMethod(m_serverCommandManager, "hasPermission",
                                   Qt::DirectConnection,
                                   Q_RETURN_ARG(bool, hasPermission));
-                                  
+
         if (hasPermission) {
             qDebug() << "QuickMenuManager: Executing server command:" << commandId;
             // Execute the command using thread-safe invocation
-            QMetaObject::invokeMethod(m_serverCommandManager, "executeCommand", 
+            QMetaObject::invokeMethod(m_serverCommandManager, "executeCommand",
                                       Qt::QueuedConnection,
                                       Q_ARG(QString, commandId));
         } else {
             qDebug() << "QuickMenuManager: Server commands not available or no permission";
-            
+
             // Show error message briefly
             if (Session::get()) {
                 auto& overlayManager = Session::get()->getOverlayManager();
                 overlayManager.setOverlayState(Overlay::OverlayServerCommands, true);
                 overlayManager.updateOverlayText(Overlay::OverlayServerCommands, "Server commands not available");
-                
+
                 QTimer::singleShot(2000, [&overlayManager]() {
                     overlayManager.setOverlayState(Overlay::OverlayServerCommands, false);
                 });
@@ -282,7 +502,7 @@ void QuickMenuManager::uploadClipboard()
 {
     qDebug() << "QuickMenuManager: Clipboard upload requested";
     emit clipboardUploadRequested();
-    
+
     if (m_clipboardManager) {
         m_clipboardManager->sendClipboard();
     }
@@ -292,7 +512,7 @@ void QuickMenuManager::fetchClipboard()
 {
     qDebug() << "QuickMenuManager: Clipboard fetch requested";
     emit clipboardFetchRequested();
-    
+
     if (m_clipboardManager) {
         m_clipboardManager->getClipboard();
     }
@@ -302,13 +522,13 @@ void QuickMenuManager::toggleStats()
 {
     qDebug() << "QuickMenuManager: Stats toggle requested";
     emit statsToggleRequested();
-    
+
     // Toggle debug overlay (performance stats)
     if (Session::get()) {
         auto& overlayManager = Session::get()->getOverlayManager();
         bool currentState = overlayManager.isOverlayEnabled(Overlay::OverlayDebug);
         overlayManager.setOverlayState(Overlay::OverlayDebug, !currentState);
-        
+
         m_isStatsVisible = !currentState;
         emit statsVisibilityChanged();
     }
@@ -318,7 +538,7 @@ void QuickMenuManager::toggleMouseCapture()
 {
     qDebug() << "QuickMenuManager: Mouse capture toggle requested";
     emit mouseCaptureToggleRequested();
-    
+
     // Send the mouse capture toggle key combo
     sendKeyCombo(KeyComboToggleMouseMode);
 }
@@ -327,7 +547,7 @@ void QuickMenuManager::toggleKeyboardCapture()
 {
     qDebug() << "QuickMenuManager: Keyboard capture toggle requested";
     emit keyboardCaptureToggleRequested();
-    
+
     // For keyboard capture, we'll simulate the capture toggle
     // This would need to be implemented in the input handler
 }
@@ -336,7 +556,7 @@ void QuickMenuManager::toggleFullscreen()
 {
     qDebug() << "QuickMenuManager: Fullscreen toggle requested";
     emit fullscreenToggleRequested();
-    
+
     // Send the fullscreen toggle key combo
     sendKeyCombo(KeyComboToggleFullScreen);
 }
@@ -346,14 +566,14 @@ void QuickMenuManager::setServerCommandManager(ServerCommandManager *manager)
     if (m_serverCommandManager) {
         QObject::disconnect(m_serverCommandManager, nullptr, this, nullptr);
     }
-    
+
     m_serverCommandManager = manager;
-    
+
     if (m_serverCommandManager) {
         connect(m_serverCommandManager, &ServerCommandManager::permissionChanged,
                 this, &QuickMenuManager::onServerCommandsChanged);
     }
-    
+
     emit serverCommandsChanged();
 }
 
@@ -364,17 +584,16 @@ void QuickMenuManager::setClipboardManager(ClipboardManager *manager)
 
 void QuickMenuManager::setWindow(QWindow *window)
 {
-    m_window = window;
+    // The overlay no longer uses a separate OS window; this hook is retained for the
+    // Session call site but is intentionally a no-op.
+    Q_UNUSED(window);
 }
 
 void QuickMenuManager::setWindowGeometry(int x, int y, int width, int height)
 {
-    qDebug() << "QuickMenuManager::setWindowGeometry:" << x << y << width << height;
-    m_windowX = x;
-    m_windowY = y;
-    m_windowWidth = width;
-    m_windowHeight = height;
-    m_hasWindowGeometry = true;
+    // Positioning is handled by the renderer (centered). Retained as a no-op so the
+    // Session call site does not need conditional compilation.
+    Q_UNUSED(x); Q_UNUSED(y); Q_UNUSED(width); Q_UNUSED(height);
 }
 
 void QuickMenuManager::onServerCommandsChanged()
@@ -402,98 +621,9 @@ void QuickMenuManager::onStatsVisibilityChanged()
     emit statsVisibilityChanged();
 }
 
-void QuickMenuManager::createQuickView()
-{
-    qDebug() << "QuickMenuManager::createQuickView() called";
-    
-    if (!m_quickView) {
-        qDebug() << "Creating new QQuickView";
-        m_quickView = new QQuickView();
-        m_quickView->setResizeMode(QQuickView::SizeViewToRootObject);
-        
-        // Set up the QML context
-        QQmlContext *context = m_quickView->rootContext();
-        context->setContextProperty("quickMenuManager", this);
-        
-        // Load the QML file
-        qDebug() << "Loading QML from: qrc:/gui/QuickMenu.qml";
-        m_quickView->setSource(QUrl("qrc:/gui/QuickMenu.qml"));
-        
-        qDebug() << "QML loading status:" << m_quickView->status();
-        if (m_quickView->status() == QQuickView::Error) {
-            qDebug() << "QuickMenuManager: Error loading QML:" << m_quickView->errors();
-            return;
-        } else if (m_quickView->status() == QQuickView::Ready) {
-            qDebug() << "QML loaded successfully";
-        } else {
-            qDebug() << "QML loading in progress, status:" << m_quickView->status();
-        }
-        
-        m_quickMenuItem = m_quickView->rootObject();
-        qDebug() << "Root object:" << m_quickMenuItem;
-        
-        if (m_quickMenuItem) {
-            qDebug() << "Root object created successfully";
-            // Make sure the root object is visible
-            m_quickMenuItem->setProperty("visible", true);
-            qDebug() << "Root object set to visible";
-        } else {
-            qDebug() << "Failed to create root object";
-        }
-        
-        // Overlay window flags.
-        // Qt::Tool on Wayland/SteamOS causes the window to render visually
-        // transparent even though the QML Rectangle has a solid colour —
-        // the compositor treats Tool windows differently and the QML Scene
-        // Graph content is not composited correctly. Dropping Qt::Tool and
-        // using a plain frameless stay-on-top window fixes this.
-        // We also do NOT call setColor(transparent): the QML root Rectangle
-        // already provides the dark opaque background; making the QQuickView
-        // background transparent just creates compositing problems on some
-        // Wayland setups where the result is an invisible-but-input-capturing
-        // window.
-        m_quickView->setFlags(Qt::WindowStaysOnTopHint | Qt::FramelessWindowHint);
-        
-        // Centre the overlay on the primary screen using Qt logical coordinates.
-        // SDL window coordinates (m_windowX/Y) come from SDL_GetWindowPosition()
-        // which returns X11 physical pixels. On high-DPI displays or when KDE
-        // Plasma applies fractional scaling, physical pixels != Qt logical pixels,
-        // causing the overlay to appear at the wrong position. Using
-        // QGuiApplication::primaryScreen()->geometry() gives us Qt-native coords
-        // that are always correct regardless of DPI scaling.
-        QRect screen = QGuiApplication::primaryScreen()
-                       ? QGuiApplication::primaryScreen()->geometry()
-                       : QRect(0, 0, 1920, 1080);
-        const int menuW = 500, menuH = 400;
-        int centerX = screen.x() + (screen.width()  - menuW) / 2;
-        int centerY = screen.y() + (screen.height() - menuH) / 2;
-        qDebug() << "Centering menu on screen" << screen << "at" << centerX << centerY;
-        m_quickView->setGeometry(centerX, centerY, menuW, menuH);
-    }
-    
-    if (m_quickView) {
-        // Don't call updateQuickView() - it overrides our centered positioning
-        qDebug() << "Showing QuickView with geometry:" << m_quickView->geometry();
-        m_quickView->show();
-        m_quickView->raise();
-        m_quickView->requestActivate();
-    }
-}
-
-void QuickMenuManager::updateQuickView()
-{
-    // Don't update geometry - we want to keep the centered position
-    // This function used to override our centered positioning
-    qDebug() << "updateQuickView() called but not changing geometry to preserve centering";
-}
-
 void QuickMenuManager::sendKeyCombo(int keyCombo)
 {
-    // This function would need to integrate with the input system
-    // to send the appropriate key combinations
-    // For now, we'll just emit the signals and let the Session handle it
-    
-    // This is a placeholder - in a real implementation, you'd need to 
-    // trigger the key combo through the input system
+    // Placeholder — integration with the input system happens via the Session/overlay
+    // toggles invoked from the action handlers above.
     qDebug() << "QuickMenuManager: Sending key combo:" << keyCombo;
 }
