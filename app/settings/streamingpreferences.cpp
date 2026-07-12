@@ -435,6 +435,51 @@ void StreamingPreferences::save()
     settings.setValue(SER_RESOLUTIONSCALEFACTOR, resolutionScaleFactor);
 }
 
+// Presets apply a full Legion-Go-tuned bundle and persist immediately via save()
+// (unlike individual Settings controls) so a one-tap preset survives app restart.
+void StreamingPreferences::applyPreset(int preset)
+{
+    switch (preset) {
+    case PRESET_QUALITY:
+        width = 1920; height = 1200; fps = 120;
+        break;
+    case PRESET_BALANCED:
+        width = 1920; height = 1200; fps = 90;
+        break;
+    case PRESET_PERFORMANCE:
+        width = 1280; height = 800; fps = 120;
+        break;
+    case PRESET_BATTERY:
+        width = 1280; height = 800; fps = 60;
+        break;
+    default:
+        return;
+    }
+
+    // Common Legion Go S Z2 tuning: HEVC via AMD VAAPI hardware decode, frame pacing
+    // and V-Sync on for a smooth handheld experience, SDR 8-bit 4:2:0.
+    videoCodecConfig = VCC_FORCE_HEVC;
+    videoDecoderSelection = VDS_FORCE_HARDWARE;
+    enableYUV444 = false;
+    framePacing = true;
+    enableVsync = true;
+
+    // Recompute the recommended bitrate for the new mode and let it auto-track.
+    bitrateKbps = getDefaultBitrate(width, height, fps, enableYUV444);
+    autoAdjustBitrate = true;
+
+    // Persist immediately so the preset survives even without visiting other settings.
+    save();
+
+    // Notify QML bindings of everything we touched.
+    emit displayModeChanged();
+    emit videoCodecConfigChanged();
+    emit videoDecoderSelectionChanged();
+    emit enableYUV444Changed();
+    emit framePacingChanged();
+    emit enableVsyncChanged();
+    emit bitrateChanged();
+    emit autoAdjustBitrateChanged();
 // test81 (review fix): the export/import round-trip must NEVER carry the device
 // identity — "key" is the client TLS PRIVATE KEY, "certificate"/"uniqueid" are the
 // pairing identity. Exporting them put the private key in a file users are told to

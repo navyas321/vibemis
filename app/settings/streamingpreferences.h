@@ -24,6 +24,20 @@ public:
 
     void reload();
 
+    // Vibemis: one-click quality presets tuned for the Lenovo Legion Go S Z2
+    // (1920x1200 native, 120 Hz, AMD VAAPI hardware decode, HEVC). applyPreset()
+    // batch-sets the relevant streaming preferences and persists them.
+    enum VibepolloPreset
+    {
+        PRESET_QUALITY,      // 1920x1200 @ 120 — best image, native res/refresh
+        PRESET_BALANCED,     // 1920x1200 @ 90  — native res, lighter refresh
+        PRESET_PERFORMANCE,  // 1280x800  @ 120 — lower res for high fps / low latency
+        PRESET_BATTERY       // 1280x800  @ 60  — easiest on battery and network
+    };
+    Q_ENUM(VibepolloPreset)
+
+    Q_INVOKABLE void applyPreset(int preset);
+
     enum AudioConfig
     {
         AC_STEREO,
