@@ -465,6 +465,8 @@ void StreamingPreferences::applyPreset(int preset)
     emit enableVsyncChanged();
     emit bitrateChanged();
     emit autoAdjustBitrateChanged();
+}
+
 QString StreamingPreferences::exportSettings()
 {
     // Persist current in-memory values first, then copy the live settings into a portable .ini.
