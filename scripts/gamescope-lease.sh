@@ -57,5 +57,12 @@ trap 'gs_clean; rm -f "$LEASE.holder" 2>/dev/null; bus release' EXIT
 bus "acquired (${WAIT}s max wait)"
 gs_clean            # start from a clean slate (also recovers any crashed prior holder's leftovers)
 
-"$@"; rc=$?
+# Max-hold timeout: a crashed holder auto-releases (kernel drops the flock), but a HUNG-yet-alive
+# holder would block everyone forever. Cap the run so the lease can't be held indefinitely.
+# (Note: true PARALLEL gamescope on one machine is infeasible — gamescope requires the real
+# XDG_RUNTIME_DIR, so per-agent socket isolation doesn't work; serialization here is the correct
+# model. For real concurrency, run agents on separate machines/containers.)
+MAXHOLD="${GAMESCOPE_LEASE_MAXHOLD:-900}"
+timeout --kill-after=10 "$MAXHOLD" "$@"; rc=$?
+[ "$rc" = 124 ] && echo "gamescope-lease: wrapped command exceeded ${MAXHOLD}s max-hold — killed" >&2
 exit "$rc"
