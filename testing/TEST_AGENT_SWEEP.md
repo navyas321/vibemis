@@ -1,39 +1,36 @@
-# Test-agent sweep instructions — beta 0.25.4 (the stable-1.0 gate)
+# Test-agent sweep — CORRECT redesign (beta 0.26.0+)
 
-**(The coord bus truncates at ~300 chars, so the authoritative list lives here. Pull vibemis-main + read this.)**
+**(Bus truncates ~300 chars — full instructions here. `git pull` vibemis-main + read this.)**
 
-## Where we are
-The redesign is COMPLETE and all three blockers you found are FIXED. Target the **latest beta 0.25.4**.
+## What changed (important)
+The previously-shipped redesign DIVERGED from the design handoff. The **authoritative** source is
+`Downloads/critical pick this UP/design_handoff_vibemis_redesign/previews/` (screens `1a`–`1f`,
+1920×1200). Compare the app against **those PNGs**, not the older build.
 
-Fixed since your last sweep:
-- **Black screen under gamescope** — the startup-screen toolbar collapse (which resized the window
-  during swapchain creation) is gone; the toolbar stays on the home screens. **You already verified
-  this renders clean on 0.25.1** ("Black blocker CLEARED"). ✅
-- **1d Host-options side-sheet render collapse** — root-caused: `VbHostSheet.qml` imported
-  `QtQuick.Controls 2.2`, where `Overlay.overlay` doesn't exist (needs 2.3+), so the Popup fell back
-  to the ~300px host tile as parent → the 186px cluster you saw. Now imports 2.5 → full 560px
-  right-anchored slide-in. (0.25.2+)
-- **Double header on 1a/1b** — the per-screen header is hidden now that the global toolbar stays;
-  single header + bottom hint bar. (0.25.3+)
-- **1a hint-bar accuracy (BL-1594)** — removed the false "Ⓨ Add computer" (Y actually = Settings;
-  add-PC has no gamepad shortcut — the `+` tile does it). Now: **Ⓐ Connect · Ⓧ Host options · ☰ Settings**. (0.25.4)
+0.26.0 rebuilds **1a Computers** to match `previews/1a-computers.png`:
+- **VIBEMIS wordmark** top-left; 52px **Add / Refresh / Help / Settings** buttons top-right.
+- **"Computers · N hosts · M online"** section title.
+- **Rich 430px host cards**: monitor thumbnail, **● ONLINE / ● OFFLINE** pulse pill, name (Sora),
+  access line ("Paired · Full access"), **VIBEPOLLO / APOLLO / SUNSHINE** badge + **"<transport>"**
+  (LAN / Tailscale). *(Latency "4 ms" is deferred — BL-1598 — so cards show transport only for now.)*
+- The **Material-blue global toolbar is gone** — every launcher screen owns its per-screen header.
 
-Already PASS from your earlier work: 1e Settings sidebar (verified), 1c/1f, mock M4 real-HEVC stream.
+## CRITICAL GATE — do this FIRST
+The global toolbar collapse changed (`main.qml` redesignScreen is now DEFAULT-TRUE, so the toolbar is
+height 0 from the first frame — no 60→0 startup transition). This is the exact area that caused the
+0.25.0 gamescope black screen. **Verify 1a is NOT BLACK under gamescope / Game Mode before anything
+else.** If black: capture the log (`Made gamescope surface` / `Destroying swapchain`) and report
+immediately — I'll rework the header architecture. glxgears in the same gamescope = compositor OK.
 
-## Your remaining tasks (this is the stable-1.0 gate)
-1. **Grab beta 0.25.4** (latest). Confirm the Steam target reads `0.25.4`.
-2. **Render-confirm under gamescope** — the app is NOT black; the home screen draws (this is the
-   critical WSI check your Xvfb can't do).
-3. **Single header** on 1a/1b — one header (title + `N hosts · M online` + buttons) + bottom hint
-   bar, **no double header**.
-4. **1d side-sheet** — open a host tile → Ⓧ / Menu → the sheet slides in as the **full-height 560px
-   right panel** (not collapsed on the tile), D-pad moves rows, Ⓐ selects, Ⓑ closes.
-5. **FULL 6-screen sweep** (1a–1f) at **1920×1200 AND 1280×800** — text cutoff / artifacts /
-   overlap / functional regressions. Report per screen.
-
-If 2–5 are clean, that's the **stable-1.0 green light** and I tag v1.0.0 immediately.
+## Then, against the previews
+1. **1a Computers** — wordmark header renders; **host cards match** `1a-computers.png` (pill, name,
+   access, badge = VIBEPOLLO for the mock/Navid-PC, transport). Pair the mock (100.127.67.80:48900) so
+   real cards show.
+2. **1b App grid** — header un-hidden (back + host + Settings); tiles (Desktop/Steam/Virtual Desktop).
+   *(Full 1b tile polish still in progress — flag gaps vs `1b-app-grid.png`.)*
+3. **1c/1d/1e/1f** — compare to previews; note any divergence (these are being re-checked).
+4. Both viewports **1920×1200 + 1280×800**.
 
 ## Reporting
-Incrementally on the bus in SHORT (<250 char) messages, or append to
-`testing/TEST_AGENT_FINDINGS.md` and commit. Don't batch-and-end — the build agent is live and
-hot-fixes within ~60s. This sweep is the last gate before stable 1.0.
+Incremental SHORT (<250 char) bus messages, or append to `testing/TEST_AGENT_FINDINGS.md` + commit.
+The black-screen check is the release-blocking gate; everything else feeds the next hot-fix wave.
