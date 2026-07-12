@@ -180,6 +180,9 @@ private:
         KeyComboTogglePointerRegionLock,
         KeyComboQuitAndExit,
         KeyComboToggleQuickMenu,
+        KeyComboZoomIn,
+        KeyComboZoomOut,
+        KeyComboZoomReset,
         KeyComboMax
     };
 

@@ -123,6 +123,22 @@ SdlInputHandler::SdlInputHandler(StreamingPreferences& prefs, int streamWidth, i
     m_SpecialKeyCombos[KeyComboToggleQuickMenu].scanCode = SDL_SCANCODE_BACKSLASH;
     m_SpecialKeyCombos[KeyComboToggleQuickMenu].enabled = true;
 
+    // Vibemis video zoom (Ctrl+Alt+Shift + '='/'-'/'0')
+    m_SpecialKeyCombos[KeyComboZoomIn].keyCombo = KeyComboZoomIn;
+    m_SpecialKeyCombos[KeyComboZoomIn].keyCode = SDLK_EQUALS;
+    m_SpecialKeyCombos[KeyComboZoomIn].scanCode = SDL_SCANCODE_EQUALS;
+    m_SpecialKeyCombos[KeyComboZoomIn].enabled = true;
+
+    m_SpecialKeyCombos[KeyComboZoomOut].keyCombo = KeyComboZoomOut;
+    m_SpecialKeyCombos[KeyComboZoomOut].keyCode = SDLK_MINUS;
+    m_SpecialKeyCombos[KeyComboZoomOut].scanCode = SDL_SCANCODE_MINUS;
+    m_SpecialKeyCombos[KeyComboZoomOut].enabled = true;
+
+    m_SpecialKeyCombos[KeyComboZoomReset].keyCombo = KeyComboZoomReset;
+    m_SpecialKeyCombos[KeyComboZoomReset].keyCode = SDLK_0;
+    m_SpecialKeyCombos[KeyComboZoomReset].scanCode = SDL_SCANCODE_0;
+    m_SpecialKeyCombos[KeyComboZoomReset].enabled = true;
+
     m_OldIgnoreDevices = SDL_GetHint(SDL_HINT_GAMECONTROLLER_IGNORE_DEVICES);
     m_OldIgnoreDevicesExcept = SDL_GetHint(SDL_HINT_GAMECONTROLLER_IGNORE_DEVICES_EXCEPT);
 
