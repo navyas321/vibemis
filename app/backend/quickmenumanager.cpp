@@ -380,6 +380,33 @@ void QuickMenuManager::injectKey(int qtKey)
     renderToSurface();
 }
 
+void QuickMenuManager::injectText(const QString& text)
+{
+    if (!m_isVisible || !m_quickWindow || text.isEmpty()) {
+        return;
+    }
+    // Deliver the character(s) as a synthetic key press carrying text — a focused
+    // TextField in the offscreen scene consumes them. The key code is unimportant for
+    // text entry; Qt::Key_unknown with the text payload is sufficient.
+    QKeyEvent press(QEvent::KeyPress, Qt::Key_unknown, Qt::NoModifier, text);
+    QKeyEvent release(QEvent::KeyRelease, Qt::Key_unknown, Qt::NoModifier, text);
+    QCoreApplication::sendEvent(m_quickWindow, &press);
+    QCoreApplication::sendEvent(m_quickWindow, &release);
+    renderToSurface();
+}
+
+void QuickMenuManager::sendText(const QString& text)
+{
+    if (text.isEmpty()) {
+        return;
+    }
+    // Send the whole string to the host as a UTF-8 text event (the OSK gap on
+    // keyboard-less handhelds). moonlight-common-c takes the byte length.
+    QByteArray utf8 = text.toUtf8();
+    LiSendUtf8TextEvent(utf8.constData(), (unsigned int)utf8.size());
+    showToast(QStringLiteral("Sent text to host"));
+}
+
 void QuickMenuManager::executeAction(const QString &action)
 {
     qDebug() << "QuickMenuManager: Executing action:" << action;

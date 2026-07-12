@@ -2567,6 +2567,11 @@ void Session::execInternal()
             presence.runCallbacks();
             m_InputHandler->handleKeyEvent(&event.key);
             break;
+        case SDL_TEXTINPUT:
+            // P3.20 (test86): routed to the Quick Menu's text field when it's focused;
+            // ignored otherwise (the host receives scancodes from SDL_KEYDOWN as before).
+            m_InputHandler->handleTextInputEvent(&event.text);
+            break;
         case SDL_MOUSEBUTTONDOWN:
         case SDL_MOUSEBUTTONUP:
             presence.runCallbacks();

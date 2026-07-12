@@ -36,7 +36,10 @@ Rectangle {
         if (event.key === Qt.Key_Escape) {
             // test77: from a submenu, Esc/B/Back returns to the main menu (matching the
             // on-screen "← Back" button); from the main menu it resumes the game.
-            if (currentMenu !== "main") {
+            if (currentMenu === "text_send") {
+                if (typeof quickMenuManager !== 'undefined') quickMenuManager.setTextInputActive(false)
+                currentMenu = "main"
+            } else if (currentMenu !== "main") {
                 currentMenu = "main"
             } else {
                 closeMenu()
@@ -58,7 +61,8 @@ Rectangle {
 
         // Title
         Text {
-            text: currentMenu === "main" ? qsTr("Quick Menu") : qsTr("Server Commands")
+            text: currentMenu === "text_send" ? qsTr("Send Text to Host")
+                  : (currentMenu === "main" ? qsTr("Quick Menu") : qsTr("Server Commands"))
             font.pointSize: 24
             font.bold: true
             color: "#00cccc"
@@ -68,6 +72,7 @@ Rectangle {
         // Menu items
         ListView {
             id: menuListView
+            visible: currentMenu !== "text_send"
             Layout.fillWidth: true
             Layout.fillHeight: true
             // The root item owns keyboard focus and forwards navigation via Keys.onPressed,
@@ -134,6 +139,61 @@ Rectangle {
                     }
                 }
             }
+        }
+
+        // P3.20 (test86): on-screen text-send view. A focused TextField receives typed
+        // characters routed from SDL_TEXTINPUT via QuickMenuManager::injectText; Send (or
+        // Enter) ships the string to the host as a UTF-8 text event. Fills the OSK gap on
+        // keyboard-less handhelds (works with a physical keyboard or the platform OSK).
+        ColumnLayout {
+            visible: currentMenu === "text_send"
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            spacing: 12
+
+            TextField {
+                id: sendTextField
+                Layout.fillWidth: true
+                placeholderText: qsTr("Type text to send to the host…")
+                color: "white"
+                font.pointSize: 14
+                selectByMouse: true
+                background: Rectangle {
+                    color: "#1e1e1e"
+                    border.color: sendTextField.activeFocus ? "#00cccc" : "#444"
+                    border.width: 2
+                    radius: 5
+                }
+                onActiveFocusChanged: {
+                    if (typeof quickMenuManager !== 'undefined')
+                        quickMenuManager.setTextInputActive(activeFocus)
+                }
+                onAccepted: quickMenu.sendTypedText()
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 10
+                Button {
+                    text: qsTr("Send")
+                    Layout.fillWidth: true
+                    enabled: sendTextField.text.length > 0
+                    onClicked: quickMenu.sendTypedText()
+                }
+                Button {
+                    text: qsTr("Clear")
+                    onClicked: sendTextField.text = ""
+                }
+            }
+
+            Text {
+                text: qsTr("Enter sends • Esc returns to the menu")
+                font.pointSize: 9
+                color: "#999999"
+                Layout.alignment: Qt.AlignHCenter
+            }
+
+            Item { Layout.fillHeight: true }
         }
 
         // Back/Close button. test77: name the action ("Resume Game") and show the GAMEPAD
@@ -261,6 +321,10 @@ Rectangle {
             description: qsTr("Fetch clipboard from server")
         }
         ListElement {
+            text: qsTr("Type Text")
+            icon: "⌨"
+            action: "type_text"
+            description: qsTr("Send typed text to the host")
             text: qsTr("Paste Clipboard Text")
             icon: "⌨"
             action: "paste_clipboard"
@@ -322,6 +386,23 @@ Rectangle {
         }
     }
     
+    // P3.20 (test86): ship the field contents to the host and return to the main menu.
+    function sendTypedText() {
+        if (typeof quickMenuManager === 'undefined') return
+        if (sendTextField.text.length > 0) {
+            quickMenuManager.sendText(sendTextField.text)
+            sendTextField.text = ""
+        }
+        quickMenuManager.setTextInputActive(false)
+        currentMenu = "main"
+    }
+
+    Timer {
+        id: sendTextFocusTimer
+        interval: 50
+        onTriggered: sendTextField.forceActiveFocus()
+    }
+
     function closeMenuDelayed() {
         closeTimer.restart();
     }
@@ -330,6 +411,7 @@ Rectangle {
     function closeMenu() {
         // Only call backend hide - don't set QML invisible
             if (typeof quickMenuManager !== 'undefined') {
+                quickMenuManager.setTextInputActive(false)   // P3.20: leave text mode
                 showActionFeedback("Closing menu...")  // Feedback when closing
             quickMenuManager.hide();
         }
@@ -346,6 +428,12 @@ Rectangle {
         console.log("Executing action:", action)
         
         // Handle navigation actions
+        if (action === "type_text") {
+            currentMenu = "text_send"
+            // Focus the field so injected text lands in it (deferred so it exists).
+            sendTextFocusTimer.restart()
+            return;
+        }
         if (action === "server_commands") {
             if (quickMenuManager.serverCommandManager && quickMenuManager.serverCommandManager.hasPermission) {
                 currentMenu = "server_commands";
