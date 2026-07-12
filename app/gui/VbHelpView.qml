@@ -118,12 +118,15 @@ Item {
                     }
                 }
 
-                // Gamepad shortcuts card
+                // Gamepad shortcuts card — sized to content (fix: VbCard has no implicitHeight,
+                // so a fillHeight card starves to 0 when the column has no surplus space).
                 VbCard {
                     Layout.fillWidth: true
-                    Layout.fillHeight: true
+                    Layout.preferredHeight: gpCol.implicitHeight + 48
                     ColumnLayout {
-                        anchors.fill: parent; anchors.margins: 24; spacing: 14
+                        id: gpCol
+                        anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
+                        anchors.margins: 24; spacing: 14
                         Text {
                             text: qsTr("Gamepad shortcuts")
                             font.family: VbTokens.fontDisplay; font.weight: Font.Bold; font.pixelSize: 20; color: VbTokens.text
@@ -140,9 +143,9 @@ Item {
                                 Text { text: modelData.k; font.family: VbTokens.fontBody; font.pixelSize: VbTokens.sizeLabel; font.bold: true; color: VbTokens.textMute }
                             }
                         }
-                        Item { Layout.fillHeight: true }
                     }
                 }
+                Item { Layout.fillHeight: true }
             }
 
             // RIGHT column: keyboard shortcuts + remote play
@@ -154,9 +157,11 @@ Item {
 
                 VbCard {
                     Layout.fillWidth: true
-                    Layout.fillHeight: true
+                    Layout.preferredHeight: kbCol.implicitHeight + 48
                     ColumnLayout {
-                        anchors.fill: parent; anchors.margins: 24; spacing: 14
+                        id: kbCol
+                        anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
+                        anchors.margins: 24; spacing: 14
                         Text {
                             text: qsTr("Keyboard shortcuts")
                             font.family: VbTokens.fontDisplay; font.weight: Font.Bold; font.pixelSize: 20; color: VbTokens.text
@@ -182,15 +187,16 @@ Item {
                                 }
                             }
                         }
-                        Item { Layout.fillHeight: true }
                     }
                 }
 
                 VbCard {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 200
+                    Layout.preferredHeight: rpCol.implicitHeight + 40
                     ColumnLayout {
-                        anchors.fill: parent; anchors.margins: 24; spacing: 12
+                        id: rpCol
+                        anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
+                        anchors.margins: 24; spacing: 12
                         Text {
                             text: qsTr("Remote play")
                             font.family: VbTokens.fontDisplay; font.weight: Font.Bold; font.pixelSize: 20; color: VbTokens.text
@@ -200,9 +206,9 @@ Item {
                             font.family: VbTokens.fontBody; font.pixelSize: VbTokens.sizeBody
                             color: VbTokens.textDim; wrapMode: Text.WordWrap; Layout.fillWidth: true
                         }
-                        Item { Layout.fillHeight: true }
                     }
                 }
+                Item { Layout.fillHeight: true }
             }
         }
 
