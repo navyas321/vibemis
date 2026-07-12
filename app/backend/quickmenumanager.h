@@ -2,22 +2,40 @@
 
 #include <QObject>
 #include <QQmlEngine>
-#include <QWindow>
-#include <QQuickItem>
-#include <QQuickView>
+#include <QSize>
 
 class NvComputer;
 class NvHTTP;
 #include "backend/servercommandmanager.h"
 class ClipboardManager;
 
+// Forward declarations for the offscreen QML → surface render pipeline.
+QT_BEGIN_NAMESPACE
+class QWindow;
+class QQuickItem;
+class QQuickWindow;
+class QQuickRenderControl;
+class QQmlComponent;
+class QOpenGLContext;
+class QOffscreenSurface;
+class QOpenGLFramebufferObject;
+class QTimer;
+QT_END_NAMESPACE
+
 /**
  * @brief Manages the Quick Menu overlay system
- * 
- * This class handles the display and interaction of the Quick Menu overlay
- * that provides easy access to common streaming functions and server commands.
- * It integrates with the existing overlay system and provides a modern QML-based
- * interface for touchscreen and keyboard navigation.
+ *
+ * The Quick Menu is rendered from QML offscreen (via QQuickRenderControl into an
+ * OpenGL framebuffer), read back to an RGBA SDL_Surface, and published to the
+ * OverlayManager as the OverlayQuickMenu overlay type. Every video renderer
+ * (EGL, SDL, VAAPI) already composites OverlayManager surfaces into the stream,
+ * so the menu appears correctly in SteamOS Game Mode (Gamescope) — unlike the
+ * previous QQuickView approach, which relied on a separate OS window that
+ * Gamescope does not composite.
+ *
+ * Input (gamepad/keyboard navigation) is injected as synthetic Qt key events into
+ * the offscreen QQuickWindow via injectKey(), since the window is never shown and
+ * therefore never holds OS keyboard focus.
  */
 class QuickMenuManager : public QObject
 {
@@ -49,6 +67,11 @@ public:
     Q_INVOKABLE void show();
     Q_INVOKABLE void hide();
 
+    // Inject a navigation key (a Qt::Key value) into the offscreen menu. Called from
+    // the SDL input thread via QueuedConnection; safe to call when the menu is hidden
+    // (it is simply ignored).
+    Q_INVOKABLE void injectKey(int qtKey);
+
     // Action handlers
     Q_INVOKABLE void executeAction(const QString &action);
     Q_INVOKABLE void disconnect();
@@ -66,7 +89,8 @@ public:
     void setServerCommandManager(ServerCommandManager *manager);
     void setClipboardManager(ClipboardManager *manager);
 
-    // Window management
+    // Window management (legacy hooks kept for the Session call sites; geometry is no
+    // longer used for positioning since the menu is centered by the renderer).
     void setWindow(QWindow *window);
     void setWindowGeometry(int x, int y, int width, int height);
 
@@ -97,29 +121,34 @@ private slots:
     void onMouseCaptureChanged();
     void onKeyboardCaptureChanged();
     void onStatsVisibilityChanged();
+    void renderToSurface();
 
 private:
-    void createQuickView();
-    void updateQuickView();
+    bool initOverlayRenderer();
+    void teardownOverlayRenderer();
     void sendKeyCombo(int keyCombo);
 
     bool m_isVisible;
-    QWindow *m_window;
-    QQuickView *m_quickView;
-    QQuickItem *m_quickMenuItem;
-    
+
     ServerCommandManager *m_serverCommandManager;
     ClipboardManager *m_clipboardManager;
-    
+
     // State tracking
     bool m_isFullscreen;
     bool m_isMouseCaptured;
     bool m_isKeyboardCaptured;
     bool m_isStatsVisible;
-    
-    // Window geometry fallback when no QWindow is available
-int m_windowX, m_windowY, m_windowWidth, m_windowHeight;
-    bool m_hasWindowGeometry;
 
-    QQuickView *m_ToastWindow; // Toast window for notifications
+    // Offscreen QML → surface render pipeline (all used on the Qt main thread).
+    QOpenGLContext *m_glContext;
+    QOffscreenSurface *m_offscreenSurface;
+    QQuickRenderControl *m_renderControl;
+    QQuickWindow *m_quickWindow;
+    QQmlEngine *m_qmlEngine;
+    QQmlComponent *m_qmlComponent;
+    QQuickItem *m_rootItem;
+    QOpenGLFramebufferObject *m_fbo;
+    QTimer *m_renderTimer;
+    QSize m_overlaySize;
+    bool m_overlayReady;
 };

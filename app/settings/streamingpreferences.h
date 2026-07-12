@@ -16,6 +16,12 @@ public:
 
     Q_INVOKABLE void save();
 
+    // Vibemis: export all settings to a portable .ini and import them back (config backup /
+    // sharing across devices). exportSettings() returns the written path ("" on failure);
+    // importSettings() returns true and reloads on success.
+    Q_INVOKABLE QString exportSettings();
+    Q_INVOKABLE bool importSettings();
+
     void reload();
 
     enum AudioConfig
@@ -117,6 +123,27 @@ public:
     };
     Q_ENUM(CaptureSysKeysMode);
 
+    // Vibemis: font size of the in-stream performance overlay.
+    // PERF_TEXT_NORMAL preserves the historical 20pt default.
+    enum PerfOverlayTextSize
+    {
+        PERF_TEXT_SMALL,
+        PERF_TEXT_NORMAL,
+        PERF_TEXT_LARGE,
+    };
+    Q_ENUM(PerfOverlayTextSize);
+
+    // Vibemis: which screen corner the in-stream performance overlay anchors to.
+    // POS_TOP_LEFT preserves the historical Moonlight position (default).
+    enum PerfOverlayPosition
+    {
+        POS_TOP_LEFT,
+        POS_TOP_RIGHT,
+        POS_BOTTOM_LEFT,
+        POS_BOTTOM_RIGHT,
+    };
+    Q_ENUM(PerfOverlayPosition);
+
     Q_PROPERTY(int width MEMBER width NOTIFY displayModeChanged)
     Q_PROPERTY(int height MEMBER height NOTIFY displayModeChanged)
     Q_PROPERTY(int fps MEMBER fps NOTIFY displayModeChanged)
@@ -138,6 +165,15 @@ public:
     Q_PROPERTY(bool gamepadMouse MEMBER gamepadMouse NOTIFY gamepadMouseChanged)
     Q_PROPERTY(bool detectNetworkBlocking MEMBER detectNetworkBlocking NOTIFY detectNetworkBlockingChanged)
     Q_PROPERTY(bool showPerformanceOverlay MEMBER showPerformanceOverlay NOTIFY showPerformanceOverlayChanged)
+    Q_PROPERTY(bool preferTailscale MEMBER preferTailscale NOTIFY preferTailscaleChanged)
+    Q_PROPERTY(bool forwardMotionControls MEMBER forwardMotionControls NOTIFY forwardMotionControlsChanged)
+    // Vibemis (test72): optional wall-clock line at the top of the performance
+    // overlay. Off by default so the overlay is unchanged for existing users.
+    Q_PROPERTY(bool perfOverlayShowClock MEMBER perfOverlayShowClock NOTIFY perfOverlayShowClockChanged)
+    Q_PROPERTY(bool suppressControllerRumble MEMBER suppressControllerRumble NOTIFY suppressControllerRumbleChanged)
+    Q_PROPERTY(PerfOverlayTextSize perfOverlayTextSize MEMBER perfOverlayTextSize NOTIFY perfOverlayTextSizeChanged)
+    Q_PROPERTY(PerfOverlayPosition perfOverlayPosition MEMBER perfOverlayPosition NOTIFY perfOverlayPositionChanged)
+    Q_PROPERTY(bool adaptiveBitrate MEMBER adaptiveBitrate NOTIFY adaptiveBitrateChanged)
     Q_PROPERTY(AudioConfig audioConfig MEMBER audioConfig NOTIFY audioConfigChanged)
     Q_PROPERTY(VideoCodecConfig videoCodecConfig MEMBER videoCodecConfig NOTIFY videoCodecConfigChanged)
     Q_PROPERTY(bool enableHdr MEMBER enableHdr NOTIFY enableHdrChanged)
@@ -159,6 +195,7 @@ public:
     Q_PROPERTY(bool swapFaceButtons MEMBER swapFaceButtons NOTIFY swapFaceButtonsChanged)
     Q_PROPERTY(bool keepAwake MEMBER keepAwake NOTIFY keepAwakeChanged)
     Q_PROPERTY(bool reduceBitrateOnBattery MEMBER reduceBitrateOnBattery NOTIFY reduceBitrateOnBatteryChanged)
+    Q_PROPERTY(bool seenWelcomeHint MEMBER seenWelcomeHint NOTIFY seenWelcomeHintChanged)
     Q_PROPERTY(CaptureSysKeysMode captureSysKeysMode MEMBER captureSysKeysMode NOTIFY captureSysKeysModeChanged)
     Q_PROPERTY(Language language MEMBER language NOTIFY languageChanged)
     Q_PROPERTY(RendererBackend rendererBackend MEMBER rendererBackend NOTIFY rendererBackendChanged)
@@ -194,6 +231,13 @@ public:
     bool gamepadMouse;
     bool detectNetworkBlocking;
     bool showPerformanceOverlay;
+    bool preferTailscale;
+    bool forwardMotionControls;
+    bool perfOverlayShowClock;
+    bool suppressControllerRumble;
+    PerfOverlayTextSize perfOverlayTextSize;
+    PerfOverlayPosition perfOverlayPosition;
+    bool adaptiveBitrate;
     bool swapMouseButtons;
     bool muteOnFocusLoss;
     bool backgroundGamepad;
@@ -201,6 +245,7 @@ public:
     bool swapFaceButtons;
     bool keepAwake;
     bool reduceBitrateOnBattery;
+    bool seenWelcomeHint;
     int packetSize;
     AudioConfig audioConfig;
     VideoCodecConfig videoCodecConfig;
@@ -252,6 +297,13 @@ signals:
     void gamepadMouseChanged();
     void detectNetworkBlockingChanged();
     void showPerformanceOverlayChanged();
+    void preferTailscaleChanged();
+    void forwardMotionControlsChanged();
+    void perfOverlayShowClockChanged();
+    void suppressControllerRumbleChanged();
+    void perfOverlayTextSizeChanged();
+    void perfOverlayPositionChanged();
+    void adaptiveBitrateChanged();
     void mouseButtonsChanged();
     void muteOnFocusLossChanged();
     void backgroundGamepadChanged();
@@ -260,6 +312,7 @@ signals:
     void captureSysKeysModeChanged();
     void keepAwakeChanged();
     void reduceBitrateOnBatteryChanged();
+    void seenWelcomeHintChanged();
     void languageChanged();
     void rendererBackendChanged();
     

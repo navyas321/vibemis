@@ -30,11 +30,18 @@ Build host: WSL2 Ubuntu-24.04, working copy at ~/vibemis. Test device: Lenovo Le
 Do ONE bounded, self-verified unit of work this run, then STOP. Respect usage limits: at most
 one build + one PR (or one merge) per run; never loop.
 
-ORIENT (cheap, always first):
+ORIENT (cheap, always first) — derive ALL state from live git/PR data, do NOT trust any
+"handoff" doc to be current:
 - cd ~/vibemis && git fetch --all --prune && git checkout vibemis-main && git pull --ff-only
-- gh pr list --state open        (note the highest existing testNN branch number)
-- gh run list --limit 5          (CI health)
-- Read CLAUDE.md ("Phase 3 — plan", "Working style") and docs/WORKFLOW.md.
+- git log --oneline -25                         (what landed recently)
+- git ls-remote --heads origin 'refs/heads/test*' | grep -oE 'test[0-9]+' | sort -t t -k2 -n | tail -1
+  → highest existing testN; your new branch = test(N+1)
+- git branch -a                                 (existing feature/stack branches)
+- gh pr list --state open                       (open feature + diagnostic report PRs)
+- gh run list --limit 5                         (CI health)
+- Read CLAUDE.md ("Phase 3 — plan", "Working style") and docs/WORKFLOW.md for direction.
+  (The CLAUDE.md "session handoff" table may be stale — commit history + branches + PRs are the
+  source of truth. Reconcile from those.)
 
 CHOOSE THE SINGLE HIGHEST-VALUE ACTION, in this priority order:
   1. RED CI / broken vibemis-main: if the latest vibemis-main build is failing, fixing it is the
