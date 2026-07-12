@@ -1,19 +1,21 @@
 # Vibemis
 
-**Vibemis** is the only actively maintained Linux client for the [Apollo](https://github.com/ClassicOldSong/Apollo) / [Vibepollo](https://github.com/navyas321/Vibepollo) game streaming ecosystem. There is no official Artemis client for Linux — [wjbeckett's Artemis Qt](https://github.com/wjbeckett/artemis) has been dormant since August 2025 with a broken AppImage build on current Mesa/glibc, and a native Apollo Linux client ([Apollo issue #937](https://github.com/ClassicOldSong/Apollo/issues/937)) remains in development and unreleased. Vibemis fills that gap — forked from Artemis Qt, running on current SteamOS/Mesa/AMD hardware today.
+**Vibemis** is a gamepad-first Linux game-streaming client for **SteamOS** and Linux handhelds. It's the Linux counterpart to [Artemis](https://github.com/wjbeckett/artemis) — forked from Artemis Qt and actively maintained — and it pairs with **[Vibepollo](https://github.com/navyas321/Vibepollo)**, its host-side counterpart. Client and host are built to work together: set up Vibepollo on your gaming PC, run Vibemis on your handheld, pair, and stream.
 
 **Built for SteamOS.** The primary target is SteamOS Game Mode (Gamescope) on AMD handhelds; every release is hardware-verified on a **Lenovo Legion Go S Z2** test device before it ships. It runs on any modern Linux desktop too.
 
 ## Why Vibemis?
 
-Standard Moonlight doesn't support Apollo's extended protocol features. Apollo and Vibepollo add clipboard sync, server command execution, OTP pairing, virtual display control, an in-stream Quick Menu, and per-client permission management — but without a working Linux client, those features were inaccessible on SteamOS and Linux handhelds.
+Artemis Qt — the desktop client these extended features were built for — went dormant (August 2025) with an AppImage that no longer builds on current Mesa/glibc, leaving no maintained Linux client. Vibemis picks that up: forked from Artemis Qt, fixed for current SteamOS/Mesa/AMD hardware, and tuned for Vibepollo.
 
-- **The only working Linux client for Apollo** — fills the gap left by dormant Artemis Qt
+Beyond standard Moonlight streaming, the Vibepollo host adds clipboard sync, server command execution, OTP pairing, virtual display control, an in-stream Quick Menu, and per-client permission management — and Vibemis surfaces all of them on the handheld.
+
+- **Actively-maintained Linux client** — the up-to-date Artemis-lineage client for SteamOS and Linux handhelds
 - **Works on current SteamOS** — VAAPI/Mesa compatibility fixes for AMD hardware; every cycle is verified on the Lenovo Legion Go S Z2 (including nested-Gamescope "Game Mode" runs)
-- **Tuned for Vibepollo** — pairing flow, clipboard auth, and SSL handling built for Vibepollo specifically
+- **Tuned for Vibepollo** — pairing flow, clipboard auth, and SSL handling built for the Vibepollo host specifically
 - **Kept current** — merged with upstream moonlight-qt (May 2026), CI pipeline on every push
 
-> **Compatibility:** Vibemis works with Vibepollo, Apollo, and vanilla Sunshine hosts. Apollo-only features light up automatically when connected to a compatible host.
+> **Compatibility:** Vibemis pairs with **Vibepollo**, and also works with [Apollo](https://github.com/ClassicOldSong/Apollo) and vanilla Sunshine hosts (Vibepollo is an Apollo/Sunshine-lineage host). The extended Vibepollo/Apollo features light up automatically when the host supports them.
 
 ---
 
@@ -256,7 +258,7 @@ bash scripts/build-appimage.sh
 - **[Apollo](https://github.com/ClassicOldSong/Apollo)** and **[Artemis Android](https://github.com/ClassicOldSong/moonlight-android)** by [ClassicOldSong](https://github.com/ClassicOldSong) — the Sunshine fork and Android client whose protocol extensions this client speaks
 - **[Sunshine](https://github.com/LizardByte/Sunshine)** by [LizardByte](https://github.com/LizardByte) — the original open-source game streaming server
 - **[moonlight-common-c](https://github.com/ClassicOldSong/moonlight-common-c)** (ClassicOldSong's Apollo-lineage fork) — the protocol/codec library submodule
-- **[Vibepollo](https://github.com/navyas321/Vibepollo)** by [Nonary](https://github.com/Nonary) — the Apollo fork this client is tuned to pair with
+- **[Vibepollo](https://github.com/navyas321/Vibepollo)** — the Apollo/Sunshine-lineage **host** Vibemis is built to pair with (the counterpart to this client)
 
 ---
 
