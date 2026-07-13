@@ -34,3 +34,7 @@
 
 ## Report
 Commit `testing/test110-a-resume-doubleback/report.md` on `diagnostic/test110-a-resume-doubleback-report`, PASS/FAIL per numbered step, and open a PR.
+
+## Artifact integrity
+
+- `Vibemis-0.2.0-alpha.001-x86_64.AppImage` — **sha256** `e7005099d38f7590d605151adfb45aa8f959bdcdd71a05ec2ee5ea003a2bc3fe` (91,400,696 bytes; matches the GitHub release's published digest). Verify with `sha256sum` before running.
