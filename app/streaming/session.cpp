@@ -1483,13 +1483,15 @@ private:
             } catch (const QtNetworkReplyException&) {
             }
 
-            // Exit the entire program if requested
+            // Session is finished now. BL-1630: emit BEFORE quit() — emitting after meant
+            // the queued sessionFinished handler (StreamSegue re-show, gamepad re-init)
+            // could run mid-shutdown on a dying event loop, or never run at all.
+            emit m_Session->sessionFinished(m_Session->m_PortTestResults);
+
+            // Exit the entire program if requested — LAST statement of the quit path.
             if (m_Session->m_ShouldExitAfterQuit) {
                 QCoreApplication::instance()->quit();
             }
-
-            // Session is finished now
-            emit m_Session->sessionFinished(m_Session->m_PortTestResults);
         }
     }
 
@@ -2265,6 +2267,16 @@ void Session::execInternal()
 
     // Toggle the stats overlay if requested by the user
     m_OverlayManager.setOverlayState(Overlay::OverlayDebug, m_Preferences->showPerformanceOverlay);
+
+    // Vibemis BL-1562: opt-in on-screen touch controls overlay (MENU opens the Quick
+    // Menu, KBD opens its text-send view). The labels must be (re)set before enabling
+    // because setOverlayState() clears the overlay text on disable.
+    if (m_Preferences->enableTouchOverlay) {
+        m_OverlayManager.updateOverlayText(Overlay::OverlayTouchButtonMenu, "MENU");
+        m_OverlayManager.updateOverlayText(Overlay::OverlayTouchButtonKbd, "KBD");
+        m_OverlayManager.setOverlayState(Overlay::OverlayTouchButtonMenu, true);
+        m_OverlayManager.setOverlayState(Overlay::OverlayTouchButtonKbd, true);
+    }
 
     // Hijack this thread to be the SDL main thread. We have to do this
     // because we want to suspend all Qt processing until the stream is over.

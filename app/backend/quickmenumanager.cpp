@@ -145,15 +145,19 @@ void QuickMenuManager::setVisible(bool visible)
         }
 
         // Enable the overlay slot, render the first frame, and start the refresh loop.
-        if (Session::get()) {
-            Session::get()->getOverlayManager().setOverlayState(Overlay::OverlayQuickMenu, true);
+        // BL-1630: fetch the Session ONCE — s_ActiveSession is cleared from a pool thread,
+        // so a second Session::get() between check and use can return null mid-teardown.
+        Session* session = Session::get();
+        if (session) {
+            session->getOverlayManager().setOverlayState(Overlay::OverlayQuickMenu, true);
         }
         renderToSurface();
         m_renderTimer->start();
     } else {
         m_renderTimer->stop();
-        if (Session::get()) {
-            Session::get()->getOverlayManager().setOverlayState(Overlay::OverlayQuickMenu, false);
+        Session* session = Session::get();
+        if (session) {
+            session->getOverlayManager().setOverlayState(Overlay::OverlayQuickMenu, false);
         }
     }
 
@@ -320,8 +324,9 @@ void QuickMenuManager::renderToSurface()
                rowBytes);
     }
 
-    if (Session::get()) {
-        Session::get()->getOverlayManager().updateOverlaySurface(Overlay::OverlayQuickMenu, surface);
+    Session* session = Session::get();   // BL-1630: single fetch (TOCTOU vs pool-thread clear)
+    if (session) {
+        session->getOverlayManager().updateOverlaySurface(Overlay::OverlayQuickMenu, surface);
     } else {
         SDL_FreeSurface(surface);
     }
@@ -338,14 +343,15 @@ void QuickMenuManager::teardownOverlayRenderer()
         m_glContext->makeCurrent(m_offscreenSurface);
     }
 
-    if (m_rootItem) {
-        m_rootItem->deleteLater();
-        m_rootItem = nullptr;
-    }
+    // BL-1630: destruction ORDER matters, and deleteLater() is a trap here — on the quit
+    // path the event loop is already dead, so a queued deletion never runs and the live QML
+    // scene would outlive its engine (crash inside the outer QQmlApplicationEngine dtor).
+    // The root item is C++-owned (QQmlComponent::create()), so delete it directly, and keep
+    // the engine alive until AFTER the window/render-control that host its scene are gone.
+    delete m_rootItem;
+    m_rootItem = nullptr;
     delete m_qmlComponent;
     m_qmlComponent = nullptr;
-    delete m_qmlEngine;
-    m_qmlEngine = nullptr;
     delete m_fbo;
     m_fbo = nullptr;
     // test81 (review fix): the QQuickWindow was constructed WITH this render control and
@@ -354,6 +360,9 @@ void QuickMenuManager::teardownOverlayRenderer()
     m_quickWindow = nullptr;
     delete m_renderControl;
     m_renderControl = nullptr;
+    // Engine last (BL-1630): scene objects above may call back into it while dying.
+    delete m_qmlEngine;
+    m_qmlEngine = nullptr;
 
     if (m_glContext) {
         m_glContext->doneCurrent();
@@ -447,7 +456,46 @@ void QuickMenuManager::executeAction(const QString &action)
         pasteClipboard();
     } else if (action == "stream_info") {
         showStreamInfo();
+    } else if (action == "toggle_touch_overlay") {
+        toggleTouchOverlay();
     }
+}
+
+void QuickMenuManager::openTextSend()
+{
+    // BL-1562: show the menu (lazily initializing the offscreen renderer if needed),
+    // then jump straight to the text-send view — the same path as picking "Type Text"
+    // from the main menu, so field focus and text-input routing behave identically.
+    show();
+    if (m_rootItem) {
+        QMetaObject::invokeMethod(m_rootItem, "executeAction",
+                                  Q_ARG(QVariant, QStringLiteral("type_text")));
+    }
+}
+
+void QuickMenuManager::toggleTouchOverlay()
+{
+    // BL-1562: flip + persist the preference, then apply it to the live session.
+    auto prefs = StreamingPreferences::get();
+    prefs->enableTouchOverlay = !prefs->enableTouchOverlay;
+    prefs->save();
+    emit prefs->enableTouchOverlayChanged();
+
+    Session* session = Session::get();   // BL-1630: single fetch (TOCTOU vs pool-thread clear)
+    if (session) {
+        auto& overlayManager = session->getOverlayManager();
+        if (prefs->enableTouchOverlay) {
+            // The labels must be (re)set before enabling because setOverlayState()
+            // clears the overlay text on disable.
+            overlayManager.updateOverlayText(Overlay::OverlayTouchButtonMenu, "MENU");
+            overlayManager.updateOverlayText(Overlay::OverlayTouchButtonKbd, "KBD");
+        }
+        overlayManager.setOverlayState(Overlay::OverlayTouchButtonMenu, prefs->enableTouchOverlay);
+        overlayManager.setOverlayState(Overlay::OverlayTouchButtonKbd, prefs->enableTouchOverlay);
+    }
+
+    showToast(prefs->enableTouchOverlay ? QStringLiteral("Touch overlay: On")
+                                        : QStringLiteral("Touch overlay: Off"));
 }
 
 void QuickMenuManager::showStreamInfo()
@@ -531,6 +579,13 @@ void QuickMenuManager::disconnect()
     qDebug() << "QuickMenuManager: Disconnect requested";
     emit disconnectRequested();
 
+    // BL-1630: hide NOW (stops the 33ms render timer + releases the overlay slot while the
+    // session is intact) and queue the offscreen-renderer teardown for the next main-loop
+    // tick — we are currently INSIDE a JS frame of the engine teardown would destroy.
+    setVisible(false);
+    QMetaObject::invokeMethod(this, &QuickMenuManager::teardownOverlayRenderer,
+                              Qt::QueuedConnection);
+
     // Send SDL quit event to disconnect
     SDL_Event quitEvent;
     quitEvent.type = SDL_QUIT;
@@ -543,9 +598,20 @@ void QuickMenuManager::quit()
     qDebug() << "QuickMenuManager: Quit requested";
     emit quitRequested();
 
+    // BL-1630 (the quit-from-Quick-Menu crash): quitting tears the Qt event loop down while
+    // the offscreen menu renderer is still live (visible menu, armed 33ms timer, live GL
+    // context + second QQmlEngine), leaving it to be destroyed in a broken order inside the
+    // outer QQmlApplicationEngine destructor. Hide synchronously and queue the teardown for
+    // the next main-loop tick, BEFORE pushing SDL_QUIT (can't tear down inline — we're in a
+    // JS frame of the engine being destroyed).
+    setVisible(false);
+    QMetaObject::invokeMethod(this, &QuickMenuManager::teardownOverlayRenderer,
+                              Qt::QueuedConnection);
+
     // Set flag to exit after quit and send quit event
-    if (Session::get()) {
-        Session::get()->setShouldExitAfterQuit();
+    Session* session = Session::get();
+    if (session) {
+        session->setShouldExitAfterQuit();
     }
 
     SDL_Event quitEvent;
@@ -594,8 +660,9 @@ void QuickMenuManager::executeServerCommand(const QString &command)
             qDebug() << "QuickMenuManager: Server commands not available or no permission";
 
             // Show error message briefly
-            if (Session::get()) {
-                auto& overlayManager = Session::get()->getOverlayManager();
+            Session* session = Session::get();   // BL-1630: single fetch (TOCTOU)
+            if (session) {
+                auto& overlayManager = session->getOverlayManager();
                 overlayManager.setOverlayState(Overlay::OverlayServerCommands, true);
                 overlayManager.updateOverlayText(Overlay::OverlayServerCommands, "Server commands not available");
 
@@ -603,8 +670,9 @@ void QuickMenuManager::executeServerCommand(const QString &command)
                 // reference — the session can be torn down inside the 2s window (UAF).
                 // Re-fetch the live session (if any) when the timer fires.
                 QTimer::singleShot(2000, []() {
-                    if (Session::get()) {
-                        Session::get()->getOverlayManager().setOverlayState(Overlay::OverlayServerCommands, false);
+                    Session* s = Session::get();   // BL-1630: single fetch (TOCTOU)
+                    if (s) {
+                        s->getOverlayManager().setOverlayState(Overlay::OverlayServerCommands, false);
                     }
                 });
             }
@@ -640,8 +708,9 @@ void QuickMenuManager::toggleStats()
     emit statsToggleRequested();
 
     // Toggle debug overlay (performance stats)
-    if (Session::get()) {
-        auto& overlayManager = Session::get()->getOverlayManager();
+    Session* session = Session::get();   // BL-1630: single fetch (TOCTOU vs pool-thread clear)
+    if (session) {
+        auto& overlayManager = session->getOverlayManager();
         bool currentState = overlayManager.isOverlayEnabled(Overlay::OverlayDebug);
         overlayManager.setOverlayState(Overlay::OverlayDebug, !currentState);
 
