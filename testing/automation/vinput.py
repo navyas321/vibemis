@@ -114,13 +114,16 @@ def _emit(fd, t, c, v): os.write(fd, _EV.pack(0, 0, t, c, v))
 def _syn(fd): _emit(fd, EV_SYN, SYN_REPORT, 0)
 
 # uinput_user_dev: name[80] + input_id(HHHH) + ff_effects_max(I) + abs{max,min,fuzz,flat}[64]
-def _pack_user_dev(name, bus, vendor, product, version, absmax=None):
+def _pack_user_dev(name, bus, vendor, product, version, absmax=None, absmin=None):
     absmax = absmax or {}
+    absmin = absmin or {}
     mx = [0]*64
+    mn = [0]*64
     for a, v in absmax.items(): mx[a] = v
+    for a, v in absmin.items(): mn[a] = v
     blob = name.encode().ljust(80, b"\0")
     blob += struct.pack("<HHHH", bus, vendor, product, version) + struct.pack("<I", 0)
-    blob += struct.pack("<64i", *mx) + struct.pack("<64i", *[0]*64)
+    blob += struct.pack("<64i", *mx) + struct.pack("<64i", *mn)
     blob += struct.pack("<64i", *[0]*64) + struct.pack("<64i", *[0]*64)
     assert len(blob) == 1116, len(blob)
     return blob
@@ -165,9 +168,12 @@ def build_gamepad(fd):
     for b in codes: fcntl.ioctl(fd, UI_SET_KEYBIT, b)
     axes = {ABS_X: 32767, ABS_Y: 32767, ABS_RX: 32767, ABS_RY: 32767,
             ABS_Z: 255, ABS_RZ: 255, ABS_HAT0X: 1, ABS_HAT0Y: 1}
+    axis_min = {ABS_X: -32768, ABS_Y: -32768, ABS_RX: -32768, ABS_RY: -32768,
+                ABS_Z: 0, ABS_RZ: 0, ABS_HAT0X: -1, ABS_HAT0Y: -1}
     for a in axes: fcntl.ioctl(fd, UI_SET_ABSBIT, a)
     # Advertise as an Xbox 360 pad so SDL's gamepad DB maps BTN_SOUTH/EAST/... correctly.
-    os.write(fd, _pack_user_dev("vibemis-autotest-gamepad", 0x03, 0x045e, 0x028e, 0x0110, axes))
+    os.write(fd, _pack_user_dev("vibemis-autotest-gamepad", 0x03, 0x045e, 0x028e, 0x0110,
+                                axes, axis_min))
     fcntl.ioctl(fd, UI_DEV_CREATE)
 
 def build_keyboard(fd):
@@ -188,6 +194,23 @@ def mouse_click(fd, code=BTN_LEFT): mouse_btn(fd, code, True); mouse_btn(fd, cod
 def pad_press(fd, code, hold=0.08):
     _emit(fd, EV_KEY, code, 1); _syn(fd); time.sleep(hold)
     _emit(fd, EV_KEY, code, 0); _syn(fd); time.sleep(0.04)
+
+def pad_dpad(fd, dx, dy, hold=0.12):
+    # The resolved Xbox mapping uses HAT0. Do not also emit 0x220-0x223: SDL numbers those
+    # experimental keys as unrelated buttons and the app may invoke actions instead of navigate.
+    if dx: _emit(fd, EV_ABS, ABS_HAT0X, dx)
+    if dy: _emit(fd, EV_ABS, ABS_HAT0Y, dy)
+    _syn(fd); time.sleep(hold)
+    if dx: _emit(fd, EV_ABS, ABS_HAT0X, 0)
+    if dy: _emit(fd, EV_ABS, ABS_HAT0Y, 0)
+    _syn(fd); time.sleep(0.06)
+
+def pad_stick(fd, dx, dy, hold=0.16):
+    # Left stick full-deflect + release (SDL menu nav). Signed range, centered at zero.
+    _emit(fd, EV_ABS, ABS_X, int(dx*32000)); _emit(fd, EV_ABS, ABS_Y, int(dy*32000))
+    _syn(fd); time.sleep(hold)
+    _emit(fd, EV_ABS, ABS_X, 0); _emit(fd, EV_ABS, ABS_Y, 0)
+    _syn(fd); time.sleep(0.06)
 
 def key_tap(fd, codes):
     for c in codes: _emit(fd, EV_KEY, c, 1)
@@ -214,6 +237,10 @@ def run_daemon(kind, fifo, log, pidfile):
     if kind == "mouse":   build_mouse(fd)
     elif kind == "gamepad": build_gamepad(fd)
     else: raise SystemExit("daemon kind must be mouse|gamepad")
+    navfd = None
+    if kind == "gamepad":
+        navfd = _open_uinput()
+        build_keyboard(navfd)
     time.sleep(1.0)  # let the gamescope/libinput seat enumerate the new device
     try: os.mkfifo(fifo)
     except OSError as e:
@@ -242,8 +269,12 @@ def run_daemon(kind, fifo, log, pidfile):
             buf += chunk
             while b"\n" in buf:
                 line, buf = buf.split(b"\n", 1)
-                _dispatch(kind, fd, line.decode(errors="ignore").strip(), stop)
+                _dispatch(kind, fd, line.decode(errors="ignore").strip(), stop, navfd)
     finally:
+        if navfd is not None:
+            try: fcntl.ioctl(navfd, UI_DEV_DESTROY)
+            except OSError: pass
+            os.close(navfd)
         try: fcntl.ioctl(fd, UI_DEV_DESTROY)
         except OSError: pass
         os.close(fd)
@@ -252,7 +283,7 @@ def run_daemon(kind, fifo, log, pidfile):
                 if p: os.remove(p)
             except OSError: pass
 
-def _dispatch(kind, fd, line, stop):
+def _dispatch(kind, fd, line, stop, navfd=None):
     if not line: return
     p = line.split(); k = p[0].upper()
     if k == "Q" or k == "QUIT": stop["v"] = True; return
@@ -273,6 +304,16 @@ def _dispatch(kind, fd, line, stop):
         elif k == "HOLD" and len(p) >= 3:
             code = PAD_BUTTONS.get(p[1].upper());
             if code is not None: pad_press(fd, code, float(p[2]))
+        elif k in ("DPAD", "LS") and len(p) >= 2:
+            _dirs = {"UP": (0, -1), "DOWN": (0, 1), "LEFT": (-1, 0), "RIGHT": (1, 0),
+                     "U": (0, -1), "D": (0, 1), "L": (-1, 0), "R": (1, 0)}
+            v = _dirs.get(p[1].upper())
+            if v:
+                (pad_dpad if k == "DPAD" else pad_stick)(fd, v[0], v[1])
+                if navfd is not None:
+                    arrow = {(0, -1): KEYS["UP"], (0, 1): KEYS["DOWN"],
+                             (-1, 0): KEYS["LEFT"], (1, 0): KEYS["RIGHT"]}[v]
+                    key_tap(navfd, [arrow])
 
 # ============================================================ send / stop
 def do_send(fifo, msg):
