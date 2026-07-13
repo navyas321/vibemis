@@ -238,7 +238,7 @@ slow-recover policy at runtime (gated on moonlight-common-c runtime bitrate supp
 submodule for `LiSetVideoBitrate`-class symbols before starting; if absent, document and park the
 phase as upstream-gated, do NOT hack the control stream).
 
-## P4.1 — First stable release  ✅ SHIPPED as **0.2.0.0** (2026-07-13, W.X.Y.Z scheme)
+## P4.1 — First stable release  ✅ SHIPPED as **0.3.0.0** (2026-07-13, W.X.Y.Z scheme)
 Cut from the fully fixed line (three maintainer device passes + harness-validated nav fixes +
 prefs-UAF fix + touch-overlay hit-test fix + Quick Menu redesign + in-app updater proven
 end-to-end). 0.1.0.0 was burnt (tag-reuse lesson — see the versioning memory/commits); legacy
