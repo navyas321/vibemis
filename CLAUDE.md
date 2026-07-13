@@ -352,6 +352,10 @@ If a feature works only in Desktop Mode, it's not ready.
   `release_type=stable` (or push `release/**`/`main`/`master`) without the
   maintainer explicitly approving that specific cut in the current conversation.**
   Alphas, betas and RCs are agent-cuttable per the matrix above.
+  **CI-enforced (BL-1741):** a stable dispatch additionally requires the input
+  `stable_confirm=CONFIRM-STABLE` — without it the run fails at Setup Version
+  before anything builds. Type the phrase only when relaying the maintainer's
+  explicit approval of that specific cut.
 - **Beta** = `0.5.0-beta.NNN` (vibemis-main), **alpha** = `0.5.0-alpha.NNN` (test
   branches), dev = `0.5.0-dev.<run>.<branch>`. NNN is dense + zero-padded, computed
   from existing tags — never delete a tag.

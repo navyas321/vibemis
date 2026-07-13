@@ -39,6 +39,11 @@ on:
         required: false
         type: string
         default: ''
+      stable_confirm:
+        description: 'Stable cuts only: type CONFIRM-STABLE to approve this production release. Maintainer approval gate (BL-1741) — a stable dispatch without it FAILS before anything builds.'
+        required: false
+        type: string
+        default: ''
 
 env:
   QT_VERSION: '6.8.3'
@@ -182,6 +187,22 @@ jobs:
           echo "should_build=true" >> $GITHUB_OUTPUT
           echo "Build will proceed - meaningful changes detected (including code and/or workflow changes)"
       
+      # BL-1741: the stable-approval rule (CLAUDE.md tier matrix) enforced at the CI layer,
+      # not just in prose — a release_type=stable dispatch without the literal confirmation
+      # phrase fails HERE, before any version is computed or artifact built. Downstream
+      # jobs all `need` this job, so nothing runs. release/**/main/master pushes are the
+      # maintainer's own branch-protected actions and are not gated by this input.
+      - name: Enforce stable approval gate
+        if: github.event.inputs.release_type == 'stable'
+        run: |
+          if [ "${{ github.event.inputs.stable_confirm }}" != "CONFIRM-STABLE" ]; then
+            echo "::error::Stable cut REFUSED: maintainer approval gate (BL-1741)."
+            echo "::error::A production release requires the dispatch input stable_confirm=CONFIRM-STABLE."
+            echo "::error::Agents: stables are maintainer-approval-only — never dispatch release_type=stable yourself."
+            exit 1
+          fi
+          echo "Stable approval confirmed (stable_confirm=CONFIRM-STABLE)."
+
       - name: Generate semantic version
         id: version
         run: |
