@@ -4,9 +4,7 @@
 Moonlight Qt and Artemis (Apollo's extended protocol), tuned to pair with the **Vibepollo** host.
 0.1.0 is the first production-stable release (canonical Semantic Versioning identity of the adopted stable lineage), hardware-verified on a Lenovo Legion Go S Z2.
 
-> **Versioning note:** releases now follow **`w.x.y.z`** — `x` steps per stable release, `y` per
-> beta (the manual-testing channel), `z` per alpha (automated test artifacts). This cut supersedes
-> the earlier parked `1.0.x` tags from the pre-scheme era.
+> **Versioning note:** releases follow **[Semantic Versioning 2.0.0](https://semver.org)** — pre-releases are suffixed versions of the stable they precede (`0.2.0-beta.001` → `0.2.0`), release candidates are `-rc.NNN`, and only bare stable versions are full releases (Latest). The complete historical catalog, including the interim-scheme era it supersedes, is mapped in `docs/RELEASE_HISTORY.md`.
 
 ## Highlights
 
