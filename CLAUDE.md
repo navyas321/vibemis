@@ -356,9 +356,18 @@ If a feature works only in Desktop Mode, it's not ready.
   `stable_confirm=CONFIRM-STABLE` — without it the run fails at Setup Version
   before anything builds. Type the phrase only when relaying the maintainer's
   explicit approval of that specific cut.
-- **Beta** = `0.5.0-beta.NNN` (vibemis-main), **alpha** = `0.5.0-alpha.NNN` (test
-  branches), dev = `0.5.0-dev.<run>.<branch>`. NNN is dense + zero-padded, computed
-  from existing tags — never delete a tag.
+- **Pre-release tags lead with a build ordinal (BL-1770, maintainer 2026-07-13):**
+  `0.5.0-nNNNNN-beta.CCC` / `0.5.0-nNNNNN-alpha.CCC` / `0.5.0-nNNNNN-rc.CCC`, where
+  `nNNNNN` = zero-padded workflow run number. GitHub sorts the Releases/Tags pages
+  by SemVer precedence, and with parallel alpha+beta channels precedence could
+  never equal chronology (`alpha` < `beta` by spec §11.4 regardless of dates) —
+  the ordinal-first identifier makes precedence == cut order, so the newest build
+  always tops the page whatever its tier. The literal `-beta`/`-alpha`/`-rc`
+  substrings stay inside the identifier so every deployed updater generation's
+  channel matcher keeps working. Legacy `0.x.y-beta.NNN`-shape tags sort below all
+  ordinal tags of the same base (correct — they're older). dev =
+  `0.5.0-dev.<run>.<branch>` (matches no channel). CCC stays the dense zero-padded
+  per-channel counter, computed from existing tags (both shapes) — never delete a tag.
 - All suffixed builds are GitHub-prerelease; only bare stables are full releases.
 - **Releases are PERMANENT, like tags (maintainer 2026-07-13, BL-1736).** Every cut
   stays on the Releases page forever — SemVer §3 released-version immutability; the

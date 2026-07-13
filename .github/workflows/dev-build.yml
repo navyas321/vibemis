@@ -228,17 +228,34 @@ jobs:
           if [[ "$BASE_VERSION" =~ ^[0-9]+\.[0-9]+$ ]]; then
             BASE_VERSION="$(echo "$BASE_VERSION" | cut -d. -f1).$(( $(echo "$BASE_VERSION" | cut -d. -f2) + 1 )).0"
           fi
-          next_counter() {  # $1 = suffix class (beta|alpha)
+          next_counter() {  # $1 = suffix class (beta|alpha|rc)
             local max
-            max=$(git ls-remote --tags origin "refs/tags/${BASE_VERSION}-$1.*" 2>/dev/null \
-                  | sed -E "s#.*refs/tags/${BASE_VERSION}-$1\.##" \
-                  | grep -E '^[0-9]+$' | sort -n | tail -1)
+            # BL-1770: match BOTH tag shapes — legacy "<base>-beta.NNN" and ordinal-first
+            # "<base>-nXXXXX-beta.NNN" — so counters stay dense across the scheme change
+            # and a number is never reused.
+            max=$(git ls-remote --tags origin "refs/tags/${BASE_VERSION}-*" 2>/dev/null \
+                  | sed -n -E "s#.*refs/tags/${BASE_VERSION}-(n[0-9]+-)?$1\.([0-9]+)\$#\2#p" \
+                  | sort -n | tail -1)
             # BL-1744: 10# forces base-10 — zero-padded suffixes are OCTAL to bash arithmetic,
             # so 008 crashed ("value too great for base") and 010+ would silently compute
             # WRONG (lower!) numbers, risking tag reuse. First tripped the day beta.008 existed.
             printf '%03d' $(( 10#${max:-0} + 1 ))
           }
           RUN_N=${GITHUB_RUN_NUMBER}
+          # BL-1770 (maintainer: the Releases page MUST read chronologically): GitHub sorts
+          # the Releases/Tags pages by SemVer PRECEDENCE, and with parallel alpha+beta
+          # channels precedence can never equal chronology ("alpha" < "beta" by spec §11.4
+          # regardless of dates). Fix: every pre-release tag now leads with a monotonic
+          # BUILD ORDINAL as its first prerelease identifier — <base>-nNNNNN-<tier>.<CCC>
+          # (n + zero-padded run number; identifiers may contain hyphens per SemVer §9).
+          # Precedence therefore equals cut order across ALL channels, so the newest build
+          # tops the page whatever its tier. The literal "-beta"/"-alpha"/"-rc" substrings
+          # survive inside the identifier, so every deployed updater generation's channel
+          # matcher (tag.contains("-beta") etc.) keeps working. Legacy suffix tags sort
+          # BELOW all ordinal tags of the same base ("beta..." < "n..."), which is exactly
+          # right: they are all older. Wrap hazard: lexical==numeric only while the run
+          # number stays <= 99999 (we're at ~550; revisit padding before then).
+          RUN_ORD=$(printf 'n%05d' "$RUN_N")
 
           # Get branch info
           BRANCH_NAME="${{ github.ref_name }}"
@@ -275,7 +292,7 @@ jobs:
             # 🎯 Release candidate — the exact build proposed as the next stable, cut for
             # on-device verification. Prerelease-flagged; the updater's RC channel matches
             # the -rc suffix. Never takes Latest.
-            VERSION="${BASE_VERSION}-rc.$(next_counter rc)"
+            VERSION="${BASE_VERSION}-${RUN_ORD}-rc.$(next_counter rc)"
             IS_PRERELEASE="true"
             RELEASE_TIER="rc"
 
@@ -283,13 +300,13 @@ jobs:
             # 🧪 Beta — semver pre-release of the upcoming stable. Prerelease-flagged on
             # GitHub (only bare stables are full releases); the updater's beta channel
             # matches the -beta suffix on every deployed client generation.
-            VERSION="${BASE_VERSION}-beta.$(next_counter beta)"
+            VERSION="${BASE_VERSION}-${RUN_ORD}-beta.$(next_counter beta)"
             IS_PRERELEASE="true"
             RELEASE_TIER="beta"
 
           elif [[ "$BRANCH_NAME" =~ ^test || "$BRANCH_NAME" =~ ^(fix|hotfix|feat|feature)/ ]]; then
             # 🔬 Alpha — pre-release; the branch is shown in the release body.
-            VERSION="${BASE_VERSION}-alpha.$(next_counter alpha)"
+            VERSION="${BASE_VERSION}-${RUN_ORD}-alpha.$(next_counter alpha)"
             RELEASE_TIER="alpha"
 
           else
