@@ -292,12 +292,22 @@ jobs:
     # AppImage job, so running sanity there doubled ~10 min of build for zero signal.
     if: needs.setup-version.outputs.should_build == 'true' && github.event_name == 'push'
     runs-on: ubuntu-22.04
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: 'recursive'
           fetch-depth: 0
+
+      # BL-1730: azure.archive.ubuntu.com stalls (20-140s per package) once turned a 9-min
+      # build into 37. A 30s inactivity timeout + retries makes apt fail over to the
+      # mirrorlist fallback instead of trickling. Must run before Setup Qt 6 — the Qt
+      # action apt-installs its own system deps.
+      - name: Harden apt against flaky mirrors
+        run: |
+          printf 'Acquire::Retries "3";\nAcquire::http::Timeout "30";\nAcquire::https::Timeout "30";\n' \
+            | sudo tee /etc/apt/apt.conf.d/99-vibemis-ci-retries
 
       - name: Setup Qt 6
         uses: jurplel/install-qt-action@v3
@@ -306,6 +316,7 @@ jobs:
           host: 'linux'
           target: 'desktop'
           modules: 'qtmultimedia'
+          cache: true
 
       - name: Install Linux dependencies
         run: |
@@ -331,13 +342,20 @@ jobs:
     # BL-1701: releases ship ONLY the AppImage, so this tarball build ran ~15 min per
     # beta/alpha for an artifact nobody downloads. Stable cuts keep the full matrix.
     if: needs.setup-version.outputs.should_build == 'true' && needs.setup-version.outputs.release_tier == 'release'
-    
+    timeout-minutes: 45
+
     steps:
     - name: Checkout
       uses: actions/checkout@v4
       with:
         submodules: 'recursive'
         fetch-depth: 0
+
+    # BL-1730: fail over from stalled apt mirrors instead of trickling (see compile-sanity).
+    - name: Harden apt against flaky mirrors
+      run: |
+        printf 'Acquire::Retries "3";\nAcquire::http::Timeout "30";\nAcquire::https::Timeout "30";\n' \
+          | sudo tee /etc/apt/apt.conf.d/99-vibemis-ci-retries
 
     - name: Display version info
       run: |
@@ -352,7 +370,8 @@ jobs:
         host: 'linux'
         target: 'desktop'
         modules: 'qtmultimedia'
-    
+        cache: true
+
     - name: Install dependencies
       run: |
         sudo apt-get update
@@ -555,6 +574,7 @@ jobs:
     needs: setup-version
     runs-on: ubuntu-22.04
     if: needs.setup-version.outputs.should_build == 'true'
+    timeout-minutes: 45
 
     steps:
     - name: Checkout
@@ -563,6 +583,12 @@ jobs:
         submodules: 'recursive'
         fetch-depth: 0
 
+    # BL-1730: fail over from stalled apt mirrors instead of trickling (see compile-sanity).
+    - name: Harden apt against flaky mirrors
+      run: |
+        printf 'Acquire::Retries "3";\nAcquire::http::Timeout "30";\nAcquire::https::Timeout "30";\n' \
+          | sudo tee /etc/apt/apt.conf.d/99-vibemis-ci-retries
+
     - name: Setup Qt 6
       uses: jurplel/install-qt-action@v3
       with:
@@ -570,6 +596,7 @@ jobs:
         host: 'linux'
         target: 'desktop'
         modules: 'qtmultimedia'
+        cache: true
 
     - name: Install system dependencies
       run: |
