@@ -242,20 +242,15 @@ jobs:
             printf '%03d' $(( 10#${max:-0} + 1 ))
           }
           RUN_N=${GITHUB_RUN_NUMBER}
-          # BL-1770 (maintainer: the Releases page MUST read chronologically): GitHub sorts
-          # the Releases/Tags pages by SemVer PRECEDENCE, and with parallel alpha+beta
-          # channels precedence can never equal chronology ("alpha" < "beta" by spec §11.4
-          # regardless of dates). Fix: every pre-release tag now leads with a monotonic
-          # BUILD ORDINAL as its first prerelease identifier — <base>-nNNNNN-<tier>.<CCC>
-          # (n + zero-padded run number; identifiers may contain hyphens per SemVer §9).
-          # Precedence therefore equals cut order across ALL channels, so the newest build
-          # tops the page whatever its tier. The literal "-beta"/"-alpha"/"-rc" substrings
-          # survive inside the identifier, so every deployed updater generation's channel
-          # matcher (tag.contains("-beta") etc.) keeps working. Legacy suffix tags sort
-          # BELOW all ordinal tags of the same base ("beta..." < "n..."), which is exactly
-          # right: they are all older. Wrap hazard: lexical==numeric only while the run
-          # number stays <= 99999 (we're at ~550; revisit padding before then).
-          RUN_ORD=$(printf 'n%05d' "$RUN_N")
+          # BL-1772 (maintainer final call on release-page ordering): tags stay CLEAN
+          # (<base>-<tier>.<CCC>). The ordinal-first experiment (<base>-nNNNNN-<tier>.<CCC>,
+          # BL-1770) DID make the GitHub Releases page chronological, but the maintainer
+          # judged the names too ugly and accepted the SemVer-precedence page order
+          # (alphas list after betas of the same base — spec §11.4; GitHub offers no page
+          # sort setting). Chronological views that remain: RELEASES.md (auto-refreshed),
+          # the releases Atom feed, the API, and the in-app channels — all date-ordered.
+          # next_counter still scans BOTH tag shapes so history with the one ordinal-era
+          # cut can never cause a counter reuse.
 
           # Get branch info
           BRANCH_NAME="${{ github.ref_name }}"
@@ -292,7 +287,7 @@ jobs:
             # 🎯 Release candidate — the exact build proposed as the next stable, cut for
             # on-device verification. Prerelease-flagged; the updater's RC channel matches
             # the -rc suffix. Never takes Latest.
-            VERSION="${BASE_VERSION}-${RUN_ORD}-rc.$(next_counter rc)"
+            VERSION="${BASE_VERSION}-rc.$(next_counter rc)"
             IS_PRERELEASE="true"
             RELEASE_TIER="rc"
 
@@ -300,13 +295,13 @@ jobs:
             # 🧪 Beta — semver pre-release of the upcoming stable. Prerelease-flagged on
             # GitHub (only bare stables are full releases); the updater's beta channel
             # matches the -beta suffix on every deployed client generation.
-            VERSION="${BASE_VERSION}-${RUN_ORD}-beta.$(next_counter beta)"
+            VERSION="${BASE_VERSION}-beta.$(next_counter beta)"
             IS_PRERELEASE="true"
             RELEASE_TIER="beta"
 
           elif [[ "$BRANCH_NAME" =~ ^test || "$BRANCH_NAME" =~ ^(fix|hotfix|feat|feature)/ ]]; then
             # 🔬 Alpha — pre-release; the branch is shown in the release body.
-            VERSION="${BASE_VERSION}-${RUN_ORD}-alpha.$(next_counter alpha)"
+            VERSION="${BASE_VERSION}-alpha.$(next_counter alpha)"
             RELEASE_TIER="alpha"
 
           else
