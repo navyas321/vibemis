@@ -444,6 +444,13 @@ void VDPAURenderer::notifyOverlayUpdated(Overlay::OverlayType type)
             overlayRect.x0 = right ? (m_DisplayWidth - newSurface->w) : 0;
             overlayRect.y0 = bottom ? (m_DisplayHeight - newSurface->h) : 0;
         }
+        else if (type == Overlay::OverlayTouchButtonMenu || type == Overlay::OverlayTouchButtonKbd) {
+            // Vibemis BL-1562: touch buttons inset from the top corners (upper-left origin)
+            overlayRect.x0 = (type == Overlay::OverlayTouchButtonMenu)
+                    ? Overlay::TouchButtonInset
+                    : (m_DisplayWidth - Overlay::TouchButtonInset - newSurface->w);
+            overlayRect.y0 = Overlay::TouchButtonInset;
+        }
 
         overlayRect.x1 = overlayRect.x0 + newSurface->w;
         overlayRect.y1 = overlayRect.y0 + newSurface->h;

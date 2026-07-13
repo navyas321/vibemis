@@ -973,6 +973,15 @@ void D3D11VARenderer::notifyOverlayUpdated(Overlay::OverlayType type)
         // Center
         renderRect.x = (m_DisplayWidth - newSurface->w) / 2;
         renderRect.y = (m_DisplayHeight - newSurface->h) / 2;
+    }
+    else if (type == Overlay::OverlayTouchButtonMenu || type == Overlay::OverlayTouchButtonKbd) {
+        // Vibemis BL-1562: touch buttons inset from the top corners.
+        // NB: this renderer's origin is lower-left (see OverlayDebug above),
+        // so "top" is the high-Y edge here.
+        renderRect.x = (type == Overlay::OverlayTouchButtonMenu)
+                ? Overlay::TouchButtonInset
+                : (m_DisplayWidth - Overlay::TouchButtonInset - newSurface->w);
+        renderRect.y = m_DisplayHeight - Overlay::TouchButtonInset - newSurface->h;
     } else {
         SDL_assert(false);
     }

@@ -264,6 +264,12 @@ private:
     bool m_AbsoluteTouchMode;
     bool m_DisabledTouchFeedback;
 
+    // Vibemis BL-1562: finger currently captured by the on-screen touch overlay
+    // buttons; its motion/up events are swallowed so the host never sees an
+    // unbalanced touch sequence (see abstouch.cpp).
+    SDL_FingerID m_TouchOverlayFinger;
+    bool m_TouchOverlayFingerActive;
+
     SDL_TouchFingerEvent m_TouchDownEvent[MAX_FINGERS];
     SDL_TimerID m_LeftButtonReleaseTimer;
     SDL_TimerID m_RightButtonReleaseTimer;

@@ -194,6 +194,11 @@ public:
     Q_PROPERTY(bool quitAppAfter MEMBER quitAppAfter NOTIFY quitAppAfterChanged)
     Q_PROPERTY(bool absoluteMouseMode MEMBER absoluteMouseMode NOTIFY absoluteMouseModeChanged)
     Q_PROPERTY(bool absoluteTouchMode MEMBER absoluteTouchMode NOTIFY absoluteTouchModeChanged)
+    // Vibemis BL-1562: opt-in on-screen touch controls overlay for touch handhelds.
+    // When enabled, two semi-transparent buttons are composited into the stream:
+    // MENU (top-left, opens the Quick Menu) and KBD (top-right, opens the Quick
+    // Menu's text-send view). Off by default so existing users are unaffected.
+    Q_PROPERTY(bool enableTouchOverlay MEMBER enableTouchOverlay NOTIFY enableTouchOverlayChanged)
     Q_PROPERTY(bool framePacing MEMBER framePacing NOTIFY framePacingChanged)
     Q_PROPERTY(bool connectionWarnings MEMBER connectionWarnings NOTIFY connectionWarningsChanged)
     Q_PROPERTY(bool configurationWarnings MEMBER configurationWarnings NOTIFY configurationWarningsChanged)
@@ -272,6 +277,8 @@ public:
     bool quitAppAfter;
     bool absoluteMouseMode;
     bool absoluteTouchMode;
+    // Vibemis BL-1562: see Q_PROPERTY comment above; opt-in on-screen touch buttons.
+    bool enableTouchOverlay;
     bool framePacing;
     bool connectionWarnings;
     bool configurationWarnings;
@@ -342,6 +349,7 @@ signals:
     void quitAppAfterChanged();
     void absoluteMouseModeChanged();
     void absoluteTouchModeChanged();
+    void enableTouchOverlayChanged();
     void audioConfigChanged();
     void videoCodecConfigChanged();
     void enableHdrChanged();

@@ -605,6 +605,15 @@ public:
                     renderRect.x = 0;
                     renderRect.y = m_LastDrawableHeight - overlayTexture.height;
                 }
+                else if (i == Overlay::OverlayTouchButtonMenu || i == Overlay::OverlayTouchButtonKbd) {
+                    // Vibemis BL-1562: touch buttons inset from the top corners.
+                    // NB: this renderer's origin is lower-left (see OverlayDebug above),
+                    // so "top" is the high-Y edge here.
+                    renderRect.x = (i == Overlay::OverlayTouchButtonMenu)
+                            ? Overlay::TouchButtonInset
+                            : (m_LastDrawableWidth - Overlay::TouchButtonInset - overlayTexture.width);
+                    renderRect.y = m_LastDrawableHeight - Overlay::TouchButtonInset - overlayTexture.height;
+                }
 
                 renderRect.w = overlayTexture.width;
                 renderRect.h = overlayTexture.height;

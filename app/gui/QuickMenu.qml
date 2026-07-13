@@ -400,6 +400,12 @@ Rectangle {
             description: qsTr("Toggle fullscreen mode")
         }
         ListElement {
+            text: qsTr("Toggle Touch Overlay")
+            icon: "👆"
+            action: "toggle_touch_overlay"
+            description: qsTr("Show/hide the on-screen MENU / KBD touch buttons")
+        }
+        ListElement {
             text: qsTr("Send Ctrl+Alt+Del")
             icon: "⌨"
             action: "key_ctrl_alt_del"
@@ -540,6 +546,9 @@ Rectangle {
                 break
             case "toggle_fullscreen":
                 message = "Toggling fullscreen..."
+                break
+            case "toggle_touch_overlay":
+                message = "Toggling touch overlay..."
                 break
             default:
                 message = "Executing action..."

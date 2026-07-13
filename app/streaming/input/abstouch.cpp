@@ -1,5 +1,9 @@
 #include "input.h"
 
+// session.h (Qt-heavy) must precede SDL_syswm.h: the latter drags in Xlib.h, whose
+// KeyPress/None/Expose macros poison QEvent's enum if Qt headers come after it.
+#include "streaming/session.h"
+
 #include <Limelight.h>
 #include "SDL_compat.h"
 #include <SDL_syswm.h>
@@ -68,6 +72,47 @@ void SdlInputHandler::handleAbsoluteFingerEvent(SDL_TouchFingerEvent* event)
     int windowWidth, windowHeight;
 
     SDL_GetWindowSize(m_Window, &windowWidth, &windowHeight);
+
+    // Vibemis BL-1562: on-screen touch controls overlay. When enabled, a finger-down
+    // landing on the MENU (top-left) / KBD (top-right) button is consumed locally —
+    // MENU toggles the Quick Menu, KBD opens its text-send view — instead of being
+    // forwarded to the host. The rest of that finger's gesture (motion/up) is
+    // swallowed too so the host never sees an unbalanced touch sequence.
+    if (m_TouchOverlayFingerActive) {
+        if (event->fingerId == m_TouchOverlayFinger) {
+            if (event->type == SDL_FINGERUP) {
+                m_TouchOverlayFingerActive = false;
+            }
+            return;
+        }
+    }
+    else if (event->type == SDL_FINGERDOWN &&
+             Session::get() != nullptr &&
+             Session::get()->getOverlayManager().isOverlayEnabled(Overlay::OverlayTouchButtonMenu)) {
+        int fingerX = (int)(event->x * windowWidth);
+        int fingerY = (int)(event->y * windowHeight);
+
+        if (fingerY >= Overlay::TouchButtonInset &&
+                fingerY <= Overlay::TouchButtonInset + Overlay::TouchButtonSize) {
+            bool onMenuButton = fingerX >= Overlay::TouchButtonInset &&
+                    fingerX <= Overlay::TouchButtonInset + Overlay::TouchButtonSize;
+            bool onKbdButton = fingerX >= windowWidth - Overlay::TouchButtonInset - Overlay::TouchButtonSize &&
+                    fingerX <= windowWidth - Overlay::TouchButtonInset;
+            if (onMenuButton || onKbdButton) {
+                m_TouchOverlayFingerActive = true;
+                m_TouchOverlayFinger = event->fingerId;
+
+                // The Quick Menu lives on the Qt main thread — hop threads via a
+                // queued invocation like the gamepad/keyboard intercepts do.
+                QuickMenuManager* qmm = Session::get()->getQuickMenuManager();
+                if (qmm != nullptr) {
+                    QMetaObject::invokeMethod(qmm, onMenuButton ? "toggle" : "openTextSend",
+                                              Qt::QueuedConnection);
+                }
+                return;
+            }
+        }
+    }
 
     src.x = src.y = 0;
     src.w = m_StreamWidth;

@@ -13,8 +13,20 @@ enum OverlayType {
     OverlayStatusUpdate,
     OverlayServerCommands,
     OverlayQuickMenu,
+    // Vibemis BL-1562: opt-in on-screen touch controls. Two small semi-transparent
+    // buttons composited into the stream: MENU (top-left, opens the Quick Menu) and
+    // KBD (top-right, opens the Quick Menu's text-send view). Hit-testing lives in
+    // the absolute touch handler (abstouch.cpp) using the constants below.
+    OverlayTouchButtonMenu,
+    OverlayTouchButtonKbd,
     OverlayMax
 };
+
+// Vibemis BL-1562: geometry of the on-screen touch buttons — square side length and
+// inset from the top corners, in pixels. Shared by the renderers (drawing) and the
+// touch input handler (hit-testing) so the visuals and the hit rects stay in sync.
+const int TouchButtonSize = 64;
+const int TouchButtonInset = 24;
 
 class IOverlayRenderer
 {

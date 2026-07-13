@@ -86,6 +86,15 @@ public:
     bool isTextInputActive() const { return m_textInputActive; }
     Q_INVOKABLE void setTextInputActive(bool active) { m_textInputActive = active; }
 
+    // Vibemis BL-1562: open the Quick Menu directly into its text-send view (used by
+    // the on-screen touch overlay's KBD button).
+    Q_INVOKABLE void openTextSend();
+
+    // Vibemis BL-1562: live-toggle the on-screen touch controls overlay. Flips and
+    // persists StreamingPreferences::enableTouchOverlay and applies the new state to
+    // the current session's overlays immediately.
+    Q_INVOKABLE void toggleTouchOverlay();
+
     // Action handlers
     Q_INVOKABLE void executeAction(const QString &action);
     Q_INVOKABLE void disconnect();
