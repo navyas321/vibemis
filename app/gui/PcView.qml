@@ -23,9 +23,16 @@ CenteredGridView {
     // drives the cards immediately. The maintainer's repro was "toolbar d-pad works, but the
     // moment focus reaches the cards d-pad stops" — with currentIndex still -1 the GridView had
     // no current item to move from. count>0 excludes the ghost "Add a computer" cell.
+    //
+    // BL-1681 lives here too (QML forbids a second onActiveFocusChanged — a duplicate handler
+    // fails the WHOLE component at runtime, which shipped one beta as a blank home page):
+    // losing focus also clears the ghost d-pad selection.
     onActiveFocusChanged: {
         if (activeFocus && currentIndex === -1 && count > 0) {
             currentIndex = 0
+        }
+        if (!activeFocus) {
+            ghostSelected = false
         }
     }
     // Redesign 1a: the grid content is inset so it clears the fixed per-screen header
@@ -65,11 +72,6 @@ CenteredGridView {
         }
     }
     onCurrentIndexChanged: ghostSelected = false
-    onActiveFocusChanged: {
-        if (!activeFocus) {
-            ghostSelected = false
-        }
-    }
 
     // ---- Redesign 1a chrome: per-screen header + persistent gamepad hint bar ----
     // Live "N hosts · M online" count. QML can't bind an aggregate over model rows, so

@@ -390,33 +390,31 @@ Item {
                     // onClicked fires on mouse/touch, Return/Space, and gamepad Ⓐ (UI nav mode).
                     onClicked: settingsPage.category = index
 
-                    // BL-1667: selection follows focus. When the d-pad/left-stick (Tab/Backtab in
-                    // UI nav mode) or a mouse moves focus onto this row, make it the selected
-                    // category — so the selected ring and the focus ring are always the SAME row
-                    // (no more two-rings-at-once), and up/down actually switches the shown category.
-                    //
-                    // BL-1689: EXCEPT when focus lands here by BackTab escaping the content pane
-                    // (d-pad UP at the pane's first control walks the focus chain to the LAST
-                    // sidebar row — "Up always jumps to Advanced"). settingsFlick.paneHasFocus is
-                    // still stale-true at this instant (this handler runs before the Window
-                    // activeFocusItem handlers update it), so a pane→row jump onto a row that
-                    // ISN'T the current category gets redirected back to the current category's
-                    // row. Mouse/touch clicks are unaffected (`pressed` is true on press-focus).
+                    // BL-1689 (v2 — the v1 stale-flag redirect proved unreliable on device; the
+                    // maintainer hit the Advanced-jump from EVERY category): only the CURRENT
+                    // category's row participates in the Tab focus chain. A BackTab escaping the
+                    // content pane (d-pad UP at a pane-section top in UI-nav mode) can therefore
+                    // only ever land on THIS category's row — never "Advanced" — so the surprise
+                    // pane switch is structurally impossible. LB/RB, clicks and the key handlers
+                    // below use forceActiveFocus/clicks, which ignore activeFocusOnTab.
+                    activeFocusOnTab: index === settingsPage.category
+
+                    // BL-1667: selection follows focus. When the d-pad/left-stick or a mouse
+                    // moves focus onto this row, make it the selected category — so the selected
+                    // ring and the focus ring are always the SAME row (no two-rings-at-once).
                     onActiveFocusChanged: {
                         if (activeFocus) {
-                            if (!pressed && settingsFlick.paneHasFocus && settingsPage.category !== index) {
-                                settingsPage.focusCategoryRow(settingsPage.category)
-                                return
-                            }
                             settingsPage.category = index
                         }
                     }
 
-                    // BL-1667: explicit vertical nav for keyboard arrows / any d-pad that emits
-                    // Key_Up/Down — gives the sidebar the up/down half of full 2-D navigation
-                    // (the gamepad's Tab/Backtab path is covered by onActiveFocusChanged above).
+                    // BL-1667/BL-1689: explicit vertical nav. Keyboard arrows AND the gamepad's
+                    // UI-nav Tab/BackTab are stepped here (Keys handlers run before default tab
+                    // handling), since non-current rows are no longer in the tab chain.
                     Keys.onUpPressed: settingsPage.focusCategoryRow(Math.max(0, index - 1))
                     Keys.onDownPressed: settingsPage.focusCategoryRow(Math.min(sidebarRepeater.count - 1, index + 1))
+                    Keys.onBacktabPressed: settingsPage.focusCategoryRow(Math.max(0, index - 1))
+                    Keys.onTabPressed: settingsPage.focusCategoryRow(Math.min(sidebarRepeater.count - 1, index + 1))
 
                     // BL-1627: d-pad RIGHT (sent as Key_Right by SdlGamepadKeyNavigation even in
                     // UI nav mode) enters the content pane: select this row's category, then move
@@ -441,12 +439,6 @@ Item {
         anchors.bottom: hintBar.top
 
         boundsBehavior: Flickable.OvershootBounds
-
-        // BL-1689: whether the CURRENT window focus item is inside this pane. Updated in the
-        // Window.onActiveFocusItemChanged handler below, which runs AFTER each item's own
-        // onActiveFocusChanged — so a sidebar row receiving focus can still read the stale
-        // "true" and know the jump CAME from the pane (the BackTab-escape detection).
-        property bool paneHasFocus: false
 
         // BL-1627 (symmetric return path): unhandled d-pad LEFT from any focused content
         // control bubbles up here and returns focus to the selected sidebar row. Controls
@@ -490,9 +482,6 @@ Item {
 
         Window.onActiveFocusItemChanged: {
             var item = Window.activeFocusItem
-            // BL-1689: keep the pane-focus flag current (read stale by the sidebar rows to
-            // detect BackTab escapes — see the row's onActiveFocusChanged).
-            settingsFlick.paneHasFocus = (item ? isChildOfFlickable(item) : false)
             if (item) {
                 // Ignore non-child elements like the toolbar buttons / header / sidebar rows
                 if (!isChildOfFlickable(item)) {
