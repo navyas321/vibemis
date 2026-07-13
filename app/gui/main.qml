@@ -485,7 +485,7 @@ ApplicationWindow {
                 ToolTip.text: qsTr("Join our community on Discord")
 
                 // TODO need to make sure browser is brought to foreground.
-                onClicked: Qt.openUrlExternally("https://moonlight-stream.org/discord");
+                onClicked: SystemProperties.openUrl("https://moonlight-stream.org/discord");
 
                 Keys.onDownPressed: {
                     stackView.currentItem.forceActiveFocus(Qt.TabFocus)
@@ -553,7 +553,7 @@ ApplicationWindow {
 
                 onClicked: {
                     if (SystemProperties.hasBrowser) {
-                        Qt.openUrlExternally(browserUrl);
+                        SystemProperties.openUrl(browserUrl);
                     }
                 }
 
@@ -598,7 +598,7 @@ ApplicationWindow {
                     if (comp.status === Component.Ready) {
                         stackView.push(comp)
                     } else {
-                        Qt.openUrlExternally("https://github.com/navyas321/vibemis")
+                        SystemProperties.openUrl("https://github.com/navyas321/vibemis")
                     }
                 }
 
@@ -671,7 +671,7 @@ ApplicationWindow {
         standardButtons: Dialog.Ok | Dialog.Cancel
         text: qsTr("This version of Vibemis isn't optimized for your PC. Please download the '%1' version of Vibemis for the best streaming performance.").arg(SystemProperties.friendlyNativeArchName)
         onAccepted: {
-            Qt.openUrlExternally("https://github.com/navyas321/vibemis/releases");
+            SystemProperties.openUrl("https://github.com/navyas321/vibemis/releases");
         }
     }
 

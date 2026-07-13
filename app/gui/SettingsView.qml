@@ -3455,7 +3455,7 @@ Item {
                         visible: false
                         onClicked: {
                             if (releaseUrl) {
-                                Qt.openUrlExternally(releaseUrl)
+                                SystemProperties.openUrl(releaseUrl)
                             }
                         }
                     }
@@ -3565,12 +3565,12 @@ Item {
                     spacing: 8
                     Button {
                         text: qsTr("Set up Tailscale")
-                        onClicked: Qt.openUrlExternally("https://tailscale.com/kb/installation")
+                        onClicked: SystemProperties.openUrl("https://tailscale.com/kb/installation")
                         visible: SystemProperties.hasBrowser
                     }
                     Button {
                         text: qsTr("One-command setup (guide)")
-                        onClicked: Qt.openUrlExternally("https://github.com/navyas321/vibemis/blob/vibemis-main/scripts/setup-tailscale.sh")
+                        onClicked: SystemProperties.openUrl("https://github.com/navyas321/vibemis/blob/vibemis-main/scripts/setup-tailscale.sh")
                         visible: SystemProperties.hasBrowser
                     }
                     // Vibemis P3.7 (test93): check the tailnet status in-app (no terminal needed).
@@ -3707,7 +3707,7 @@ Item {
                 Label {
                     width: parent.width
                     text: "<a href=\"https://github.com/navyas321/vibemis\">github.com/navyas321/vibemis</a>"
-                    onLinkActivated: Qt.openUrlExternally(link)
+                    onLinkActivated: SystemProperties.openUrl(link)
                     font.pointSize: 9
                     wrapMode: Text.Wrap
                     color: "#aaaaaa"
@@ -3743,15 +3743,15 @@ Item {
 
                 Button {
                     text: qsTr("Vibemis on GitHub")
-                    onClicked: Qt.openUrlExternally("https://github.com/navyas321/vibemis")
+                    onClicked: SystemProperties.openUrl("https://github.com/navyas321/vibemis")
                 }
                 Button {
                     text: qsTr("Install guide (README)")
-                    onClicked: Qt.openUrlExternally("https://github.com/navyas321/vibemis#readme")
+                    onClicked: SystemProperties.openUrl("https://github.com/navyas321/vibemis#readme")
                 }
                 Button {
                     text: qsTr("Remote play over Tailscale — setup")
-                    onClicked: Qt.openUrlExternally("https://tailscale.com/kb/installation")
+                    onClicked: SystemProperties.openUrl("https://tailscale.com/kb/installation")
                 }
             }
         }
