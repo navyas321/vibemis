@@ -331,7 +331,7 @@ jobs:
 
       - name: Build (qmake + make)
         run: |
-          export PATH="$Qt6_DIR/bin:$PATH"
+          export PATH="$QT_ROOT_DIR/bin:$PATH"
           qmake6 vibemis.pro CONFIG+=release "QMAKE_CXXFLAGS+=-fPIC"
           make -j$(nproc)
 
@@ -399,8 +399,8 @@ jobs:
     
     - name: Build
       run: |
-        export PATH="$Qt6_DIR/bin:$PATH"
-        export QMAKE="$Qt6_DIR/bin/qmake6"
+        export PATH="$QT_ROOT_DIR/bin:$PATH"
+        export QMAKE="$QT_ROOT_DIR/bin/qmake6"
         qmake6 vibemis.pro CONFIG+=release "QMAKE_CXXFLAGS+=-fPIC"
         make -j$(nproc)
     
@@ -624,7 +624,7 @@ jobs:
 
     - name: Build and install
       run: |
-        export PATH="$Qt6_DIR/bin:$PATH"
+        export PATH="$QT_ROOT_DIR/bin:$PATH"
         DEPLOY=$PWD/deploy
         rm -rf "$DEPLOY" build/installer-release
         mkdir -p "$DEPLOY" build/installer-release
@@ -702,9 +702,9 @@ jobs:
 
     - name: Bundle AppImage with linuxdeploy
       run: |
-        export PATH="$Qt6_DIR/bin:$PATH"
+        export PATH="$QT_ROOT_DIR/bin:$PATH"
         # Tell linuxdeploy-plugin-qt where Qt 6's qmake lives
-        export QMAKE="$Qt6_DIR/bin/qmake6"
+        export QMAKE="$QT_ROOT_DIR/bin/qmake6"
         # Run AppImages without FUSE (extract-and-run mode) — required in CI
         export APPIMAGE_EXTRACT_AND_RUN=1
         DEPLOY=$PWD/deploy
