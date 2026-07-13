@@ -60,28 +60,39 @@ CenteredGridView {
         }
     }
 
-    // Live "session running" signal for the Ⓨ hint below — QML can't observe
-    // getRunningAppId() directly, so bump a rev on any model change (PcView's
-    // onlineRev pattern).
-    property int runningRev: 0
+    // Live "session running" state for the Ⓨ hint below. BL-1771 round 2 RCA: the
+    // first attempt made the hint binding depend on a rev counter via a BARE property
+    // read (`appGrid.runningRev;` as a statement) — compiled QML optimizes away unused
+    // pure reads, so the dependency was never registered and the binding NEVER
+    // re-evaluated (on-device: the RESUME badge updated, the hint didn't). This
+    // boolean is a REAL, used dependency (branched on inside the hints binding) and
+    // is set imperatively from every path that can change the running state.
+    property bool sessionRunning: false
+    function refreshSessionRunning() {
+        sessionRunning = appModel.getRunningAppId() !== 0
+    }
     Connections {
         target: appModel
-        function onDataChanged() { appGrid.runningRev++ }
-        function onRowsInserted() { appGrid.runningRev++ }
-        function onRowsRemoved() { appGrid.runningRev++ }
-        function onModelReset() { appGrid.runningRev++ }
+        function onDataChanged() { appGrid.refreshSessionRunning() }
+        function onRowsInserted() { appGrid.refreshSessionRunning() }
+        function onRowsRemoved() { appGrid.refreshSessionRunning() }
+        function onModelReset() { appGrid.refreshSessionRunning() }
     }
 
     // BL-1769: the poll-delta path misses running-state changes the launch/quit flow
     // already wrote to NvComputer (no diff -> no computerStateChanged -> stale RESUME
     // badge + stale Ⓨ hint until the view was recreated). Resync explicitly while this
     // view is live — resyncRunningState() is a no-op when nothing changed, so this
-    // never spams dataChanged.
+    // never spams dataChanged. The hint state refreshes on the same tick (belt and
+    // braces: even a missed model signal can't strand the hint for more than 3s).
     Timer {
         interval: 3000
         repeat: true
         running: appGrid.activated
-        onTriggered: appModel.resyncRunningState()
+        onTriggered: {
+            appModel.resyncRunningState()
+            appGrid.refreshSessionRunning()
+        }
     }
 
     // ---- Redesign 1b chrome: per-screen header + persistent gamepad hint bar ----
@@ -140,16 +151,17 @@ CenteredGridView {
         anchors.bottom: parent.bottom
         anchors.left: parent.left
         anchors.right: parent.right
-        // BL-1760: the Ⓨ Quit-session hint appears only while a session is actually
-        // running (runningRev re-evaluates this binding on any model change).
+        // BL-1760/BL-1771: the Ⓨ Quit-session hint appears only while a session is
+        // actually running. appGrid.sessionRunning is a real branched-on dependency —
+        // NOT a bare rev read, which compiled QML eliminated, freezing this binding
+        // at its first evaluation (alpha.004 regression: badge updated, hint didn't).
         hints: {
-            appGrid.runningRev
             var h = [
                 { glyph: "Ⓐ", label: qsTr("Launch") },
                 { glyph: "Ⓑ", label: qsTr("Back") },
                 { glyph: "Ⓧ", label: qsTr("App options") }
             ]
-            if (appModel.getRunningAppId() !== 0) {
+            if (appGrid.sessionRunning) {
                 h.push({ glyph: "Ⓨ", label: qsTr("Quit session") })
             }
             return h
@@ -183,6 +195,7 @@ CenteredGridView {
         // running state immediately (don't wait for the 3s resync tick) so the RESUME
         // badge and the Ⓨ Quit-session hint are correct the moment the grid reappears.
         appModel.resyncRunningState()
+        refreshSessionRunning()
 
         // Highlight the first item if a gamepad is connected
         if (currentIndex === -1 && SdlGamepadKeyNavigation.getConnectedGamepads() > 0) {
