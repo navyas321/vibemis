@@ -783,14 +783,26 @@ ApplicationWindow {
                     anchors.rightMargin: 20
                     verticalAlignment: TextInput.AlignVCenter
                     focus: true
-                    placeholderText: "192.168.1.42"
+                    // BL-1647 (test-agent find): Material's placeholderText renders as a FLOATING
+                    // label that rises to the control's top edge on focus and clipped into the
+                    // custom 72px frame's border. Use a plain in-field hint instead (the handoff
+                    // shows a static grey hint, not a floating label).
                     color: VbTokens.text
-                    placeholderTextColor: VbTokens.textDim
                     font.family: VbTokens.fontBody
                     font.pixelSize: 20
                     background: Item {}   // the surrounding Rectangle is the visual frame
                     Keys.onReturnPressed: addPcDialog.accept()
                     Keys.onEnterPressed: addPcDialog.accept()
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.left: parent.left
+                        visible: editText.text.length === 0
+                        text: "192.168.1.42"
+                        color: VbTokens.textDim
+                        font.family: VbTokens.fontBody
+                        font.pixelSize: 20
+                    }
                 }
             }
 

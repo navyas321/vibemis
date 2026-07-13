@@ -144,8 +144,24 @@ void AutoUpdateChecker::handleUpdateCheckRequestFinished(QNetworkReply* reply)
         // Vibemis: keep wjbeckett's GitHub-Releases-based update path (checks our own
         // navyas321/vibemis releases). Upstream moonlight-qt switched to a server-hosted
         // manifest at this point — not applicable to a fork that publishes via GitHub.
-        // Get the most recent release (first in the array).
-        QJsonObject releaseObj = releasesArray[0].toObject();
+        //
+        // BL-1646 (test-agent find): releasesArray[0] is the newest release INCLUDING
+        // prereleases, so the stable build advertised its own beta ("1.0.0-beta.…" parsed
+        // as > 1.0.0) as an update. Only offer STABLE releases: scan for the first entry
+        // that is neither a prerelease nor a draft. CI beta/alpha builds update along the
+        // release cadence anyway; the in-app banner is for stable users.
+        QJsonObject releaseObj;
+        for (const QJsonValue& relVal : releasesArray) {
+            QJsonObject candidate = relVal.toObject();
+            if (!candidate["prerelease"].toBool() && !candidate["draft"].toBool()) {
+                releaseObj = candidate;
+                break;
+            }
+        }
+        if (releaseObj.isEmpty()) {
+            qDebug() << "No stable (non-prerelease) release found in the update feed";
+            return;
+        }
 
         // Extract version from tag_name (remove 'v' prefix if present)
         QString tagName = releaseObj["tag_name"].toString();
