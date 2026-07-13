@@ -270,6 +270,26 @@ CenteredGridView {
         width: 430; height: 242;
         grid: pcGrid
 
+        // BL-1625 (test-agent FAIL RCA): focus lives on the DELEGATE (GridView is a FocusScope
+        // forwarding to currentItem), and NavigableItemDelegate's Keys.onRight/DownPressed
+        // auto-consume the event even when the move is a no-op at the grid's edge — so a
+        // grid-level handler never fires. Override here: if the grid can't move further
+        // right/down, hand focus to the "Add a computer" ghost card.
+        Keys.onRightPressed: {
+            var before = grid.currentIndex
+            grid.moveCurrentIndexRight()
+            if (grid.currentIndex === before) {
+                addPcCardSlot.forceActiveFocus()
+            }
+        }
+        Keys.onDownPressed: {
+            var before = grid.currentIndex
+            grid.moveCurrentIndexDown()
+            if (grid.currentIndex === before) {
+                addPcCardSlot.forceActiveFocus()
+            }
+        }
+
         property alias pcContextMenu : pcContextMenuLoader.item
 
         // Redesign 1a: the rich host card (previews/1a-computers.png). Model roles feed the pure-visual
@@ -476,6 +496,17 @@ CenteredGridView {
         // Gamepad/keyboard: focusable — Right/Down from the last host card lands here (see the
         // grid Keys handler), Ⓐ/Enter opens Add-PC, Left/Escape returns to the grid.
         activeFocusOnTab: true
+        // Scroll into view on gamepad focus (test-agent find: the ghost can rest half-hidden
+        // behind the hint bar — it's not a delegate, so GridView never auto-tracks it).
+        onActiveFocusChanged: {
+            if (activeFocus) {
+                var needed = y + height + 24 - pcGrid.height
+                              + (pcHintBar.visible ? pcHintBar.height : 0)
+                if (pcGrid.contentY < needed) {
+                    pcGrid.contentY = needed
+                }
+            }
+        }
         Keys.onReturnPressed: addPcDialog.open()
         Keys.onSpacePressed: addPcDialog.open()
         Keys.onLeftPressed: { pcGrid.forceActiveFocus(); if (pcGrid.count > 0) pcGrid.currentIndex = pcGrid.count - 1 }

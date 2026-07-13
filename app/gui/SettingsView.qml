@@ -94,11 +94,26 @@ Item {
         opacity: enabled ? 1.0 : 0.5
 
         indicator: Item {}
-        background: Rectangle {
-            anchors.bottom: parent.bottom
-            width: parent.width
-            height: 1
-            color: VbTokens.strokeSoft
+        background: Item {
+            // BL-1655 (test-agent: "no visible pane focus"): the toggle rows had no focus
+            // affordance at all, so gamepad focus in the content pane was invisible. Paint
+            // the standard focused fill + accent border when the row holds active focus.
+            Rectangle {
+                anchors.fill: parent
+                anchors.topMargin: 4
+                anchors.bottomMargin: 4
+                radius: 10
+                visible: toggleRoot.activeFocus
+                color: VbTokens.focusedFill
+                border.width: VbTokens.focusBorder
+                border.color: VbTokens.accent
+            }
+            Rectangle {
+                anchors.bottom: parent.bottom
+                width: parent.width
+                height: 1
+                color: VbTokens.strokeSoft
+            }
         }
         contentItem: Item {
             anchors.fill: parent
