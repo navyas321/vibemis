@@ -43,6 +43,35 @@ CenteredGridView {
     cellWidth: 356
     cellHeight: Math.max(300, Math.min(474, height - topMargin - bottomMargin))
 
+    // Maintainer feature 2026-07-13 (BL-1760): Ⓨ quits the in-progress session from
+    // anywhere in the app grid — the gamepad equivalent of the stop button on the
+    // RESUME-badged card (A/B/X are taken: Launch/Back/App options). Key events bubble
+    // up from the focused delegate to the grid, same mechanism as PcView's Ⓨ Add-PC.
+    // Opens the same quit-confirmation dialog as the stop button — never quits silently.
+    // Maintainer-verified feature (no test-agent cycle; BL-1760/BL-1762).
+    Keys.onPressed: {
+        if (event.key === Qt.Key_Yellow) {
+            if (appModel.getRunningAppId() !== 0) {
+                quitAppDialog.appName = appModel.getRunningAppName()
+                quitAppDialog.segueToStream = false
+                quitAppDialog.open()
+            }
+            event.accepted = true
+        }
+    }
+
+    // Live "session running" signal for the Ⓨ hint below — QML can't observe
+    // getRunningAppId() directly, so bump a rev on any model change (PcView's
+    // onlineRev pattern).
+    property int runningRev: 0
+    Connections {
+        target: appModel
+        function onDataChanged() { appGrid.runningRev++ }
+        function onRowsInserted() { appGrid.runningRev++ }
+        function onRowsRemoved() { appGrid.runningRev++ }
+        function onModelReset() { appGrid.runningRev++ }
+    }
+
     // ---- Redesign 1b chrome: per-screen header + persistent gamepad hint bar ----
     // Fixed header (does not scroll with the grid). Opaque bg so scrolled tiles pass behind it.
     Item {
@@ -99,11 +128,20 @@ CenteredGridView {
         anchors.bottom: parent.bottom
         anchors.left: parent.left
         anchors.right: parent.right
-        hints: [
-            { glyph: "Ⓐ", label: qsTr("Launch") },
-            { glyph: "Ⓑ", label: qsTr("Back") },
-            { glyph: "Ⓧ", label: qsTr("App options") }
-        ]
+        // BL-1760: the Ⓨ Quit-session hint appears only while a session is actually
+        // running (runningRev re-evaluates this binding on any model change).
+        hints: {
+            appGrid.runningRev
+            var h = [
+                { glyph: "Ⓐ", label: qsTr("Launch") },
+                { glyph: "Ⓑ", label: qsTr("Back") },
+                { glyph: "Ⓧ", label: qsTr("App options") }
+            ]
+            if (appModel.getRunningAppId() !== 0) {
+                h.push({ glyph: "Ⓨ", label: qsTr("Quit session") })
+            }
+            return h
+        }
         hintsRight: [ { glyph: "☰", label: qsTr("Settings") } ]
     }
 
