@@ -82,3 +82,4 @@ config.log
 
 # test agent design-audit artifacts (screenshots for Claude Design) are allowed:
 !testing/theme-review/*.zip
+.claude/worktrees/
