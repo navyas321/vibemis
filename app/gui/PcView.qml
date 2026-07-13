@@ -118,6 +118,14 @@ CenteredGridView {
             addPcDialog.open()
             event.accepted = true
         }
+        // BL-1625: make the "Add a computer" ghost card gamepad-reachable — Right (or Down)
+        // from the last host card moves focus onto it (it isn't a GridView delegate, so the
+        // grid's own arrow nav can never land there).
+        else if ((event.key === Qt.Key_Right || event.key === Qt.Key_Down)
+                 && (count === 0 || currentIndex === count - 1)) {
+            addPcCardSlot.forceActiveFocus()
+            event.accepted = true
+        }
     }
 
     // Called by the global toolbar's Refresh button (main.qml) — re-poll for hosts.
@@ -451,11 +459,35 @@ CenteredGridView {
         id: addPcCardSlot
         parent: pcGrid.contentItem
         property int columns: Math.max(1, pcGrid.itemsPerRow)
+        // Hovered or focused — drives the highlight fill/border and the focus ring (BL-1625:
+        // the card was click-only with zero hover/focus affordance, so it read as dead UI).
+        property bool highlighted: addPcMouseArea.containsMouse || activeFocus
         x: (pcGrid.count % columns) * pcGrid.cellWidth
         y: Math.floor(pcGrid.count / columns) * pcGrid.cellHeight
         width: 430
         height: 242
         z: 2
+
+        // Gamepad/keyboard: focusable — Right/Down from the last host card lands here (see the
+        // grid Keys handler), Ⓐ/Enter opens Add-PC, Left/Escape returns to the grid.
+        activeFocusOnTab: true
+        Keys.onReturnPressed: addPcDialog.open()
+        Keys.onSpacePressed: addPcDialog.open()
+        Keys.onLeftPressed: { pcGrid.forceActiveFocus(); if (pcGrid.count > 0) pcGrid.currentIndex = pcGrid.count - 1 }
+        Keys.onEscapePressed: pcGrid.forceActiveFocus()
+
+        // Hover/focus fill behind the dashed border (token-consistent with VbCard's focused fill).
+        Rectangle {
+            anchors.fill: parent
+            radius: 20
+            color: addPcCardSlot.highlighted ? VbTokens.bgElev : "transparent"
+            Behavior on color { ColorAnimation { duration: 120 } }
+        }
+        // Accent focus ring when gamepad/keyboard-focused (same recipe as the host cards).
+        VbFocusRing {
+            active: addPcCardSlot.activeFocus
+            radius: 20
+        }
 
         Canvas {
             id: addPcDashedBorder
@@ -464,7 +496,7 @@ CenteredGridView {
             onPaint: {
                 var ctx = getContext("2d")
                 ctx.reset()
-                ctx.strokeStyle = Qt.rgba(1, 1, 1, 0.14)
+                ctx.strokeStyle = addPcCardSlot.highlighted ? Qt.rgba(1, 1, 1, 0.30) : Qt.rgba(1, 1, 1, 0.14)
                 ctx.lineWidth = 2
                 ctx.setLineDash([6, 6])
                 var r = 20, w = width, h = height
@@ -511,10 +543,15 @@ CenteredGridView {
         }
 
         MouseArea {
+            id: addPcMouseArea
             anchors.fill: parent
+            hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             onClicked: addPcDialog.open()
         }
+
+        // Repaint the dashed border when the highlight state flips (Canvas doesn't auto-bind).
+        onHighlightedChanged: addPcDashedBorder.requestPaint()
     }
 
     ErrorMessageDialog {
