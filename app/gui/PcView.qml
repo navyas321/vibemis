@@ -21,6 +21,11 @@ CenteredGridView {
     // (title + host count + icon buttons) and the bottom gamepad hint bar. See the chrome
     // block below. The global toolbar is collapsed for PcView in main.qml (redesignScreen).
     topMargin: pcChromeHeader.height + 12
+    // BL-1653: when hosts don't fill a full row, CenteredGridView skips centering and falls
+    // back to minMargin (default 10px) — cards hugged the screen edge, misaligned with the
+    // 56px header and visually clipping the focus ring's outer glow. Align partial rows with
+    // the redesign's screen padding instead.
+    minMargin: VbTokens.screenPadX
     // The "Add a computer" ghost card is hand-placed at the index==count cell (see the delegate's
     // sibling below). GridView.contentHeight only counts real delegates, so when the last row is FULL
     // (count is a multiple of the column count) the ghost card starts a brand-new virtual row at

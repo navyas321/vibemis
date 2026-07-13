@@ -32,6 +32,8 @@ CenteredGridView {
     // Gap between the "Apps" title row and the tile row is 30 (HTML body flex gap), and the
     // bottom clearance matches the body's own bottom padding (screenPadY = 52).
     topMargin: appChromeHeader.height + 30
+    // BL-1653: same partial-row minMargin fix as PcView — align with the 56px screen padding.
+    minMargin: VbTokens.screenPadX
     bottomMargin: (appHintBar.visible ? appHintBar.height : 0) + VbTokens.screenPadY
     // Redesign 1b: 320x430 app tiles (HTML #1b), gap 36 horizontal; cellHeight adds room for the
     // 16px-gap + "Ⓐ Launch" hint row (or app name) below the focused tile.
