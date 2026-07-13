@@ -2,7 +2,7 @@
 
 **Vibemis** is a gamepad-first game-streaming client for **SteamOS & Linux handhelds** — the best of
 Moonlight Qt and Artemis (Apollo's extended protocol), tuned to pair with the **Vibepollo** host.
-1.0.0 is the first production-stable release, hardware-verified on a Lenovo Legion Go S Z2.
+1.0.1 is the first production-stable release, hardware-verified on a Lenovo Legion Go S Z2.
 
 ## Highlights
 
@@ -25,11 +25,23 @@ Clipboard sync, server commands, OTP pairing, virtual display control, an in-str
 — all surfaced on-device, lighting up automatically on capable hosts.
 
 ### Added by Vibemis
+- **In-app updates with channels** — pick **Stable / Beta / Alpha** in Settings → Advanced →
+  "Software updates", check for updates on demand, and update the AppImage **in place with one
+  tap** (keeps a `.old` rollback next to it); builds now self-report their exact version.
 - Tailscale-first **remote play** (one-command setup + in-app help).
 - **SteamOS one-click integration** (guided setup, add-to-Steam helpers, self-update).
 - Bounded **auto-reconnect** on stream drop, **per-game stream profiles**, **settings export/import**,
   battery-saver bitrate, a compact performance overlay, and `vibemis selftest` for CI/on-device tests.
 
+### Polished in 1.0.1 (the manual-testing cascade)
+Every defect from the maintainer's hands-on device pass, fixed in one wave:
+- **Settings pickers show their full text** (root-cause fix covering all 13 dropdowns) and the
+  Settings page has true 2-D gamepad navigation with a single, always-visible selection ring.
+- **The window actually fills the handheld screen** (1920×1200) and app-grid tiles keep their
+  cover-art aspect ratio.
+- **Quick Menu**: d-pad auto-repeat scrolling, left-stick navigation, and a roomier selector.
+- **Help screen** is focusable, scrollable, and correctly scaled; Ⓑ/Back work everywhere.
+- **Home grid** focus hardening (no more freeze when focus enters the grid).
 
 ### Hardened in 1.0.1 (the launch-blocker wave, on-device validated)
 - **Input latency fixed** — three compounding launcher stalls removed (background-poll log flood,

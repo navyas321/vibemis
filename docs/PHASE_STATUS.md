@@ -238,12 +238,22 @@ slow-recover policy at runtime (gated on moonlight-common-c runtime bitrate supp
 submodule for `LiSetVideoBitrate`-class symbols before starting; if absent, document and park the
 phase as upstream-gated, do NOT hack the control stream).
 
-## P4.1 — Stable 1.0 criteria  🔵 DEFINED (cut when all hold)
-1. TEST_CHECKLIST fully drained (all rows ☑, including test76-followup + the deferred-verification ledger triage).
-2. Zero open freeze-class bugs; Quick Menu content stack verified on-device in Game Mode.
-3. README + PHASE_STATUS current; release pipeline AppImage-only (done 2026-07-12).
-4. P4.0 repo-hygiene split executed (agent meta moved to a private repo).
-5. Cut `release/1.0` → stable, tagged from a beta that soaked ≥1 week on the device.
+## P4.1 — Stable 1.0 criteria  🟡 FINAL GATE IN PROGRESS (2026-07-13)
+History: stable **1.0.0 was cut 2026-07-13T02:29Z** on the maintainer's goal directive (original
+criteria below superseded by that directive — the 1-week soak and P4.0 split were explicitly
+waived), then **parked** (flipped to prerelease) when the maintainer's hands-on pass found the
+manual-testing UI cascade. The cascade was fixed in one wave (`b6198e4f`, see
+`docs/UI_DEFECT_CHECKLIST.md`) plus the in-app update-channel selector (`a98b7a11`, BL-1665).
+
+**Current gate (agreed on the coordination bus 2026-07-13T00:39, HDR carved out as Experimental):**
+the maintainer's manual device pass on the current beta — lag feel, paddle combo, touch taps,
+mapper persistence, quit check, regression glance, plus the BL-1664 items 1–12 (cascade fixes +
+update-channel checks). **On the maintainer's green → dispatch `dev-build.yml` with
+`release_type=stable` from `vibemis-main`** (tag `1.0.1`, Latest), attach
+`docs/release-notes-v1.0.1.md`, roll `version.txt` to the next dev base. Do NOT un-park 1.0.0.
+
+Original criteria (kept for the record): TEST_CHECKLIST drained · zero freeze-class bugs · README/
+PHASE_STATUS current · P4.0 split (deferred post-1.0) · release/1.0 from a ≥1-week-soaked beta.
 
 ## P4.2 — Upstream rebase cadence  🔵 STANDING
 Quarterly: merge upstream moonlight-qt, re-check the moonlight-common-c wrapper for new symbols the
