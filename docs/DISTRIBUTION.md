@@ -49,3 +49,29 @@ Valve's own Steam Link; no Moonlight-lineage client has ever been on the store).
 
 Sources: Moonlight Flathub manifest repo; Flathub submission + requirements docs; Steam Deck install
 guides (XDA / Pi My Life Up); MoonDeck/Decky for Game-Mode launching.
+
+## 2026-07-13 research refresh (BL-1552 second pass — confirms the plan, adds specifics)
+
+Ranked by real one-click-ness for a Game-Mode user vs maintainer effort:
+
+| Rank | Path | User steps that remain | Effort |
+|---|---|---|---|
+| **1** | **Flathub via Discover** | Desktop Mode once → Discover → Install → right-click "Add to Steam" | ~1-2 days |
+| 2 | Steam store (Steam Direct) | none — fully in Game Mode, auto-updates | $100 deposit (recoup only after $1k revenue), paperwork, ~30-day wait, SteamPipe, GPL-fork rights review. OBS/Blender precedent exists — a *revisit-later*, not a hard skip |
+| 3 | AppImage + Gear Lever | strictly more steps than Flathub | ~0 (keep for power users; add zsync) |
+| 4 | Decky Loader | not a distribution channel — "VibeDeck" companion-plugin idea only (MoonDeck precedent) | n/a |
+
+Confirmed specifics to fold into the manifest work:
+- Moonlight's manifest currently pins `org.kde.Platform` **6.10**; module chain unchanged
+  (libplacebo, libdecor, SDL3, SDL2-compat, SDL2_ttf, dav1d, cgutman ffmpeg, gamescope-wsi
+  VkLayer json). Drop its three Qt-6.9 patches if already merged in our tree.
+- Add `flathub.json` with `{"only-arches": ["x86_64"]}` (we ship x86_64 only).
+- Wire `x-checker-data` (git tag-pattern) on the app source so stable-tag bumps arrive as
+  **automated update PRs** in the flathub repo; merging publishes.
+- Verification = GitHub login in the Flathub Developer Portal (io.github.* IDs).
+- **Phase E UX polish:** an in-app "Add me to Steam" button (Heroic precedent — shortcuts.vdf
+  write, or `steamos-add-to-steam` via `flatpak-spawn --host`; expect reviewers to question the
+  permission) + a first-run SteamOS hint. README install section then reads:
+  "Discover → Vibemis → Install → right-click → Add to Steam."
+- Game-Mode reality: **nothing except the real Steam store removes the one Desktop-Mode visit
+  and the one Add-to-Steam right-click.**
