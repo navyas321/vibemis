@@ -334,13 +334,15 @@ Rectangle {
             text: qsTr("Disconnect")
             icon: "⏹"
             action: "disconnect"
-            description: qsTr("Disconnect from server")
+            description: qsTr("End the stream — game keeps running on the host")
         }
         ListElement {
-            text: qsTr("Quit")
+            // BL-1686: quits the game on the HOST and returns to the Vibemis grid
+            // (no longer exits the whole app — start another session right away).
+            text: qsTr("Quit game")
             icon: "❌"
             action: "quit"
-            description: qsTr("Quit streaming session")
+            description: qsTr("Quit the game on the host and return to Vibemis")
         }
         ListElement {
             text: qsTr("Server Commands")

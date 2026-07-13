@@ -630,6 +630,7 @@ Session::Session(NvComputer* computer, NvApp& app, StreamingPreferences *prefere
       m_MouseEmulationRefCount(0),
       m_FlushingWindowEventsRef(0),
       m_ShouldExitAfterQuit(false),
+      m_ShouldQuitAppAfter(false),
       m_AsyncConnectionSuccess(false),
       m_PortTestResults(0),
       m_OpusDecoder(nullptr),
@@ -1454,7 +1455,9 @@ private:
         bool shouldQuit =
                 !m_Session->m_UnexpectedTermination &&
                 (m_Session->m_Preferences->quitAppAfter ||
-                 m_Session->m_ShouldExitAfterQuit);
+                 m_Session->m_ShouldExitAfterQuit ||
+                 // Vibemis BL-1686: Quick Menu "Quit game" — quit on the host, stay in Vibemis
+                 m_Session->m_ShouldQuitAppAfter);
 
         // Notify the UI
         if (shouldQuit) {
@@ -1943,6 +1946,11 @@ void Session::flushWindowEvents()
 void Session::setShouldExitAfterQuit()
 {
     m_ShouldExitAfterQuit = true;
+}
+
+void Session::setShouldQuitAppAfter()
+{
+    m_ShouldQuitAppAfter = true;
 }
 
 class ExecThread : public QThread

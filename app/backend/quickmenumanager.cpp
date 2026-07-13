@@ -662,10 +662,13 @@ void QuickMenuManager::quit()
     QMetaObject::invokeMethod(this, &QuickMenuManager::teardownOverlayRenderer,
                               Qt::QueuedConnection);
 
-    // Set flag to exit after quit and send quit event
+    // Vibemis BL-1686 (maintainer directive): "Quit" from the Quick Menu terminates the
+    // running app on the HOST but keeps Vibemis open at the grid, so another session can
+    // be started without relaunching. (The whole-app exit remains available via the
+    // Ctrl+Alt+Shift+Q quitAndExit keyboard combo and plain window close.)
     Session* session = Session::get();
     if (session) {
-        session->setShouldExitAfterQuit();
+        session->setShouldQuitAppAfter();
     }
 
     SDL_Event quitEvent;

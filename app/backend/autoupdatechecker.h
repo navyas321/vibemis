@@ -39,6 +39,9 @@ signals:
                              QString assetUrl, QString message);
     void installProgress(qint64 bytesReceived, qint64 bytesTotal);
     void installFailed(QString error, QString htmlUrl);
+    // Vibemis BL-1692: the downloaded AppImage has been swapped into place (emitted just
+    // before the relaunch; the update-selftest harness uses it to verify and exit).
+    void installCompleted(QString appImagePath);
 
 private slots:
     void handleUpdateCheckRequestFinished(QNetworkReply* reply);

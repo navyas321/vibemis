@@ -17,7 +17,11 @@ Item {
     Rectangle {
         anchors.fill: parent
         anchors.margins: -VbTokens.focusGlow
-        radius: ring.radius + VbTokens.focusGlow
+        // BL-1682: radius -1 thickens the band by ~1px at the CORNERS only, overlapping the
+        // surface corner instead of meeting it edge-to-edge. Geometrically the exact value
+        // (ring.radius + focusGlow) is concentric, but on-device rasterization (gamescope,
+        // Qt hi-DPI scaling disabled) let the card's corner poke a hair past the halo curve.
+        radius: ring.radius + VbTokens.focusGlow - 1
         color: "transparent"
         border.width: VbTokens.focusGlow
         border.color: VbTokens.focusGlowColor

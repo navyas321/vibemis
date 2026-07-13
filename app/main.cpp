@@ -57,6 +57,8 @@
 #include <QSettings>
 #include <QJsonObject>
 #include <QJsonDocument>
+#include <QFileInfo>
+#include <QTimer>
 
 #if defined(Q_OS_WIN32)
 #define IS_UNSPECIFIED_HANDLE(x) ((x) == INVALID_HANDLE_VALUE || (x) == NULL)
@@ -725,6 +727,93 @@ int main(int argc, char *argv[])
         }
         fflush(stdout);
         return failures == 0 ? 0 : 1;
+    }
+
+    // Vibemis BL-1692: `vibemis update-selftest [--channel stable|beta|alpha]` — end-to-end
+    // proof of the in-app updater's REAL code path: AutoUpdateChecker::checkNow() against the
+    // live GitHub release feed, then installUpdate() downloading the .AppImage asset and
+    // atomically swapping $APPIMAGE (previous build kept as "<file>.old"). Run off-device with
+    // $APPIMAGE pointed at a scratch copy, or on-device as the real AppImage (a true
+    // self-update; the .old rollback keeps it safe). Exits 0 on a verified swap, 1 otherwise.
+    // VIBEMIS_UPDATE_SELFTEST=1 makes installUpdate() stop after the swap (no relaunch/quit)
+    // so this harness owns verification and process exit.
+    if (commandLineParserResult == GlobalCommandLineParser::UpdateSelfTestRequested) {
+        qputenv("VIBEMIS_UPDATE_SELFTEST", "1");
+
+        StreamingPreferences* prefs = StreamingPreferences::get();
+        const QStringList cliArgs = app.arguments();
+        int chIdx = cliArgs.indexOf("--channel");
+        if (chIdx >= 0 && chIdx + 1 < cliArgs.count()) {
+            QString ch = cliArgs.at(chIdx + 1).toLower();
+            // In-memory override only — never save() this into the user's real preferences
+            if (ch == "beta") {
+                prefs->updateChannel = StreamingPreferences::UC_BETA;
+            }
+            else if (ch == "alpha") {
+                prefs->updateChannel = StreamingPreferences::UC_ALPHA;
+            }
+            else {
+                prefs->updateChannel = StreamingPreferences::UC_STABLE;
+            }
+        }
+
+        QString selfTestTarget = qEnvironmentVariable("APPIMAGE");
+        if (selfTestTarget.isEmpty()) {
+            fprintf(stderr, "UPDATE-SELFTEST FAIL: $APPIMAGE is not set (run as an AppImage, "
+                            "or point APPIMAGE at a scratch copy)\n");
+            return 1;
+        }
+        fprintf(stdout, "UPDATE-SELFTEST target: %s (channel %d)\n",
+                selfTestTarget.toUtf8().constData(), (int)prefs->updateChannel);
+        fflush(stdout);
+
+        AutoUpdateChecker checker;
+        QObject::connect(&checker, &AutoUpdateChecker::updateCheckFinished, &app,
+                         [&](bool available, QString version, QString htmlUrl,
+                             QString assetUrl, QString message) {
+            Q_UNUSED(available);
+            Q_UNUSED(htmlUrl);
+            fprintf(stdout, "UPDATE-SELFTEST check: %s\n", message.toUtf8().constData());
+            if (assetUrl.isEmpty()) {
+                fprintf(stderr, "UPDATE-SELFTEST FAIL: no AppImage asset on this channel "
+                                "(newest version: '%s')\n", version.toUtf8().constData());
+                fflush(stderr);
+                app.exit(1);
+                return;
+            }
+            fprintf(stdout, "UPDATE-SELFTEST installing: %s\n", assetUrl.toUtf8().constData());
+            fflush(stdout);
+            checker.installUpdate(assetUrl);
+        });
+        QObject::connect(&checker, &AutoUpdateChecker::installFailed, &app,
+                         [&](QString error, QString htmlUrl) {
+            Q_UNUSED(htmlUrl);
+            fprintf(stderr, "UPDATE-SELFTEST FAIL: install: %s\n", error.toUtf8().constData());
+            fflush(stderr);
+            app.exit(1);
+        });
+        QObject::connect(&checker, &AutoUpdateChecker::installCompleted, &app,
+                         [&](QString path) {
+            QFileInfo swapped(path);
+            QFileInfo rollback(path + QStringLiteral(".old"));
+            bool ok = swapped.exists() && swapped.size() > 0 && swapped.isExecutable()
+                      && rollback.exists();
+            fprintf(stdout, "UPDATE-SELFTEST swapped: %s (%lld bytes, exec=%d), rollback %s\n",
+                    path.toUtf8().constData(), (long long)swapped.size(),
+                    swapped.isExecutable() ? 1 : 0,
+                    rollback.exists() ? "present" : "MISSING");
+            fprintf(stdout, "UPDATE-SELFTEST RESULT: %s\n", ok ? "PASS" : "FAIL");
+            fflush(stdout);
+            app.exit(ok ? 0 : 1);
+        });
+        // Hard timeout so a hung feed/download can never wedge a CI job or scripted run
+        QTimer::singleShot(180000, &app, [&]() {
+            fprintf(stderr, "UPDATE-SELFTEST FAIL: timed out\n");
+            fflush(stderr);
+            app.exit(1);
+        });
+        checker.checkNow();
+        return app.exec();
     }
 
     SDL_version compileVersion;

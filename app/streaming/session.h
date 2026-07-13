@@ -165,6 +165,10 @@ public:
 
     void setShouldExitAfterQuit();
 
+    // Vibemis BL-1686: quit the RUNNING APP on the host when this session ends, but keep
+    // Vibemis itself open (back to the grid) — a one-shot session-scoped quitAppAfter.
+    void setShouldQuitAppAfter();
+
 signals:
     void stageStarting(QString stage);
 
@@ -312,6 +316,8 @@ private:
     int m_FlushingWindowEventsRef;
     QList<QString> m_LaunchWarnings;
     bool m_ShouldExitAfterQuit;
+    // Vibemis BL-1686: see setShouldQuitAppAfter()
+    bool m_ShouldQuitAppAfter;
 
     bool m_AsyncConnectionSuccess;
     int m_PortTestResults;

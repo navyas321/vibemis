@@ -121,6 +121,9 @@ Item {
             Text {
                 id: toggleTitle
                 anchors.left: parent.left
+                // BL-1683: constant inset so the focused ring's left border never overlaps
+                // the first letters (padding is permanent — text must not shift on focus).
+                anchors.leftMargin: 14
                 anchors.right: togglePill.left
                 anchors.rightMargin: 16
                 anchors.verticalCenter: parent.verticalCenter
@@ -134,6 +137,8 @@ Item {
             Rectangle {
                 id: togglePill
                 anchors.right: parent.right
+                // BL-1683: mirror inset on the right so the ring clears the pill too.
+                anchors.rightMargin: 14
                 anchors.verticalCenter: parent.verticalCenter
                 width: 60; height: 34; radius: 999
                 color: toggleRoot.checked ? VbTokens.accent : "#2A2F37"
@@ -389,8 +394,20 @@ Item {
                     // UI nav mode) or a mouse moves focus onto this row, make it the selected
                     // category — so the selected ring and the focus ring are always the SAME row
                     // (no more two-rings-at-once), and up/down actually switches the shown category.
+                    //
+                    // BL-1689: EXCEPT when focus lands here by BackTab escaping the content pane
+                    // (d-pad UP at the pane's first control walks the focus chain to the LAST
+                    // sidebar row — "Up always jumps to Advanced"). settingsFlick.paneHasFocus is
+                    // still stale-true at this instant (this handler runs before the Window
+                    // activeFocusItem handlers update it), so a pane→row jump onto a row that
+                    // ISN'T the current category gets redirected back to the current category's
+                    // row. Mouse/touch clicks are unaffected (`pressed` is true on press-focus).
                     onActiveFocusChanged: {
                         if (activeFocus) {
+                            if (!pressed && settingsFlick.paneHasFocus && settingsPage.category !== index) {
+                                settingsPage.focusCategoryRow(settingsPage.category)
+                                return
+                            }
                             settingsPage.category = index
                         }
                     }
@@ -424,6 +441,12 @@ Item {
         anchors.bottom: hintBar.top
 
         boundsBehavior: Flickable.OvershootBounds
+
+        // BL-1689: whether the CURRENT window focus item is inside this pane. Updated in the
+        // Window.onActiveFocusItemChanged handler below, which runs AFTER each item's own
+        // onActiveFocusChanged — so a sidebar row receiving focus can still read the stale
+        // "true" and know the jump CAME from the pane (the BackTab-escape detection).
+        property bool paneHasFocus: false
 
         // BL-1627 (symmetric return path): unhandled d-pad LEFT from any focused content
         // control bubbles up here and returns focus to the selected sidebar row. Controls
@@ -467,6 +490,9 @@ Item {
 
         Window.onActiveFocusItemChanged: {
             var item = Window.activeFocusItem
+            // BL-1689: keep the pane-focus flag current (read stale by the sidebar rows to
+            // detect BackTab escapes — see the row's onActiveFocusChanged).
+            settingsFlick.paneHasFocus = (item ? isChildOfFlickable(item) : false)
             if (item) {
                 // Ignore non-child elements like the toolbar buttons / header / sidebar rows
                 if (!isChildOfFlickable(item)) {
@@ -1900,7 +1926,7 @@ Item {
 
                 Label {
                     width: parent.width
-                    text: qsTr("These features require Apollo as the host streaming software.")
+                    text: qsTr("These features require an Apollo / Vibepollo host (they use Apollo's extended protocol — not available with plain Sunshine or GeForce Experience).")
                     font.pointSize: 9
                     wrapMode: Text.Wrap
                     color: VbTokens.textDim
@@ -1918,7 +1944,7 @@ Item {
                     ToolTip.delay: 1000
                     ToolTip.timeout: 5000
                     ToolTip.visible: hovered
-                    ToolTip.text: qsTr("Creates a virtual display on the Apollo server for streaming. Requires Apollo server - not available with Sunshine/GeForce Experience.")
+                    ToolTip.text: qsTr("Creates a virtual display on the host for streaming. Requires an Apollo / Vibepollo host - not available with plain Sunshine/GeForce Experience.")
                 }
 
                 // Vibemis (P3.13): clarify the virtual-display behavior, which commonly confuses
@@ -1928,7 +1954,7 @@ Item {
                 Label {
                     width: parent.width
                     visible: virtualDisplayCheck.checked
-                    text: qsTr("✓ Apollo will create a virtual display matching your selected resolution and refresh rate — recommended on a handheld (the host's physical monitor is left untouched).")
+                    text: qsTr("✓ Your Apollo / Vibepollo host will create a virtual display matching your selected resolution and refresh rate — recommended on a handheld (the host's physical monitor is left untouched).")
                     font.pointSize: 9
                     wrapMode: Text.Wrap
                     color: "#80C080"
@@ -1937,7 +1963,7 @@ Item {
                 Label {
                     width: parent.width
                     visible: !virtualDisplayCheck.checked
-                    text: qsTr("Without a virtual display, the stream uses the host's current physical display resolution. Enable this with an Apollo host to match this device's resolution automatically.")
+                    text: qsTr("Without a virtual display, the stream uses the host's current physical display resolution. Enable this with an Apollo / Vibepollo host to match this device's resolution automatically.")
                     font.pointSize: 9
                     wrapMode: Text.Wrap
                     color: "#aaaaaa"
@@ -2672,7 +2698,8 @@ Item {
                 // Redesign 1e / BL-1562: expose the (previously hidden) gamepad remapping screen.
                 Button {
                     id: gamepadMapButton
-                    text: qsTr("Configure gamepad mapping…")
+                    // BL-1687: no trailing ellipsis — it read as clipped text on device.
+                    text: qsTr("Configure gamepad mapping")
                     onClicked: navigateTo("qrc:/gui/GamepadMapper.qml", "GamepadMapper")
                     ToolTip.text: qsTr("Remap or calibrate connected controllers (paddles, face buttons, sticks).")
                     ToolTip.delay: 1000
@@ -2761,7 +2788,8 @@ Item {
                     ToolTip.delay: 1000
                     ToolTip.timeout: 5000
                     ToolTip.visible: hovered
-                    ToolTip.text: qsTr("Which gamepad button combination opens the in-stream Quick Menu.")
+                    ToolTip.text: qsTr("Which gamepad button combination opens the in-stream Quick Menu.") + "\n\n" +
+                                  qsTr("On controllers with back paddles (Legion Go, Xbox Elite, …) the P1 paddle ALSO opens the menu while the default combo is selected — no setup needed. Picking any other combo takes full control.")
                 }
 
                 VbToggleRow {
@@ -3368,8 +3396,11 @@ Item {
                     Button {
                         id: checkUpdatesButton
                         text: qsTr("Check for updates")
+                        // BL-1690: do NOT toggle `enabled` here — disabling the focused button
+                        // drops activeFocus and the pane auto-scrolls to the next focus item at
+                        // the top of the page. Re-entry is already guarded in C++ (one check in
+                        // flight at a time), so the button can stay enabled and keep focus.
                         onClicked: {
-                            enabled = false
                             updateStatusLabel.text = qsTr("Checking for updates…")
                             updateNowButton.visible = false
                             viewReleaseButton.visible = false
@@ -3380,11 +3411,17 @@ Item {
                     Button {
                         id: updateNowButton
                         property string assetUrl: ""
+                        // BL-1690: QML-side re-entry guard instead of `enabled = false` (which
+                        // would drop focus and scroll the pane to the top — same class as the
+                        // Check button). Reset on installFailed; a successful install relaunches.
+                        property bool installing: false
                         text: qsTr("Update now")
                         visible: false
                         onClicked: {
-                            enabled = false
-                            checkUpdatesButton.enabled = false
+                            if (installing) {
+                                return
+                            }
+                            installing = true
                             updateStatusLabel.text = qsTr("Downloading update…")
                             AutoUpdateChecker.installUpdate(assetUrl)
                         }
@@ -3414,12 +3451,10 @@ Item {
                 Connections {
                     target: AutoUpdateChecker
                     function onUpdateCheckFinished(available, version, htmlUrl, assetUrl, message) {
-                        checkUpdatesButton.enabled = true
                         updateStatusLabel.text = message
                         viewReleaseButton.releaseUrl = htmlUrl
                         viewReleaseButton.visible = available && htmlUrl !== "" && SystemProperties.hasBrowser
                         updateNowButton.assetUrl = assetUrl
-                        updateNowButton.enabled = true
                         updateNowButton.visible = available && assetUrl !== "" && AutoUpdateChecker.canInstallUpdates()
                     }
                     function onInstallProgress(bytesReceived, bytesTotal) {
@@ -3431,8 +3466,7 @@ Item {
                         }
                     }
                     function onInstallFailed(error, htmlUrl) {
-                        checkUpdatesButton.enabled = true
-                        updateNowButton.enabled = true
+                        updateNowButton.installing = false
                         updateStatusLabel.text = qsTr("Install failed: %1").arg(error)
                         if (htmlUrl !== "") {
                             viewReleaseButton.releaseUrl = htmlUrl
@@ -3526,7 +3560,7 @@ Item {
                 // Note about Server Commands
                 Label {
                     width: parent.width
-                    text: qsTr("Server Commands are available during streaming sessions via the game menu when connected to Apollo servers.")
+                    text: qsTr("Server Commands are available during streaming sessions via the game menu when connected to Apollo / Vibepollo hosts.")
                     font.pointSize: 9
                     wrapMode: Text.Wrap
                     color: "#aaaaaa"

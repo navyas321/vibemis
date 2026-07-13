@@ -48,6 +48,29 @@ CenteredGridView {
     cellWidth: 462; cellHeight: 274;
     objectName: qsTr("Computers")
 
+    // BL-1681: d-pad selection state for the Add-a-computer ghost — WITHOUT focus. The
+    // BL-1662 freeze RCA forbids focusing a non-delegate inside the GridView's focus scope,
+    // so the grid keeps activeFocus + currentIndex and the ghost merely PAINTS selected;
+    // Ⓐ/Return on the current delegate opens Add-PC while this is set. Cleared by any
+    // Left/Up, index move, or focus loss.
+    property bool ghostSelected: false
+    function selectGhost() {
+        ghostSelected = true
+        // Reveal the ghost above the hint bar (it lives in contentItem space; only ever
+        // scroll DOWN to expose it — with few hosts there is nothing to scroll).
+        var hintClear = (pcHintBar.visible ? pcHintBar.height : 0) + 12
+        var target = addPcCardSlot.y + addPcCardSlot.height + hintClear - pcGrid.height
+        if (target > pcGrid.contentY) {
+            pcGrid.contentY = target
+        }
+    }
+    onCurrentIndexChanged: ghostSelected = false
+    onActiveFocusChanged: {
+        if (!activeFocus) {
+            ghostSelected = false
+        }
+    }
+
     // ---- Redesign 1a chrome: per-screen header + persistent gamepad hint bar ----
     // Live "N hosts · M online" count. QML can't bind an aggregate over model rows, so
     // onlineRev bumps on any model change to force the count to re-compute.
@@ -280,6 +303,69 @@ CenteredGridView {
 
         property alias pcContextMenu : pcContextMenuLoader.item
 
+        // BL-1681: instance-level nav overrides (these replace NavigableItemDelegate's
+        // handlers) route the "can't move further" edge to the ghost card as a pure
+        // SELECTION (pcGrid.ghostSelected) — focus and currentIndex never leave this
+        // delegate, so the BL-1662 focus-war freeze class is impossible by construction.
+        Keys.onRightPressed: {
+            if (index === pcGrid.count - 1 && !pcGrid.ghostSelected) {
+                pcGrid.selectGhost()
+            }
+            else if (!pcGrid.ghostSelected) {
+                grid.moveCurrentIndexRight()
+            }
+        }
+        Keys.onDownPressed: {
+            var cols = Math.max(1, Math.floor(pcGrid.itemsPerRow))
+            if (!pcGrid.ghostSelected &&
+                    Math.floor(index / cols) === Math.floor((pcGrid.count - 1) / cols)) {
+                // On the last delegate row: Down selects the ghost (it sits in the trailing
+                // cell or starts the next virtual row — either way it is "below/after").
+                pcGrid.selectGhost()
+            }
+            else if (!pcGrid.ghostSelected) {
+                grid.moveCurrentIndexDown()
+            }
+        }
+        Keys.onLeftPressed: {
+            if (pcGrid.ghostSelected) {
+                pcGrid.ghostSelected = false
+            }
+            else {
+                grid.moveCurrentIndexLeft()
+            }
+        }
+        Keys.onUpPressed: {
+            if (pcGrid.ghostSelected) {
+                pcGrid.ghostSelected = false
+            }
+            else {
+                grid.moveCurrentIndexUp()
+
+                // If we've reached the top of the grid, move focus to the toolbar
+                // (preserves NavigableItemDelegate's base behavior we override here)
+                if (grid.currentItem === this) {
+                    nextItemInFocusChain(false).forceActiveFocus(Qt.TabFocus)
+                }
+            }
+        }
+        Keys.onReturnPressed: {
+            if (pcGrid.ghostSelected) {
+                addPcDialog.open()
+            }
+            else {
+                clicked()
+            }
+        }
+        Keys.onEnterPressed: {
+            if (pcGrid.ghostSelected) {
+                addPcDialog.open()
+            }
+            else {
+                clicked()
+            }
+        }
+
         // Redesign 1a: the rich host card (previews/1a-computers.png). Model roles feed the pure-visual
         // VbHostCard; the pairing/wake/menu wiring below is unchanged. The CS_UNKNOWN state is shown by
         // the card's own neutral "CHECKING" pill (no separate teal spinner).
@@ -290,7 +376,9 @@ CenteredGridView {
             online: model.online
             paired: model.paired
             statusUnknown: model.statusUnknown
-            focused: highlighted
+            // BL-1681: exactly ONE selection ring at a time — the card yields its ring
+            // while the ghost is d-pad-selected (focus stays here invisibly).
+            focused: highlighted && !pcGrid.ghostSelected
             // Access line: paired hosts show their permission summary (Apollo grants "Full access" to
             // the first client, view/input-only to later ones); unpaired hosts prompt to pair.
             accessText: model.paired
@@ -472,12 +560,15 @@ CenteredGridView {
         id: addPcCardSlot
         parent: pcGrid.contentItem
         property int columns: Math.max(1, pcGrid.itemsPerRow)
-        // Hover-only highlight (BL-1625 hover affordance). BL-1662: this item is deliberately
-        // NON-FOCUSABLE — giving a non-delegate item focus inside the GridView's focus scope
-        // caused a focus war with the view (CPU spin, every input hijacked, gamepad dead).
-        // Gamepad users add a PC with the Ⓨ button (the hint bar advertises it); mouse/touch
-        // users hover + click here.
-        property bool highlighted: addPcMouseArea.containsMouse
+        // Hover highlight (BL-1625) + d-pad selection (BL-1681). BL-1662: this item stays
+        // deliberately NON-FOCUSABLE — giving a non-delegate item focus inside the GridView's
+        // focus scope caused a focus war with the view (CPU spin, every input hijacked,
+        // gamepad dead). The d-pad path is a grid-owned SELECTION state instead: the ghost
+        // paints selected (accent dashed stroke) while focus never leaves the delegates.
+        // Ⓨ remains the shortcut; mouse/touch hover + click unchanged.
+        property bool selected: pcGrid.ghostSelected
+        property bool highlighted: addPcMouseArea.containsMouse || selected
+        onSelectedChanged: addPcDashedBorder.requestPaint()
         x: (pcGrid.count % columns) * pcGrid.cellWidth
         y: Math.floor(pcGrid.count / columns) * pcGrid.cellHeight
         width: 430
@@ -499,8 +590,10 @@ CenteredGridView {
             onPaint: {
                 var ctx = getContext("2d")
                 ctx.reset()
-                ctx.strokeStyle = addPcCardSlot.highlighted ? Qt.rgba(1, 1, 1, 0.30) : Qt.rgba(1, 1, 1, 0.14)
-                ctx.lineWidth = 2
+                // BL-1681: accent stroke while d-pad-selected, white-ish on hover, faint idle.
+                ctx.strokeStyle = addPcCardSlot.selected ? String(VbTokens.accent)
+                                : (addPcCardSlot.highlighted ? Qt.rgba(1, 1, 1, 0.30) : Qt.rgba(1, 1, 1, 0.14))
+                ctx.lineWidth = addPcCardSlot.selected ? 3 : 2
                 ctx.setLineDash([6, 6])
                 var r = 20, w = width, h = height
                 ctx.beginPath()

@@ -489,11 +489,17 @@ void AutoUpdateChecker::installUpdate(QString assetUrl)
             return;
         }
 
-        qInfo() << "Update installed at" << appImagePath << "- relaunching";
-        // The running process keeps its mounted (old) image alive; the relaunch
-        // picks up the new file. If the relaunch fails the install still succeeded,
-        // so quit either way rather than leaving two half-states.
-        QProcess::startDetached(appImagePath, QStringList());
-        QCoreApplication::quit();
+        qInfo() << "Update installed at" << appImagePath;
+        emit installCompleted(appImagePath);
+        // BL-1692: under the update-selftest harness the swap is the end of the story —
+        // the harness verifies the file and controls process exit (relaunching a scratch
+        // AppImage would spawn a stray GUI). The production path relaunches and quits.
+        if (!qEnvironmentVariableIsSet("VIBEMIS_UPDATE_SELFTEST")) {
+            // The running process keeps its mounted (old) image alive; the relaunch
+            // picks up the new file. If the relaunch fails the install still succeeded,
+            // so quit either way rather than leaving two half-states.
+            QProcess::startDetached(appImagePath, QStringList());
+            QCoreApplication::quit();
+        }
     });
 }

@@ -571,7 +571,23 @@ void SdlInputHandler::handleControllerButtonEvent(SDL_ControllerButtonEvent* eve
     }
 
     // Handle the configurable gamepad combo for the Quick Menu (default Select+L1+R1+Y)
-    if (state->buttons == quickMenuComboMask()) {
+    bool quickMenuComboHit = (state->buttons == quickMenuComboMask());
+    // Vibemis BL-1685 (maintainer directive): on paddle-equipped controllers (Legion Go,
+    // Xbox Elite, …) the back paddle P1 opens the Quick Menu OUT OF THE BOX — no Settings
+    // trip needed. Active only while the pref is still the default chord; explicitly
+    // choosing ANY combo in Settings (including another paddle) takes full control.
+    // Exact-match (clean P1 press, nothing else held), same rule as configured paddles.
+#if SDL_VERSION_ATLEAST(2, 0, 14)
+    if (!quickMenuComboHit && state->buttons == PADDLE1_FLAG && state->controller != nullptr) {
+        StreamingPreferences* qmPrefs = StreamingPreferences::get();
+        if (qmPrefs != nullptr &&
+                qmPrefs->quickMenuGamepadCombo == StreamingPreferences::QMGC_SELECT_LB_RB_Y &&
+                SDL_GameControllerHasButton(state->controller, SDL_CONTROLLER_BUTTON_PADDLE1)) {
+            quickMenuComboHit = true;
+        }
+    }
+#endif
+    if (quickMenuComboHit) {
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                     "Detected quick menu toggle gamepad combo");
 
