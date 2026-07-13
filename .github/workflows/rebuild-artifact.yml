@@ -36,7 +36,7 @@ jobs:
     # actions/checkout treats a short sha as a branch/tag name and fails — check out
     # the default branch with full history, then hop to the commit and sync submodules.
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         submodules: 'recursive'
         fetch-depth: 0
@@ -49,7 +49,7 @@ jobs:
         echo "HEAD now: $(git rev-parse HEAD)"
 
     - name: Setup Qt 6
-      uses: jurplel/install-qt-action@v3
+      uses: jurplel/install-qt-action@v4
       with:
         version: ${{ env.QT_VERSION }}
         host: 'linux'
@@ -82,7 +82,7 @@ jobs:
 
     - name: Build and install
       run: |
-        export PATH="$Qt6_DIR/bin:$PATH"
+        export PATH="$QT_ROOT_DIR/bin:$PATH"
         DEPLOY=$PWD/deploy
         rm -rf "$DEPLOY" build/installer-release
         mkdir -p "$DEPLOY" build/installer-release
@@ -135,8 +135,8 @@ jobs:
 
     - name: Bundle AppImage with linuxdeploy
       run: |
-        export PATH="$Qt6_DIR/bin:$PATH"
-        export QMAKE="$Qt6_DIR/bin/qmake6"
+        export PATH="$QT_ROOT_DIR/bin:$PATH"
+        export QMAKE="$QT_ROOT_DIR/bin/qmake6"
         export APPIMAGE_EXTRACT_AND_RUN=1
         DEPLOY=$PWD/deploy
         # Historical artifact filename carries the ORIGINAL tag (sanitized for filesystems)

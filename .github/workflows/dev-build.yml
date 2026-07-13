@@ -61,7 +61,7 @@ jobs:
       should_build: ${{ steps.check-changes.outputs.should_build }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0  # Need full history for proper versioning
       
@@ -295,7 +295,7 @@ jobs:
     timeout-minutes: 45
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: 'recursive'
           fetch-depth: 0
@@ -346,7 +346,7 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         submodules: 'recursive'
         fetch-depth: 0
@@ -563,7 +563,7 @@ jobs:
         # Package with semantic version
         tar -czf vibemis-linux-$VERSION.tar.gz -C linux-package .
     - name: Upload Development Artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: vibemis-linux-${{ needs.setup-version.outputs.version }}
         path: vibemis-linux-${{ needs.setup-version.outputs.version }}.tar.gz
@@ -578,7 +578,7 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         submodules: 'recursive'
         fetch-depth: 0
@@ -729,7 +729,7 @@ jobs:
         file "$APP"
 
     - name: Upload AppImage artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: vibemis-appimage-${{ needs.setup-version.outputs.version }}
         path: build/installer-release/Vibemis-${{ needs.setup-version.outputs.version }}-x86_64.AppImage
@@ -755,7 +755,7 @@ jobs:
     
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         fetch-depth: 0  # Need full history for changelog
     
@@ -820,7 +820,7 @@ jobs:
         } >> $GITHUB_OUTPUT
     
     - name: Download all artifacts
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v5
       with:
         path: artifacts
 
@@ -897,7 +897,7 @@ jobs:
         fi
     
     - name: Create Development Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ needs.setup-version.outputs.version }}
         # Uniform titles (maintainer 2026-07-13): the tag alone carries tier + version;
