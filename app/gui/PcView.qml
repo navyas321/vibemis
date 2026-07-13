@@ -376,6 +376,10 @@ CenteredGridView {
                 }
             }
         }
+        // BL-1745 round 2: the manual clicked() calls are REQUIRED (ItemDelegate has no
+        // native Return/Enter activation — removing these bricked A on-device in
+        // alpha.001). The double-push symptom is fixed by the stackView.busy guard in
+        // onClicked below, which turns any duplicate activation into a no-op.
         Keys.onReturnPressed: {
             if (pcGrid.ghostSelected) {
                 addPcDialog.open()
@@ -508,6 +512,20 @@ CenteredGridView {
         }
 
         onClicked: {
+            // BL-1745 round 2: idempotent activation — if the stack is already mid-push
+            // (a duplicate clicked() from the same A press, or a double-tap), drop it.
+            // THIS is the actual double-Back fix: one activation, one AppView, one Back.
+            if (stackView.busy) {
+                return
+            }
+            // While the ghost Add-PC card is selected, the Keys handler above owns
+            // activation (it opened the dialog on key press) — swallow any click that still
+            // reaches the delegate so it can't ALSO activate the card underneath. A stray
+            // tap while ghost-selected just clears the selection (self-healing).
+            if (pcGrid.ghostSelected) {
+                pcGrid.ghostSelected = false
+                return
+            }
             if (model.online) {
                 if (!model.serverSupported) {
                     errorDialog.text = qsTr("The version of GeForce Experience on %1 is not supported by this build of Moonlight. You must update Moonlight to stream from %1.").arg(model.name)

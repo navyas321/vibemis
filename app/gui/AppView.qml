@@ -378,6 +378,11 @@ CenteredGridView {
 
         function launchOrResumeSelectedApp(quitExistingApp)
         {
+            // BL-1745 round 2: idempotent — a duplicate clicked() from the same A press
+            // (or a double-tap) must not push a second StreamSegue.
+            if (stackView.busy) {
+                return
+            }
             var runningId = appModel.getRunningAppId()
             if (runningId !== 0 && runningId !== model.appid) {
                 if (quitExistingApp) {
@@ -401,13 +406,13 @@ CenteredGridView {
         }
 
         onClicked: {
-            // Only allow clicking on the box art for non-running games.
-            // For running games, buttons will appear to resume or quit which
-            // will handle starting the game and clicks on the box art will
-            // be ignored.
-            if (!model.running) {
-                launchOrResumeSelectedApp(true)
-            }
+            // Maintainer directive 2026-07-13 (BL-1745 wave): activating an app ALWAYS
+            // launches — and for the app whose session is already running this resumes
+            // the stream directly (gamepad A used to open the options sheet instead,
+            // which X / press-and-hold already do). launchOrResumeSelectedApp() segues
+            // with isResume=true when this app owns the running session, and shows the
+            // quit-first confirmation when a DIFFERENT app is running.
+            launchOrResumeSelectedApp(true)
         }
 
         onPressAndHold: {
@@ -429,27 +434,11 @@ CenteredGridView {
             }
         }
 
-        Keys.onReturnPressed: {
-            // Open the app context menu if activated via the gamepad or keyboard
-            // for running games. If the game isn't running, the above onClicked
-            // method will handle the launch.
-            if (model.running) {
-                // This will be keyboard/gamepad driven so use
-                // open() instead of popup()
-                appContextMenu.open()
-            }
-        }
-
-        Keys.onEnterPressed: {
-            // Open the app context menu if activated via the gamepad or keyboard
-            // for running games. If the game isn't running, the above onClicked
-            // method will handle the launch.
-            if (model.running) {
-                // This will be keyboard/gamepad driven so use
-                // open() instead of popup()
-                appContextMenu.open()
-            }
-        }
+        // Maintainer directive 2026-07-13: no INSTANCE Return/Enter handlers here — the
+        // NavigableItemDelegate base handlers fire clicked() (load-bearing on-device;
+        // see BL-1745 round 2), and onClicked above resumes a running session directly
+        // instead of opening the options sheet. The options sheet stays reachable via X
+        // (Keys.onMenuPressed below), press-and-hold, and right-click.
 
         Keys.onMenuPressed: {
             // This will be keyboard/gamepad driven so use open() instead of popup()
