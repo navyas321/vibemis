@@ -228,7 +228,10 @@ jobs:
             max=$(git ls-remote --tags origin "refs/tags/${BASE_VERSION}-$1.*" 2>/dev/null \
                   | sed -E "s#.*refs/tags/${BASE_VERSION}-$1\.##" \
                   | grep -E '^[0-9]+$' | sort -n | tail -1)
-            printf '%03d' $(( ${max:-0} + 1 ))
+            # BL-1744: 10# forces base-10 — zero-padded suffixes are OCTAL to bash arithmetic,
+            # so 008 crashed ("value too great for base") and 010+ would silently compute
+            # WRONG (lower!) numbers, risking tag reuse. First tripped the day beta.008 existed.
+            printf '%03d' $(( 10#${max:-0} + 1 ))
           }
           RUN_N=${GITHUB_RUN_NUMBER}
 
