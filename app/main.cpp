@@ -318,6 +318,16 @@ int main(int argc, char *argv[])
 {
     SDL_SetMainReady();
 
+    // Gamescope runs at a fixed, nested resolution and manages its own window scaling.
+    // Qt's automatic high-DPI scaling applies a device-pixel-ratio (e.g. 1.5x) on high-DPI
+    // screens like the Legion Go, which forces the redesign's 1920x1200-absolute sizes to overflow
+    // and clip. We disable Qt High DPI scaling under Gamescope to keep a 1:1 logical layout.
+    if (qEnvironmentVariableIsSet("GAMESCOPE_WIDTH") || qgetenv("XDG_CURRENT_DESKTOP") == "gamescope") {
+        if (!qEnvironmentVariableIsSet("QT_ENABLE_HIGHDPI_SCALING")) {
+            qputenv("QT_ENABLE_HIGHDPI_SCALING", "0");
+        }
+    }
+
     // Set the app version for the QCommandLineParser's showVersion() command
     QCoreApplication::setApplicationVersion(VERSION_STR);
 

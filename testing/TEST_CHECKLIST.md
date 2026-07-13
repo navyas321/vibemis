@@ -131,6 +131,10 @@ whole Quick Menu group depends on its render path.
 - [ ] **test86** — On-screen text-send (Type Text → LiSendUtf8TextEvent) — **PR #164** merged 0.12.0
   — ☐ launcher/source PASS; in-stream typing→host on the Deferred ledger.
 
+## 5b6. UI / scaling (P3.6)
+
+- [ ] **test109** — Gamescope High-DPI UI scaling fix — base `vibemis-main` — ☐ (`testing/test109-gamescope-scaling/instructions.md`)
+
 ## 5c. CLI
 
 - [x] **test78** — CLI app seek fix — **PR #148** — ☑ **PASS** (report PR #150: all 4 headless CLI
