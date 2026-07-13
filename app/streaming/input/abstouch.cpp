@@ -89,15 +89,37 @@ void SdlInputHandler::handleAbsoluteFingerEvent(SDL_TouchFingerEvent* event)
     else if (event->type == SDL_FINGERDOWN &&
              Session::get() != nullptr &&
              Session::get()->getOverlayManager().isOverlayEnabled(Overlay::OverlayTouchButtonMenu)) {
+        // Maintainer-caught (2026-07-13): the buttons are COMPOSITED INTO THE VIDEO
+        // FRAME in STREAM pixels, but this hit-test measured raw WINDOW pixels from
+        // the window origin. Under gamescope scaling / letterboxing the two spaces
+        // diverge, so taps on the visible button fell outside the hit rect and were
+        // forwarded to the host (Windows touch gestures fired). Map the button rects
+        // through the same source->destination video transform the forwarding path
+        // uses, then test in window coordinates.
+        SDL_Rect hitSrc, hitDst;
+        hitSrc.x = hitSrc.y = 0;
+        hitSrc.w = m_StreamWidth;
+        hitSrc.h = m_StreamHeight;
+        hitDst.x = hitDst.y = 0;
+        hitDst.w = windowWidth;
+        hitDst.h = windowHeight;
+        StreamUtils::scaleSourceToDestinationSurface(&hitSrc, &hitDst);
+        float scaleX = (float)hitDst.w / m_StreamWidth;
+        float scaleY = (float)hitDst.h / m_StreamHeight;
+        int insetPxX = (int)(Overlay::TouchButtonInset * scaleX);
+        int insetPxY = (int)(Overlay::TouchButtonInset * scaleY);
+        int sizePxX = (int)(Overlay::TouchButtonSize * scaleX);
+        int sizePxY = (int)(Overlay::TouchButtonSize * scaleY);
+
         int fingerX = (int)(event->x * windowWidth);
         int fingerY = (int)(event->y * windowHeight);
 
-        if (fingerY >= Overlay::TouchButtonInset &&
-                fingerY <= Overlay::TouchButtonInset + Overlay::TouchButtonSize) {
-            bool onMenuButton = fingerX >= Overlay::TouchButtonInset &&
-                    fingerX <= Overlay::TouchButtonInset + Overlay::TouchButtonSize;
-            bool onKbdButton = fingerX >= windowWidth - Overlay::TouchButtonInset - Overlay::TouchButtonSize &&
-                    fingerX <= windowWidth - Overlay::TouchButtonInset;
+        if (fingerY >= hitDst.y + insetPxY &&
+                fingerY <= hitDst.y + insetPxY + sizePxY) {
+            bool onMenuButton = fingerX >= hitDst.x + insetPxX &&
+                    fingerX <= hitDst.x + insetPxX + sizePxX;
+            bool onKbdButton = fingerX >= hitDst.x + hitDst.w - insetPxX - sizePxX &&
+                    fingerX <= hitDst.x + hitDst.w - insetPxX;
             if (onMenuButton || onKbdButton) {
                 m_TouchOverlayFingerActive = true;
                 m_TouchOverlayFinger = event->fingerId;

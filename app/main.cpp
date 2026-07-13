@@ -930,7 +930,15 @@ int main(int argc, char *argv[])
     qmlRegisterSingletonType<StreamingPreferences>("StreamingPreferences", 1, 0,
                                                    "StreamingPreferences",
                                                    [](QQmlEngine* qmlEngine, QJSEngine*) -> QObject* {
-                                                       return StreamingPreferences::get(qmlEngine);
+                                                       StreamingPreferences* prefs = StreamingPreferences::get(qmlEngine);
+                                                       // Maintainer-caught CRITICAL (2026-07-13): this GLOBAL is served to
+                                                       // every engine — including the Quick Menu's offscreen engine (its
+                                                       // VbTokens import reads accent prefs). Engine-owned singletons are
+                                                       // DELETED with their engine, so the overlay teardown after each
+                                                       // disconnect freed the shared object and Settings showed
+                                                       // "undefinedxundefined / NaN Mbps". C++ owns it; engines never may.
+                                                       QQmlEngine::setObjectOwnership(prefs, QQmlEngine::CppOwnership);
+                                                       return prefs;
                                                    });
     qmlRegisterSingletonType<ClipboardManager>("ClipboardManager", 1, 0,
                                                "ClipboardManager",
