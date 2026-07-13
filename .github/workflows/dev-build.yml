@@ -37,6 +37,13 @@ on:
 env:
   QT_VERSION: '6.8.3'
 
+# BL-1701 (CI-minutes hygiene): one active run per ref+event — a newer push/dispatch
+# cancels the older superseded build instead of finishing a release that the newer
+# run's prune would delete minutes later.
+concurrency:
+  group: dev-build-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
 jobs:
   setup-version:
     name: Setup Version
@@ -104,6 +111,19 @@ jobs:
             echo "should_build=false" >> $GITHUB_OUTPUT
             echo "Build skipped due to [skip ci] in commit message"
             exit 0
+          fi
+
+          # BL-1701 (maintainer directive: alpha = AUTOMATED-testing artifacts only, and
+          # CI-minutes hygiene): a test** push builds an alpha ONLY when the HEAD commit
+          # message carries an explicit [alpha] request tag (the test agent adds it when
+          # it actually needs an artifact). Branch-sync/WIP pushes no longer burn a full
+          # pipeline per push. Betas (vibemis-main) are the MANUAL-testing channel.
+          if [[ "${{ github.ref_name }}" =~ ^test ]]; then
+            if ! echo "$HEAD_COMMIT_MSG" | grep -F "[alpha]" > /dev/null; then
+              echo "should_build=false" >> $GITHUB_OUTPUT
+              echo "Skipping alpha - test** push without an [alpha] request tag"
+              exit 0
+            fi
           fi
           
           # Check if this is a merge commit (has multiple parents)
@@ -237,7 +257,9 @@ jobs:
   compile-sanity:
     name: Compile Sanity (Linux)
     needs: setup-version
-    if: needs.setup-version.outputs.should_build == 'true'
+    # BL-1701: push-feedback only — dispatch releases already compile everything in the
+    # AppImage job, so running sanity there doubled ~10 min of build for zero signal.
+    if: needs.setup-version.outputs.should_build == 'true' && github.event_name == 'push'
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
@@ -275,7 +297,9 @@ jobs:
     name: Linux Development Build
     needs: setup-version
     runs-on: ubuntu-22.04
-    if: needs.setup-version.outputs.should_build == 'true'
+    # BL-1701: releases ship ONLY the AppImage, so this tarball build ran ~15 min per
+    # beta/alpha for an artifact nobody downloads. Stable cuts keep the full matrix.
+    if: needs.setup-version.outputs.should_build == 'true' && needs.setup-version.outputs.release_tier == 'release'
     
     steps:
     - name: Checkout
@@ -655,7 +679,9 @@ jobs:
 
   create-dev-release:
     name: Create Development Release
-    needs: [setup-version, build-linux-dev, build-appimage-dev]
+    # BL-1701: build-linux-dev dropped from needs — the release attaches only the
+    # AppImage, and on beta/alpha tiers that job is skipped entirely now.
+    needs: [setup-version, build-appimage-dev]
     runs-on: ubuntu-latest
     permissions:
       contents: write
