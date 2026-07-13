@@ -214,12 +214,15 @@ jobs:
           BRANCH_NAME="${{ github.ref_name }}"
           BRANCH_SANITIZED=$(echo "$BRANCH_NAME" | sed 's/[^a-zA-Z0-9._-]/-/g')
 
-          # ── Release tier determination ─────────────────────────────────────
-          # Tier       Branch / trigger                        Prerelease  Label
-          # release    release/** OR dispatch release_type      false       ✅ Release  W.(X+1).0.0
-          # beta       vibemis-main, develop                    false       🧪 Beta     W.X.RUN.0
-          # alpha      test**, fix/**, feat/**                  true        🔬 Alpha    W.X.0.RUN
-          # dev        anything else                            true        🔧 Dev      W.X.0.RUN-dev.<branch>
+          # ── Release tier determination (strict semver; <next> = app/version.txt) ──
+          # Tier     Trigger                                              Version            Prerelease
+          # release  dispatch release_type=stable / release/** / main     <next> (bare)      false (Latest)
+          #          ⚠ MAINTAINER-APPROVAL GATE: only the maintainer decides a stable cut.
+          #            Agents must NEVER dispatch release_type=stable autonomously.
+          # rc       dispatch release_type=rc                             <next>-rc.NNN      true
+          # beta     vibemis-main PR merge / plain dispatch on main       <next>-beta.NNN    true
+          # alpha    test** push tagged [alpha] (fix/feat branches too)   <next>-alpha.NNN   true
+          # dev      any other branch                                     <next>-dev.<run>.<branch>  true
 
           IS_PRERELEASE="true"
           RELEASE_TIER="dev"
@@ -563,7 +566,7 @@ jobs:
         # Package with semantic version
         tar -czf vibemis-linux-$VERSION.tar.gz -C linux-package .
     - name: Upload Development Artifacts
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: vibemis-linux-${{ needs.setup-version.outputs.version }}
         path: vibemis-linux-${{ needs.setup-version.outputs.version }}.tar.gz
@@ -729,7 +732,7 @@ jobs:
         file "$APP"
 
     - name: Upload AppImage artifact
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: vibemis-appimage-${{ needs.setup-version.outputs.version }}
         path: build/installer-release/Vibemis-${{ needs.setup-version.outputs.version }}-x86_64.AppImage
@@ -820,7 +823,7 @@ jobs:
         } >> $GITHUB_OUTPUT
     
     - name: Download all artifacts
-      uses: actions/download-artifact@v5
+      uses: actions/download-artifact@v7
       with:
         path: artifacts
 
@@ -897,7 +900,7 @@ jobs:
         fi
     
     - name: Create Development Release
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@v3
       with:
         tag_name: ${{ needs.setup-version.outputs.version }}
         # Uniform titles (maintainer 2026-07-13): the tag alone carries tier + version;

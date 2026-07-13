@@ -340,6 +340,18 @@ If a feature works only in Desktop Mode, it's not ready.
 - **Stable** = the bare version itself, non-prerelease, takes Latest; cut via
   workflow_dispatch `release_type=stable`. Hotfix patches via the `version_override`
   input (`0.5.1`). **Bump version.txt to the next stable right after every cut.**
+- **When each tier cuts (maintainer 2026-07-13):**
+  | Tier | Trigger | Who decides |
+  |------|---------|-------------|
+  | alpha | `test**` push whose HEAD commit carries `[alpha]` | automatic (test agent requests) |
+  | beta | PR merge into `vibemis-main` touching code; or plain dispatch on `vibemis-main` | automatic |
+  | rc | dispatch `release_type=rc` when the next stable is feature-complete and betas are green | agent may propose & cut |
+  | stable | dispatch `release_type=stable` | **MAINTAINER APPROVAL REQUIRED** |
+
+  ⚠ **Stable cuts are approval-gated: an agent must NEVER dispatch
+  `release_type=stable` (or push `release/**`/`main`/`master`) without the
+  maintainer explicitly approving that specific cut in the current conversation.**
+  Alphas, betas and RCs are agent-cuttable per the matrix above.
 - **Beta** = `0.5.0-beta.NNN` (vibemis-main), **alpha** = `0.5.0-alpha.NNN` (test
   branches), dev = `0.5.0-dev.<run>.<branch>`. NNN is dense + zero-padded, computed
   from existing tags (prunes delete releases but KEEP tags — never delete a tag).
