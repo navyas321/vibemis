@@ -197,10 +197,14 @@ All shortcuts require `Ctrl + Alt + Shift`:
 ## Downloads & updates
 
 Each release ships a single **`.AppImage`** — download and double-click; nothing to extract.
-**After the first install, updating is in-app**: Settings → Advanced → **Software updates** —
-pick a channel, *Check for updates*, *Update now*. The AppImage swaps itself in place (the
-previous build stays alongside as `.old` for rollback) and relaunches. The
-`scripts/vibemis-update.sh` helper does the same from a terminal or a Steam shortcut.
+
+📲 **Already have a previous version installed? Update in-app — no download needed.**
+Open Settings → Advanced → **Software updates**, pick the channel that matches the build
+you want (see the table below — **Stable** for `0.x.y`, **Release candidate** for `-rc`,
+**Beta** for `-beta`, **Alpha** for `-alpha`), then *Check for updates* → *Update now*.
+The AppImage swaps itself in place (the previous build stays alongside as `.old` for
+rollback) and relaunches. The `scripts/vibemis-update.sh` helper does the same from a
+terminal or a Steam shortcut.
 
 Versions follow **[Semantic Versioning 2.0.0](https://semver.org)** — pre-releases are
 suffixed versions of the stable they precede (`0.5.0-beta.007` → `0.5.0`), with dense

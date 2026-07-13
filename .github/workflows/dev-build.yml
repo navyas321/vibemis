@@ -910,16 +910,35 @@ jobs:
           ${{
             needs.setup-version.outputs.release_tier == 'release' && '✅ **Production Release**
 
-          Verified and tested. Recommended for general use.' ||
+          Verified and tested. Recommended for general use.
+
+          📲 **Already have Vibemis installed?** No download needed — in the app open
+          Settings → Advanced → **Software updates**, set the channel to **Stable**,
+          then *Check for updates* → *Update now* to install this build.' ||
+            needs.setup-version.outputs.release_tier == 'rc' && '🎯 **Release Candidate**
+
+          The exact build proposed as the next stable, cut for on-device verification.
+
+          📲 **Already have Vibemis installed?** In the app open Settings → Advanced →
+          **Software updates**, set the channel to **Release candidate**, then
+          *Check for updates* → *Update now* to install this build.' ||
             needs.setup-version.outputs.release_tier == 'beta' && '🧪 **Beta Build**
 
           Merged into `vibemis-main`. Functionally complete; broader smoke testing welcome.
-          Not yet a production release.' ||
+          Not yet a production release.
+
+          📲 **Already have Vibemis installed?** In the app open Settings → Advanced →
+          **Software updates**, set the channel to **Beta**, then *Check for updates* →
+          *Update now* to install this build.' ||
             needs.setup-version.outputs.release_tier == 'alpha' && '🔬 **Alpha Build**
 
           In-progress fix/feature branch. For targeted test cycles only.
-          **Do not use as a daily driver.**' ||
-            '🔧 **Dev Build** — automated build from a non-standard branch.'
+          **Do not use as a daily driver.**
+
+          📲 **Updating from a previous install:** Settings → Advanced → **Software
+          updates**, channel **Alpha**, then *Check for updates* → *Update now*.' ||
+            '🔧 **Dev Build** — automated build from a non-standard branch. Dev builds are
+          not served by any in-app update channel — download the artifact manually.'
           }}
           
           ---
