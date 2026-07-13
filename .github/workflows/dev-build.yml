@@ -1006,6 +1006,12 @@ jobs:
         # artifact per release — no tarballs/zips/raw binaries cluttering the assets list.
         files: |
           artifacts/**/*.AppImage
+        # BL-1746: pin the release tag to the EXACT commit this run built. Without this,
+        # gh-release creates new tags on the repo DEFAULT branch — so every alpha cut from
+        # a test** branch got a tag pointing at vibemis-main HEAD instead of the built
+        # commit (0.2.0-alpha.001 tagged 8842ace1 while its AppImage was built from
+        # f698b569). Tag provenance must identify the build's true source.
+        target_commitish: ${{ github.sha }}
         prerelease: ${{ needs.setup-version.outputs.is_prerelease }}
         # BL-1713 (maintainer): the GitHub "Latest" badge points at the STABLE release only.
         # Betas stay non-prerelease (visible, not hidden) but no longer claim Latest. The
