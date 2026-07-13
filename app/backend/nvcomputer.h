@@ -90,6 +90,7 @@ public:
     // Ephemeral traits
     ComputerState state;
     qint64 lastSeenMs;   // epoch ms the host was last seen online (0 = never this session)
+    int latencyMs;       // last measured serverinfo-probe RTT in ms (0 = not yet measured)
     PairState pairState;
     NvAddress activeAddress;
     uint16_t activeHttpsPort;

@@ -88,6 +88,7 @@ NvComputer::NvComputer(QSettings& settings)
     this->pairState = PS_UNKNOWN;
     this->state = CS_UNKNOWN;
     this->lastSeenMs = 0;
+    this->latencyMs = 0;
     this->gfeVersion = nullptr;
     this->appVersion = nullptr;
     this->maxLumaPixelsHEVC = 0;
@@ -253,6 +254,7 @@ NvComputer::NvComputer(NvHTTP& http, QString serverInfo)
     this->activeAddress = http.address();
     this->state = NvComputer::CS_ONLINE;
     this->lastSeenMs = QDateTime::currentMSecsSinceEpoch();  // for the offline "Last seen …" card label
+    this->latencyMs = 0;  // the poller stamps the measured probe RTT right after construction
     this->pendingQuit = false;
     this->isSupportedServerVersion = CompatFetcher::isGfeVersionSupported(this->gfeVersion);
     
@@ -652,6 +654,15 @@ bool NvComputer::update(const NvComputer& that)
     // and re-serialization. The offline "Last seen …" label reads whatever was last stored.
     if (that.lastSeenMs > this->lastSeenMs) {
         this->lastSeenMs = that.lastSeenMs;
+    }
+    // Same rationale for the measured probe RTT — except the FIRST measurement (0 -> N) flags
+    // `changed` so the card repaints with its latency line; subsequent jitter refreshes stay
+    // silent (no 3s re-serialize/dataChanged storm) and repaint on the next real change.
+    if (that.latencyMs > 0) {
+        if (this->latencyMs == 0) {
+            changed = true;
+        }
+        this->latencyMs = that.latencyMs;
     }
 
     if (!that.appList.isEmpty()) {

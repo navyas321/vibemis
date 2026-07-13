@@ -101,9 +101,12 @@ QVariant ComputerModel::data(const QModelIndex& index, int role) const
         return QStringLiteral("LAN");
     }
     case LatencyTextRole:
-        // TODO(BL-1598): surface a measured RTT here (e.g. "4 ms"). Empty for now so the card shows
-        // transport only rather than a fabricated number.
-        return QString();
+        // BL-1598: the measured serverinfo-probe RTT stamped by the poller (never fabricated).
+        // Empty until the first successful probe or while offline — the card then shows transport only.
+        if (computer->state != NvComputer::CS_ONLINE || computer->latencyMs <= 0) {
+            return QString();
+        }
+        return QString("%1 ms").arg(computer->latencyMs);
     case LastSeenTextRole: {
         // Bare relative delta ("just now" / "3 min ago" / "2 h ago" / "5 d ago); the PcView
         // delegate prepends the "Last seen " label. Only meaningful for an offline host we

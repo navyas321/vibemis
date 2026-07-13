@@ -7,6 +7,7 @@
 
 #include <Limelight.h>
 #include <QtEndian>
+#include <QElapsedTimer>
 
 #include <QThread>
 #include <QThreadPool>
@@ -47,6 +48,11 @@ private:
     {
         NvHTTP http(address, 0, m_Computer->serverCert, nam);
 
+        // Time the serverinfo probe — this measured round-trip feeds the host card's
+        // "N ms · LAN" latency line (BL-1598). A real HTTP RTT, never a fabricated number.
+        QElapsedTimer rttTimer;
+        rttTimer.start();
+
         QString serverInfo;
         try {
             serverInfo = http.getServerInfo(NvHTTP::NvLogLevel::NVLL_NONE, true);
@@ -54,7 +60,10 @@ private:
             return false;
         }
 
+        qint64 rttMs = rttTimer.elapsed();
+
         NvComputer newState(http, serverInfo);
+        newState.latencyMs = (int)qMin<qint64>(rttMs, 9999);
 
         // Ensure the machine that responded is the one we intended to contact
         if (m_Computer->uuid != newState.uuid) {
