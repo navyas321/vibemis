@@ -23,8 +23,15 @@ ItemDelegate {
             nextItemInFocusChain(false).forceActiveFocus(Qt.TabFocus)
         }
     }
-    // BL-1745: NO manual Return/Enter -> clicked() here. On Qt 6, AbstractButton natively
-    // emits clicked() for Return/Enter on the focused control, so the old Qt 5-era manual
-    // handler made every gamepad-A / Enter activation fire clicked() TWICE (two AppViews
-    // pushed from the host card => Back had to be pressed twice to reach home).
+    // BL-1745 round 2: these manual handlers are LOAD-BEARING — removing them on the
+    // "Qt 6 AbstractButton activates on Return natively" theory bricked every A/Enter
+    // activation on-device (0.2.0-alpha.001 critical regression): ItemDelegate only
+    // accepts Space natively. The original double-push bug is fixed at the PUSH SITES
+    // instead (stackView.busy guards) so a duplicate clicked() is a harmless no-op.
+    Keys.onReturnPressed: {
+        clicked()
+    }
+    Keys.onEnterPressed: {
+        clicked()
+    }
 }

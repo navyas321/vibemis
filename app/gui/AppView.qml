@@ -378,6 +378,11 @@ CenteredGridView {
 
         function launchOrResumeSelectedApp(quitExistingApp)
         {
+            // BL-1745 round 2: idempotent — a duplicate clicked() from the same A press
+            // (or a double-tap) must not push a second StreamSegue.
+            if (stackView.busy) {
+                return
+            }
             var runningId = appModel.getRunningAppId()
             if (runningId !== 0 && runningId !== model.appid) {
                 if (quitExistingApp) {
@@ -429,11 +434,11 @@ CenteredGridView {
             }
         }
 
-        // Maintainer directive 2026-07-13: no Return/Enter handlers here — gamepad A /
-        // Enter activate via Qt 6 AbstractButton's native clicked() (see onClicked above),
-        // which resumes a running session directly instead of opening the options sheet.
-        // The options sheet stays reachable via X (Keys.onMenuPressed below), press-and-hold,
-        // and right-click.
+        // Maintainer directive 2026-07-13: no INSTANCE Return/Enter handlers here — the
+        // NavigableItemDelegate base handlers fire clicked() (load-bearing on-device;
+        // see BL-1745 round 2), and onClicked above resumes a running session directly
+        // instead of opening the options sheet. The options sheet stays reachable via X
+        // (Keys.onMenuPressed below), press-and-hold, and right-click.
 
         Keys.onMenuPressed: {
             // This will be keyboard/gamepad driven so use open() instead of popup()

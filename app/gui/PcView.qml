@@ -376,18 +376,24 @@ CenteredGridView {
                 }
             }
         }
-        // BL-1745: only the ghost card needs a manual Return/Enter handler (it is a pure
-        // SELECTION with no button of its own). For the real card, Qt 6 AbstractButton
-        // natively emits clicked() on Return/Enter — the old `else clicked()` branch made
-        // gamepad-A push AppView TWICE (Back then had to be pressed twice to reach home).
+        // BL-1745 round 2: the manual clicked() calls are REQUIRED (ItemDelegate has no
+        // native Return/Enter activation — removing these bricked A on-device in
+        // alpha.001). The double-push symptom is fixed by the stackView.busy guard in
+        // onClicked below, which turns any duplicate activation into a no-op.
         Keys.onReturnPressed: {
             if (pcGrid.ghostSelected) {
                 addPcDialog.open()
+            }
+            else {
+                clicked()
             }
         }
         Keys.onEnterPressed: {
             if (pcGrid.ghostSelected) {
                 addPcDialog.open()
+            }
+            else {
+                clicked()
             }
         }
 
@@ -506,7 +512,13 @@ CenteredGridView {
         }
 
         onClicked: {
-            // BL-1745: while the ghost Add-PC card is selected, the Keys handler above owns
+            // BL-1745 round 2: idempotent activation — if the stack is already mid-push
+            // (a duplicate clicked() from the same A press, or a double-tap), drop it.
+            // THIS is the actual double-Back fix: one activation, one AppView, one Back.
+            if (stackView.busy) {
+                return
+            }
+            // While the ghost Add-PC card is selected, the Keys handler above owns
             // activation (it opened the dialog on key press) — swallow any click that still
             // reaches the delegate so it can't ALSO activate the card underneath. A stray
             // tap while ghost-selected just clears the selection (self-healing).
