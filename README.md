@@ -27,6 +27,11 @@ Streaming clients in this world come in two flavors, and until now you couldn't 
 No building, no installer, no dependencies. Vibemis is a single self-contained file —
 **download it and double-click it.**
 
+> 📲 **Already have Vibemis installed?** Skip the download — it updates itself. In the app
+> open Settings → Advanced → **Software updates**, pick your channel (**Stable** recommended;
+> **Beta** for the newest features), then *Check for updates* → *Update now*. Details in
+> [Downloads & updates](#downloads--updates).
+
 ### Easiest way (Steam Deck / SteamOS)
 
 1. **Switch to Desktop Mode.** (Hold the **power button** → **Switch to Desktop**.)

@@ -813,6 +813,11 @@ jobs:
         [ ! -z "$BUGFIXES" ] && CHANGELOG="${CHANGELOG}### 🐛 Bug Fixes\n${BUGFIXES}\n"
         [ ! -z "$IMPROVEMENTS" ] && CHANGELOG="${CHANGELOG}### 🔧 Improvements\n${IMPROVEMENTS}\n"
         [ ! -z "$OTHER" ] && CHANGELOG="${CHANGELOG}### 📝 Other Changes\n${OTHER}\n"
+        # BL-1739: never render a bare header — a cut with no commits since the previous
+        # tag (e.g. a re-dispatch on the same HEAD) says so instead of looking broken.
+        if [ -z "${FEATURES}${BUGFIXES}${IMPROVEMENTS}${OTHER}" ]; then
+          CHANGELOG="${CHANGELOG}_No code changes since the previous release — this build was cut from the same source (CI re-run or infrastructure-only update)._\n"
+        fi
         echo -e "$CHANGELOG" > changelog.md
        
         echo "Generated changelog:"
