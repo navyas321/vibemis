@@ -60,8 +60,28 @@ Visually, the stream/UI looked fine throughout to the tester — this pattern on
 
 ---
 
-## 4. Recommendation
+## 4. Recommendation (superseded — see §5/§6 for alpha.002 cycle)
 
 **MERGE** — not blocking. BL-1745 nav fix and the RESUME-tap feature both verified via mouse/touch in Desktop Mode with no app-side crashes. Flagging for the record only:
 - Tier 1/2 gamepad/Enter-key path unverified this cycle (see caveat).
 - Repeated control-stream disconnects during Desktop Mode testing, believed environmental (not Vibemis-side), not blocking the release.
+
+---
+
+## 5. Addendum — alpha.001 A/Enter activation regression (2026-07-13, same day)
+
+Shortly after this report merged, `0.2.0-alpha.001` was found **BAD**: A/Enter activation was dead on all grids (round-1 removed the manual `Keys.onReturnPressed` handlers, and `ItemDelegate` has no native Return activation on its own). This was caught before it shipped further and mitigated by switching channel back to `0.2.0-beta.010` (known-good). PR #189 was held for a fix.
+
+## 6. Addendum — alpha.002 regression re-check (2026-07-13)
+
+**Artifact:** `Vibemis-0.2.0-alpha.002-x86_64.AppImage`
+**sha256:** `bc75baeb737c0a79d8cfc7dc11a0d007ebc02ce4de9cdc4e399d90501815b0b2` ✓ verified (matches GitHub release digest; instructions.md still only lists the alpha.001 digest — known protocol gap, same as §1).
+**Commit:** `35914527` (manual Return/Enter handlers restored; double-Back fix now via `stackView.busy` idempotent push guards; A-resumes-running-session kept).
+
+- Desktop Mode: launched the AppImage directly (`~/Downloads/Vibemis.AppImage`, logged), confirmed clean startup — self-reports `"0.2.0-alpha.002"`, `Navid-PC` discovered online via Tailscale, no crash/error in the startup log.
+- Game Mode (tester-driven, physical device — Game Mode kills the Desktop Claude session so this was run and observed directly by the maintainer/tester): confirmed **A-button and mouse-click activation both work correctly** on the app/PC grids — the alpha.001 dead-activation regression is **fixed** in alpha.002.
+- **Not re-run this cycle:** the full numbered Tier 1/2 gamepad scorecard (steps 1–9: single-Back-via-B, ghost Add-PC card, RESUME-badge A/X semantics, no-double-launch) was not exercised step-by-step — this cycle's scope was the regression check only, per direction. Tier 3 mouse nav/resume was already PASS from §2 and is architecturally unaffected by the alpha.002 diff (idempotent push guard, not a behavior change on the mouse path).
+
+### Recommendation
+
+**Regression check: PASS.** The alpha.001 blocker (dead A/Enter activation) is confirmed fixed on alpha.002, verified both by direct device observation (Game Mode, gamepad + mouse) and this cycle's Desktop Mode launch check. Full step-by-step Tier 1/2 gamepad scorecard replay against alpha.002 is still recommended before considering BL-1745 fully closed, but is not treated as blocking this update — flagging as a follow-up rather than re-running now.
