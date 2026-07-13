@@ -202,22 +202,23 @@ pick a channel, *Check for updates*, *Update now*. The AppImage swaps itself in 
 previous build stays alongside as `.old` for rollback) and relaunches. The
 `scripts/vibemis-update.sh` helper does the same from a terminal or a Steam shortcut.
 
-Versions follow **`w.x.y.z`** — `x` steps per **stable** release, `y` per **beta**, `z` per
-**alpha** (numbers may skip; the highest is always the newest).
+Versions follow **[Semantic Versioning 2.0.0](https://semver.org)** — pre-releases are
+suffixed versions of the stable they precede (`0.5.0-beta.007` → `0.5.0`), with dense
+zero-padded counters. The current stable keeps its original `0.4.0.0` tag (≡ `0.4.0`).
 
-| Channel | Version shape | Built from | Use |
+| Channel | Tag shape | Built from | Use |
 |---|---|---|---|
-| ✅ **Stable** | `0.x.0.0` | Explicit release cuts | **Recommended** — hand-verified on device |
-| 🧪 **Beta** | `0.x.y.0` | `vibemis-main` | **Manual-testing channel** — newest features |
-| 🔬 **Alpha** | `0.x.0.z` | `test<N>-*` branches (on request) | Automated test-agent artifacts |
+| ✅ **Stable** | `0.x.y` (bare) | Explicit release cuts | **Recommended** — hand-verified on device |
+| 🧪 **Beta** | `0.x.y-beta.NNN` | `vibemis-main` | **Manual-testing channel** — newest features |
+| 🔬 **Alpha** | `0.x.y-alpha.NNN` | `test<N>-*` branches (on request) | Automated test-agent artifacts |
 
 **[→ Download the latest stable](https://github.com/navyas321/vibemis/releases/latest)** · [all releases](https://github.com/navyas321/vibemis/releases)
 
-The releases page lists the project's **complete build history** under one monotonic catalog —
-from `0.0.0.0` (the first automated build, July 2025) to the current stable. Historical entries
-are prerelease-flagged markers without artifacts; see
-[`docs/RELEASE_HISTORY.md`](docs/RELEASE_HISTORY.md) for the full map (original tags, commits,
-CI runs, and the story of every stable number).
+The releases page lists the project's **complete build history** under the semver catalog —
+from `0.1.0-alpha.001` (the first automated build, July 2025) through the `0.1.0` beta and rc
+trains to the current stable. Historical entries are prerelease-flagged markers without
+artifacts; see [`docs/RELEASE_HISTORY.md`](docs/RELEASE_HISTORY.md) for the full map
+(original tags, commits, CI runs, and the story of every stable number).
 
 ---
 

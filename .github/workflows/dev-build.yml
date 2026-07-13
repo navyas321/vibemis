@@ -184,18 +184,30 @@ jobs:
       - name: Generate semantic version
         id: version
         run: |
-          # ── BL-1699 (maintainer directive 2026-07-13): version scheme is W.X.Y.Z ──
-          #   W  frozen until explicit maintainer approval (currently 0)
-          #   X  increments at every STABLE release  → first stable = 0.1.0.0
-          #   Y  increments per BETA release         → 0.0.<n>.0
-          #   Z  increments per ALPHA release        → 0.0.0.<n>
-          # Y/Z use GITHUB_RUN_NUMBER: monotonic, survives release pruning, never
-          # reused (numbers skip across tiers — gaps are expected and fine).
-          # app/version.txt holds just "W.X". Dev builds get a -dev.<branch> suffix
-          # so they can never be mistaken for a channel build.
+          # ── Semantic Versioning 2.0.0 (maintainer /goal 2026-07-13, supersedes W.X.Y.Z) ──
+          # app/version.txt holds the NEXT stable version, e.g. "0.5.0".
+          #   stable  → the bare version itself (0.5.0); bump version.txt right after the cut.
+          #             A hotfix patch ships via version_override (e.g. 0.5.1).
+          #   beta    → 0.5.0-beta.NNN   (dense, zero-padded; NNN = max existing +1)
+          #   alpha   → 0.5.0-alpha.NNN  (same counter mechanism)
+          #   dev     → 0.5.0-dev.NNN.<branch> (never matches an update channel)
+          # Counters scan ls-remote TAGS (pruning deletes releases but keeps tags), so a
+          # number is never reused even after cleanup. Zero-padding keeps GitHub's
+          # lexical prerelease sort identical to numeric order. The historical catalog
+          # (0.1.0-*, …-rc.*, 0.3.1, 0.4.0.0) is documented in docs/RELEASE_HISTORY.md;
+          # 0.4.0.0 keeps its four-part tag because deployed devices key on it (≡ 0.4.0).
           BASE_VERSION=$(cat app/version.txt | tr -d '\n\r')
-          VER_W=$(echo "$BASE_VERSION" | cut -d. -f1)
-          VER_X=$(echo "$BASE_VERSION" | cut -d. -f2)
+          # Legacy "W.X" bases (two segments) map to the next stable "W.(X+1).0".
+          if [[ "$BASE_VERSION" =~ ^[0-9]+\.[0-9]+$ ]]; then
+            BASE_VERSION="$(echo "$BASE_VERSION" | cut -d. -f1).$(( $(echo "$BASE_VERSION" | cut -d. -f2) + 1 )).0"
+          fi
+          next_counter() {  # $1 = suffix class (beta|alpha)
+            local max
+            max=$(git ls-remote --tags origin "refs/tags/${BASE_VERSION}-$1.*" 2>/dev/null \
+                  | sed -E "s#.*refs/tags/${BASE_VERSION}-$1\.##" \
+                  | grep -E '^[0-9]+$' | sort -n | tail -1)
+            printf '%03d' $(( ${max:-0} + 1 ))
+          }
           RUN_N=${GITHUB_RUN_NUMBER}
 
           # Get branch info
@@ -216,41 +228,42 @@ jobs:
                 "${{ github.event.inputs.release_type }}" == "stable" || \
                 "$BRANCH_NAME" == "main" || \
                 "$BRANCH_NAME" == "master" ]]; then
-            # ✅ Production release — X increments here; bump version.txt to match
-            # right after the cut (W.X -> W.(X+1)). A hotfix PATCH (W.X.0.Z, Z>0)
-            # can be cut with the version_override input; version.txt stays put.
+            # ✅ Production release — the bare next-stable version. Bump version.txt to
+            # the following stable right after the cut. Hotfix patches via version_override.
             if [[ -n "${{ github.event.inputs.version_override }}" ]]; then
               VERSION="${{ github.event.inputs.version_override }}"
             else
-              VERSION="$VER_W.$((VER_X + 1)).0.0"
+              VERSION="$BASE_VERSION"
             fi
             IS_PRERELEASE="false"
             RELEASE_TIER="release"
 
           elif [[ "$BRANCH_NAME" == "vibemis-main" || "$BRANCH_NAME" == "develop" ]]; then
-            # 🧪 Beta — NOT a prerelease so it appears as "latest" until a stable lands.
-            VERSION="$VER_W.$VER_X.$RUN_N.0"
-            IS_PRERELEASE="false"
+            # 🧪 Beta — semver pre-release of the upcoming stable. Prerelease-flagged on
+            # GitHub (only bare stables are full releases); the updater's beta channel
+            # matches the -beta suffix on every deployed client generation.
+            VERSION="${BASE_VERSION}-beta.$(next_counter beta)"
+            IS_PRERELEASE="true"
             RELEASE_TIER="beta"
 
           elif [[ "$BRANCH_NAME" =~ ^test || "$BRANCH_NAME" =~ ^(fix|hotfix|feat|feature)/ ]]; then
             # 🔬 Alpha — pre-release; the branch is shown in the release body.
-            VERSION="$VER_W.$VER_X.0.$RUN_N"
+            VERSION="${BASE_VERSION}-alpha.$(next_counter alpha)"
             RELEASE_TIER="alpha"
 
           else
-            # 🔧 Dev — suffixed so structural channel detection can never match it.
-            VERSION="$VER_W.$VER_X.0.$RUN_N-dev.$BRANCH_SANITIZED"
+            # 🔧 Dev — suffixed so channel detection can never match it.
+            VERSION="${BASE_VERSION}-dev.${RUN_N}.$BRANCH_SANITIZED"
             RELEASE_TIER="dev"
           fi
 
           echo "release_tier=$RELEASE_TIER" >> $GITHUB_OUTPUT
 
-          # Numeric 4-part version for Windows RC files
+          # Numeric 4-part version for Windows RC files (strip suffix, append run number)
+          NUMERIC_BASE=$(echo "$VERSION" | sed -E 's/-.*$//')
           case "$RELEASE_TIER" in
-            release) NUMERIC_VERSION="$VER_W.$((VER_X + 1)).0.0" ;;
-            beta)    NUMERIC_VERSION="$VER_W.$VER_X.$RUN_N.0" ;;
-            *)       NUMERIC_VERSION="$VER_W.$VER_X.0.$RUN_N" ;;
+            release) NUMERIC_VERSION="${NUMERIC_BASE}.0" ;;
+            *)       NUMERIC_VERSION="${NUMERIC_BASE}.$RUN_N" ;;
           esac
 
           # Output all versions
@@ -849,13 +862,9 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ needs.setup-version.outputs.version }}
-        name: >-
-          ${{
-            needs.setup-version.outputs.release_tier == 'release' && '✅ Vibemis Release' ||
-            needs.setup-version.outputs.release_tier == 'beta'    && '🧪 Vibemis Beta'    ||
-            needs.setup-version.outputs.release_tier == 'alpha'   && '🔬 Vibemis Alpha'   ||
-            '🔧 Vibemis Dev'
-          }} ${{ needs.setup-version.outputs.version }}
+        # Uniform titles (maintainer 2026-07-13): the tag alone carries tier + version;
+        # the body's first line states the tier.
+        name: Vibemis release ${{ needs.setup-version.outputs.version }}
         body: |
           ${{
             needs.setup-version.outputs.release_tier == 'release' && '✅ **Production Release**
@@ -917,48 +926,44 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    # ── Keep the Releases page tidy ─────────────────────────────────────────
-    # Without this, every vibemis-main push leaves its 🧪 beta behind forever and
-    # every test-branch push leaves another 🔬 alpha — the Releases list balloons.
-    # Policy:
-    #   • beta    → keep ONLY the newest beta (the one we just published); delete the rest.
-    #   • alpha   → keep ONLY the newest alpha FOR THIS test branch; other branches untouched.
-    #   • release → never pruned (production history is permanent).
+    # ── Keep the Releases page tidy (semver era, maintainer /goal 2026-07-13) ──
+    # Scope: ONLY tags of the CURRENT cycle (the KEEP_TAG's own base, e.g. "0.5.0-").
+    # The historical catalog (0.1.0-*, …-rc.*, 0.3.1, 0.4.0.0 — docs/RELEASE_HISTORY.md)
+    # can never match and is never pruned. Deletions remove the RELEASE but KEEP the
+    # git tag — the dense NNN counters scan tags, so numbers are never reused.
+    #   • beta/alpha build → keep only the newest of that class in this cycle.
+    #   • stable cut      → the cycle is complete: prune ALL of its -alpha./-beta. releases.
     - name: Prune superseded releases
-      if: needs.setup-version.outputs.release_tier == 'beta' || needs.setup-version.outputs.release_tier == 'alpha'
+      if: needs.setup-version.outputs.release_tier == 'beta' || needs.setup-version.outputs.release_tier == 'alpha' || needs.setup-version.outputs.release_tier == 'release'
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         TIER: ${{ needs.setup-version.outputs.release_tier }}
         KEEP_TAG: ${{ needs.setup-version.outputs.version }}
-        BRANCH: ${{ github.ref_name }}
       run: |
         set -u
-        # BL-1699: W.X.Y.Z structural tags (beta = Y>0,Z==0; alpha = Y==0,Z>0) plus the
-        # legacy suffix tags from the pre-W.X.Y.Z era, so old superseded releases still
-        # get cleaned up. Alphas are pruned globally now (the branch no longer lives in
-        # the tag; one test cycle at a time in practice).
-        if [ "$TIER" = "beta" ]; then
-          PATTERN='(^[0-9]+\.[0-9]+\.[1-9][0-9]*\.0$)|(-beta\.)'
-          echo "Pruning all betas except $KEEP_TAG"
+        BASE=$(echo "$KEEP_TAG" | sed -E 's/-.*$//')
+        if [ "$TIER" = "release" ]; then
+          # version_override cuts are migration/hotfix specials — the base's pre-release
+          # train may be curated history (e.g. the restored 0.1.0 catalog). Never prune it.
+          if [ -n "${{ github.event.inputs.version_override }}" ]; then
+            echo "Override cut ($KEEP_TAG) — skipping cycle prune."
+            exit 0
+          fi
+          PATTERN="^${BASE//./\\.}-(alpha|beta)\."
+          echo "Stable $KEEP_TAG cut — pruning the whole ${BASE} pre-release cycle"
+        elif [ "$TIER" = "beta" ]; then
+          PATTERN="^${BASE//./\\.}-beta\."
+          echo "Pruning ${BASE} betas except $KEEP_TAG"
         else
-          PATTERN='(^[0-9]+\.[0-9]+\.0\.[1-9][0-9]*$)|(-alpha\.)'
-          echo "Pruning alphas except $KEEP_TAG"
+          PATTERN="^${BASE//./\\.}-alpha\."
+          echo "Pruning ${BASE} alphas except $KEEP_TAG"
         fi
-        # gh release list is newest-first; we keep KEEP_TAG and delete the rest that match.
-        # PRERELEASE-ONLY filter: stable PATCHES (W.X.0.Z, prerelease=false) share the
-        # alpha's structural shape — the flag keeps them out of the prune (BL-1713 patch
-        # amendment). Betas are non-prerelease, so the beta tier keeps a shape-only match.
-        if [ "$TIER" = "beta" ]; then
-          CANDIDATES=$(gh release list --limit 200 --json tagName --jq '.[].tagName')
-        else
-          CANDIDATES=$(gh release list --limit 200 --json tagName,isPrerelease --jq '.[] | select(.isPrerelease) | .tagName')
-        fi
-        echo "$CANDIDATES" \
+        gh release list --limit 300 --json tagName --jq '.[].tagName' \
           | grep -E -- "$PATTERN" \
           | grep -v -x -F "$KEEP_TAG" \
           | while read -r tag; do
               [ -z "$tag" ] && continue
-              echo "  deleting superseded release: $tag"
-              gh release delete "$tag" --yes --cleanup-tag || echo "    (delete failed for $tag, continuing)"
+              echo "  deleting superseded release (tag kept): $tag"
+              gh release delete "$tag" --yes || echo "    (delete failed for $tag, continuing)"
             done
         echo "Prune complete."

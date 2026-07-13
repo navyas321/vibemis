@@ -75,10 +75,10 @@ else
 fi
 DEST_DIR=$(dirname "$DEST")
 
-# BL-1699 W.X.Y.Z tags: beta = W.X.Y.0 (Y>0), alpha = W.X.0.Z (Z>0), stable = W.X.0.0.
-# Legacy suffix tags (-beta./-alpha.) still exist in history. /releases/latest can't be
-# used for --stable because our betas are non-prerelease (shown as Latest) — filter the
-# full list STRUCTURALLY instead.
+# Semantic Versioning (2026-07-13): stable = bare X.Y.Z (or the frozen four-part
+# 0.4.0.0); beta/alpha/rc/dev are -suffixed and never stable. Historical catalog
+# markers are prerelease-flagged and assetless (see docs/RELEASE_HISTORY.md) — the
+# prerelease check below skips them, so structural filtering stays correct.
 API="https://api.github.com/repos/$REPO/releases"
 if [ "$CHANNEL_STABLE" -eq 1 ]; then
     echo "Channel: stable"

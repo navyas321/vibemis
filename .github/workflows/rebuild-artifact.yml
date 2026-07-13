@@ -1,0 +1,154 @@
+name: Rebuild Historical Artifact
+
+# Maintainer directive 2026-07-13: every catalog release must carry its AppImage.
+# The original artifacts were purged with their releases (unrecoverable), so this
+# workflow reproducibly rebuilds a build from its recorded commit and attaches the
+# AppImage to the given (already existing) release. Dispatched per entry by the
+# backfill driver; ~20 run concurrently on the free public-repo pool.
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: 'Commit to build (full or short sha)'
+        required: true
+      tag:
+        description: 'Existing release tag to attach the AppImage to'
+        required: true
+      artifact_version:
+        description: 'Version string stamped into the binary + artifact filename (the original historical tag)'
+        required: true
+
+env:
+  QT_VERSION: '6.8.3'
+
+concurrency:
+  group: rebuild-${{ github.event.inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  rebuild:
+    name: Rebuild ${{ github.event.inputs.artifact_version }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+
+    steps:
+    - name: Checkout historical commit
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.inputs.sha }}
+        submodules: 'recursive'
+        fetch-depth: 0
+
+    - name: Setup Qt 6
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: ${{ env.QT_VERSION }}
+        host: 'linux'
+        target: 'desktop'
+        modules: 'qtmultimedia'
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          libegl1-mesa-dev libgl1-mesa-dev \
+          libopus-dev libsdl2-dev libsdl2-ttf-dev \
+          libssl-dev libavcodec-dev libavformat-dev libavutil-dev libswscale-dev \
+          libxkbcommon-dev wayland-protocols libdrm-dev libgbm-dev \
+          libplacebo-dev libva-dev \
+          libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+          libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 \
+          librsvg2-bin fuse libfuse2
+
+    - name: Download linuxdeploy + Qt plugin
+      run: |
+        mkdir -p $HOME/bin
+        wget -q -O $HOME/bin/linuxdeploy.AppImage \
+          https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+        wget -q -O $HOME/bin/linuxdeploy-plugin-qt.AppImage \
+          https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
+        chmod +x $HOME/bin/linuxdeploy.AppImage $HOME/bin/linuxdeploy-plugin-qt.AppImage
+        echo "$HOME/bin" >> $GITHUB_PATH
+
+    - name: Build and install
+      run: |
+        export PATH="$Qt6_DIR/bin:$PATH"
+        DEPLOY=$PWD/deploy
+        rm -rf "$DEPLOY" build/installer-release
+        mkdir -p "$DEPLOY" build/installer-release
+        # Stamp the ORIGINAL historical version so the binary self-reports its true identity
+        echo "${{ github.event.inputs.artifact_version }}" > app/version.txt
+        echo "Stamped app/version.txt: $(cat app/version.txt)"
+        # Project file name changed across history (moonlight-qt.pro -> vibemis.pro)
+        PRO=vibemis.pro
+        [ -f "$PRO" ] || PRO=moonlight-qt.pro
+        [ -f "$PRO" ] || PRO=$(ls *.pro | head -1)
+        echo "Using project file: $PRO"
+        qmake6 "$PRO" CONFIG+=release \
+          CONFIG+=disable-wayland CONFIG+=disable-libdrm CONFIG+=disable-cuda \
+          PREFIX=/usr DEFINES+=APP_IMAGE "QMAKE_CXXFLAGS+=-fPIC"
+        make -j$(nproc)
+        make INSTALL_ROOT="$DEPLOY" install
+
+    - name: Install VAAPI apprun hook
+      run: |
+        DEPLOY=$PWD/deploy
+        mkdir -p "$DEPLOY/apprun-hooks"
+        cat > "$DEPLOY/apprun-hooks/01-libva-driver-paths.sh" << 'HOOK'
+        if [ -z "$LIBVA_DRIVERS_PATH" ]; then
+            for _d in /usr/lib/x86_64-linux-gnu/dri /usr/lib64/dri /usr/lib/dri; do
+                [ -d "$_d" ] && { export LIBVA_DRIVERS_PATH="$_d"; break; }
+            done
+        fi
+        if [ -z "$VIBEMIS_SKIP_HOST_LIBVA" ]; then
+            for _d in /usr/lib64 /usr/lib/x86_64-linux-gnu /usr/lib; do
+                if [ -e "$_d/libva.so.2" ]; then
+                    _tmp=$(mktemp -d)
+                    for _so in libva.so.2 libva-drm.so.2 libva-x11.so.2; do
+                        [ -e "$_d/$_so" ] && ln -sf "$_d/$_so" "$_tmp/"
+                    done
+                    export LD_LIBRARY_PATH="$_tmp${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+                    break
+                fi
+            done
+        fi
+        if [ -z "$FORCE_VAAPI" ] && [ -n "$LIBVA_DRIVERS_PATH" ]; then
+            export FORCE_VAAPI=1
+        fi
+        if [ -z "$VDPAU_DRIVER_PATH" ]; then
+            for _d in /usr/lib/x86_64-linux-gnu/vdpau /usr/lib64/vdpau /usr/lib/vdpau; do
+                [ -d "$_d" ] && { export VDPAU_DRIVER_PATH="$_d"; break; }
+            done
+        fi
+        HOOK
+        chmod +x "$DEPLOY/apprun-hooks/01-libva-driver-paths.sh"
+
+    - name: Bundle AppImage with linuxdeploy
+      run: |
+        export PATH="$Qt6_DIR/bin:$PATH"
+        export QMAKE="$Qt6_DIR/bin/qmake6"
+        export APPIMAGE_EXTRACT_AND_RUN=1
+        DEPLOY=$PWD/deploy
+        # Historical artifact filename carries the ORIGINAL tag (sanitized for filesystems)
+        SAFE_VERSION=$(echo "${{ github.event.inputs.artifact_version }}" | tr '+' '_')
+        export OUTPUT="$PWD/build/installer-release/Vibemis-${SAFE_VERSION}-x86_64.AppImage"
+        export QML_SOURCES_PATHS=$PWD/app/gui
+        # Pre-redesign commits ship no branded icon — fall back to any icon present
+        ICON="$DEPLOY/usr/share/icons/hicolor/256x256/apps/vibemis.png"
+        [ -f "$ICON" ] || ICON=$(find "$DEPLOY/usr/share/icons" -name '*.png' 2>/dev/null | head -1)
+        DESKTOP=$(find "$DEPLOY/usr/share/applications" -name '*.desktop' | head -1)
+        ARGS=(--appdir "$DEPLOY" --plugin qt --output appimage --desktop-file "$DESKTOP")
+        [ -n "$ICON" ] && ARGS+=(--icon-file "$ICON")
+        linuxdeploy.AppImage "${ARGS[@]}"
+        ls -la build/installer-release/
+
+    - name: Attach to release
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        APP=$(ls build/installer-release/*.AppImage | head -1)
+        echo "Attaching $APP to release ${{ github.event.inputs.tag }}"
+        gh release upload "${{ github.event.inputs.tag }}" "$APP" --clobber --repo "${{ github.repository }}"
+        echo "DONE: $(basename "$APP") -> ${{ github.event.inputs.tag }}"

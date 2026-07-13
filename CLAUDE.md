@@ -331,24 +331,25 @@ Key implementation steps (branch: feat/quickmenu-sdl-overlay):
 **When testing:** prioritise Game Mode. Desktop Mode results are informative but secondary.
 If a feature works only in Desktop Mode, it's not ready.
 
-## Versioning / release cadence — build agent MUST keep this moving (maintainer directive 2026-07-11)
+## Versioning — Semantic Versioning 2.0.0 (maintainer /goal 2026-07-13)
 
-`app/version.txt` is the single version source; CI derives every tag from it
-(`<base>-beta.<ts>` on `vibemis-main`, `<base>-alpha.<branch>.<ts>` on `test**`).
-**Do not let the base version lag behind shipped work** (0.6.7 sat unchanged across ~40 merged
-features — never again):
+`app/version.txt` holds the **next stable version** (e.g. `0.5.0`); CI derives every tag:
 
-- **Bump MINOR** (`0.7.0` → `0.8.0`) when a feature wave merges to `vibemis-main`
-  (one or more verified `test<N>` feature PRs).
-- **Bump PATCH** for a fix-only wave.
-- Bump `app/version.txt` **in the same push as (or immediately after) the merge**. Mechanics
-  (verified 2026-07-11 against `check-changes`): on `vibemis-main`, betas publish **only on PR
-  merge commits that touch code** — a direct push (even code-touching) never releases. So a bump
-  pushed directly cuts its beta at the **next PR merge**; to release immediately, run
-  `gh workflow run dev-build.yml --ref vibemis-main` (workflow_dispatch always builds).
-- **Stable releases stay explicit** (workflow_dispatch `release_type=stable` or a `release/**`
-  branch) — cut one at milestones (e.g. after a verification wave clears); don't let stable lag
-  more than a few minor versions behind beta.
+- **Stable** = the bare version itself (`0.5.0`), non-prerelease, takes Latest; cut via
+  workflow_dispatch `release_type=stable`. Hotfix patches via the `version_override`
+  input (`0.5.1`). **Bump version.txt to the next stable right after every cut.**
+- **Beta** = `0.5.0-beta.NNN` (vibemis-main), **alpha** = `0.5.0-alpha.NNN` (test
+  branches), dev = `0.5.0-dev.<run>.<branch>`. NNN is dense + zero-padded, computed
+  from existing tags (prunes delete releases but KEEP tags — never delete a tag).
+- All suffixed builds are GitHub-prerelease; only bare stables are full releases.
+- On a stable cut, CI prunes that cycle's alpha/beta releases automatically.
+- The current stable keeps its frozen four-part tag `0.4.0.0` (≡ `0.4.0`) because
+  deployed devices key on it. The historical catalog (0.1.0-alpha/beta/rc trains,
+  `0.3.1`) is documented in `docs/RELEASE_HISTORY.md` — never prune or reuse it.
+- **A release number is NEVER reused for different bits** — a burnt number stays burnt.
+- Release titles are uniform: `Vibemis release <tag>`.
+- Betas publish **only on PR merge commits that touch code** — a direct push never
+  releases; `gh workflow run dev-build.yml --ref vibemis-main` builds immediately.
 
 ## CI / AppImage release rules — READ BEFORE PUSHING
 
