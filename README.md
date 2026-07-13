@@ -117,6 +117,13 @@ AppImage to a stable path with a clean `Vibemis` desktop entry, ready to Add to 
   live host count), app grid, Add-PC dialog, Host-options side-sheet, Settings (a category sidebar),
   and in-stream Help — per-screen chrome, a single header, the accent focus-ring, and line icons
 
+### Known limitations
+
+| Feature | Status |
+|---|---|
+| **HDR streaming** | Ships **opt-in and marked Experimental** (off by default; auto-disabled on unsupported PCs). The code path is complete but has not yet been validated on HDR hardware — the primary test device's panel is SDR. Validation is planned via an external HDR display. |
+| **Microphone passthrough** | Not possible yet in any Moonlight-family client: it requires host-side protocol support that Apollo/Vibepollo does not ship (tracked upstream — Apollo discussion #591). |
+
 ---
 
 ## Remote Play (over the internet)
