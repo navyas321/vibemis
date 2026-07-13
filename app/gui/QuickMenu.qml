@@ -2,16 +2,23 @@ import QtQuick 2.9
 import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.2
 import ServerCommandManager 1.0
+import Vibemis.Redesign 1.0
 
+// BL-1688: redesigned onto the Vibemis token system (dark elevated panel, Sora/Manrope
+// type, VbSheetIcon line glyphs instead of emoji, sheet-style rows, hint-bar footer) —
+// matching the 1a/1d/1e screens. Input model unchanged (d-pad auto-repeat, left stick,
+// injected keys). Renders offscreen into the stream; VbTokens is a process-global
+// singleton and VbSheetIcon resolves from the same qrc:/gui directory, so the separate
+// offscreen QML engine sees both.
 Rectangle {
     id: quickMenu
     // Fixed size for the menu - small and centered
-    width: 500
-    height: 400
+    width: 520
+    height: 420
     // Don't use anchors with SizeViewToRootObject - position manually
-    color: "#2d2d2d"
-    radius: 10
-    border.color: "#444"
+    color: VbTokens.bgElev
+    radius: VbTokens.radiusWindow
+    border.color: VbTokens.stroke
     border.width: 1
     visible: true  // Always visible when created
     opacity: 1.0
@@ -56,17 +63,25 @@ Rectangle {
     // Menu content (no longer nested in another rectangle)
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 20
-        spacing: 15
+        anchors.margins: 22
+        spacing: 12
 
-        // Title
+        // BL-1688: screen-style title — Sora bold, left-aligned over a soft hairline,
+        // like the 1a/1e section headers (was a centered cyan pointSize title).
         Text {
-            text: currentMenu === "text_send" ? qsTr("Send Text to Host")
-                  : (currentMenu === "main" ? qsTr("Quick Menu") : qsTr("Server Commands"))
-            font.pointSize: 24
-            font.bold: true
-            color: "#00cccc"
-            Layout.alignment: Qt.AlignHCenter
+            text: currentMenu === "text_send" ? qsTr("Send text to host")
+                  : (currentMenu === "main" ? qsTr("Quick Menu") : qsTr("Server commands"))
+            font.family: VbTokens.fontDisplay
+            font.weight: Font.Bold
+            font.pixelSize: 24
+            color: VbTokens.text
+            Layout.fillWidth: true
+            elide: Text.ElideRight
+        }
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 1
+            color: VbTokens.strokeSoft
         }
 
         // Menu items
@@ -95,6 +110,7 @@ Rectangle {
             model: currentMenu === "main" ? mainMenuModel : serverCommandsModel
             
             delegate: Button {
+                id: menuRow
                 width: menuListView.width
                 // BL-1666: taller row so the selection rectangle isn't cramped against the label
                 // (was 60 with only 6px text margin — the teal border hugged the text). The list
@@ -106,12 +122,20 @@ Rectangle {
                 // controller navigation is visible in Game Mode.
                 highlighted: ListView.isCurrentItem
 
+                // BL-1688: destructive rows (quit) take the danger treatment like the
+                // host sheet's Delete row.
+                readonly property bool danger: model.action === "quit"
+                readonly property bool active: hovered || highlighted
+
+                // BL-1688: sheet-row recipe — focusedFill surface + accent border when
+                // current (flat variant: the outer glow would clip inside this scrolling
+                // clipped list, so the ring is border-only here).
                 background: Rectangle {
-                    color: parent.down ? "#333"
-                                       : ((parent.hovered || parent.highlighted) ? "#444" : "transparent")
-                    border.color: (parent.hovered || parent.highlighted) ? "#00cccc" : "transparent"
-                    border.width: 2
-                    radius: 5
+                    radius: VbTokens.radiusControl
+                    color: menuRow.down ? Qt.darker(VbTokens.focusedFill, 1.15)
+                                        : (menuRow.active ? VbTokens.focusedFill : "transparent")
+                    border.color: menuRow.active ? VbTokens.accent : "transparent"
+                    border.width: VbTokens.focusBorder
                 }
 
                 onClicked: {
@@ -125,40 +149,43 @@ Rectangle {
                 // remaining width and elides instead of overflowing.
                 contentItem: RowLayout {
                     anchors.fill: parent
-                    anchors.leftMargin: 16
-                    anchors.rightMargin: 16
+                    anchors.leftMargin: 18
+                    anchors.rightMargin: 18
                     anchors.topMargin: 6
                     anchors.bottomMargin: 6
-                    spacing: 14
+                    spacing: 16
 
-                    Text {
-                        text: model.icon
-                        font.pointSize: 20
-                        color: "white"
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                        Layout.preferredWidth: 40
+                    // BL-1688: monochrome line glyph (VbSheetIcon) instead of an emoji —
+                    // accent when selected, danger red for quit, dim otherwise.
+                    VbSheetIcon {
+                        kind: model.icon
+                        color: menuRow.danger ? VbTokens.statusDanger
+                                              : (menuRow.active ? VbTokens.accent : VbTokens.textDim)
+                        Layout.preferredWidth: 26
+                        Layout.preferredHeight: 26
                         Layout.alignment: Qt.AlignVCenter
                     }
 
                     ColumnLayout {
                         Layout.fillWidth: true
                         Layout.alignment: Qt.AlignVCenter
-                        spacing: 2
+                        spacing: 3
 
                         Text {
                             text: model.text
-                            font.pointSize: 14
-                            font.bold: true
-                            color: "white"
+                            font.family: VbTokens.fontBody
+                            font.pixelSize: 17
+                            font.weight: menuRow.active ? Font.Bold : Font.DemiBold
+                            color: menuRow.danger ? VbTokens.statusDanger : VbTokens.text
                             Layout.fillWidth: true
                             elide: Text.ElideRight
                         }
 
                         Text {
                             text: model.description
-                            font.pointSize: 10
-                            color: "#cccccc"
+                            font.family: VbTokens.fontBody
+                            font.pixelSize: 12
+                            color: VbTokens.textDim
                             Layout.fillWidth: true
                             elide: Text.ElideRight
                         }
@@ -181,14 +208,17 @@ Rectangle {
                 id: sendTextField
                 Layout.fillWidth: true
                 placeholderText: qsTr("Type text to send to the host…")
-                color: "white"
-                font.pointSize: 14
+                color: VbTokens.text
+                placeholderTextColor: VbTokens.textDim
+                font.family: VbTokens.fontBody
+                font.pixelSize: 16
                 selectByMouse: true
+                // BL-1688: token field — window-dark well + accent focus border.
                 background: Rectangle {
-                    color: "#1e1e1e"
-                    border.color: sendTextField.activeFocus ? "#00cccc" : "#444"
-                    border.width: 2
-                    radius: 5
+                    color: VbTokens.bgWindow
+                    border.color: sendTextField.activeFocus ? VbTokens.accent : VbTokens.stroke
+                    border.width: VbTokens.focusBorder
+                    radius: VbTokens.radiusControl
                 }
                 onActiveFocusChanged: {
                     if (typeof quickMenuManager !== 'undefined')
@@ -213,9 +243,10 @@ Rectangle {
             }
 
             Text {
-                text: qsTr("Enter sends • Esc returns to the menu")
-                font.pointSize: 9
-                color: "#999999"
+                text: qsTr("Enter sends · Ⓑ / Esc returns to the menu")
+                font.family: VbTokens.fontBody
+                font.pixelSize: 13
+                color: VbTokens.textDim
                 Layout.alignment: Qt.AlignHCenter
             }
 
@@ -227,24 +258,63 @@ Rectangle {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 1
-            color: "#444"
+            color: VbTokens.strokeSoft
         }
 
-        // Back/Close button. test77: name the action ("Resume Game") and show the GAMEPAD
-        // buttons that trigger it — the old "Close (Esc)" keyboard-only hint left
-        // controller users with no discoverable way back to the game.
-        // Bug fix: pinned as a full-width footer bar (was a centered auto-width button that
-        // the overflowing, unclipped list painted over). It now always sits below the list.
-        Button {
-            text: currentMenu === "main" ? qsTr("Resume Game (Ⓑ / Back / Esc)") : qsTr("← Back (Ⓑ)")
+        // BL-1688: footer restyled as a hint bar (circled glyphs + labels, like every
+        // redesigned screen's VbHintBar) — still tappable to go back/resume (test77:
+        // controller users need the discoverable gamepad way back to the game).
+        // Bug fix history: pinned full-width below the clipped list.
+        Item {
             Layout.fillWidth: true
-            Layout.preferredHeight: 40
-            Layout.alignment: Qt.AlignHCenter
-            onClicked: {
-                if (currentMenu === "main") {
-                    closeMenu()
-                } else {
-                    currentMenu = "main"
+            Layout.preferredHeight: 34
+
+            Row {
+                anchors.centerIn: parent
+                spacing: 26
+
+                Row {
+                    spacing: 8
+                    Text {
+                        text: "Ⓐ"
+                        font.pixelSize: 20
+                        color: VbTokens.textDim
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    Text {
+                        text: qsTr("Select")
+                        font.family: VbTokens.fontBody
+                        font.pixelSize: VbTokens.sizeLabel
+                        color: VbTokens.textDim
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+                Row {
+                    spacing: 8
+                    Text {
+                        text: "Ⓑ"
+                        font.pixelSize: 20
+                        color: VbTokens.textDim
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    Text {
+                        text: currentMenu === "main" ? qsTr("Resume game") : qsTr("Back")
+                        font.family: VbTokens.fontBody
+                        font.pixelSize: VbTokens.sizeLabel
+                        color: VbTokens.textDim
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    if (currentMenu === "main") {
+                        closeMenu()
+                    } else {
+                        currentMenu = "main"
+                    }
                 }
             }
         }
@@ -257,25 +327,27 @@ Rectangle {
         id: toastNotification
         anchors.top: parent.top
         anchors.horizontalCenter: parent.horizontalCenter
-        anchors.topMargin: 12
-        width: Math.min(parent.width - 40, toastText.implicitWidth + 20)
+        anchors.topMargin: 14
+        width: Math.min(parent.width - 44, toastText.implicitWidth + 32)
         height: 40
-        radius: 20
-        color: "#333"
-        border.color: "#666"
+        radius: VbTokens.radiusPill
+        // BL-1688: token pill (elevated chip + accent edge) instead of grey-on-grey.
+        color: VbTokens.bgElev2
+        border.color: VbTokens.accent
         border.width: 1
         visible: showToast
         opacity: showToast ? 1.0 : 0.0
-        
+
         Behavior on opacity {
             NumberAnimation { duration: 200 }
         }
-        
+
         Text {
             id: toastText
             text: toastMessage
-            color: "white"
-            font.pointSize: 12
+            color: VbTokens.text
+            font.family: VbTokens.fontBody
+            font.pixelSize: 14
             anchors.centerIn: parent
         }
     }
@@ -307,11 +379,12 @@ Rectangle {
             var commandIds = quickMenuManager.serverCommandManager.getAvailableCommands();
             for (var i = 0; i < commandIds.length; i++) {
                 var commandId = commandIds[i];
-                var icon = "⚙️"; // Default
+                // BL-1688: VbSheetIcon kinds (line glyphs), not emoji.
+                var icon = "terminal"; // Default
                 if (commandId.toLowerCase() === "shutdown") {
-                    icon = "⏻";
+                    icon = "power";
                 } else if (commandId.toLowerCase() === "restart") {
-                    icon = "🔄";
+                    icon = "restart";
                 }
                 serverCommandsModel.append({
                     icon: icon,
@@ -330,9 +403,10 @@ Rectangle {
     // Main menu model
     ListModel {
         id: mainMenuModel
+        // BL-1688: `icon` values are VbSheetIcon kinds (monochrome line glyphs), not emoji.
         ListElement {
             text: qsTr("Disconnect")
-            icon: "⏹"
+            icon: "disconnect"
             action: "disconnect"
             description: qsTr("End the stream — game keeps running on the host")
         }
@@ -340,97 +414,97 @@ Rectangle {
             // BL-1686: quits the game on the HOST and returns to the Vibemis grid
             // (no longer exits the whole app — start another session right away).
             text: qsTr("Quit game")
-            icon: "❌"
+            icon: "power"
             action: "quit"
             description: qsTr("Quit the game on the host and return to Vibemis")
         }
         ListElement {
-            text: qsTr("Server Commands")
-            icon: "⚙"
+            text: qsTr("Server commands")
+            icon: "terminal"
             action: "server_commands"
             description: qsTr("Access server control commands")
         }
         ListElement {
-            text: qsTr("Clipboard Upload")
-            icon: "📋"
+            text: qsTr("Upload clipboard")
+            icon: "clipboard-up"
             action: "clipboard_upload"
             description: qsTr("Upload clipboard to server")
         }
         ListElement {
-            text: qsTr("Fetch Clipboard")
-            icon: "📥"
+            text: qsTr("Fetch clipboard")
+            icon: "clipboard-down"
             action: "clipboard_fetch"
             description: qsTr("Fetch clipboard from server")
         }
         ListElement {
-            text: qsTr("Type Text")
-            icon: "⌨"
+            text: qsTr("Type text")
+            icon: "keyboard"
             action: "type_text"
             description: qsTr("Send typed text to the host")
         }
         ListElement {
-            text: qsTr("Paste Clipboard Text")
-            icon: "📋"
+            text: qsTr("Paste clipboard text")
+            icon: "clipboard"
             action: "paste_clipboard"
             description: qsTr("Type clipboard text into the host")
         }
         ListElement {
-            text: qsTr("Stream Info")
-            icon: "ℹ"
+            text: qsTr("Stream info")
+            icon: "details"
             action: "stream_info"
             description: qsTr("Show current resolution, FPS, bitrate and codec")
         }
         ListElement {
-            text: qsTr("Toggle Performance Stats")
-            icon: "📊"
+            text: qsTr("Performance stats")
+            icon: "stats"
             action: "toggle_stats"
             description: qsTr("Show/hide performance statistics")
         }
         ListElement {
-            text: qsTr("Toggle Mouse Capture")
-            icon: "🖱"
+            text: qsTr("Mouse capture")
+            icon: "mouse"
             action: "toggle_mouse"
             description: qsTr("Toggle mouse capture mode")
         }
         ListElement {
-            text: qsTr("Toggle Keyboard Capture")
-            icon: "⌨"
+            text: qsTr("Keyboard capture")
+            icon: "keyboard"
             action: "toggle_keyboard"
             description: qsTr("Toggle keyboard capture mode")
         }
         ListElement {
-            text: qsTr("Toggle Fullscreen")
-            icon: "🖥"
+            text: qsTr("Fullscreen")
+            icon: "fullscreen"
             action: "toggle_fullscreen"
             description: qsTr("Toggle fullscreen mode")
         }
         ListElement {
-            text: qsTr("Toggle Touch Overlay")
-            icon: "👆"
+            text: qsTr("Touch overlay")
+            icon: "touch"
             action: "toggle_touch_overlay"
             description: qsTr("Show/hide the on-screen MENU / KBD touch buttons")
         }
         ListElement {
             text: qsTr("Send Ctrl+Alt+Del")
-            icon: "⌨"
+            icon: "key"
             action: "key_ctrl_alt_del"
             description: qsTr("Send Ctrl+Alt+Del to the host")
         }
         ListElement {
             text: qsTr("Send Alt+F4")
-            icon: "✖"
+            icon: "key"
             action: "key_alt_f4"
             description: qsTr("Close the focused window on the host")
         }
         ListElement {
             text: qsTr("Send Super (Win) key")
-            icon: "⊞"
+            icon: "key"
             action: "key_super"
             description: qsTr("Open the host start menu / launcher")
         }
         ListElement {
             text: qsTr("Send Esc")
-            icon: "⎋"
+            icon: "key"
             action: "key_esc"
             description: qsTr("Send the Escape key to the host")
         }
