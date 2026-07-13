@@ -1,8 +1,8 @@
-# Vibemis 0.1.0.0 — first stable release
+# Vibemis 0.2.0.0 — first stable release
 
 **Vibemis** is a gamepad-first game-streaming client for **SteamOS & Linux handhelds** — the best of
 Moonlight Qt and Artemis (Apollo's extended protocol), tuned to pair with the **Vibepollo** host.
-0.1.0.0 is the first production-stable release, hardware-verified on a Lenovo Legion Go S Z2.
+0.2.0.0 is the first production-stable release, hardware-verified on a Lenovo Legion Go S Z2.
 
 > **Versioning note:** releases now follow **`w.x.y.z`** — `x` steps per stable release, `y` per
 > beta (the manual-testing channel), `z` per alpha (automated test artifacts). This cut supersedes
