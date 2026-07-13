@@ -48,6 +48,7 @@ CenteredGridView {
     // RESUME-badged card (A/B/X are taken: Launch/Back/App options). Key events bubble
     // up from the focused delegate to the grid, same mechanism as PcView's Ⓨ Add-PC.
     // Opens the same quit-confirmation dialog as the stop button — never quits silently.
+    // Maintainer-verified feature (no test-agent cycle; BL-1760/BL-1762).
     Keys.onPressed: {
         if (event.key === Qt.Key_Yellow) {
             if (appModel.getRunningAppId() !== 0) {
