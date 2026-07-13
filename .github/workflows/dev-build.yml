@@ -1031,6 +1031,34 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+    # BL-1768: refresh the chronological build timeline (RELEASES.md) on vibemis-main
+    # after every cut. GitHub's Releases page sorts by SemVer precedence (alphas sink
+    # below betas of the same base version), so RELEASES.md is the newest-first-by-date
+    # view for humans. Fail-soft: a timeline refresh failure never fails a release.
+    - name: Refresh RELEASES.md build timeline
+      continue-on-error: true
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        if [ ! -f scripts/gen-releases-index.sh ]; then
+          echo "::warning::gen-releases-index.sh not on this branch - skipping timeline refresh"
+          exit 0
+        fi
+        bash scripts/gen-releases-index.sh "${{ github.repository }}" > /tmp/RELEASES.md
+        SHA=$(gh api "repos/${{ github.repository }}/contents/RELEASES.md?ref=vibemis-main" --jq .sha 2>/dev/null || true)
+        if [ -n "$SHA" ]; then
+          gh api -X PUT "repos/${{ github.repository }}/contents/RELEASES.md" \
+            -f message="docs: refresh RELEASES.md build timeline [skip ci]" \
+            -f branch=vibemis-main -f sha="$SHA" \
+            -f content="$(base64 -w0 /tmp/RELEASES.md)" > /dev/null
+        else
+          gh api -X PUT "repos/${{ github.repository }}/contents/RELEASES.md" \
+            -f message="docs: add RELEASES.md build timeline [skip ci]" \
+            -f branch=vibemis-main \
+            -f content="$(base64 -w0 /tmp/RELEASES.md)" > /dev/null
+        fi
+        echo "RELEASES.md timeline refreshed"
+
     # ── Releases are PERMANENT, like tags (maintainer directive 2026-07-13, BL-1736) ──
     # SemVer 2.0.0 §3: "Once a versioned package has been released, the contents of that
     # version MUST NOT be modified." The Releases list preserves the complete build
