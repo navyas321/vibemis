@@ -3500,6 +3500,24 @@ Item {
                     width: parent.width
                 }
 
+                // Maintainer find 2026-07-13: the BL-1562 touch-overlay PREF shipped with a
+                // Quick-Menu toggle but never got its Settings row — unfindable outside a
+                // stream. Same opt-in default (off).
+                VbToggleRow {
+                    id: touchOverlayCheck
+                    text: qsTr("On-screen touch controls while streaming")
+                    checked: StreamingPreferences.enableTouchOverlay
+                    onCheckedChanged: {
+                        StreamingPreferences.enableTouchOverlay = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Composites two translucent buttons into the stream: MENU (top-left, opens the Quick Menu) and KBD (top-right, opens text-send). Finger taps only — mouse clicks in those corners pass through to the game.") + "\n\n" +
+                                  qsTr("Can also be toggled mid-stream from the Quick Menu (\"Touch overlay\").")
+                }
+
                 VbToggleRow {
                     id: preferTailscaleCheck
                     text: qsTr("Prefer Tailscale addresses for remote play")
