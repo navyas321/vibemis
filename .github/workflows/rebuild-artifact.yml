@@ -33,12 +33,20 @@ jobs:
     timeout-minutes: 60
 
     steps:
-    - name: Checkout historical commit
+    # actions/checkout treats a short sha as a branch/tag name and fails — check out
+    # the default branch with full history, then hop to the commit and sync submodules.
+    - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        ref: ${{ github.event.inputs.sha }}
         submodules: 'recursive'
         fetch-depth: 0
+
+    - name: Checkout historical commit
+      run: |
+        git checkout --force "${{ github.event.inputs.sha }}"
+        git submodule sync --recursive
+        git submodule update --init --recursive --force
+        echo "HEAD now: $(git rev-parse HEAD)"
 
     - name: Setup Qt 6
       uses: jurplel/install-qt-action@v3
