@@ -222,7 +222,12 @@ zero-padded counters. The first stable is `0.1.0`; its release-candidate lineage
 | 🧪 **Beta** | `0.x.y-beta.NNN` | `vibemis-main` | **Manual-testing channel** — newest features |
 | 🔬 **Alpha** | `0.x.y-alpha.NNN` | `test<N>-*` branches (on request) | Automated test-agent artifacts |
 
-**[→ Download the latest stable](https://github.com/navyas321/vibemis/releases/latest)** · [all releases](https://github.com/navyas321/vibemis/releases)
+**[→ Download the latest stable](https://github.com/navyas321/vibemis/releases/latest)** · [all releases](https://github.com/navyas321/vibemis/releases) · [newest betas](https://github.com/navyas321/vibemis/releases?q=beta&expanded=false) · [newest alphas](https://github.com/navyas321/vibemis/releases?q=alpha&expanded=false)
+
+> ℹ️ GitHub's Releases and Tags pages sort by **SemVer precedence**, not date — and per
+> SemVer, `alpha` pre-releases rank *below* `beta` ones of the same version, so the newest
+> alpha appears **after all the betas** (often on page 2). Use the filtered links above, or
+> the in-app channel picker, to find the newest build of a specific tier.
 
 The releases page lists the project's **complete build history** under the semver catalog —
 from `0.1.0-alpha.001` (the first automated build, July 2025) through the beta and rc
