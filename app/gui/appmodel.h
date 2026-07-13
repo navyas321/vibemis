@@ -33,6 +33,14 @@ public:
 
     Q_INVOKABLE int getRunningAppId();
 
+    // BL-1769: re-read the computer's live currentGameId and emit RunningRole dataChanged
+    // if it differs from our cached copy. The poll-delta path (handleComputerStateChanged)
+    // never fires when NvComputer.currentGameId was already updated by the launch/quit flow
+    // before the next poll diff — leaving the RESUME badge and the Ⓨ Quit-session hint
+    // stale until the view was recreated. Called from AppView on re-activation + a light
+    // activated-only timer; a no-op (no signals) when nothing changed.
+    Q_INVOKABLE void resyncRunningState();
+
     // P3.8 per-game profiles: expose the host identity so QML can key profiles.
     Q_INVOKABLE QString getComputerUuid();
 
