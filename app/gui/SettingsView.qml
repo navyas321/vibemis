@@ -25,6 +25,113 @@ Item {
 
     signal languageChanged()
 
+    // ---- BL-1627: sidebar -> content focus handoff. D-pad RIGHT on a sidebar row moves
+    // active focus to the first focusable control of the visible category, mirroring the
+    // toolbar->grid handoff in main.qml (stackView.currentItem.forceActiveFocus(Qt.TabFocus)).
+    // Search order is declaration order inside the panel columns, and hidden categories'
+    // GroupBoxes are skipped via the visible check, so this lands on the visible page.
+    function focusContentPane() {
+        var target = findFirstFocusable(settingsFlick.contentItem)
+        if (target) {
+            target.forceActiveFocus(Qt.TabFocus)
+        }
+    }
+
+    function findFirstFocusable(item) {
+        for (var i = 0; i < item.children.length; i++) {
+            var child = item.children[i]
+            if (!child.visible || !child.enabled) {
+                continue
+            }
+            if (child.activeFocusOnTab) {
+                return child
+            }
+            var nested = findFirstFocusable(child)
+            if (nested) {
+                return nested
+            }
+        }
+        return null
+    }
+
+    // ---- BL-1628: shared restyle components, factored from the redesigned Video subpage so
+    // the other categories reuse the exact same visual pattern (no new design language). ----
+
+    // Card-style settings group — same recipe as the Video page's Vibepollo Presets card
+    // (bgElev fill, radiusCard, 1px stroke border, 24px padding, label rendered inside).
+    component VbSettingsCard: GroupBox {
+        padding: 24
+        label: Item {}
+        background: Rectangle {
+            color: VbTokens.bgElev
+            radius: VbTokens.radiusCard
+            border.width: 1
+            border.color: VbTokens.stroke
+        }
+    }
+
+    // Sora section header shown at the top of each settings card (fontDisplay, like the
+    // category title above the panel, at card scale).
+    component VbSectionHeader: Text {
+        width: parent.width
+        font.family: VbTokens.fontDisplay
+        font.weight: Font.Bold
+        font.pixelSize: 20
+        color: VbTokens.text
+        bottomPadding: 6
+        wrapMode: Text.Wrap
+    }
+
+    // Toggle-row CheckBox — identical visual language to the Video page's V-Sync /
+    // frame-pacing / adaptive-bitrate rows (18px DemiBold title + accent pill switch over
+    // a strokeSoft hairline). Purely visual: each usage keeps its own checked /
+    // onCheckedChanged / visible / enabled bindings and ToolTip, unchanged.
+    component VbToggleRow: CheckBox {
+        id: toggleRoot
+        width: parent.width
+        height: Math.max(70, toggleTitle.implicitHeight + 28)
+        hoverEnabled: true
+        opacity: enabled ? 1.0 : 0.5
+
+        indicator: Item {}
+        background: Rectangle {
+            anchors.bottom: parent.bottom
+            width: parent.width
+            height: 1
+            color: VbTokens.strokeSoft
+        }
+        contentItem: Item {
+            anchors.fill: parent
+            Text {
+                id: toggleTitle
+                anchors.left: parent.left
+                anchors.right: togglePill.left
+                anchors.rightMargin: 16
+                anchors.verticalCenter: parent.verticalCenter
+                text: toggleRoot.text
+                font.family: VbTokens.fontBody
+                font.weight: Font.DemiBold
+                font.pixelSize: 18
+                color: VbTokens.text
+                wrapMode: Text.Wrap
+            }
+            Rectangle {
+                id: togglePill
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                width: 60; height: 34; radius: 999
+                color: toggleRoot.checked ? VbTokens.accent : "#2A2F37"
+                Rectangle {
+                    width: 26; height: 26; radius: 13
+                    anchors.verticalCenter: parent.verticalCenter
+                    x: toggleRoot.checked ? parent.width - width - 4 : 4
+                    color: toggleRoot.checked ? "#08090B" : VbTokens.textDim
+                    Behavior on x { NumberAnimation { duration: 120 } }
+                }
+            }
+        }
+    }
+
     // Full-bleed window background.
     Rectangle { anchors.fill: parent; color: VbTokens.bgWindow }
 
@@ -187,7 +294,7 @@ Item {
                     { icon: "video",     label: qsTr("Video") },
                     { icon: "audio",     label: qsTr("Audio") },
                     { icon: "gamepad",   label: qsTr("Input & gamepad") },
-                    { icon: "streaming", label: qsTr("Streaming (Apollo)") },
+                    { icon: "streaming", label: qsTr("Streaming") },
                     { icon: "advanced",  label: qsTr("Advanced") }
                 ]
                 delegate: Button {
@@ -247,6 +354,14 @@ Item {
 
                     // onClicked fires on mouse/touch, Return/Space, and gamepad Ⓐ (UI nav mode).
                     onClicked: settingsPage.category = index
+
+                    // BL-1627: d-pad RIGHT (sent as Key_Right by SdlGamepadKeyNavigation even in
+                    // UI nav mode) enters the content pane: select this row's category, then move
+                    // focus to its first control. Without this, RIGHT was a dead key on the sidebar.
+                    Keys.onRightPressed: {
+                        settingsPage.category = index
+                        settingsPage.focusContentPane()
+                    }
                 }
             }
         }
@@ -263,6 +378,17 @@ Item {
         anchors.bottom: hintBar.top
 
         boundsBehavior: Flickable.OvershootBounds
+
+        // BL-1627 (symmetric return path): unhandled d-pad LEFT from any focused content
+        // control bubbles up here and returns focus to the selected sidebar row. Controls
+        // that consume Left themselves (e.g. Slider value adjustment, text fields in
+        // dialogs) are unaffected because they accept the event before it propagates.
+        Keys.onLeftPressed: {
+            var row = sidebarRepeater.itemAt(settingsPage.category)
+            if (row) {
+                row.forceActiveFocus(Qt.TabFocus)
+            }
+        }
 
         contentWidth: settingsFlick.width
         // Columns now stack vertically (settingsColumn2 anchors under settingsColumn1), so the
@@ -513,6 +639,10 @@ Item {
                         // Model/functions/dialog below are unchanged.
                         width: (parent.width - parent.spacing) / 2
                         padding: 0
+                        // BL-1629: the content Column is inset by 24px margins that don't count
+                        // toward the control's implicit height, so the value text used to render
+                        // past the card's bottom edge. Size the card to content + both margins.
+                        implicitHeight: resolutionCardContent.implicitHeight + 48
                         background: Rectangle {
                             color: VbTokens.bgElev
                             radius: VbTokens.radiusCard
@@ -521,15 +651,18 @@ Item {
                         }
                         indicator: Item { width: 0; height: 0 }
                         contentItem: Column {
+                            id: resolutionCardContent
                             anchors.fill: parent
                             anchors.margins: 24
                             spacing: 10
                             Text {
+                                width: parent.width
                                 text: qsTr("Resolution")
                                 font.family: VbTokens.fontBody
                                 font.weight: Font.DemiBold
                                 font.pixelSize: VbTokens.sizeLabel
                                 color: VbTokens.textDim
+                                elide: Text.ElideRight
                             }
                             Row {
                                 width: parent.width
@@ -547,6 +680,20 @@ Item {
                                     font.pixelSize: 20
                                     color: VbTokens.textDim
                                 }
+                            }
+                        }
+                        // BL-1629: unlike the auto-sizing combos elsewhere, this combo's width is
+                        // fixed by the card, so long entries (e.g. "Native (Excluding Notch)
+                        // (1920x1200)") could overflow the default popup delegate. Elide instead.
+                        delegate: ItemDelegate {
+                            width: resolutionComboBox.width
+                            highlighted: resolutionComboBox.highlightedIndex === index
+                            contentItem: Text {
+                                text: model.text
+                                font: resolutionComboBox.font
+                                color: VbTokens.text
+                                elide: Text.ElideRight
+                                verticalAlignment: Text.AlignVCenter
                             }
                         }
                         property int lastIndexValue
@@ -862,6 +1009,9 @@ Item {
                         // Redesign 1e: card look, matching the Resolution card. Visual only.
                         width: (parent.width - parent.spacing) / 2
                         padding: 0
+                        // BL-1629: same content-margin sizing fix as the Resolution card — keeps
+                        // the frame-rate value text inside the card bounds.
+                        implicitHeight: fpsCardContent.implicitHeight + 48
                         background: Rectangle {
                             color: VbTokens.bgElev
                             radius: VbTokens.radiusCard
@@ -870,15 +1020,18 @@ Item {
                         }
                         indicator: Item { width: 0; height: 0 }
                         contentItem: Column {
+                            id: fpsCardContent
                             anchors.fill: parent
                             anchors.margins: 24
                             spacing: 10
                             Text {
+                                width: parent.width
                                 text: qsTr("Frame rate")
                                 font.family: VbTokens.fontBody
                                 font.weight: Font.DemiBold
                                 font.pixelSize: VbTokens.sizeLabel
                                 color: VbTokens.textDim
+                                elide: Text.ElideRight
                             }
                             Row {
                                 width: parent.width
@@ -896,6 +1049,19 @@ Item {
                                     font.pixelSize: 20
                                     color: VbTokens.textDim
                                 }
+                            }
+                        }
+                        // BL-1629: fixed-width card combo — elide long popup entries (e.g.
+                        // "Custom (119.88 Hz)") instead of letting them overflow the delegate.
+                        delegate: ItemDelegate {
+                            width: fpsComboBox.width
+                            highlighted: fpsComboBox.highlightedIndex === index
+                            contentItem: Text {
+                                text: model.text
+                                font: fpsComboBox.font
+                                color: VbTokens.text
+                                elide: Text.ElideRight
+                                verticalAlignment: Text.AlignVCenter
                             }
                         }
                         property int lastIndexValue
@@ -1663,17 +1829,21 @@ Item {
             }
         }
 
-        GroupBox {
+        // BL-1628: restyled to the Video-page card pattern (VbSettingsCard + Sora header +
+        // VbToggleRow rows). Bindings, visibility logic and tooltips are unchanged.
+        VbSettingsCard {
             id: artemisStreamingGroupBox
             visible: settingsPage.category === 3
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
-            padding: 12
-            title: "<font color=\"skyblue\">" + qsTr("Vibemis Streaming Enhancements") + "</font>"
             font.pointSize: 12
 
             Column {
                 anchors.fill: parent
-                spacing: 10
+                spacing: 12
+
+                VbSectionHeader {
+                    text: qsTr("Vibemis Streaming Enhancements")
+                }
 
                 Label {
                     width: parent.width
@@ -1687,16 +1857,13 @@ Item {
                     text: qsTr("These features require Apollo as the host streaming software.")
                     font.pointSize: 9
                     wrapMode: Text.Wrap
-                    color: "#888888"
+                    color: VbTokens.textDim
                 }
 
                 // Virtual Display Control
-                CheckBox {
+                VbToggleRow {
                     id: virtualDisplayCheck
-                    width: parent.width
-                    hoverEnabled: true
                     text: qsTr("Use Virtual Display")
-                    font.pointSize: 12
                     checked: StreamingPreferences.useVirtualDisplay
                     onCheckedChanged: {
                         StreamingPreferences.useVirtualDisplay = checked
@@ -1732,12 +1899,9 @@ Item {
                 }
 
                 // Resolution Scaling
-                CheckBox {
+                VbToggleRow {
                     id: resolutionScalingCheck
-                    width: parent.width
-                    hoverEnabled: true
                     text: qsTr("Enable Resolution Scaling")
-                    font.pointSize: 12
                     checked: StreamingPreferences.enableResolutionScaling
                     onCheckedChanged: {
                         StreamingPreferences.enableResolutionScaling = checked
@@ -1766,7 +1930,31 @@ Item {
                         to: 200     // 200%
                         stepSize: 5
                         value: StreamingPreferences.resolutionScaleFactor
-                        
+
+                        // BL-1628: same track/handle recipe as the Video page's bitrate slider.
+                        background: Rectangle {
+                            x: resolutionScaleSlider.leftPadding
+                            y: resolutionScaleSlider.topPadding + resolutionScaleSlider.availableHeight / 2 - height / 2
+                            width: resolutionScaleSlider.availableWidth
+                            height: 10
+                            radius: 6
+                            color: VbTokens.bgWindow
+                            Rectangle {
+                                width: resolutionScaleSlider.visualPosition * parent.width
+                                height: parent.height
+                                radius: 6
+                                color: VbTokens.accent
+                            }
+                        }
+                        handle: Rectangle {
+                            x: resolutionScaleSlider.leftPadding + resolutionScaleSlider.visualPosition * (resolutionScaleSlider.availableWidth - width)
+                            y: resolutionScaleSlider.topPadding + resolutionScaleSlider.availableHeight / 2 - height / 2
+                            width: 26
+                            height: 26
+                            radius: 13
+                            color: VbTokens.text
+                        }
+
                         onValueChanged: {
                             StreamingPreferences.resolutionScaleFactor = value
                         }
@@ -1782,18 +1970,20 @@ Item {
             }
         }
 
-        GroupBox {
-
+        // BL-1628: restyled to the Video-page card pattern. Bindings unchanged.
+        VbSettingsCard {
             id: audioSettingsGroupBox
             visible: settingsPage.category === 1
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
-            padding: 12
-            title: "<font color=\"skyblue\">" + qsTr("Audio Settings") + "</font>"
             font.pointSize: 12
 
             Column {
                 anchors.fill: parent
-                spacing: 5
+                spacing: 12
+
+                VbSectionHeader {
+                    text: qsTr("Audio Settings")
+                }
 
                 Label {
                     width: parent.width
@@ -1842,11 +2032,9 @@ Item {
                 }
 
 
-                CheckBox {
+                VbToggleRow {
                     id: audioPcCheck
-                    width: parent.width
                     text: qsTr("Mute host PC speakers while streaming")
-                    font.pointSize: 12
                     checked: !StreamingPreferences.playAudioOnHost
                     onCheckedChanged: {
                         StreamingPreferences.playAudioOnHost = !checked
@@ -1858,11 +2046,9 @@ Item {
                     ToolTip.text: qsTr("You must restart any game currently in progress for this setting to take effect")
                 }
 
-                CheckBox {
+                VbToggleRow {
                     id: muteOnFocusLossCheck
-                    width: parent.width
                     text: qsTr("Mute audio stream when Vibemis is not the active window")
-                    font.pointSize: 12
                     visible: SystemProperties.hasDesktopEnvironment
                     checked: StreamingPreferences.muteOnFocusLoss
                     onCheckedChanged: {
@@ -1877,34 +2063,33 @@ Item {
             }
         }
 
-        GroupBox {
+        // BL-1628: restyled to the Video-page card pattern. Bindings unchanged.
+        VbSettingsCard {
             id: hostSettingsGroupBox
             visible: settingsPage.category === 3
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
-            padding: 12
-            title: "<font color=\"skyblue\">" + qsTr("Host Settings") + "</font>"
             font.pointSize: 12
 
             Column {
                 anchors.fill: parent
-                spacing: 5
+                spacing: 12
 
-                CheckBox {
+                VbSectionHeader {
+                    text: qsTr("Host Settings")
+                }
+
+                VbToggleRow {
                     id: optimizeGameSettingsCheck
-                    width: parent.width
                     text: qsTr("Optimize game settings for streaming")
-                    font.pointSize:  12
                     checked: StreamingPreferences.gameOptimizations
                     onCheckedChanged: {
                         StreamingPreferences.gameOptimizations = checked
                     }
                 }
 
-                CheckBox {
+                VbToggleRow {
                     id: quitAppAfter
-                    width: parent.width
                     text: qsTr("Quit app on host PC after ending stream")
-                    font.pointSize: 12
                     checked: StreamingPreferences.quitAppAfter
                     onCheckedChanged: {
                         StreamingPreferences.quitAppAfter = checked
@@ -1918,17 +2103,20 @@ Item {
             }
         }
 
-        GroupBox {
+        // BL-1628: restyled to the Video-page card pattern. Bindings unchanged.
+        VbSettingsCard {
             id: uiSettingsGroupBox
             visible: settingsPage.category === 4
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
-            padding: 12
-            title: "<font color=\"skyblue\">" + qsTr("UI Settings") + "</font>"
             font.pointSize: 12
 
             Column {
                 anchors.fill: parent
-                spacing: 5
+                spacing: 12
+
+                VbSectionHeader {
+                    text: qsTr("UI Settings")
+                }
 
                 Label {
                     width: parent.width
@@ -2162,34 +2350,28 @@ Item {
                     }
                 }
 
-                CheckBox {
+                VbToggleRow {
                     id: connectionWarningsCheck
-                    width: parent.width
                     text: qsTr("Show connection quality warnings")
-                    font.pointSize: 12
                     checked: StreamingPreferences.connectionWarnings
                     onCheckedChanged: {
                         StreamingPreferences.connectionWarnings = checked
                     }
                 }
 
-                CheckBox {
+                VbToggleRow {
                     id: configurationWarningsCheck
-                    width: parent.width
                     text: qsTr("Show configuration warnings")
-                    font.pointSize: 12
                     checked: StreamingPreferences.configurationWarnings
                     onCheckedChanged: {
                         StreamingPreferences.configurationWarnings = checked
                     }
                 }
 
-                CheckBox {
+                VbToggleRow {
                     visible: SystemProperties.hasDiscordIntegration
                     id: discordPresenceCheck
-                    width: parent.width
                     text: qsTr("Discord Rich Presence integration")
-                    font.pointSize: 12
                     checked: StreamingPreferences.richPresence
                     onCheckedChanged: {
                         StreamingPreferences.richPresence = checked
@@ -2201,11 +2383,9 @@ Item {
                     ToolTip.text: qsTr("Updates your Discord status to display the name of the game you're streaming.")
                 }
 
-                CheckBox {
+                VbToggleRow {
                     id: keepAwakeCheck
-                    width: parent.width
                     text: qsTr("Keep the display awake while streaming")
-                    font.pointSize: 12
                     checked: StreamingPreferences.keepAwake
                     onCheckedChanged: {
                         StreamingPreferences.keepAwake = checked
@@ -2217,11 +2397,9 @@ Item {
                     ToolTip.text: qsTr("Prevents the screensaver from starting or the display from going to sleep while streaming.")
                 }
 
-                CheckBox {
+                VbToggleRow {
                     id: reduceBitrateOnBatteryCheck
-                    width: parent.width
                     text: qsTr("Reduce bitrate when on battery")
-                    font.pointSize: 12
                     checked: StreamingPreferences.reduceBitrateOnBattery
                     onCheckedChanged: {
                         StreamingPreferences.reduceBitrateOnBattery = checked
@@ -2294,24 +2472,27 @@ Item {
         width: settingsFlick.width - 20
         spacing: 15
 
-        GroupBox {
+        // BL-1628: restyled to the Video-page card pattern. Bindings unchanged. The
+        // capture-shortcuts checkbox + mode combo were a side-by-side Row; the toggle row is
+        // full-width now, so the combo moved directly below it (layout only — same ids,
+        // same enabled/checked logic).
+        VbSettingsCard {
             id: inputSettingsGroupBox
             visible: settingsPage.category === 2
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
-            padding: 12
-            title: "<font color=\"skyblue\">" + qsTr("Input Settings") + "</font>"
             font.pointSize: 12
 
             Column {
                 anchors.fill: parent
-                spacing: 5
+                spacing: 12
 
-                CheckBox {
+                VbSectionHeader {
+                    text: qsTr("Input Settings")
+                }
+
+                VbToggleRow {
                     id: absoluteMouseCheck
-                    hoverEnabled: true
-                    width: parent.width
                     text: qsTr("Optimize mouse for remote desktop instead of games")
-                    font.pointSize:  12
                     checked: StreamingPreferences.absoluteMouseMode
                     onCheckedChanged: {
                         StreamingPreferences.absoluteMouseMode = checked
@@ -2325,87 +2506,77 @@ Item {
                                   qsTr("NOTE: Due to a bug in GeForce Experience, this option may not work properly if your host PC has multiple monitors.")
                 }
 
-                Row {
-                    spacing: 5
-                    width: parent.width
+                VbToggleRow {
+                    id: captureSysKeysCheck
+                    text: qsTr("Capture system keyboard shortcuts")
+                    enabled: SystemProperties.hasDesktopEnvironment
+                    checked: StreamingPreferences.captureSysKeysMode !== StreamingPreferences.CSK_OFF || !SystemProperties.hasDesktopEnvironment
 
-                    CheckBox {
-                        id: captureSysKeysCheck
-                        hoverEnabled: true
-                        text: qsTr("Capture system keyboard shortcuts")
-                        font.pointSize: 12
-                        enabled: SystemProperties.hasDesktopEnvironment
-                        checked: StreamingPreferences.captureSysKeysMode !== StreamingPreferences.CSK_OFF || !SystemProperties.hasDesktopEnvironment
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 10000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("This enables the capture of system-wide keyboard shortcuts like Alt+Tab that would normally be handled by the client OS while streaming.") + "\n\n" +
+                                  qsTr("NOTE: Certain keyboard shortcuts like Ctrl+Alt+Del on Windows cannot be intercepted by any application, including Vibemis.")
+                }
 
-                        ToolTip.delay: 1000
-                        ToolTip.timeout: 10000
-                        ToolTip.visible: hovered
-                        ToolTip.text: qsTr("This enables the capture of system-wide keyboard shortcuts like Alt+Tab that would normally be handled by the client OS while streaming.") + "\n\n" +
-                                      qsTr("NOTE: Certain keyboard shortcuts like Ctrl+Alt+Del on Windows cannot be intercepted by any application, including Vibemis.")
+                AutoResizingComboBox {
+                    // ignore setting the index at first, and actually set it when the component is loaded
+                    Component.onCompleted: {
+                        if (!visible) {
+                            // Do nothing if the control won't even be visible
+                            return
+                        }
+
+                        var saved_syskeysmode = StreamingPreferences.captureSysKeysMode
+                        currentIndex = 0
+                        for (var i = 0; i < captureSysKeysModeListModel.count; i++) {
+                            var el_syskeysmode = captureSysKeysModeListModel.get(i).val;
+                            if (saved_syskeysmode === el_syskeysmode) {
+                                currentIndex = i
+                                break
+                            }
+                        }
+
+                        activated(currentIndex)
                     }
 
-                    AutoResizingComboBox {
-                        // ignore setting the index at first, and actually set it when the component is loaded
-                        Component.onCompleted: {
-                            if (!visible) {
-                                // Do nothing if the control won't even be visible
-                                return
-                            }
-
-                            var saved_syskeysmode = StreamingPreferences.captureSysKeysMode
-                            currentIndex = 0
-                            for (var i = 0; i < captureSysKeysModeListModel.count; i++) {
-                                var el_syskeysmode = captureSysKeysModeListModel.get(i).val;
-                                if (saved_syskeysmode === el_syskeysmode) {
-                                    currentIndex = i
-                                    break
-                                }
-                            }
-
-                            activated(currentIndex)
+                    enabled: captureSysKeysCheck.checked && captureSysKeysCheck.enabled
+                    textRole: "text"
+                    model: ListModel {
+                        id: captureSysKeysModeListModel
+                        ListElement {
+                            text: qsTr("in fullscreen")
+                            val: StreamingPreferences.CSK_FULLSCREEN
                         }
-
-                        enabled: captureSysKeysCheck.checked && captureSysKeysCheck.enabled
-                        textRole: "text"
-                        model: ListModel {
-                            id: captureSysKeysModeListModel
-                            ListElement {
-                                text: qsTr("in fullscreen")
-                                val: StreamingPreferences.CSK_FULLSCREEN
-                            }
-                            ListElement {
-                                text: qsTr("always")
-                                val: StreamingPreferences.CSK_ALWAYS
-                            }
+                        ListElement {
+                            text: qsTr("always")
+                            val: StreamingPreferences.CSK_ALWAYS
                         }
+                    }
 
-                        function updatePref() {
-                            if (!enabled) {
-                                StreamingPreferences.captureSysKeysMode = StreamingPreferences.CSK_OFF
-                            }
-                            else {
-                                StreamingPreferences.captureSysKeysMode = captureSysKeysModeListModel.get(currentIndex).val
-                            }
+                    function updatePref() {
+                        if (!enabled) {
+                            StreamingPreferences.captureSysKeysMode = StreamingPreferences.CSK_OFF
                         }
+                        else {
+                            StreamingPreferences.captureSysKeysMode = captureSysKeysModeListModel.get(currentIndex).val
+                        }
+                    }
 
-                        // ::onActivated must be used, as it only listens for when the index is changed by a human
-                        onActivated: {
-                            updatePref()
-                        }
+                    // ::onActivated must be used, as it only listens for when the index is changed by a human
+                    onActivated: {
+                        updatePref()
+                    }
 
-                        // This handles transition of the checkbox state
-                        onEnabledChanged: {
-                            updatePref()
-                        }
+                    // This handles transition of the checkbox state
+                    onEnabledChanged: {
+                        updatePref()
                     }
                 }
 
-                CheckBox {
+                VbToggleRow {
                     id: absoluteTouchCheck
-                    hoverEnabled: true
-                    width: parent.width
                     text: qsTr("Use touchscreen as a virtual trackpad")
-                    font.pointSize:  12
                     checked: !StreamingPreferences.absoluteTouchMode
                     onCheckedChanged: {
                         StreamingPreferences.absoluteTouchMode = !checked
@@ -2417,24 +2588,18 @@ Item {
                     ToolTip.text: qsTr("When checked, the touchscreen acts like a trackpad. When unchecked, the touchscreen will directly control the mouse pointer.")
                 }
 
-                CheckBox {
+                VbToggleRow {
                     id: swapMouseButtonsCheck
-                    hoverEnabled: true
-                    width: parent.width
                     text: qsTr("Swap left and right mouse buttons")
-                    font.pointSize:  12
                     checked: StreamingPreferences.swapMouseButtons
                     onCheckedChanged: {
                         StreamingPreferences.swapMouseButtons = checked
                     }
                 }
 
-                CheckBox {
+                VbToggleRow {
                     id: reverseScrollButtonsCheck
-                    hoverEnabled: true
-                    width: parent.width
                     text: qsTr("Reverse mouse scrolling direction")
-                    font.pointSize: 12
                     checked: StreamingPreferences.reverseScrollDirection
                     onCheckedChanged: {
                         StreamingPreferences.reverseScrollDirection = checked
@@ -2443,17 +2608,20 @@ Item {
             }
         }
 
-        GroupBox {
+        // BL-1628: restyled to the Video-page card pattern. Bindings unchanged.
+        VbSettingsCard {
             id: gamepadSettingsGroupBox
             visible: settingsPage.category === 2
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
-            padding: 12
-            title: "<font color=\"skyblue\">" + qsTr("Gamepad Settings") + "</font>"
             font.pointSize: 12
 
             Column {
                 anchors.fill: parent
-                spacing: 5
+                spacing: 12
+
+                VbSectionHeader {
+                    text: qsTr("Gamepad Settings")
+                }
 
                 // Redesign 1e / BL-1562: expose the (previously hidden) gamepad remapping screen.
                 Button {
@@ -2466,11 +2634,9 @@ Item {
                 }
 
                 // Redesign handoff live tweaks (State model: showHints + accent). Persisted via prefs.
-                CheckBox {
+                VbToggleRow {
                     id: showHintsCheck
-                    width: parent.width
                     text: qsTr("Show the gamepad hint bar")
-                    font.pointSize: 12
                     checked: StreamingPreferences.uiShowHints
                     onCheckedChanged: StreamingPreferences.uiShowHints = checked
                     ToolTip.text: qsTr("Show the button-hint bar at the bottom of every screen.")
@@ -2552,11 +2718,9 @@ Item {
                     ToolTip.text: qsTr("Which gamepad button combination opens the in-stream Quick Menu.")
                 }
 
-                CheckBox {
+                VbToggleRow {
                     id: swapFaceButtonsCheck
-                    width: parent.width
                     text: qsTr("Swap A/B and X/Y gamepad buttons")
-                    font.pointSize: 12
                     checked: StreamingPreferences.swapFaceButtons
                     onCheckedChanged: {
                         StreamingPreferences.swapFaceButtons = checked
@@ -2568,11 +2732,9 @@ Item {
                     ToolTip.text: qsTr("This switches gamepads into a Nintendo-style button layout")
                 }
 
-                CheckBox {
+                VbToggleRow {
                     id: singleControllerCheck
-                    width: parent.width
                     text: qsTr("Force gamepad #1 always connected")
-                    font.pointSize:  12
                     checked: !StreamingPreferences.multiController
                     onCheckedChanged: {
                         StreamingPreferences.multiController = !checked
@@ -2585,23 +2747,18 @@ Item {
                                   qsTr("Only enable this option when streaming a game that doesn't support gamepads being connected after startup.")
                 }
 
-                CheckBox {
+                VbToggleRow {
                     id: gamepadMouseCheck
-                    hoverEnabled: true
-                    width: parent.width
                     text: qsTr("Enable mouse control with gamepads by holding the 'Start' button")
-                    font.pointSize: 12
                     checked: StreamingPreferences.gamepadMouse
                     onCheckedChanged: {
                         StreamingPreferences.gamepadMouse = checked
                     }
                 }
 
-                CheckBox {
+                VbToggleRow {
                     id: backgroundGamepadCheck
-                    width: parent.width
                     text: qsTr("Process gamepad input when Vibemis is in the background")
-                    font.pointSize: 12
                     visible: SystemProperties.hasDesktopEnvironment
                     checked: StreamingPreferences.backgroundGamepad
                     onCheckedChanged: {
@@ -2614,11 +2771,9 @@ Item {
                     ToolTip.text: qsTr("Allows Vibemis to capture gamepad inputs even if it's not the current window in focus")
                 }
 
-                CheckBox {
+                VbToggleRow {
                     id: forwardMotionCheck
-                    width: parent.width
                     text: qsTr("Forward motion controls (gyro) — experimental")
-                    font.pointSize: 12
                     checked: StreamingPreferences.forwardMotionControls
                     onCheckedChanged: {
                         StreamingPreferences.forwardMotionControls = checked
@@ -2630,11 +2785,9 @@ Item {
                     ToolTip.text: qsTr("Experimental: detect this device's gyro/accelerometer for forwarding to the host (motion/gyro aim). Sensor forwarding is still in development; enabling this currently logs the detected sensors.")
                 }
 
-                CheckBox {
+                VbToggleRow {
                     id: suppressRumbleCheck
-                    width: parent.width
                     text: qsTr("Disable controller rumble")
-                    font.pointSize: 12
                     checked: StreamingPreferences.suppressControllerRumble
                     onCheckedChanged: {
                         StreamingPreferences.suppressControllerRumble = checked
@@ -2648,17 +2801,20 @@ Item {
             }
         }
 
-        GroupBox {
+        // BL-1628: restyled to the Video-page card pattern. Bindings unchanged.
+        VbSettingsCard {
             id: advancedSettingsGroupBox
             visible: settingsPage.category === 4
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
-            padding: 12
-            title: "<font color=\"skyblue\">" + qsTr("Advanced Settings") + "</font>"
             font.pointSize: 12
 
             Column {
                 anchors.fill: parent
-                spacing: 5
+                spacing: 12
+
+                VbSectionHeader {
+                    text: qsTr("Advanced Settings")
+                }
 
                 Label {
                     width: parent.width
@@ -2836,11 +2992,9 @@ Item {
                     }
                 }
 
-                CheckBox {
+                VbToggleRow {
                     id: enableHdr
-                    width: parent.width
                     text: qsTr("Enable HDR (Experimental)")
-                    font.pointSize: 12
 
                     enabled: SystemProperties.supportsHdr
                     checked: enabled && StreamingPreferences.enableHdr
@@ -2863,11 +3017,9 @@ Item {
                 // the client keeps the HDR setting but does NOT actually ask the
                 // host for HDR pixels — fixing the wash-out on SDR displays like
                 // the Legion Go S Z2 LCD, most Steam Decks, etc.
-                CheckBox {
+                VbToggleRow {
                     id: displayHdrCapability
-                    width: parent.width
                     text: qsTr("    My display supports HDR")
-                    font.pointSize: 11
 
                     visible: enableHdr.checked
                     enabled: enableHdr.checked
@@ -2885,11 +3037,9 @@ Item {
                                        "Unchecking keeps the HDR codec path off; re-check it later if you connect an HDR display.")
                 }
 
-                CheckBox {
+                VbToggleRow {
                     id: enableYUV444
-                    width: parent.width
                     text: qsTr("Enable YUV 4:4:4 (Experimental)")
-                    font.pointSize: 12
 
                     checked: StreamingPreferences.enableYUV444
                     onCheckedChanged: {
@@ -2915,11 +3065,9 @@ Item {
                                       qsTr("YUV 4:4:4 is not supported on this PC.")
                 }
 
-                CheckBox {
+                VbToggleRow {
                     id: unlockBitrate
-                    width: parent.width
                     text: qsTr("Unlock bitrate limit (Experimental)")
-                    font.pointSize: 12
 
                     checked: StreamingPreferences.unlockBitrate
                     onCheckedChanged: {
@@ -2934,11 +3082,9 @@ Item {
                     ToolTip.text: qsTr("This unlocks extremely high video bitrates for use with Sunshine hosts. It should only be used when streaming over an Ethernet LAN connection.")
                 }
 
-                CheckBox {
+                VbToggleRow {
                     id: enableMdns
-                    width: parent.width
                     text: qsTr("Automatically find PCs on the local network (Recommended)")
-                    font.pointSize: 12
                     checked: StreamingPreferences.enableMdns
                     onCheckedChanged: {
                         // This is called on init, so only do the work if we've
@@ -2955,22 +3101,18 @@ Item {
                     }
                 }
 
-                CheckBox {
+                VbToggleRow {
                     id: detectNetworkBlocking
-                    width: parent.width
                     text: qsTr("Automatically detect blocked connections (Recommended)")
-                    font.pointSize: 12
                     checked: StreamingPreferences.detectNetworkBlocking
                     onCheckedChanged: {
                         StreamingPreferences.detectNetworkBlocking = checked
                     }
                 }
 
-                CheckBox {
+                VbToggleRow {
                     id: showPerformanceOverlay
-                    width: parent.width
                     text: qsTr("Show performance stats while streaming")
-                    font.pointSize: 12
                     checked: StreamingPreferences.showPerformanceOverlay
                     onCheckedChanged: {
                         StreamingPreferences.showPerformanceOverlay = checked
@@ -2984,11 +3126,9 @@ Item {
                                   qsTr("The performance overlay is not supported on Steam Link or Raspberry Pi.")
                 }
 
-                CheckBox {
+                VbToggleRow {
                     id: compactPerformanceOverlay
-                    width: parent.width
                     text: qsTr("Compact performance overlay")
-                    font.pointSize: 12
                     enabled: showPerformanceOverlay.checked
                     checked: StreamingPreferences.compactPerformanceOverlay
                     onCheckedChanged: {
@@ -3001,11 +3141,9 @@ Item {
                     ToolTip.text: qsTr("Show the stats as a single compact line (fps, resolution, latency, dropped frames) instead of the full multi-line block — easier to read on a handheld screen.")
                 }
 
-                CheckBox {
+                VbToggleRow {
                     id: perfOverlayShowClock
-                    width: parent.width
                     text: qsTr("Show clock in the performance overlay")
-                    font.pointSize: 12
                     enabled: showPerformanceOverlay.checked
                     checked: StreamingPreferences.perfOverlayShowClock
                     onCheckedChanged: {
@@ -3123,28 +3261,29 @@ Item {
             }
         }
 
-        GroupBox {
+        // BL-1628: restyled to the Video-page card pattern. Bindings unchanged.
+        VbSettingsCard {
             id: artemisSettingsGroupBox
             visible: settingsPage.category === 3
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
-            padding: 12
-            title: "<font color=\"skyblue\">" + qsTr("Vibemis Features") + "</font>"
             font.pointSize: 12
 
             Column {
                 anchors.fill: parent
-                spacing: 10
+                spacing: 12
+
+                VbSectionHeader {
+                    text: qsTr("Vibemis Features")
+                }
 
                 ClipboardSettings {
                     id: clipboardSettings
                     width: parent.width
                 }
 
-                CheckBox {
+                VbToggleRow {
                     id: preferTailscaleCheck
-                    width: parent.width
                     text: qsTr("Prefer Tailscale addresses for remote play")
-                    font.pointSize: 12
                     checked: StreamingPreferences.preferTailscale
                     onCheckedChanged: {
                         StreamingPreferences.preferTailscale = checked
@@ -3217,17 +3356,20 @@ Item {
         // Vibemis: read-only System Information panel. Surfaces the same environment facts the
         // headless `vibemis selftest` reports, so a human (or a bug report) can see version,
         // platform, and capability at a glance. Pure QML over the already-exposed SystemProperties.
-        GroupBox {
+        // BL-1628: restyled to the Video-page card pattern. Bindings unchanged.
+        VbSettingsCard {
             id: systemInfoGroupBox
             visible: settingsPage.category === 4
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
-            padding: 12
-            title: "<font color=\"skyblue\">" + qsTr("System Information") + "</font>"
             font.pointSize: 12
 
             Column {
                 anchors.fill: parent
                 spacing: 6
+
+                VbSectionHeader {
+                    text: qsTr("System Information")
+                }
 
                 Repeater {
                     width: parent.width
@@ -3270,17 +3412,20 @@ Item {
             }
         }
 
-        GroupBox {
+        // BL-1628: restyled to the Video-page card pattern. Bindings unchanged.
+        VbSettingsCard {
             id: aboutGroupBox
             visible: settingsPage.category === 4
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
-            padding: 12
-            title: "<font color=\"skyblue\">" + qsTr("About") + "</font>"
             font.pointSize: 12
 
             Column {
                 anchors.fill: parent
                 spacing: 6
+
+                VbSectionHeader {
+                    text: qsTr("About")
+                }
 
                 Label {
                     width: parent.width
@@ -3310,17 +3455,20 @@ Item {
         // Vibemis: Help & Links — quick access to docs/support. Only shown when a browser is
         // available (SystemProperties.hasBrowser). Uses Qt.openUrlExternally so it works in
         // Desktop Mode; in Game Mode the buttons simply do nothing if no browser is present.
-        GroupBox {
+        // BL-1628: restyled to the Video-page card pattern. Bindings unchanged.
+        VbSettingsCard {
             id: helpLinksGroupBox
             visible: SystemProperties.hasBrowser && settingsPage.category === 4
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
-            padding: 12
-            title: "<font color=\"skyblue\">" + qsTr("Help & Links") + "</font>"
             font.pointSize: 12
 
             Column {
                 anchors.fill: parent
                 spacing: 8
+
+                VbSectionHeader {
+                    text: qsTr("Help & Links")
+                }
 
                 Label {
                     width: parent.width
