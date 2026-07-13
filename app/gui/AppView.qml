@@ -72,6 +72,18 @@ CenteredGridView {
         function onModelReset() { appGrid.runningRev++ }
     }
 
+    // BL-1769: the poll-delta path misses running-state changes the launch/quit flow
+    // already wrote to NvComputer (no diff -> no computerStateChanged -> stale RESUME
+    // badge + stale Ⓨ hint until the view was recreated). Resync explicitly while this
+    // view is live — resyncRunningState() is a no-op when nothing changed, so this
+    // never spams dataChanged.
+    Timer {
+        interval: 3000
+        repeat: true
+        running: appGrid.activated
+        onTriggered: appModel.resyncRunningState()
+    }
+
     // ---- Redesign 1b chrome: per-screen header + persistent gamepad hint bar ----
     // Fixed header (does not scroll with the grid). Opaque bg so scrolled tiles pass behind it.
     Item {
@@ -166,6 +178,11 @@ CenteredGridView {
     StackView.onActivated: {
         appModel.computerLost.connect(computerLost)
         activated = true
+
+        // BL-1769: returning from a stream segue re-activates this view — pull the live
+        // running state immediately (don't wait for the 3s resync tick) so the RESUME
+        // badge and the Ⓨ Quit-session hint are correct the moment the grid reappears.
+        appModel.resyncRunningState()
 
         // Highlight the first item if a gamepad is connected
         if (currentIndex === -1 && SdlGamepadKeyNavigation.getConnectedGamepads() > 0) {
