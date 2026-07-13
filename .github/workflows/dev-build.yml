@@ -33,6 +33,11 @@ on:
         type: choice
         options: ['', 'stable']
         default: ''
+      version_override:
+        description: 'Stable cuts only: exact W.X.0.Z version for a hotfix PATCH (e.g. 0.3.0.1). Leave empty for the normal W.(X+1).0.0.'
+        required: false
+        type: string
+        default: ''
 
 env:
   QT_VERSION: '6.8.3'
@@ -212,8 +217,13 @@ jobs:
                 "$BRANCH_NAME" == "main" || \
                 "$BRANCH_NAME" == "master" ]]; then
             # ✅ Production release — X increments here; bump version.txt to match
-            # right after the cut (W.X -> W.(X+1)).
-            VERSION="$VER_W.$((VER_X + 1)).0.0"
+            # right after the cut (W.X -> W.(X+1)). A hotfix PATCH (W.X.0.Z, Z>0)
+            # can be cut with the version_override input; version.txt stays put.
+            if [[ -n "${{ github.event.inputs.version_override }}" ]]; then
+              VERSION="${{ github.event.inputs.version_override }}"
+            else
+              VERSION="$VER_W.$((VER_X + 1)).0.0"
+            fi
             IS_PRERELEASE="false"
             RELEASE_TIER="release"
 
@@ -935,7 +945,15 @@ jobs:
           echo "Pruning alphas except $KEEP_TAG"
         fi
         # gh release list is newest-first; we keep KEEP_TAG and delete the rest that match.
-        gh release list --limit 200 --json tagName --jq '.[].tagName' \
+        # PRERELEASE-ONLY filter: stable PATCHES (W.X.0.Z, prerelease=false) share the
+        # alpha's structural shape — the flag keeps them out of the prune (BL-1713 patch
+        # amendment). Betas are non-prerelease, so the beta tier keeps a shape-only match.
+        if [ "$TIER" = "beta" ]; then
+          CANDIDATES=$(gh release list --limit 200 --json tagName --jq '.[].tagName')
+        else
+          CANDIDATES=$(gh release list --limit 200 --json tagName,isPrerelease --jq '.[] | select(.isPrerelease) | .tagName')
+        fi
+        echo "$CANDIDATES" \
           | grep -E -- "$PATTERN" \
           | grep -v -x -F "$KEEP_TAG" \
           | while read -r tag; do

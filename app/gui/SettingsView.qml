@@ -3634,8 +3634,16 @@ Item {
                         { k: qsTr("SteamOS / gamescope"), v: SystemProperties.isSteamDeck ? qsTr("Yes") : qsTr("No") },
                         { k: qsTr("Display server"),  v: SystemProperties.isRunningWayland ? (SystemProperties.isRunningXWayland ? "XWayland" : "Wayland") : "X11" },
                         { k: qsTr("Hardware decode"), v: SystemProperties.hasHardwareAcceleration ? qsTr("Available") : qsTr("Not available") },
-                        { k: qsTr("HDR support"),     v: SystemProperties.supportsHdr ? qsTr("Yes") : qsTr("No") },
-                        { k: qsTr("Max resolution"),  v: SystemProperties.maximumResolution.width + "×" + SystemProperties.maximumResolution.height }
+                        // Maintainer 2026-07-13: these two report the DECODER, not the panel —
+                        // 'HDR support: Yes' on an SDR device and 'Max resolution: 0×0' were
+                        // both technically-true sentinels rendered misleadingly. supportsHdr =
+                        // the decoder can decode HDR streams; maximumResolution 0×0 = the probe
+                        // found no ceiling above 1080p (see the Video page NOTE(test68)).
+                        { k: qsTr("Display resolution"), v: Screen.width + "×" + Screen.height },
+                        { k: qsTr("HDR decode"),      v: SystemProperties.supportsHdr ? qsTr("Supported (stream decode)") : qsTr("No") },
+                        { k: qsTr("Max decode resolution"),  v: (SystemProperties.maximumResolution.width > 0 && SystemProperties.maximumResolution.height > 0)
+                                                                ? (SystemProperties.maximumResolution.width + "×" + SystemProperties.maximumResolution.height)
+                                                                : qsTr("No limit found (above 1080p)") }
                     ]
                     delegate: RowLayout {
                         width: systemInfoGroupBox.availableWidth

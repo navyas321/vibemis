@@ -91,14 +91,16 @@ JSON=$(curl -fsSL -H "Accept: application/vnd.github+json" "$API") || {
     echo "ERROR: failed to query $API (network/offline?)." >&2; exit 1; }
 
 is_stable_tag() {
-    # Stable: no -suffix AND (W.X.0.0 four-part, or legacy bare three-part like 1.0.1)
+    # Stable: no -suffix AND (W.X.0.Z four-part with Y==0 — Z is the hotfix patch
+    # counter, e.g. 0.3.0.1 — or legacy bare three-part like 1.0.1). The prerelease
+    # flag is checked separately by the caller (parked stables / alphas are skipped).
     case "$1" in
         *-*) return 1 ;;
     esac
     n=$(printf '%s' "$1" | awk -F. '{print NF}')
     if [ "$n" = "4" ]; then
-        y=$(printf '%s' "$1" | cut -d. -f3); z=$(printf '%s' "$1" | cut -d. -f4)
-        [ "$y" = "0" ] && [ "$z" = "0" ]
+        y=$(printf '%s' "$1" | cut -d. -f3)
+        [ "$y" = "0" ]
     else
         [ "$n" = "3" ]
     fi

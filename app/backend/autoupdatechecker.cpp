@@ -258,17 +258,20 @@ static bool releaseMatchesChannel(const QJsonObject& release,
 
     const QStringList parts = tag.split('.');
     if (parts.count() == 4) {
-        // BL-1699 W.X.Y.Z structural channels
+        // BL-1699 W.X.Y.Z structural channels. Amended for stable PATCHES (maintainer
+        // 2026-07-13, first use 0.3.0.1): a stable is Y==0 with Z free (Z = hotfix
+        // patch counter), gated on !prerelease; an alpha is Z>0 AND prerelease-flagged
+        // (CI always marks alphas prerelease), so patches and alphas can't collide.
         qlonglong y = parts[2].toLongLong();
         qlonglong z = parts[3].toLongLong();
         switch (channel) {
         case StreamingPreferences::UC_BETA:
             return y > 0 && z == 0;
         case StreamingPreferences::UC_ALPHA:
-            return z > 0;
+            return z > 0 && release["prerelease"].toBool();
         case StreamingPreferences::UC_STABLE:
         default:
-            return y == 0 && z == 0 && !release["prerelease"].toBool();
+            return y == 0 && !release["prerelease"].toBool();
         }
     }
 
