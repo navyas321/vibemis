@@ -2,7 +2,7 @@
 
 The pre-w.x.y.z alpha RELEASES were purged during the 0.3.0.0 release-page cleanup;
 their build artifacts are unrecoverable (assets are deleted with releases), but the
-git history is restored here: each historical alpha is re-tagged under the current
+git history is restored here: each historical alpha is re-tagged AND re-listed as an asset-less prerelease entry on the Releases page under the current
 scheme's alpha shape (`0.0.0.<n>`, chronological). Stables are NEVER pruned going
 forward; release history accumulates from 0.3.0.0 on.
 
