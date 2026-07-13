@@ -628,7 +628,8 @@ Item {
 
                 Text {
                     width: parent.width
-                    text: qsTr("Vibepollo Presets")
+                    // Maintainer 2026-07-13: generic wording — no host/device product names.
+                    text: qsTr("Presets")
                     font.family: VbTokens.fontBody
                     font.weight: Font.DemiBold
                     font.pixelSize: VbTokens.sizeLabel
@@ -637,7 +638,7 @@ Item {
 
                 Label {
                     width: parent.width
-                    text: qsTr("One-click quality profiles tuned for the Legion Go S Z2 (HEVC, hardware decode). Adjust anything below afterwards.")
+                    text: qsTr("One-click starting points for common quality/performance trade-offs (HEVC, hardware decode). Pick one, then fine-tune anything below.")
                     font.pointSize: 9
                     wrapMode: Text.Wrap
                 }

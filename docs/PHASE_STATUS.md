@@ -238,7 +238,14 @@ slow-recover policy at runtime (gated on moonlight-common-c runtime bitrate supp
 submodule for `LiSetVideoBitrate`-class symbols before starting; if absent, document and park the
 phase as upstream-gated, do NOT hack the control stream).
 
-## P4.1 — Stable 1.0 criteria  🟡 FINAL GATE IN PROGRESS (2026-07-13)
+## P4.1 — First stable release  ✅ SHIPPED as **0.2.0.0** (2026-07-13, W.X.Y.Z scheme)
+Cut from the fully fixed line (three maintainer device passes + harness-validated nav fixes +
+prefs-UAF fix + touch-overlay hit-test fix + Quick Menu redesign + in-app updater proven
+end-to-end). 0.1.0.0 was burnt (tag-reuse lesson — see the versioning memory/commits); legacy
+1.0.x tags are parked pre-scheme history. GitHub "Latest" now points at stables only; betas are
+the manual-testing channel; alphas are [alpha]-gated automated artifacts.
+
+## P4.1 (history) — original stable criteria  🟡 superseded record
 History: stable **1.0.0 was cut 2026-07-13T02:29Z** on the maintainer's goal directive (original
 criteria below superseded by that directive — the 1-week soak and P4.0 split were explicitly
 waived), then **parked** (flipped to prerelease) when the maintainer's hands-on pass found the

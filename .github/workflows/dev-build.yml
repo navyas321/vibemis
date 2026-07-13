@@ -898,7 +898,11 @@ jobs:
         files: |
           artifacts/**/*.AppImage
         prerelease: ${{ needs.setup-version.outputs.is_prerelease }}
-        make_latest: ${{ (needs.setup-version.outputs.release_tier == 'release' || needs.setup-version.outputs.release_tier == 'beta') && 'true' || 'false' }}
+        # BL-1713 (maintainer): the GitHub "Latest" badge points at the STABLE release only.
+        # Betas stay non-prerelease (visible, not hidden) but no longer claim Latest. The
+        # in-app updater and vibemis-update.sh select channels STRUCTURALLY from the full
+        # release list (never /releases/latest), so update flows are unaffected.
+        make_latest: ${{ needs.setup-version.outputs.release_tier == 'release' && 'true' || 'false' }}
         draft: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

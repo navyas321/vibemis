@@ -211,7 +211,7 @@ Versions follow **`w.x.y.z`** — `x` steps per **stable** release, `y` per **be
 | 🧪 **Beta** | `0.x.y.0` | `vibemis-main` | **Manual-testing channel** — newest features |
 | 🔬 **Alpha** | `0.x.0.z` | `test<N>-*` branches (on request) | Automated test-agent artifacts |
 
-**[→ Releases page](https://github.com/navyas321/vibemis/releases)**
+**[→ Download the latest stable](https://github.com/navyas321/vibemis/releases/latest)** · [all releases](https://github.com/navyas321/vibemis/releases)
 
 ---
 
