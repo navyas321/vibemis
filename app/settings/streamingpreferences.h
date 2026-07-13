@@ -180,6 +180,17 @@ public:
     };
     Q_ENUM(PerfOverlayPosition);
 
+    // Vibemis BL-1665: which release channel the update checker follows.
+    // UC_STABLE preserves the pre-channel behavior (stable releases only);
+    // Beta/Alpha follow the CI prerelease tiers (-beta.* / -alpha.* tags).
+    enum UpdateChannel
+    {
+        UC_STABLE,
+        UC_BETA,
+        UC_ALPHA,
+    };
+    Q_ENUM(UpdateChannel);
+
     Q_PROPERTY(int width MEMBER width NOTIFY displayModeChanged)
     Q_PROPERTY(int height MEMBER height NOTIFY displayModeChanged)
     Q_PROPERTY(int fps MEMBER fps NOTIFY displayModeChanged)
@@ -218,6 +229,7 @@ public:
     Q_PROPERTY(bool suppressControllerRumble MEMBER suppressControllerRumble NOTIFY suppressControllerRumbleChanged)
     Q_PROPERTY(PerfOverlayTextSize perfOverlayTextSize MEMBER perfOverlayTextSize NOTIFY perfOverlayTextSizeChanged)
     Q_PROPERTY(PerfOverlayPosition perfOverlayPosition MEMBER perfOverlayPosition NOTIFY perfOverlayPositionChanged)
+    Q_PROPERTY(UpdateChannel updateChannel MEMBER updateChannel NOTIFY updateChannelChanged)
     Q_PROPERTY(bool adaptiveBitrate MEMBER adaptiveBitrate NOTIFY adaptiveBitrateChanged)
     Q_PROPERTY(AudioConfig audioConfig MEMBER audioConfig NOTIFY audioConfigChanged)
     Q_PROPERTY(VideoCodecConfig videoCodecConfig MEMBER videoCodecConfig NOTIFY videoCodecConfigChanged)
@@ -293,6 +305,7 @@ public:
     bool suppressControllerRumble;
     PerfOverlayTextSize perfOverlayTextSize;
     PerfOverlayPosition perfOverlayPosition;
+    UpdateChannel updateChannel;
     bool adaptiveBitrate;
     bool swapMouseButtons;
     bool muteOnFocusLoss;
@@ -374,6 +387,7 @@ signals:
     void suppressControllerRumbleChanged();
     void perfOverlayTextSizeChanged();
     void perfOverlayPositionChanged();
+    void updateChannelChanged();
     void adaptiveBitrateChanged();
     void mouseButtonsChanged();
     void muteOnFocusLossChanged();

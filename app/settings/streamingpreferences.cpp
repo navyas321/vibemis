@@ -83,6 +83,7 @@
 #define SER_RESOLUTIONSCALING "resolutionscaling"
 #define SER_RESOLUTIONSCALEFACTOR "resolutionscalefactor"
 #define SER_PERFOVERLAYPOSITION "perfoverlayposition"
+#define SER_UPDATECHANNEL "updatechannel"
 
 #define CURRENT_DEFAULT_VER 2
 
@@ -185,6 +186,8 @@ void StreamingPreferences::reload()
                                                            static_cast<int>(PerfOverlayTextSize::PERF_TEXT_NORMAL)).toInt());
     perfOverlayPosition = static_cast<PerfOverlayPosition>(settings.value(SER_PERFOVERLAYPOSITION,
                                                            static_cast<int>(PerfOverlayPosition::POS_TOP_LEFT)).toInt());
+    updateChannel = static_cast<UpdateChannel>(settings.value(SER_UPDATECHANNEL,
+                                               static_cast<int>(UpdateChannel::UC_STABLE)).toInt());
     adaptiveBitrate = settings.value(SER_ADAPTIVEBITRATE, false).toBool();
     packetSize = settings.value(SER_PACKETSIZE, 0).toInt();
     swapMouseButtons = settings.value(SER_SWAPMOUSEBUTTONS, false).toBool();
@@ -417,6 +420,7 @@ void StreamingPreferences::save()
     settings.setValue(SER_SUPPRESSRUMBLE, suppressControllerRumble);
     settings.setValue(SER_PERFOVERLAYTEXTSIZE, static_cast<int>(perfOverlayTextSize));
     settings.setValue(SER_PERFOVERLAYPOSITION, static_cast<int>(perfOverlayPosition));
+    settings.setValue(SER_UPDATECHANNEL, static_cast<int>(updateChannel));
     settings.setValue(SER_ADAPTIVEBITRATE, adaptiveBitrate);
     settings.setValue(SER_AUDIOCFG, static_cast<int>(audioConfig));
     settings.setValue(SER_HDR, enableHdr);

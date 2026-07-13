@@ -9,6 +9,7 @@ import SdlGamepadKeyNavigation 1.0
 import SystemProperties 1.0
 import ClipboardManager 1.0
 import ServerCommandManager 1.0
+import AutoUpdateChecker 1.0
 
 import Vibemis.Redesign 1.0
 
@@ -3302,6 +3303,142 @@ Item {
                     ToolTip.timeout: 5000
                     ToolTip.visible: hovered
                     ToolTip.text: qsTr("Choose which corner of the screen the performance overlay appears in.")
+                }
+
+                // Vibemis BL-1665: in-app update channel + manual check + one-tap install.
+                // The checker follows StreamingPreferences.updateChannel; installUpdate()
+                // swaps the running AppImage in place (falls back to the release page).
+                Label {
+                    width: parent.width
+                    id: updateChannelTitle
+                    text: qsTr("Software updates")
+                    font.pointSize: 12
+                    wrapMode: Text.Wrap
+                    topPadding: 8
+                }
+
+                AutoResizingComboBox {
+                    id: updateChannelComboBox
+                    textRole: "text"
+                    model: ListModel {
+                        id: updateChannelListModel
+                        ListElement {
+                            text: qsTr("Stable (recommended)")
+                            val: StreamingPreferences.UC_STABLE
+                        }
+                        ListElement {
+                            text: qsTr("Beta (new features)")
+                            val: StreamingPreferences.UC_BETA
+                        }
+                        ListElement {
+                            text: qsTr("Alpha (test builds)")
+                            val: StreamingPreferences.UC_ALPHA
+                        }
+                    }
+                    Component.onCompleted: {
+                        var saved = StreamingPreferences.updateChannel
+                        currentIndex = 0
+                        for (var i = 0; i < updateChannelListModel.count; i++) {
+                            if (updateChannelListModel.get(i).val === saved) {
+                                currentIndex = i
+                                break
+                            }
+                        }
+                    }
+                    // ::onActivated only fires on human-driven index changes
+                    onActivated: {
+                        StreamingPreferences.updateChannel = updateChannelListModel.get(currentIndex).val
+                        // A previous check's result doesn't apply to the new channel
+                        updateStatusLabel.text = qsTr("Channel changed — check for updates to see this channel's newest build.")
+                        updateNowButton.assetUrl = ""
+                        updateNowButton.visible = false
+                        viewReleaseButton.releaseUrl = ""
+                        viewReleaseButton.visible = false
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Which release channel updates come from. Stable is safest; Beta gets features as they ship; Alpha is per-feature test builds.")
+                }
+
+                Row {
+                    spacing: 8
+
+                    Button {
+                        id: checkUpdatesButton
+                        text: qsTr("Check for updates")
+                        onClicked: {
+                            enabled = false
+                            updateStatusLabel.text = qsTr("Checking for updates…")
+                            updateNowButton.visible = false
+                            viewReleaseButton.visible = false
+                            AutoUpdateChecker.checkNow()
+                        }
+                    }
+
+                    Button {
+                        id: updateNowButton
+                        property string assetUrl: ""
+                        text: qsTr("Update now")
+                        visible: false
+                        onClicked: {
+                            enabled = false
+                            checkUpdatesButton.enabled = false
+                            updateStatusLabel.text = qsTr("Downloading update…")
+                            AutoUpdateChecker.installUpdate(assetUrl)
+                        }
+                    }
+
+                    Button {
+                        id: viewReleaseButton
+                        property string releaseUrl: ""
+                        text: qsTr("View release")
+                        visible: false
+                        onClicked: {
+                            if (releaseUrl) {
+                                Qt.openUrlExternally(releaseUrl)
+                            }
+                        }
+                    }
+                }
+
+                Label {
+                    id: updateStatusLabel
+                    width: parent.width
+                    text: qsTr("Current version: %1").arg(AutoUpdateChecker.currentVersion())
+                    font.pointSize: 10
+                    wrapMode: Text.Wrap
+                }
+
+                Connections {
+                    target: AutoUpdateChecker
+                    function onUpdateCheckFinished(available, version, htmlUrl, assetUrl, message) {
+                        checkUpdatesButton.enabled = true
+                        updateStatusLabel.text = message
+                        viewReleaseButton.releaseUrl = htmlUrl
+                        viewReleaseButton.visible = available && htmlUrl !== "" && SystemProperties.hasBrowser
+                        updateNowButton.assetUrl = assetUrl
+                        updateNowButton.enabled = true
+                        updateNowButton.visible = available && assetUrl !== "" && AutoUpdateChecker.canInstallUpdates()
+                    }
+                    function onInstallProgress(bytesReceived, bytesTotal) {
+                        if (bytesTotal > 0) {
+                            updateStatusLabel.text = qsTr("Downloading update… %1%").arg(Math.floor(bytesReceived * 100 / bytesTotal))
+                        }
+                        else {
+                            updateStatusLabel.text = qsTr("Downloading update… %1 MB").arg((bytesReceived / 1048576).toFixed(1))
+                        }
+                    }
+                    function onInstallFailed(error, htmlUrl) {
+                        checkUpdatesButton.enabled = true
+                        updateNowButton.enabled = true
+                        updateStatusLabel.text = qsTr("Install failed: %1").arg(error)
+                        if (htmlUrl !== "") {
+                            viewReleaseButton.releaseUrl = htmlUrl
+                            viewReleaseButton.visible = SystemProperties.hasBrowser
+                        }
+                    }
                 }
             }
         }

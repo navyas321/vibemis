@@ -54,10 +54,22 @@ binary); all 8 edited QML files pass `qmllint` (no parse errors, only expected i
 
 ---
 
-## 3. NEXT / IN PROGRESS — in-app update channel selector (user's latest request)
+## 3. SHIPPED (follow-up session, BL-1665) — in-app update channel selector
 
-**Requested but NOT started in code.** User wants to select **Stable / Beta / Alpha** inside the app
-and update easily (ideally one-tap from Game Mode). Design scoped this session:
+**Status: IMPLEMENTED** in the follow-up 2026-07-13 session (user greenlit "Complete BL-1665").
+What shipped vs. the design below: items 1, 2 and 4 as designed; item 3 (in-app AppImage
+install) shipped **with** the defensive fallbacks (temp `.new` file → atomic swap keeping the
+previous build as `<AppImage>.old` → relaunch; every failure path leaves a runnable AppImage and
+surfaces a "View release" fallback). Item 5 (main.qml banner install offer) deliberately NOT
+done — the toolbar banner still opens the release page; in-app install lives in Settings →
+Advanced → "Software updates". Plus one addition the design missed: **CI now stamps the full
+semantic version into `app/version.txt`** in the AppImage job (dev-build.yml), because every
+build previously compiled `VERSION_STR` as just the base ("1.0.1"), making beta-to-beta
+comparison impossible. ⚠️ Still needs the maintainer's on-device pass (esp. the install swap —
+host is BUILD ONLY); pre-stamp builds report the bare base version, so the first manual check
+from the old beta offers the newest channel build once (expected).
+
+Original design (for reference):
 
 1. **Pref** — add `enum UpdateChannel { UC_STABLE, UC_BETA, UC_ALPHA }` + `updateChannel` member,
    Q_PROPERTY, and save/load in `app/settings/streamingpreferences.{h,cpp}` (mirror the

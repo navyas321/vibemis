@@ -102,6 +102,9 @@ AppImage to a stable path with a clean `Vibemis` desktop entry, ready to Add to 
 - **SteamOS one-click integration** — `scripts/vibemis-setup.sh` guided setup (doctor → update →
   install → pair → add games to Steam), plus per-script helpers and a self-update command
 - **Settings export / import** — portable `.ini` backup of the full configuration
+- **In-app updates with channels** — pick Stable / Beta / Alpha in Settings → Advanced →
+  "Software updates", check for updates on demand, and (when running as an AppImage) install
+  the new build in place with one tap — no browser or terminal needed
 - **Performance overlay controls** — corner anchoring, text size, optional wall clock, and a
   data-usage estimate next to the bitrate slider
 - **Handheld quality-of-life** — battery-saver bitrate, controller-rumble suppression, motion

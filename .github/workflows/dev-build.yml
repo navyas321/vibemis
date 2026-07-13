@@ -546,6 +546,14 @@ jobs:
         find . -name "Makefile*" -not -path "./.git/*" -delete 2>/dev/null || true
         rm -f .qmake.stash .qmake.cache app/.qmake.stash
 
+        # BL-1665: stamp the full semantic version (channel + timestamp + commit) into
+        # version.txt so the compiled VERSION_STR identifies the exact build. Without
+        # this every build reports only the base version ("1.0.1") and the in-app
+        # channel-aware update checker can't tell one beta from another. CI-local only —
+        # the checkout is never pushed. Linux-only job, so qmake's VERSION var is inert.
+        echo "${{ needs.setup-version.outputs.version }}" > app/version.txt
+        echo "Stamped app/version.txt: $(cat app/version.txt)"
+
         qmake6 vibemis.pro CONFIG+=release \
           CONFIG+=disable-wayland CONFIG+=disable-libdrm CONFIG+=disable-cuda \
           PREFIX=/usr DEFINES+=APP_IMAGE "QMAKE_CXXFLAGS+=-fPIC"
