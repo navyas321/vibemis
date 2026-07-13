@@ -710,9 +710,29 @@ void QuickMenuManager::setWindow(QWindow *window)
 
 void QuickMenuManager::setWindowGeometry(int x, int y, int width, int height)
 {
-    // Positioning is handled by the renderer (centered). Retained as a no-op so the
-    // Session call site does not need conditional compilation.
-    Q_UNUSED(x); Q_UNUSED(y); Q_UNUSED(width); Q_UNUSED(height);
+    // Positioning is handled by the renderer (centered); x/y are unused. But the SIZE matters:
+    // the menu renders into an offscreen FBO the renderers blit 1:1, so a fixed FBO on a large
+    // stream surface reads tiny (test-agent device data: a 720x600 FBO covered only ~29% of the
+    // 1536x960 overlay area on a 1920x1200 stream — BL-1622). Size the FBO to 80% of the stream
+    // window (10% margins), clamped to a sane floor, so the menu scales with the display and the
+    // QML lays out in the same coord space the user sees.
+    Q_UNUSED(x); Q_UNUSED(y);
+    if (width <= 0 || height <= 0) {
+        return;
+    }
+    QSize newSize(qMax(640, (width * 8) / 10), qMax(480, (height * 8) / 10));
+    if (newSize == m_overlaySize) {
+        return;
+    }
+    m_overlaySize = newSize;
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "QuickMenuManager: overlay size set to %dx%d (from window %dx%d)",
+                newSize.width(), newSize.height(), width, height);
+    if (m_overlayReady) {
+        // Rebuild at the new size on next show (setWindowGeometry arrives at stream start,
+        // before the first toggle, so this path is rare).
+        teardownOverlayRenderer();
+    }
 }
 
 void QuickMenuManager::onServerCommandsChanged()
