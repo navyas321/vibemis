@@ -371,10 +371,13 @@ void AutoUpdateChecker::handleUpdateCheckRequestFinished(QNetworkReply* reply)
         // not be offered blindly to stable users. BL-1665 generalizes that stable-only
         // scan to the user's selected channel: take the newest release that belongs to
         // the channel (the feed is newest-first, so the first match wins).
+        // Historical marker entries (the restored release catalog) are prerelease-flagged
+        // and carry NO AppImage asset — a channel match without an installable artifact
+        // must not shadow the newest real build, so keep scanning past assetless matches.
         QJsonObject releaseObj;
         for (const QJsonValue& relVal : std::as_const(releasesArray)) {
             QJsonObject candidate = relVal.toObject();
-            if (releaseMatchesChannel(candidate, channel)) {
+            if (releaseMatchesChannel(candidate, channel) && !appImageAssetUrl(candidate).isEmpty()) {
                 releaseObj = candidate;
                 break;
             }

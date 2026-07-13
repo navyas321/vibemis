@@ -213,6 +213,12 @@ Versions follow **`w.x.y.z`** — `x` steps per **stable** release, `y` per **be
 
 **[→ Download the latest stable](https://github.com/navyas321/vibemis/releases/latest)** · [all releases](https://github.com/navyas321/vibemis/releases)
 
+The releases page lists the project's **complete build history** under one monotonic catalog —
+from `0.0.0.0` (the first automated build, July 2025) to the current stable. Historical entries
+are prerelease-flagged markers without artifacts; see
+[`docs/RELEASE_HISTORY.md`](docs/RELEASE_HISTORY.md) for the full map (original tags, commits,
+CI runs, and the story of every stable number).
+
 ---
 
 ## Building from Source
