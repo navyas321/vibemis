@@ -44,6 +44,11 @@ on:
         required: false
         type: string
         default: ''
+      dry_run:
+        description: 'Validate-only (BL-1754): build + verify the full pipeline but create NO release and NO tag. Use this to test CI/workflow changes — a version is minted only when a release is actually intended.'
+        required: false
+        type: boolean
+        default: false
 
 env:
   QT_VERSION: '6.8.3'
@@ -771,7 +776,11 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    # BL-1754 (maintainer audit of the 0.2.0 beta train): dry_run=true skips this job
+    # entirely — the pipeline builds and verifies but mints no release/tag. Use it for
+    # validating CI changes; cut a real version only when a release is intended.
     if: >-
+      github.event.inputs.dry_run != 'true' &&
       needs.setup-version.outputs.should_build == 'true' && (
         github.ref == 'refs/heads/vibemis-main' ||
         github.ref == 'refs/heads/main' ||
