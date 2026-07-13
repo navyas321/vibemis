@@ -335,8 +335,8 @@ If a feature works only in Desktop Mode, it's not ready.
 
 `app/version.txt` holds the **next stable version** (e.g. `0.5.0`); CI derives every tag:
 
-- **Bump policy (maintainer 2026-07-13):** patch = fixes and small additions (e.g. the
-  RC channel); minor = MAJOR feature waves only. When unsure, patch.
+- **Bump policy (maintainer 2026-07-13): STRICT SEMVER.** Patch = bug fixes only;
+  minor = ANY new feature (backward-compatible); major = breaking changes.
 - **Stable** = the bare version itself, non-prerelease, takes Latest; cut via
   workflow_dispatch `release_type=stable`. Hotfix patches via the `version_override`
   input (`0.5.1`). **Bump version.txt to the next stable right after every cut.**
