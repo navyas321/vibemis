@@ -343,9 +343,9 @@ If a feature works only in Desktop Mode, it's not ready.
   from existing tags (prunes delete releases but KEEP tags — never delete a tag).
 - All suffixed builds are GitHub-prerelease; only bare stables are full releases.
 - On a stable cut, CI prunes that cycle's alpha/beta releases automatically.
-- The current stable keeps its frozen four-part tag `0.4.0.0` (≡ `0.4.0`) because
-  deployed devices key on it. The historical catalog (0.1.0-alpha/beta/rc trains,
-  `0.3.1`) is documented in `docs/RELEASE_HISTORY.md` — never prune or reuse it.
+- The first stable is bare `0.1.0` (Latest). The full historical catalog (0.1.0
+  alpha/beta/rc trains incl. the folded interim-scheme cuts rc.001-006) is documented
+  in `docs/RELEASE_HISTORY.md` — never prune or reuse it.
 - **A release number is NEVER reused for different bits** — a burnt number stays burnt.
 - Release titles are uniform: `Vibemis release <tag>`.
 - Betas publish **only on PR merge commits that touch code** — a direct push never

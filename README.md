@@ -204,7 +204,7 @@ previous build stays alongside as `.old` for rollback) and relaunches. The
 
 Versions follow **[Semantic Versioning 2.0.0](https://semver.org)** — pre-releases are
 suffixed versions of the stable they precede (`0.5.0-beta.007` → `0.5.0`), with dense
-zero-padded counters. The current stable keeps its original `0.4.0.0` tag (≡ `0.4.0`).
+zero-padded counters. The first stable is `0.1.0`; its release-candidate lineage (`0.1.0-rc.001..006`, including the interim-scheme cuts) is preserved on the releases page.
 
 | Channel | Tag shape | Built from | Use |
 |---|---|---|---|
@@ -215,8 +215,8 @@ zero-padded counters. The current stable keeps its original `0.4.0.0` tag (≡ `
 **[→ Download the latest stable](https://github.com/navyas321/vibemis/releases/latest)** · [all releases](https://github.com/navyas321/vibemis/releases)
 
 The releases page lists the project's **complete build history** under the semver catalog —
-from `0.1.0-alpha.001` (the first automated build, July 2025) through the `0.1.0` beta and rc
-trains to the current stable. Historical entries are prerelease-flagged markers without
+from `0.1.0-alpha.001` (the first automated build, July 2025) through the beta and rc
+trains to the `0.1.0` stable. Historical entries are prerelease-flagged markers without
 artifacts; see [`docs/RELEASE_HISTORY.md`](docs/RELEASE_HISTORY.md) for the full map
 (original tags, commits, CI runs, and the story of every stable number).
 

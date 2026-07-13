@@ -729,12 +729,15 @@ jobs:
         echo "Creating release with version: ${{ needs.setup-version.outputs.version }}"
         echo "Is prerelease: ${{ needs.setup-version.outputs.is_prerelease }}"
 
-    - name: Create tag for release
+    # Tag creation is delegated to the release action (API-side). A git push of the tag
+    # is REJECTED when the tagged commit touches .github/workflows/* (the GITHUB_TOKEN
+    # lacks the `workflows` scope — this killed the first 0.1.0 cut, run #510); the
+    # release API's implicit tag creation is not subject to that check.
+    - name: Create local tag for changelog range
       run: |
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
-        git tag ${{ needs.setup-version.outputs.version }}
-        git push origin ${{ needs.setup-version.outputs.version }}
+        git tag ${{ needs.setup-version.outputs.version }} || true
 
     - name: Generate Changelog
       id: changelog

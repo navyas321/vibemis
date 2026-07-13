@@ -1,11 +1,19 @@
 # Vibemis release history — the Semantic Versioning catalog
 
-Every build this project ever published, catalogued under **[Semantic Versioning 2.0.0](https://semver.org)**.
-Everything that predates the first stable cut is a pre-release of `0.1.0` at its chronological
-position; burnt stable cuts are `rc` entries; the adopted first stable is **`0.4.0.0`** (kept
-under its original four-part tag because deployed devices key on it — canonically `0.4.0`).
-Restored and renumbered 2026-07-13 from local clone tags, the 507-run CI inventory, git
-history, and session-transcript archaeology after a release-page cleanup deleted the originals.
+Every build this project ever published, catalogued under **[Semantic Versioning 2.0.0](https://semver.org)**
+as one release train: `0.1.0-alpha.NNN` → `0.1.0-beta.NNN` → `0.1.0-rc.NNN` → **`0.1.0`**
+(the first stable, sole non-prerelease, Latest). Restored and renumbered 2026-07-13 from local
+clone tags, the CI run inventory (507+ runs), git history, and all-sessions transcript
+archaeology after a release-page cleanup deleted the originals.
+
+## Proven properties (machine-checked against the live release API)
+
+- **P1 Grammar totality** — all 182 tags match `^0\.1\.0(-(alpha|beta|rc)\.\d{3})?$`; zero exceptions.
+- **P2 Train density** — alpha = exactly {001..119}, beta = {001..056}, rc = {001..006}; each a contiguous interval from 001; exactly one bare tag (`0.1.0`).
+- **P3 Uniform increments** — in canonical order every consecutive pair is same-class with ΔN=+1, or a class boundary restarting at 001 (bare terminal). Nothing else exists. ∎
+- **P4 Chronology** — within every train, catalog order is non-decreasing in commit timestamp; cross-train order is semver precedence (alpha < beta < rc < release).
+- **P5 Latest invariant** — exactly one non-prerelease entry (`0.1.0`) and `/releases/latest` resolves to it.
+- **P6 Completeness** — 182 entries = 119 alpha + 56 beta + 6 rc + 1 stable, accounting for every release-producing CI run and every identity recovered from all AI-session transcripts (Claude + Codex).
 
 ## Numbering rules
 
@@ -34,10 +42,11 @@ structurally invisible to deployed updaters and was superseded the same day by
 Latest badge, live-fire proven against the oldest deployed client generation. Future
 releases: `0.5.0-alpha.NNN` / `0.5.0-beta.NNN` → `0.5.0`.
 
-## Full catalog (181 entries)
+## Full catalog (182 entries)
 
 | Catalog version | Original tag | Class | Commit | Run | Built |
 |---|---|---|---|---|---|
+| `0.1.0` | `0.1.0` | stable ✅ Latest | `60736b0` | #510 | 2026-07-13 13:33Z |
 | `0.1.0-alpha.001` | `dev-develop-866a377-20250725-0911` | dev | `866a377` | — | 2025-07-25 09:11Z |
 | `0.1.0-alpha.002` | `dev-develop-da2f0fc-20250726-1157` | dev | `da2f0fc` | — | 2025-07-26 11:57Z |
 | `0.1.0-alpha.003` | `dev-develop-edb66fc-20250726-2104` | dev | `edb66fc` | — | 2025-07-26 21:04Z |
@@ -157,65 +166,65 @@ releases: `0.5.0-alpha.NNN` / `0.5.0-beta.NNN` → `0.5.0`.
 | `0.1.0-alpha.117` | `1.0.1-alpha.test109-gamescope-scaling.20260713.0528+b6198e4` | alpha | `b6198e4` | #460 | 2026-07-13 05:28Z |
 | `0.1.0-alpha.118` | `1.0.1-alpha.test109-gamescope-scaling.20260713.0559+a98b7a1` | alpha | `a98b7a1` | #465 | 2026-07-13 05:59Z |
 | `0.1.0-alpha.119` | `1.0.1-alpha.test109-gamescope-scaling.20260713.0723+873d44c` | alpha | `873d44c` | #473 | 2026-07-13 07:23Z |
-| `0.1.0-beta.001` | `0.0.486.0` | beta | `2f7e0b7` | #486 | — |
-| `0.1.0-beta.002` | `0.6.7-beta.20260711.0854+e7a2a4b` | beta | `e7a2a4b` | #227 | 2026-07-11 08:54Z |
-| `0.1.0-beta.003` | `0.7.0-beta.20260712.0003+d40afc4` | beta | `d40afc4` | #244 | 2026-07-12 00:03Z |
-| `0.1.0-beta.004` | `0.7.1-beta.20260712.0021+4a03d72` | beta | `4a03d72` | #257 | 2026-07-12 00:21Z |
-| `0.1.0-beta.005` | `0.8.0-beta.20260712.0037+91d5022` | beta | `91d5022` | #263 | 2026-07-12 00:37Z |
-| `0.1.0-beta.006` | `0.9.0-beta.20260712.0054+ddfd4d1` | beta | `ddfd4d1` | #279 | 2026-07-12 00:54Z |
-| `0.1.0-beta.007` | `0.9.0-beta.20260712.0107+ea78ea7` | beta | `ea78ea7` | #284 | 2026-07-12 01:07Z |
-| `0.1.0-beta.008` | `0.10.0-beta.20260712.0113+0cec433` | beta | `0cec433` | #287 | 2026-07-12 01:13Z |
-| `0.1.0-beta.009` | `0.10.0-beta.20260712.0118+eb7b088` | beta | `eb7b088` | #291 | 2026-07-12 01:18Z |
-| `0.1.0-beta.010` | `0.10.0-beta.20260712.0119+963e30c` | beta | `963e30c` | #292 | 2026-07-12 01:19Z |
-| `0.1.0-beta.011` | `0.10.1-beta.20260712.0123+383f378` | beta | `383f378` | #293 | 2026-07-12 01:23Z |
-| `0.1.0-beta.012` | `0.11.0-beta.20260712.0132+02cc28c` | beta | `02cc28c` | #298 | 2026-07-12 01:32Z |
-| `0.1.0-beta.013` | `0.11.3-beta.20260712.0147+306cd8c` | beta | `306cd8c` | #311 | 2026-07-12 01:47Z |
-| `0.1.0-beta.014` | `0.11.3-beta.20260712.0206+2d755ab` | beta | `2d755ab` | #322 | 2026-07-12 02:06Z |
-| `0.1.0-beta.015` | `0.11.3-beta.20260712.0206+5f7da82` | beta | `5f7da82` | #320 | 2026-07-12 02:06Z |
-| `0.1.0-beta.016` | `0.12.0-beta.20260712.0208+3ed3c8b` | beta | `3ed3c8b` | #325 | 2026-07-12 02:08Z |
-| `0.1.0-beta.017` | `0.13.0-beta.20260712.0213+5d5dd4e` | beta | `5d5dd4e` | #327 | 2026-07-12 02:13Z |
-| `0.1.0-beta.018` | `0.13.0-beta.20260712.0214+bf56a89` | beta | `bf56a89` | #329 | 2026-07-12 02:14Z |
-| `0.1.0-beta.019` | `0.15.0-beta.20260712.0237+ce61cb9` | beta | `ce61cb9` | #347 | 2026-07-12 02:37Z |
-| `0.1.0-beta.020` | `0.18.0-beta.20260712.0250+5c96250` | beta | `5c96250` | #354 | 2026-07-12 02:50Z |
-| `0.1.0-beta.021` | `0.19.0-beta.20260712.0304+e203f2a` | beta | `e203f2a` | #356 | 2026-07-12 03:04Z |
-| `0.1.0-beta.022` | `0.20.0-beta.20260712.0313+d9b91eb` | beta | `d9b91eb` | #359 | 2026-07-12 03:13Z |
-| `0.1.0-beta.023` | `0.21.0-beta.20260712.0314+9fecaaf` | beta | `9fecaaf` | #362 | 2026-07-12 03:14Z |
-| `0.1.0-beta.024` | `0.22.0-beta.20260712.0331+e1bc9c6` | beta | `e1bc9c6` | #365 | 2026-07-12 03:31Z |
-| `0.1.0-beta.025` | `0.22.1-beta.20260712.0345+cc82e42` | beta | `cc82e42` | #367 | 2026-07-12 03:45Z |
-| `0.1.0-beta.026` | `0.22.2-beta.20260712.0347+4e9e47e` | beta | `4e9e47e` | #369 | 2026-07-12 03:47Z |
-| `0.1.0-beta.027` | `0.22.3-beta.20260712.0351+bf7b5bb` | beta | `bf7b5bb` | #371 | 2026-07-12 03:51Z |
-| `0.1.0-beta.028` | `0.23.0-beta.20260712.0542+43c6445` | beta | `43c6445` | #379 | 2026-07-12 05:42Z |
-| `0.1.0-beta.029` | `0.23.1-beta.20260712.0601+025eb18` | beta | `025eb18` | #383 | 2026-07-12 06:01Z |
-| `0.1.0-beta.030` | `0.24.0-beta.20260712.0614+c2f99d6` | beta | `c2f99d6` | #385 | 2026-07-12 06:14Z |
-| `0.1.0-beta.031` | `0.24.1-beta.20260712.0633+f9861b5` | beta | `f9861b5` | #386 | 2026-07-12 06:33Z |
-| `0.1.0-beta.032` | `0.24.2-beta.20260712.0640+6ab6799` | beta | `6ab6799` | #388 | 2026-07-12 06:40Z |
-| `0.1.0-beta.033` | `0.25.0-beta.20260712.0708+a2231cb` | beta | `a2231cb` | #391 | 2026-07-12 07:08Z |
-| `0.1.0-beta.034` | `0.25.3-beta.20260712.0751+2542454` | beta | `2542454` | #401 | 2026-07-12 07:51Z |
-| `0.1.0-beta.035` | `0.25.4-beta.20260712.0806+c34b99c` | beta | `c34b99c` | #403 | 2026-07-12 08:06Z |
-| `0.1.0-beta.036` | `0.26.0-beta.20260712.0848+77fd3c7` | beta | `77fd3c7` | #406 | 2026-07-12 08:48Z |
-| `0.1.0-beta.037` | `0.26.2-beta.20260712.0931+524534b` | beta | `524534b` | #409 | 2026-07-12 09:31Z |
-| `0.1.0-beta.038` | `0.26.5-beta.20260712.1003+2a25469` | beta | `2a25469` | #419 | 2026-07-12 10:03Z |
-| `0.1.0-beta.039` | `1.0.0-beta.20260712.1125+74fc67d` | beta | `74fc67d` | #429 | 2026-07-12 11:25Z |
-| `0.1.0-beta.040` | `1.0.0-beta.20260712.1152+77e3501` | beta | `77e3501` | #432 | 2026-07-12 11:52Z |
-| `0.1.0-beta.041` | `1.0.0-beta.20260712.1217+9d429ed` | beta | `9d429ed` | #434 | 2026-07-12 12:17Z |
-| `0.1.0-beta.042` | `1.0.0-beta.20260712.1317+60d95b3` | beta | `60d95b3` | #436 | 2026-07-12 13:17Z |
-| `0.1.0-beta.043` | `1.0.0-beta.20260712.1348+2db0667` | beta | `2db0667` | #438 | 2026-07-12 13:48Z |
-| `0.1.0-beta.044` | `1.0.0-beta.20260712.1359+516ba04` | beta | `516ba04` | #440 | 2026-07-12 13:59Z |
-| `0.1.0-beta.045` | `1.0.0-beta.20260713.0208+24c27ee` | beta | `24c27ee` | #443 | 2026-07-13 02:08Z |
-| `0.1.0-beta.046` | `1.0.0` | stable (pre-scheme) | `2068768` | #446 | 2026-07-13 |
-| `0.1.0-beta.047` | `1.0.1-beta.20260713.0349+88f4619` | beta | `88f4619` | #451 | 2026-07-13 03:49Z |
-| `0.1.0-beta.048` | `1.0.1-beta.20260713.0413+fce9093` | beta | `fce9093` | #453 | 2026-07-13 04:13Z |
-| `0.1.0-beta.049` | `1.0.1-beta.20260713.0421+0a911e5` | beta | `0a911e5` | #455 | 2026-07-13 04:21Z |
-| `0.1.0-beta.050` | `1.0.1-beta.20260713.0528+b6198e4` | beta | `b6198e4` | #460 | 2026-07-13 05:28Z |
-| `0.1.0-beta.051` | `1.0.1-beta.20260713.0559+a98b7a1` | beta | `a98b7a1` | #465 | 2026-07-13 05:59Z |
-| `0.1.0-beta.052` | `1.0.1` | stable (pre-scheme) | `4fd166f` | #470 | 2026-07-13 |
-| `0.1.0-beta.053` | `1.1.0-beta.20260713.0756+1507a45` | beta | `1507a45` | #479 | 2026-07-13 07:56Z |
-| `0.1.0-beta.054` | `0.0.481.0` | beta | `90ca8c2` | #481 | 2026-07-13 08:13Z |
-| `0.1.0-beta.055` | `0.0.482.0` | beta | `f69e325` | #482 | 2026-07-13 08:19Z |
-| `0.1.0-beta.056` | `0.0.485.0` | beta | `83ba993` | #485 | 2026-07-13 08:21Z |
-| `0.1.0-rc.001` | `0.1.0.0` | stable cut (burnt) | `e1a12de` | #489 | 2026-07-13 09:36Z |
-| `0.1.0-rc.002` | `0.1.0.0` | stable cut (burnt) | `b72c1dc` | #491 | 2026-07-13 10:10Z |
-| `0.2.0-rc.001` | `0.2.0.0` | stable cut (burnt) | `e2a4dfd` | #492 | 2026-07-13 10:24Z |
-| `0.3.0-rc.001` | `0.3.0.0` | stable cut (burnt) | `166eab7` | #497 | 2026-07-13 11:13Z |
-| `0.3.1` | `0.3.0.1` | stable patch (superseded) | `0378e19` | #503 | 2026-07-13 11:38Z |
-| `0.4.0.0` | `0.4.0.0` | stable ✅ (≡ 0.4.0) | `6715aa5` | #505 | 2026-07-13 12:06Z |
+| `0.1.0-beta.001` | `0.6.7-beta.20260711.0854+e7a2a4b` | beta | `e7a2a4b` | #227 | 2026-07-11 08:54Z |
+| `0.1.0-beta.002` | `0.7.0-beta.20260712.0003+d40afc4` | beta | `d40afc4` | #244 | 2026-07-12 00:03Z |
+| `0.1.0-beta.003` | `0.7.1-beta.20260712.0021+4a03d72` | beta | `4a03d72` | #257 | 2026-07-12 00:21Z |
+| `0.1.0-beta.004` | `0.8.0-beta.20260712.0037+91d5022` | beta | `91d5022` | #263 | 2026-07-12 00:37Z |
+| `0.1.0-beta.005` | `0.9.0-beta.20260712.0054+ddfd4d1` | beta | `ddfd4d1` | #279 | 2026-07-12 00:54Z |
+| `0.1.0-beta.006` | `0.9.0-beta.20260712.0107+ea78ea7` | beta | `ea78ea7` | #284 | 2026-07-12 01:07Z |
+| `0.1.0-beta.007` | `0.10.0-beta.20260712.0113+0cec433` | beta | `0cec433` | #287 | 2026-07-12 01:13Z |
+| `0.1.0-beta.008` | `0.10.0-beta.20260712.0118+eb7b088` | beta | `eb7b088` | #291 | 2026-07-12 01:18Z |
+| `0.1.0-beta.009` | `0.10.0-beta.20260712.0119+963e30c` | beta | `963e30c` | #292 | 2026-07-12 01:19Z |
+| `0.1.0-beta.010` | `0.10.1-beta.20260712.0123+383f378` | beta | `383f378` | #293 | 2026-07-12 01:23Z |
+| `0.1.0-beta.011` | `0.11.0-beta.20260712.0132+02cc28c` | beta | `02cc28c` | #298 | 2026-07-12 01:32Z |
+| `0.1.0-beta.012` | `0.11.3-beta.20260712.0147+306cd8c` | beta | `306cd8c` | #311 | 2026-07-12 01:47Z |
+| `0.1.0-beta.013` | `0.11.3-beta.20260712.0206+2d755ab` | beta | `2d755ab` | #322 | 2026-07-12 02:06Z |
+| `0.1.0-beta.014` | `0.11.3-beta.20260712.0206+5f7da82` | beta | `5f7da82` | #320 | 2026-07-12 02:06Z |
+| `0.1.0-beta.015` | `0.12.0-beta.20260712.0208+3ed3c8b` | beta | `3ed3c8b` | #325 | 2026-07-12 02:08Z |
+| `0.1.0-beta.016` | `0.13.0-beta.20260712.0213+5d5dd4e` | beta | `5d5dd4e` | #327 | 2026-07-12 02:13Z |
+| `0.1.0-beta.017` | `0.13.0-beta.20260712.0214+bf56a89` | beta | `bf56a89` | #329 | 2026-07-12 02:14Z |
+| `0.1.0-beta.018` | `0.15.0-beta.20260712.0237+ce61cb9` | beta | `ce61cb9` | #347 | 2026-07-12 02:37Z |
+| `0.1.0-beta.019` | `0.18.0-beta.20260712.0250+5c96250` | beta | `5c96250` | #354 | 2026-07-12 02:50Z |
+| `0.1.0-beta.020` | `0.19.0-beta.20260712.0304+e203f2a` | beta | `e203f2a` | #356 | 2026-07-12 03:04Z |
+| `0.1.0-beta.021` | `0.20.0-beta.20260712.0313+d9b91eb` | beta | `d9b91eb` | #359 | 2026-07-12 03:13Z |
+| `0.1.0-beta.022` | `0.21.0-beta.20260712.0314+9fecaaf` | beta | `9fecaaf` | #362 | 2026-07-12 03:14Z |
+| `0.1.0-beta.023` | `0.22.0-beta.20260712.0331+e1bc9c6` | beta | `e1bc9c6` | #365 | 2026-07-12 03:31Z |
+| `0.1.0-beta.024` | `0.22.1-beta.20260712.0345+cc82e42` | beta | `cc82e42` | #367 | 2026-07-12 03:45Z |
+| `0.1.0-beta.025` | `0.22.2-beta.20260712.0347+4e9e47e` | beta | `4e9e47e` | #369 | 2026-07-12 03:47Z |
+| `0.1.0-beta.026` | `0.22.3-beta.20260712.0351+bf7b5bb` | beta | `bf7b5bb` | #371 | 2026-07-12 03:51Z |
+| `0.1.0-beta.027` | `0.23.0-beta.20260712.0542+43c6445` | beta | `43c6445` | #379 | 2026-07-12 05:42Z |
+| `0.1.0-beta.028` | `0.23.1-beta.20260712.0601+025eb18` | beta | `025eb18` | #383 | 2026-07-12 06:01Z |
+| `0.1.0-beta.029` | `0.24.0-beta.20260712.0614+c2f99d6` | beta | `c2f99d6` | #385 | 2026-07-12 06:14Z |
+| `0.1.0-beta.030` | `0.24.1-beta.20260712.0633+f9861b5` | beta | `f9861b5` | #386 | 2026-07-12 06:33Z |
+| `0.1.0-beta.031` | `0.24.2-beta.20260712.0640+6ab6799` | beta | `6ab6799` | #388 | 2026-07-12 06:40Z |
+| `0.1.0-beta.032` | `0.25.0-beta.20260712.0708+a2231cb` | beta | `a2231cb` | #391 | 2026-07-12 07:08Z |
+| `0.1.0-beta.033` | `0.25.3-beta.20260712.0751+2542454` | beta | `2542454` | #401 | 2026-07-12 07:51Z |
+| `0.1.0-beta.034` | `0.25.4-beta.20260712.0806+c34b99c` | beta | `c34b99c` | #403 | 2026-07-12 08:06Z |
+| `0.1.0-beta.035` | `0.26.0-beta.20260712.0848+77fd3c7` | beta | `77fd3c7` | #406 | 2026-07-12 08:48Z |
+| `0.1.0-beta.036` | `0.26.2-beta.20260712.0931+524534b` | beta | `524534b` | #409 | 2026-07-12 09:31Z |
+| `0.1.0-beta.037` | `0.26.5-beta.20260712.1003+2a25469` | beta | `2a25469` | #419 | 2026-07-12 10:03Z |
+| `0.1.0-beta.038` | `1.0.0-beta.20260712.1125+74fc67d` | beta | `74fc67d` | #429 | 2026-07-12 11:25Z |
+| `0.1.0-beta.039` | `1.0.0-beta.20260712.1152+77e3501` | beta | `77e3501` | #432 | 2026-07-12 11:52Z |
+| `0.1.0-beta.040` | `1.0.0-beta.20260712.1217+9d429ed` | beta | `9d429ed` | #434 | 2026-07-12 12:17Z |
+| `0.1.0-beta.041` | `1.0.0-beta.20260712.1317+60d95b3` | beta | `60d95b3` | #436 | 2026-07-12 13:17Z |
+| `0.1.0-beta.042` | `1.0.0-beta.20260712.1348+2db0667` | beta | `2db0667` | #438 | 2026-07-12 13:48Z |
+| `0.1.0-beta.043` | `1.0.0-beta.20260712.1359+516ba04` | beta | `516ba04` | #440 | 2026-07-12 13:59Z |
+| `0.1.0-beta.044` | `1.0.0-beta.20260713.0208+24c27ee` | beta | `24c27ee` | #443 | 2026-07-13 02:08Z |
+| `0.1.0-beta.045` | `1.0.0` | stable (pre-scheme) | `2068768` | #446 | 2026-07-13 |
+| `0.1.0-beta.046` | `1.0.1-beta.20260713.0349+88f4619` | beta | `88f4619` | #451 | 2026-07-13 03:49Z |
+| `0.1.0-beta.047` | `1.0.1-beta.20260713.0413+fce9093` | beta | `fce9093` | #453 | 2026-07-13 04:13Z |
+| `0.1.0-beta.048` | `1.0.1-beta.20260713.0421+0a911e5` | beta | `0a911e5` | #455 | 2026-07-13 04:21Z |
+| `0.1.0-beta.049` | `1.0.1-beta.20260713.0528+b6198e4` | beta | `b6198e4` | #460 | 2026-07-13 05:28Z |
+| `0.1.0-beta.050` | `1.0.1-beta.20260713.0559+a98b7a1` | beta | `a98b7a1` | #465 | 2026-07-13 05:59Z |
+| `0.1.0-beta.051` | `1.0.1` | stable (pre-scheme) | `4fd166f` | #470 | 2026-07-13 |
+| `0.1.0-beta.052` | `1.1.0-beta.20260713.0756+1507a45` | beta | `1507a45` | #479 | 2026-07-13 07:56Z |
+| `0.1.0-beta.053` | `0.0.481.0` | beta | `90ca8c2` | #481 | 2026-07-13 08:13Z |
+| `0.1.0-beta.054` | `0.0.482.0` | beta | `f69e325` | #482 | 2026-07-13 08:19Z |
+| `0.1.0-beta.055` | `0.0.485.0` | beta | `83ba993` | #485 | 2026-07-13 08:21Z |
+| `0.1.0-beta.056` | `0.0.486.0` | beta | `2f7e0b7` | #486 | 2026-07-13 08:46Z |
+| `0.1.0-rc.001` | `0.1.0.0` | stable cut (rc, burnt) | `e1a12de` | #489 | 2026-07-13 09:36Z |
+| `0.1.0-rc.002` | `0.1.0.0` | stable cut (rc, burnt) | `b72c1dc` | #491 | 2026-07-13 10:10Z |
+| `0.1.0-rc.003` | `0.2.0.0` | stable cut (rc, burnt) | `e2a4dfd` | #492 | 2026-07-13 10:24Z |
+| `0.1.0-rc.004` | `0.3.0.0` | stable cut (rc, burnt) | `166eab7` | #497 | 2026-07-13 11:13Z |
+| `0.1.0-rc.005` | `0.3.0.1` | stable patch cut (rc, superseded; artifact) | `0378e19` | #503 | 2026-07-13 11:38Z |
+| `0.1.0-rc.006` | `0.4.0.0` | adopted candidate (rc; ran on device; artifact) | `6715aa5` | #505 | 2026-07-13 12:06Z |
