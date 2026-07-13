@@ -310,7 +310,7 @@ jobs:
             | sudo tee /etc/apt/apt.conf.d/99-vibemis-ci-retries
 
       - name: Setup Qt 6
-        uses: jurplel/install-qt-action@v3
+        uses: jurplel/install-qt-action@v4
         with:
           version: ${{ env.QT_VERSION }}
           host: 'linux'
@@ -364,7 +364,7 @@ jobs:
         echo "Is prerelease: ${{ needs.setup-version.outputs.is_prerelease }}"
     
     - name: Setup Qt
-      uses: jurplel/install-qt-action@v3
+      uses: jurplel/install-qt-action@v4
       with:
         version: ${{ env.QT_VERSION }}
         host: 'linux'
@@ -590,7 +590,7 @@ jobs:
           | sudo tee /etc/apt/apt.conf.d/99-vibemis-ci-retries
 
     - name: Setup Qt 6
-      uses: jurplel/install-qt-action@v3
+      uses: jurplel/install-qt-action@v4
       with:
         version: ${{ env.QT_VERSION }}
         host: 'linux'
