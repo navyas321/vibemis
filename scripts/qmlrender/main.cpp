@@ -46,7 +46,39 @@ int main(int argc, char** argv) {
     view.show();
 
     int holdMs = argc > 3 ? atoi(argv[3]) : 900;
-    QTimer::singleShot(holdMs, &app, [&]() {
+
+    // BL-1709: optional key simulation — 4th arg like "Up,Up,Down" posts real key
+    // events to the window between render settle and grab, printing the active focus
+    // item's objectName after each press so nav flows can be validated headlessly.
+    QString keyScript = argc > 4 ? QString::fromLocal8Bit(argv[4]) : QString();
+
+    QTimer::singleShot(holdMs, &app, [&, keyScript]() {
+        if (!keyScript.isEmpty()) {
+            const QStringList keys = keyScript.split(',', Qt::SkipEmptyParts);
+            for (const QString& k : keys) {
+                int keyCode = Qt::Key_unknown;
+                Qt::KeyboardModifiers mods = Qt::NoModifier;
+                QString kk = k.trimmed().toLower();
+                if (kk == "up") keyCode = Qt::Key_Up;
+                else if (kk == "down") keyCode = Qt::Key_Down;
+                else if (kk == "left") keyCode = Qt::Key_Left;
+                else if (kk == "right") keyCode = Qt::Key_Right;
+                else if (kk == "tab") keyCode = Qt::Key_Tab;
+                else if (kk == "backtab") { keyCode = Qt::Key_Tab; mods = Qt::ShiftModifier; }
+                else if (kk == "esc") keyCode = Qt::Key_Escape;
+                else if (kk == "return") keyCode = Qt::Key_Return;
+                if (keyCode == Qt::Key_unknown) continue;
+                QKeyEvent press(QEvent::KeyPress, keyCode, mods);
+                QKeyEvent release(QEvent::KeyRelease, keyCode, mods);
+                QCoreApplication::sendEvent(&view, &press);
+                QCoreApplication::sendEvent(&view, &release);
+                QQuickItem* f = view.activeFocusItem();
+                fprintf(stdout, "AFTER %s: focus=%s\n", k.trimmed().toUtf8().constData(),
+                        f ? (f->objectName().isEmpty() ? f->metaObject()->className()
+                                                       : f->objectName().toUtf8().constData())
+                          : "<none>");
+            }
+        }
         QImage img = view.grabWindow();
         bool ok = !img.isNull() && img.save(QString::fromLocal8Bit(argv[2]));
         fprintf(stdout, "RENDER %s: %dx%d -> %s\n", ok ? "OK" : "FAIL",

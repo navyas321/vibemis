@@ -417,14 +417,31 @@ Item {
                     // sendKey(Key_Tab, ShiftModifier)) — NOT Key_Backtab. Keys.onTabPressed
                     // matches Key_Tab regardless of modifiers, so a naive onTab/onBacktab pair
                     // made Up step DOWN. Direction must come from the modifier.
-                    Keys.onUpPressed: settingsPage.focusCategoryRow(Math.max(0, index - 1))
+                    // BL-1709: Up at the TOP row (Video) escapes to the toolbar instead of
+                    // self-focusing (focusCategoryRow(0) on row 0 consumed the press and made
+                    // the toolbar unreachable by d-pad — maintainer launch blocker). Leaving
+                    // the event unaccepted lets the default BackTab chain walk out of the
+                    // sidebar (this row is the only tab-focusable one, so chain-previous is
+                    // the toolbar).
+                    Keys.onUpPressed: {
+                        if (index === 0) {
+                            event.accepted = false
+                        }
+                        else {
+                            settingsPage.focusCategoryRow(index - 1)
+                        }
+                    }
                     Keys.onDownPressed: settingsPage.focusCategoryRow(Math.min(sidebarRepeater.count - 1, index + 1))
                     Keys.onPressed: {
                         if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
                             var backwards = (event.key === Qt.Key_Backtab)
                                             || (event.modifiers & Qt.ShiftModifier)
+                            if (backwards && index === 0) {
+                                event.accepted = false   // BL-1709: escape to the toolbar
+                                return
+                            }
                             settingsPage.focusCategoryRow(backwards
-                                ? Math.max(0, index - 1)
+                                ? index - 1
                                 : Math.min(sidebarRepeater.count - 1, index + 1))
                             event.accepted = true
                         }

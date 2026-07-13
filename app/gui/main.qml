@@ -283,6 +283,28 @@ ApplicationWindow {
         anchors.topMargin: 0
         anchors.bottomMargin: 0
 
+        // BL-1709 (launch blocker #2, "back needs two presses"): the toolbar lives in the
+        // window HEADER — outside the StackView — so when focus sits on a toolbar button
+        // (e.g. after d-pad Up from a grid), Ⓑ/Esc bubbled up the header chain and never
+        // reached stackView's back handlers; the press was silently lost and only a second
+        // press (after focus fell back into the page) worked. Mirror the back handling here.
+        Keys.onEscapePressed: {
+            if (stackView.depth > 1) {
+                goBack()
+            }
+            else {
+                quitConfirmationDialog.open()
+            }
+        }
+        Keys.onBackPressed: {
+            if (stackView.depth > 1) {
+                goBack()
+            }
+            else {
+                quitConfirmationDialog.open()
+            }
+        }
+
         // Redesign: dark token-styled surface. This global toolbar stays visible on the home screens
         // (1a Computers / 1b app grid) — where it can't collapse without resizing the window during
         // gamescope swapchain creation (the 0.25.0 black-screen cause) — so it must LOOK like the

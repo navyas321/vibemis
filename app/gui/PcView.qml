@@ -300,6 +300,7 @@ CenteredGridView {
     model: computerModel
 
     delegate: NavigableItemDelegate {
+        id: pcDelegate
         width: 430; height: 242;
         grid: pcGrid
 
@@ -349,10 +350,29 @@ CenteredGridView {
             else {
                 grid.moveCurrentIndexUp()
 
-                // If we've reached the top of the grid, move focus to the toolbar
-                // (preserves NavigableItemDelegate's base behavior we override here)
-                if (grid.currentItem === this) {
-                    nextItemInFocusChain(false).forceActiveFocus(Qt.TabFocus)
+                // BL-1709 (launch blocker, harness-validated RCA): at the top of the grid,
+                // hop focus to the toolbar. The upstream one-liner
+                // `nextItemInFocusChain(false).forceActiveFocus()` is structurally broken in
+                // the redesign nesting — the delegate's chain-previous is the GRID itself
+                // (its ancestor FocusScope), and focusing an ancestor just re-descends into
+                // this same delegate (observed: focus never left the card). Walk the chain
+                // PAST ancestors to the first real outside item (the toolbar buttons).
+                if (grid.currentItem === pcDelegate) {
+                    var prev = pcDelegate.nextItemInFocusChain(false)
+                    var guard = 0
+                    while (prev && guard++ < 8) {
+                        var isAncestor = false
+                        for (var p = pcDelegate.parent; p; p = p.parent) {
+                            if (p === prev) { isAncestor = true; break }
+                        }
+                        if (!isAncestor) {
+                            break
+                        }
+                        prev = prev.nextItemInFocusChain(false)
+                    }
+                    if (prev) {
+                        prev.forceActiveFocus(Qt.TabFocus)
+                    }
                 }
             }
         }
