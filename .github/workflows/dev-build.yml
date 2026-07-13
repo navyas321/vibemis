@@ -7,8 +7,9 @@ name: Development Build
 #   commits) do NOT build a beta — this is what keeps the Releases page quiet.
 # - release/** / main / master / workflow_dispatch: ALWAYS build + create production releases
 #
-# Beta policy = "beta tracks PR merges into vibemis-main, nothing else." A superseded beta/alpha is
-# auto-pruned at the end (see "Prune superseded releases"), so at most one beta is ever live.
+# Beta policy = "beta tracks PR merges into vibemis-main, nothing else." Releases are PERMANENT
+# (maintainer 2026-07-13, BL-1736): every cut stays on the Releases page forever, like tags —
+# SemVer §3 released-version immutability. Superseded releases are never deleted.
 
 on:
   push:
@@ -986,47 +987,12 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    # ── Keep the Releases page tidy (semver era, maintainer /goal 2026-07-13) ──
-    # Scope: ONLY tags of the CURRENT cycle (the KEEP_TAG's own base, e.g. "0.5.0-").
-    # The historical catalog (0.1.0-*, …-rc.*, 0.3.1, 0.4.0.0 — docs/RELEASE_HISTORY.md)
-    # can never match and is never pruned. Deletions remove the RELEASE but KEEP the
-    # git tag — the dense NNN counters scan tags, so numbers are never reused.
-    #   • beta/alpha build → keep only the newest of that class in this cycle.
-    #   • stable cut      → the cycle is complete: prune ALL of its -alpha./-beta. releases.
-    - name: Prune superseded releases
-      if: needs.setup-version.outputs.release_tier == 'beta' || needs.setup-version.outputs.release_tier == 'alpha' || needs.setup-version.outputs.release_tier == 'rc' || needs.setup-version.outputs.release_tier == 'release'
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        TIER: ${{ needs.setup-version.outputs.release_tier }}
-        KEEP_TAG: ${{ needs.setup-version.outputs.version }}
-      run: |
-        set -u
-        BASE=$(echo "$KEEP_TAG" | sed -E 's/-.*$//')
-        if [ "$TIER" = "release" ]; then
-          # version_override cuts are migration/hotfix specials — the base's pre-release
-          # train may be curated history (e.g. the restored 0.1.0 catalog). Never prune it.
-          if [ -n "${{ github.event.inputs.version_override }}" ]; then
-            echo "Override cut ($KEEP_TAG) — skipping cycle prune."
-            exit 0
-          fi
-          PATTERN="^${BASE//./\\.}-(alpha|beta|rc)\."
-          echo "Stable $KEEP_TAG cut — pruning the whole ${BASE} pre-release cycle"
-        elif [ "$TIER" = "beta" ]; then
-          PATTERN="^${BASE//./\\.}-beta\."
-          echo "Pruning ${BASE} betas except $KEEP_TAG"
-        elif [ "$TIER" = "rc" ]; then
-          PATTERN="^${BASE//./\\.}-rc\."
-          echo "Pruning ${BASE} release candidates except $KEEP_TAG"
-        else
-          PATTERN="^${BASE//./\\.}-alpha\."
-          echo "Pruning ${BASE} alphas except $KEEP_TAG"
-        fi
-        gh release list --limit 300 --json tagName --jq '.[].tagName' \
-          | grep -E -- "$PATTERN" \
-          | grep -v -x -F "$KEEP_TAG" \
-          | while read -r tag; do
-              [ -z "$tag" ] && continue
-              echo "  deleting superseded release (tag kept): $tag"
-              gh release delete "$tag" --yes || echo "    (delete failed for $tag, continuing)"
-            done
-        echo "Prune complete."
+    # ── Releases are PERMANENT, like tags (maintainer directive 2026-07-13, BL-1736) ──
+    # SemVer 2.0.0 §3: "Once a versioned package has been released, the contents of that
+    # version MUST NOT be modified." The Releases list preserves the complete build
+    # history — same behavior as the Tags page — matching the README's "complete build
+    # history" promise. The former "Prune superseded releases" step (keep only the
+    # newest beta/alpha; wipe the cycle on a stable cut) was removed here; do NOT
+    # reintroduce release deletion without an explicit maintainer directive. The
+    # updater is unaffected: it selects the newest release per channel structurally,
+    # and only bare stables carry make_latest=true.

@@ -354,9 +354,12 @@ If a feature works only in Desktop Mode, it's not ready.
   Alphas, betas and RCs are agent-cuttable per the matrix above.
 - **Beta** = `0.5.0-beta.NNN` (vibemis-main), **alpha** = `0.5.0-alpha.NNN` (test
   branches), dev = `0.5.0-dev.<run>.<branch>`. NNN is dense + zero-padded, computed
-  from existing tags (prunes delete releases but KEEP tags — never delete a tag).
+  from existing tags — never delete a tag.
 - All suffixed builds are GitHub-prerelease; only bare stables are full releases.
-- On a stable cut, CI prunes that cycle's alpha/beta releases automatically.
+- **Releases are PERMANENT, like tags (maintainer 2026-07-13, BL-1736).** Every cut
+  stays on the Releases page forever — SemVer §3 released-version immutability; the
+  Releases list mirrors the Tags list. Never delete a release. (This supersedes the
+  earlier auto-prune policy; the prune step was removed from dev-build.yml.)
 - The first stable is bare `0.1.0` (Latest). The full historical catalog (0.1.0
   alpha/beta/rc trains incl. the folded interim-scheme cuts rc.001-006) is documented
   in `docs/RELEASE_HISTORY.md` — never prune or reuse it.
