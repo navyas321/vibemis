@@ -194,17 +194,24 @@ All shortcuts require `Ctrl + Alt + Shift`:
 
 ---
 
-## Downloads
+## Downloads & updates
 
 Each release ships a single **`.AppImage`** — download and double-click; nothing to extract.
+**After the first install, updating is in-app**: Settings → Advanced → **Software updates** —
+pick a channel, *Check for updates*, *Update now*. The AppImage swaps itself in place (the
+previous build stays alongside as `.old` for rollback) and relaunches. The
+`scripts/vibemis-update.sh` helper does the same from a terminal or a Steam shortcut.
 
-| Tier | When | Use |
-|---|---|---|
-| 🔬 **Alpha** | Every push to a `test<N>-*` feature branch | Hardware test cycles during development |
-| 🧪 **Beta** | Every PR merged into `vibemis-main` | Latest features; may change between releases |
-| ✅ **Release** | Milestone (1.0.0+) | **Recommended** — verified stable |
+Versions follow **`w.x.y.z`** — `x` steps per **stable** release, `y` per **beta**, `z` per
+**alpha** (numbers may skip; the highest is always the newest).
 
-**[→ Download the latest release](https://github.com/navyas321/vibemis/releases/latest)**
+| Channel | Version shape | Built from | Use |
+|---|---|---|---|
+| ✅ **Stable** | `0.x.0.0` | Explicit release cuts | **Recommended** — hand-verified on device |
+| 🧪 **Beta** | `0.x.y.0` | `vibemis-main` | **Manual-testing channel** — newest features |
+| 🔬 **Alpha** | `0.x.0.z` | `test<N>-*` branches (on request) | Automated test-agent artifacts |
+
+**[→ Releases page](https://github.com/navyas321/vibemis/releases)**
 
 ---
 

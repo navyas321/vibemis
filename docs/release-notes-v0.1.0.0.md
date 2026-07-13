@@ -1,8 +1,12 @@
-# Vibemis v1.0.1 — first stable release
+# Vibemis 0.1.0.0 — first stable release
 
 **Vibemis** is a gamepad-first game-streaming client for **SteamOS & Linux handhelds** — the best of
 Moonlight Qt and Artemis (Apollo's extended protocol), tuned to pair with the **Vibepollo** host.
-1.0.1 is the first production-stable release, hardware-verified on a Lenovo Legion Go S Z2.
+0.1.0.0 is the first production-stable release, hardware-verified on a Lenovo Legion Go S Z2.
+
+> **Versioning note:** releases now follow **`w.x.y.z`** — `x` steps per stable release, `y` per
+> beta (the manual-testing channel), `z` per alpha (automated test artifacts). This cut supersedes
+> the earlier parked `1.0.x` tags from the pre-scheme era.
 
 ## Highlights
 
@@ -33,8 +37,12 @@ Clipboard sync, server commands, OTP pairing, virtual display control, an in-str
 - Bounded **auto-reconnect** on stream drop, **per-game stream profiles**, **settings export/import**,
   battery-saver bitrate, a compact performance overlay, and `vibemis selftest` for CI/on-device tests.
 
-### Polished in 1.0.1 (two hands-on device passes)
-Every defect from the maintainer's on-device passes, fixed across two waves:
+### Polished for 0.1.0.0 (three hands-on device passes)
+Every defect from the maintainer's on-device passes, fixed across three waves — including a
+**Quick Menu visual redesign** onto the app's design system (line-glyph icons, token colors,
+hint-bar footer — no more emoji), settings that survive a stream (a use-after-free of the shared
+preferences object after disconnects was found and fixed), and touch-overlay taps that land
+correctly under Gamescope scaling:
 - **Settings pickers show their full text** (root-cause fix covering all 13 dropdowns) and the
   Settings page has true 2-D gamepad navigation with a single, always-visible selection ring —
   including d-pad Up at the top of a pane returning to the correct sidebar category.
@@ -55,7 +63,7 @@ Every defect from the maintainer's on-device passes, fixed across two waves:
   the real check→download→swap path (used as a release gate), and the update script now finds
   your install wherever it lives instead of assuming one folder.
 
-### Hardened in 1.0.1 (the launch-blocker wave, on-device validated)
+### Hardened (the launch-blocker wave, on-device validated)
 - **Input latency fixed** — three compounding launcher stalls removed (background-poll log flood,
   a software-blur repaint on card focus, and a focus hand-off gap).
 - **In-stream Quick Menu overhaul** — fills the stream window (was a tiny fixed box), no text
@@ -84,4 +92,4 @@ the README.
 - Built from source under GPL-3.0; hardware-decode (VAAPI/VDPAU/NVDEC), H.264/HEVC/AV1, HDR, 7.1 audio.
 - The in-stream Quick Menu opens with `Select + L1 + R1 + Y` (gamepad) or `Ctrl+Alt+Shift+\` (keyboard).
 
-_Full commit history: the 0.6.x → 1.0.0 development series on `vibemis-main`._
+_Full commit history: the 0.6.x → 1.0.x → 0.1.0.0 development series on `vibemis-main`._
