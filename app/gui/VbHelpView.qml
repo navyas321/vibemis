@@ -14,10 +14,27 @@ Item {
     // Full-bleed window background.
     Rectangle { anchors.fill: parent; color: VbTokens.bgWindow }
 
-    // Let Esc / Back / gamepad B pop this view.
+    // BL-1669: the Help screen had NO focusable element, so on entry focus stuck on the global
+    // toolbar (only the ☰ settings icon was reachable) and gamepad Ⓑ/Back did nothing — the
+    // screen read as "unusable / frozen". Grab focus on entry so Ⓑ/Esc pop and up/down scroll.
     focus: true
+    Component.onCompleted: helpView.forceActiveFocus()
     Keys.onEscapePressed: stackView.pop()
     Keys.onBackPressed: stackView.pop()
+
+    // BL-1669: scroll the (previously fixed, overflowing) body. The gamepad sends Key_Up/Down in
+    // arrow nav mode and Tab/Backtab in UI nav mode, so accept BOTH plus PageUp/Down — whatever
+    // the current mode emits scrolls the card body instead of doing nothing.
+    Keys.onPressed: {
+        if (event.key === Qt.Key_Down || event.key === Qt.Key_Tab || event.key === Qt.Key_PageDown) {
+            helpFlick.contentY = Math.min(Math.max(0, helpFlick.contentHeight - helpFlick.height),
+                                          helpFlick.contentY + 140)
+            event.accepted = true
+        } else if (event.key === Qt.Key_Up || event.key === Qt.Key_Backtab || event.key === Qt.Key_PageUp) {
+            helpFlick.contentY = Math.max(0, helpFlick.contentY - 140)
+            event.accepted = true
+        }
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -59,21 +76,32 @@ Item {
             Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: VbTokens.strokeSoft }
         }
 
-        // ---- Body: two columns (left is slightly wider — flex:1.1 vs flex:1 in the HTML) ----
-        RowLayout {
+        // ---- Body: two columns, wrapped in a Flickable so tall content (or a small window)
+        // scrolls instead of clipping the cards off the top/bottom edge (BL-1669). ----
+        Flickable {
+            id: helpFlick
             Layout.fillWidth: true
             Layout.fillHeight: true
-            Layout.topMargin: VbTokens.screenPadY
-            Layout.bottomMargin: VbTokens.screenPadY
-            Layout.leftMargin: VbTokens.screenPadX
-            Layout.rightMargin: VbTokens.screenPadX
+            clip: true
+            contentWidth: width
+            contentHeight: bodyRow.implicitHeight + VbTokens.screenPadY * 2
+            boundsBehavior: Flickable.StopAtBounds
+            ScrollBar.vertical: ScrollBar { }
+
+        RowLayout {
+            id: bodyRow
+            x: VbTokens.screenPadX
+            y: VbTokens.screenPadY
+            width: helpFlick.width - VbTokens.screenPadX * 2
             spacing: VbTokens.cardGap
 
-            // LEFT column: Quick Menu hero + gamepad shortcuts
+            // LEFT column: Quick Menu hero + gamepad shortcuts. BL-1669: `Layout.preferredWidth`
+            // was set to 1.1 / 1.0 as if it were a CSS flex ratio — but in QML it is an ABSOLUTE
+            // pixel width (≈1px), which fought fillWidth and skewed the scaling. Use real relative
+            // stretch widths instead (left slightly wider, as the design intends).
             ColumnLayout {
                 Layout.fillWidth: true
-                Layout.fillHeight: true
-                Layout.preferredWidth: 1.1
+                Layout.preferredWidth: 110
                 spacing: 22
 
                 // Hero Quick Menu card (accent gradient wash + accent border, 20px radius)
@@ -183,14 +211,12 @@ Item {
                         }
                     }
                 }
-                Item { Layout.fillHeight: true }
             }
 
             // RIGHT column: keyboard shortcuts + remote play
             ColumnLayout {
                 Layout.fillWidth: true
-                Layout.fillHeight: true
-                Layout.preferredWidth: 1.0
+                Layout.preferredWidth: 100
                 spacing: 22
 
                 VbCard {
@@ -255,8 +281,8 @@ Item {
                         }
                     }
                 }
-                Item { Layout.fillHeight: true }
             }
+        }
         }
 
         // ---- Gamepad hint bar ----

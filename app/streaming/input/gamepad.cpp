@@ -243,11 +243,52 @@ void SdlInputHandler::handleControllerAxisEvent(SDL_ControllerAxisEvent* event)
 
     // test81 (review fix): while the Quick Menu is open, buttons are intercepted but
     // sticks/triggers used to keep streaming to the host — the game kept walking/aiming
-    // under the menu. Swallow axis input too; state resyncs on the next event after close.
+    // under the menu. Swallow axis input so it never reaches the host.
+    // BL-1665: additionally translate the LEFT stick into menu navigation (like the d-pad),
+    // emitting only on direction change (edges) with auto-repeat handled by the menu — so the
+    // stick actually moves the selection instead of doing nothing.
     {
         Session* sess = Session::get();
         if (sess && sess->getQuickMenuManager() &&
             sess->getQuickMenuManager()->isVisible()) {
+            switch (event->axis) {
+            case SDL_CONTROLLER_AXIS_LEFTX:
+                state->lsX = event->value;
+                break;
+            case SDL_CONTROLLER_AXIS_LEFTY:
+                state->lsY = -qMax(event->value, (short)-32767);
+                break;
+            default:
+                // Right stick / triggers do nothing in the menu — swallow and ignore.
+                return;
+            }
+
+            // Derive a d-pad direction from the left stick, dominant-axis wins. lsY > 0 is up
+            // and lsX > 0 is right (see the sign handling above / in the normal path below).
+            const int kStickNavDeadzone = 16000;
+            int dir = 0; // a Qt::Key value, or 0 for centered
+            if (state->lsY > kStickNavDeadzone && state->lsY >= qAbs(state->lsX)) {
+                dir = Qt::Key_Up;
+            } else if (state->lsY < -kStickNavDeadzone && -state->lsY >= qAbs(state->lsX)) {
+                dir = Qt::Key_Down;
+            } else if (state->lsX > kStickNavDeadzone) {
+                dir = Qt::Key_Right;
+            } else if (state->lsX < -kStickNavDeadzone) {
+                dir = Qt::Key_Left;
+            }
+
+            if (dir != state->menuStickDir) {
+                QuickMenuManager* qmm = sess->getQuickMenuManager();
+                if (state->menuStickDir != 0) {
+                    QMetaObject::invokeMethod(qmm, "stopNavRepeat", Qt::QueuedConnection,
+                                              Q_ARG(int, state->menuStickDir));
+                }
+                if (dir != 0) {
+                    QMetaObject::invokeMethod(qmm, "injectNavKey", Qt::QueuedConnection,
+                                              Q_ARG(int, dir));
+                }
+                state->menuStickDir = dir;
+            }
             return;
         }
     }
@@ -354,11 +395,15 @@ void SdlInputHandler::handleControllerButtonEvent(SDL_ControllerButtonEvent* eve
             sess->getQuickMenuManager()->isVisible())
         {
             Qt::Key qtKey = Qt::Key_unknown;
+            // BL-1665: d-pad directions auto-repeat while held (injectNavKey); action buttons
+            // fire once (injectKey). SDL emits no key-repeat for held gamepad buttons, so
+            // without this a held d-pad moved the selection exactly once.
+            bool isNav = false;
             switch (event->button) {
-            case SDL_CONTROLLER_BUTTON_DPAD_UP:    qtKey = Qt::Key_Up;     break;
-            case SDL_CONTROLLER_BUTTON_DPAD_DOWN:  qtKey = Qt::Key_Down;   break;
-            case SDL_CONTROLLER_BUTTON_DPAD_LEFT:  qtKey = Qt::Key_Left;   break;
-            case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: qtKey = Qt::Key_Right;  break;
+            case SDL_CONTROLLER_BUTTON_DPAD_UP:    qtKey = Qt::Key_Up;     isNav = true; break;
+            case SDL_CONTROLLER_BUTTON_DPAD_DOWN:  qtKey = Qt::Key_Down;   isNav = true; break;
+            case SDL_CONTROLLER_BUTTON_DPAD_LEFT:  qtKey = Qt::Key_Left;   isNav = true; break;
+            case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: qtKey = Qt::Key_Right;  isNav = true; break;
             case SDL_CONTROLLER_BUTTON_A:          qtKey = Qt::Key_Return; break;
             case SDL_CONTROLLER_BUTTON_B:          qtKey = Qt::Key_Escape; break;
             // test77: Back/Select(View) and Start also close the menu and return to the
@@ -371,7 +416,8 @@ void SdlInputHandler::handleControllerButtonEvent(SDL_ControllerButtonEvent* eve
             if (qtKey != Qt::Key_unknown) {
                 // The Quick Menu is rendered offscreen and never holds OS focus, so we
                 // inject the navigation key straight into it on the Qt main thread.
-                QMetaObject::invokeMethod(sess->getQuickMenuManager(), "injectKey",
+                QMetaObject::invokeMethod(sess->getQuickMenuManager(),
+                                          isNav ? "injectNavKey" : "injectKey",
                                           Qt::QueuedConnection, Q_ARG(int, (int)qtKey));
                 // test81 (review fix): remember the consumed press so its RELEASE is
                 // swallowed too (see below) — otherwise the release leaked into the
@@ -388,6 +434,22 @@ void SdlInputHandler::handleControllerButtonEvent(SDL_ControllerButtonEvent* eve
     // test81 (review fix): swallow the release of any press the Quick Menu consumed.
     if (event->state == SDL_RELEASED &&
         (state->buttonsConsumedByMenu & k_ButtonMap[event->button])) {
+        // BL-1665: releasing a d-pad direction ends its auto-repeat in the menu.
+        Qt::Key navKey = Qt::Key_unknown;
+        switch (event->button) {
+        case SDL_CONTROLLER_BUTTON_DPAD_UP:    navKey = Qt::Key_Up;    break;
+        case SDL_CONTROLLER_BUTTON_DPAD_DOWN:  navKey = Qt::Key_Down;  break;
+        case SDL_CONTROLLER_BUTTON_DPAD_LEFT:  navKey = Qt::Key_Left;  break;
+        case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: navKey = Qt::Key_Right; break;
+        default: break;
+        }
+        if (navKey != Qt::Key_unknown) {
+            Session* sess = Session::get();
+            if (sess && sess->getQuickMenuManager()) {
+                QMetaObject::invokeMethod(sess->getQuickMenuManager(), "stopNavRepeat",
+                                          Qt::QueuedConnection, Q_ARG(int, (int)navKey));
+            }
+        }
         state->buttonsConsumedByMenu &= ~k_ButtonMap[event->button];
         return;
     }

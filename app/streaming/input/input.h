@@ -25,6 +25,11 @@ struct GamepadState {
     // releases in emulation mode).
     int buttonsConsumedByMenu;
 
+    // BL-1665: while the Quick Menu is open, the left stick drives navigation like the d-pad.
+    // Axis events fire continuously, so we remember the last stick-derived direction (a Qt::Key
+    // value, or 0 for centered) and only emit on CHANGE (edges) — the menu handles auto-repeat.
+    int menuStickDir;
+
     bool clickpadButtonEmulationEnabled;
     bool emulatedClickpadButtonDown;
 

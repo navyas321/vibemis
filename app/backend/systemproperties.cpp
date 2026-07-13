@@ -17,6 +17,10 @@
 SystemProperties::SystemProperties()
 {
     versionString = QString(VERSION_STR);
+    // BL-1668: these MEMBER-backed Q_PROPERTYs were declared but never assigned (the assignment
+    // lived in reverted HDR WIP), leaving them uninitialized — QML read garbage. Initialize both.
+    isSteamDeck = isSteamDeckOrGamescope();
+    hasVulkanHdr = false;
     hasDesktopEnvironment = WMUtils::isRunningDesktopEnvironment();
     isRunningWayland = WMUtils::isRunningWayland();
     isRunningXWayland = isRunningWayland && QGuiApplication::platformName() == "xcb";
@@ -84,6 +88,35 @@ QRect SystemProperties::getNativeResolution(int displayIndex)
 {
     // Returns default constructed QRect if out of bounds
     return monitorNativeResolutions.value(displayIndex);
+}
+
+// BL-1668: detect a SteamOS handheld / gamescope session. Covers the Steam Deck AND other
+// SteamOS handhelds (Legion Go S, ROG Ally SteamOS, etc.) in BOTH Game Mode (gamescope env)
+// and Desktop Mode (os-release ID). Used to default the launcher to a screen-filling window on
+// handhelds — a fixed 1280-wide window is a tiny sliver of a 1920x1200 handheld panel.
+bool SystemProperties::isSteamDeckOrGamescope()
+{
+#ifdef Q_OS_LINUX
+    // Game Mode: gamescope / Steam Gamepad UI export these.
+    if (qEnvironmentVariableIsSet("GAMESCOPE_WAYLAND_DISPLAY") ||
+        qEnvironmentVariableIsSet("GAMESCOPE_LIMITER_FILE") ||
+        qEnvironmentVariableIsSet("SteamDeck") ||
+        qEnvironmentVariableIsSet("SteamGamepadUI")) {
+        return true;
+    }
+
+    // Desktop Mode: no gamescope env, so identify SteamOS by its os-release ID (this is what
+    // makes the Legion Go S fill the screen when launched from KDE, not just from Game Mode).
+    QFile osRelease(QStringLiteral("/etc/os-release"));
+    if (osRelease.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        const QString content = QString::fromUtf8(osRelease.readAll());
+        if (content.contains(QStringLiteral("steamos"), Qt::CaseInsensitive) ||
+            content.contains(QStringLiteral("holoiso"), Qt::CaseInsensitive)) {
+            return true;
+        }
+    }
+#endif
+    return false;
 }
 
 QRect SystemProperties::getSafeAreaResolution(int displayIndex)

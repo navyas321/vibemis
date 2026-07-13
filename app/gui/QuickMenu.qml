@@ -96,7 +96,10 @@ Rectangle {
             
             delegate: Button {
                 width: menuListView.width
-                height: 60
+                // BL-1666: taller row so the selection rectangle isn't cramped against the label
+                // (was 60 with only 6px text margin — the teal border hugged the text). The list
+                // scrolls (d-pad repeat / left stick), so the extra height is fine.
+                height: 70
                 flat: true
 
                 // Highlight the keyboard/gamepad-selected row, not just mouse hover, so

@@ -74,6 +74,13 @@ public:
     // (it is simply ignored).
     Q_INVOKABLE void injectKey(int qtKey);
 
+    // BL-1665: inject a navigation key AND start auto-repeat (SDL sends no key-repeat for
+    // held gamepad buttons/sticks, so holding a direction would otherwise move the selection
+    // exactly once). Repeats the key until stopNavRepeat(qtKey) is called or the menu hides.
+    // Called from the SDL input thread (d-pad press / left-stick edge) via QueuedConnection.
+    Q_INVOKABLE void injectNavKey(int qtKey);
+    Q_INVOKABLE void stopNavRepeat(int qtKey);
+
     // P3.20 (test86): deliver typed text into the offscreen menu's focused TextField
     // (called from the SDL keyboard handler when text input is active), and send an
     // assembled string to the host as UTF-8 text via LiSendUtf8TextEvent.
@@ -148,6 +155,7 @@ private slots:
     void onKeyboardCaptureChanged();
     void onStatsVisibilityChanged();
     void renderToSurface();
+    void onNavRepeat();   // BL-1665: fires the held nav key on the auto-repeat cadence
 
 private:
     bool initOverlayRenderer();
@@ -180,4 +188,9 @@ private:
     QTimer *m_renderTimer;
     QSize m_overlaySize;
     bool m_overlayReady;
+
+    // BL-1665: gamepad nav auto-repeat. m_navRepeatKey is the Qt::Key currently held (0 = none);
+    // all access is on the Qt main thread (queued from the SDL thread), so no atomic is needed.
+    QTimer *m_navRepeatTimer;
+    int m_navRepeatKey;
 };

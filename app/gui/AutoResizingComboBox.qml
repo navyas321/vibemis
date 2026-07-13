@@ -36,6 +36,18 @@ ComboBox {
     // so we can adjust the combo box width here too
     onActivated: recalculateWidth()
 
+    // BL-1664 (CRITICAL text-clip RCA): recalculateWidth() used to run ONLY from onActivated —
+    // i.e. after a human opens the popup and picks an item. But MANY instances (accent / quick-menu /
+    // capture-keys combos in SettingsView) declare their OWN onActivated, which in QML OVERRIDES this
+    // base handler and drops the recalc entirely; and none of them recalc at init. So textWidth stayed
+    // 0 and the combo collapsed to `leftPadding + indicator.width + rightPadding`, clipping the display
+    // text ("Teal (default)"->"Teal", "Select + L1 + R1 + Y (default)"->"Sele", "in fullscreen"->"in f").
+    // count-change fires when the model populates and is NOT overridable by an instance's handlers, so
+    // this sizes EVERY AutoResizingComboBox correctly on first paint regardless of what else it declares.
+    // Qt.callLater defers to end-of-frame so `popup`, `font` and the model are all fully constructed.
+    onCountChanged: Qt.callLater(recalculateWidth)
+    Component.onCompleted: Qt.callLater(recalculateWidth)
+
     popup.onAboutToShow: {
         // Switch to normal navigation for combo boxes
         SdlGamepadKeyNavigation.setUiNavMode(false)

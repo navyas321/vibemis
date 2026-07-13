@@ -169,8 +169,11 @@ CenteredGridView {
     delegate: NavigableItemDelegate {
         id: appDelegate
         // Shrink with the row height on short surfaces so the tile + its border stay on-screen
-        // (BL-1622). At 1200p cellHeight is 474 -> tile 430; on shorter surfaces it scales down.
-        width: 320; height: Math.min(430, appGrid.cellHeight - 44)
+        // (BL-1622). BL-1663: shrink WIDTH proportionally too — shrinking only height squished
+        // the portrait 320x430 tiles into landscape boxes on a short window. Keep the 320:430
+        // aspect. At 1200p cellHeight is 474 -> tile 430x320; shorter surfaces scale down evenly.
+        height: Math.min(430, appGrid.cellHeight - 44)
+        width: height * (320.0 / 430.0)
         grid: appGrid
 
         property alias appContextMenu: appContextMenuLoader.item

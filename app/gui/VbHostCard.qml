@@ -46,6 +46,10 @@ Item {
         ColumnLayout {
             anchors.fill: parent
             anchors.margins: 32
+            // BL-1661: reserve the bottom strip for the anchored badge/meta row below. The old
+            // single-column flow overflowed the fixed 242px card by ~11px with real device fonts
+            // (32+58+20+name+6+access+20+badge+32 > 242), shoving the badge row onto the border.
+            anchors.bottomMargin: 64
             spacing: 20
 
             // ---- Row 1: monitor outline + status pill ----
@@ -126,41 +130,48 @@ Item {
             }
 
             Item { Layout.fillHeight: true }
+        }
 
-            // ---- Badge + meta ----
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 10
-                // Host-type badge (accent outline for Apollo-lineage, neutral for Sunshine).
-                Rectangle {
-                    implicitWidth: badgeText.implicitWidth + 20
-                    implicitHeight: badgeText.implicitHeight + 8
-                    radius: VbTokens.radiusBadge
-                    color: "transparent"
-                    border.width: 1
-                    border.color: card.badgeAccent ? Qt.rgba(VbTokens.accent.r, VbTokens.accent.g, VbTokens.accent.b, 0.55)
-                                                   : Qt.rgba(1, 1, 1, 0.14)
-                    Text {
-                        id: badgeText
-                        anchors.centerIn: parent
-                        text: card.hostBadge
-                        font.family: VbTokens.fontBody
-                        font.pixelSize: 13
-                        font.weight: Font.ExtraBold
-                        font.letterSpacing: 1.2
-                        color: card.badgeAccent ? VbTokens.accent : VbTokens.textDim
-                    }
-                }
+        // ---- Badge + meta — PINNED 22px above the card bottom (BL-1661) ----
+        // Anchored outside the column flow so it can never be pushed onto the card border,
+        // regardless of how tall the name/access text renders with the device's real fonts.
+        RowLayout {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            anchors.leftMargin: 32
+            anchors.rightMargin: 32
+            anchors.bottomMargin: 22
+            spacing: 10
+            // Host-type badge (accent outline for Apollo-lineage, neutral for Sunshine).
+            Rectangle {
+                implicitWidth: badgeText.implicitWidth + 20
+                implicitHeight: badgeText.implicitHeight + 8
+                radius: VbTokens.radiusBadge
+                color: "transparent"
+                border.width: 1
+                border.color: card.badgeAccent ? Qt.rgba(VbTokens.accent.r, VbTokens.accent.g, VbTokens.accent.b, 0.55)
+                                               : Qt.rgba(1, 1, 1, 0.14)
                 Text {
-                    text: card.metaText
-                    visible: card.metaText !== ""
-                    Layout.fillWidth: true
+                    id: badgeText
+                    anchors.centerIn: parent
+                    text: card.hostBadge
                     font.family: VbTokens.fontBody
-                    font.pixelSize: 15
-                    color: VbTokens.textDim
-                    elide: Text.ElideRight
-                    verticalAlignment: Text.AlignVCenter
+                    font.pixelSize: 13
+                    font.weight: Font.ExtraBold
+                    font.letterSpacing: 1.2
+                    color: card.badgeAccent ? VbTokens.accent : VbTokens.textDim
                 }
+            }
+            Text {
+                text: card.metaText
+                visible: card.metaText !== ""
+                Layout.fillWidth: true
+                font.family: VbTokens.fontBody
+                font.pixelSize: 15
+                color: VbTokens.textDim
+                elide: Text.ElideRight
+                verticalAlignment: Text.AlignVCenter
             }
         }
     }

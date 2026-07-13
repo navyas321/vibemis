@@ -22,7 +22,9 @@ ApplicationWindow {
 
     id: window
     width: 1280
-    height: 600
+    // BL-1668: 600 was an absurdly short default that squished the app grid on first paint even
+    // on a desktop; 720 is a saner minimum. Handhelds fill the screen (see Component.onCompleted).
+    height: 720
 
     // This function runs prior to creation of the initial StackView item
     function doEarlyInit() {
@@ -50,6 +52,13 @@ ApplicationWindow {
             }
             else if (StreamingPreferences.uiDisplayMode == StreamingPreferences.UI_FULLSCREEN) {
                 window.showFullScreen()
+            }
+            // BL-1668: on a SteamOS handheld in Desktop Mode, the default "windowed" mode opened a
+            // tiny 1280x720 window on the 1920x1200 panel ("resolution never fills the screen", and
+            // the app grid looked squished). Fill the screen there. Explicit Maximized/Fullscreen
+            // above still win; only the windowed DEFAULT is upgraded, and only on handhelds.
+            else if (SystemProperties.isSteamDeck) {
+                window.showMaximized()
             }
             else {
                 window.show()

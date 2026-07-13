@@ -17,6 +17,17 @@ CenteredGridView {
     id: pcGrid
     focus: true
     activeFocusOnTab: true
+
+    // BL-1662 (freeze repro hardening): when focus enters the grid from the global toolbar
+    // (touch the Refresh icon, then press Down), land on a REAL host delegate so the d-pad
+    // drives the cards immediately. The maintainer's repro was "toolbar d-pad works, but the
+    // moment focus reaches the cards d-pad stops" — with currentIndex still -1 the GridView had
+    // no current item to move from. count>0 excludes the ghost "Add a computer" cell.
+    onActiveFocusChanged: {
+        if (activeFocus && currentIndex === -1 && count > 0) {
+            currentIndex = 0
+        }
+    }
     // Redesign 1a: the grid content is inset so it clears the fixed per-screen header
     // (title + host count + icon buttons) and the bottom gamepad hint bar. See the chrome
     // block below. The global toolbar is collapsed for PcView in main.qml (redesignScreen).
@@ -123,14 +134,11 @@ CenteredGridView {
             addPcDialog.open()
             event.accepted = true
         }
-        // BL-1625: make the "Add a computer" ghost card gamepad-reachable — Right (or Down)
-        // from the last host card moves focus onto it (it isn't a GridView delegate, so the
-        // grid's own arrow nav can never land there).
-        else if ((event.key === Qt.Key_Right || event.key === Qt.Key_Down)
-                 && (count === 0 || currentIndex === count - 1)) {
-            addPcCardSlot.forceActiveFocus()
-            event.accepted = true
-        }
+        // BL-1662 (CRITICAL freeze RCA): the earlier "d-pad Right/Down jumps to the ghost card"
+        // branch is GONE deliberately. Giving a non-delegate item focus inside the GridView's
+        // focus scope started a focus war with the view's own focus management (170% CPU spin,
+        // every input hijacked to Add-a-computer with a 1-host grid where currentIndex is always
+        // count-1, gamepad dead / touch-only). Gamepad path for Add-PC is the designed Y button.
     }
 
     // Called by the global toolbar's Refresh button (main.qml) — re-poll for hosts.
@@ -269,26 +277,6 @@ CenteredGridView {
     delegate: NavigableItemDelegate {
         width: 430; height: 242;
         grid: pcGrid
-
-        // BL-1625 (test-agent FAIL RCA): focus lives on the DELEGATE (GridView is a FocusScope
-        // forwarding to currentItem), and NavigableItemDelegate's Keys.onRight/DownPressed
-        // auto-consume the event even when the move is a no-op at the grid's edge — so a
-        // grid-level handler never fires. Override here: if the grid can't move further
-        // right/down, hand focus to the "Add a computer" ghost card.
-        Keys.onRightPressed: {
-            var before = grid.currentIndex
-            grid.moveCurrentIndexRight()
-            if (grid.currentIndex === before) {
-                addPcCardSlot.forceActiveFocus()
-            }
-        }
-        Keys.onDownPressed: {
-            var before = grid.currentIndex
-            grid.moveCurrentIndexDown()
-            if (grid.currentIndex === before) {
-                addPcCardSlot.forceActiveFocus()
-            }
-        }
 
         property alias pcContextMenu : pcContextMenuLoader.item
 
@@ -484,45 +472,24 @@ CenteredGridView {
         id: addPcCardSlot
         parent: pcGrid.contentItem
         property int columns: Math.max(1, pcGrid.itemsPerRow)
-        // Hovered or focused — drives the highlight fill/border and the focus ring (BL-1625:
-        // the card was click-only with zero hover/focus affordance, so it read as dead UI).
-        property bool highlighted: addPcMouseArea.containsMouse || activeFocus
+        // Hover-only highlight (BL-1625 hover affordance). BL-1662: this item is deliberately
+        // NON-FOCUSABLE — giving a non-delegate item focus inside the GridView's focus scope
+        // caused a focus war with the view (CPU spin, every input hijacked, gamepad dead).
+        // Gamepad users add a PC with the Ⓨ button (the hint bar advertises it); mouse/touch
+        // users hover + click here.
+        property bool highlighted: addPcMouseArea.containsMouse
         x: (pcGrid.count % columns) * pcGrid.cellWidth
         y: Math.floor(pcGrid.count / columns) * pcGrid.cellHeight
         width: 430
         height: 242
         z: 2
 
-        // Gamepad/keyboard: focusable — Right/Down from the last host card lands here (see the
-        // grid Keys handler), Ⓐ/Enter opens Add-PC, Left/Escape returns to the grid.
-        activeFocusOnTab: true
-        // Scroll into view on gamepad focus (test-agent find: the ghost can rest half-hidden
-        // behind the hint bar — it's not a delegate, so GridView never auto-tracks it).
-        onActiveFocusChanged: {
-            if (activeFocus) {
-                var needed = y + height + 24 - pcGrid.height
-                              + (pcHintBar.visible ? pcHintBar.height : 0)
-                if (pcGrid.contentY < needed) {
-                    pcGrid.contentY = needed
-                }
-            }
-        }
-        Keys.onReturnPressed: addPcDialog.open()
-        Keys.onSpacePressed: addPcDialog.open()
-        Keys.onLeftPressed: { pcGrid.forceActiveFocus(); if (pcGrid.count > 0) pcGrid.currentIndex = pcGrid.count - 1 }
-        Keys.onEscapePressed: pcGrid.forceActiveFocus()
-
-        // Hover/focus fill behind the dashed border (token-consistent with VbCard's focused fill).
+        // Hover fill behind the dashed border (token-consistent with VbCard's focused fill).
         Rectangle {
             anchors.fill: parent
             radius: 20
             color: addPcCardSlot.highlighted ? VbTokens.bgElev : "transparent"
             Behavior on color { ColorAnimation { duration: 120 } }
-        }
-        // Accent focus ring when gamepad/keyboard-focused (same recipe as the host cards).
-        VbFocusRing {
-            active: addPcCardSlot.activeFocus
-            radius: 20
         }
 
         Canvas {

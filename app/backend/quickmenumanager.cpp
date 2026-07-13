@@ -52,6 +52,12 @@ enum KeyCombo {
 // animations/selection highlights smooth at negligible cost.
 static const int kRenderIntervalMs = 33;
 
+// BL-1665: gamepad nav auto-repeat. Hold ~380ms before repeating, then advance the selection
+// every ~90ms — the same "delay then fast repeat" cadence keyboards use, so holding the d-pad
+// or pushing the left stick scrolls the menu continuously instead of moving exactly once.
+static const int kNavRepeatInitialMs = 380;
+static const int kNavRepeatMs = 90;
+
 QuickMenuManager::QuickMenuManager(QObject *parent)
     : QObject(parent)
     , m_isVisible(false)
@@ -79,6 +85,11 @@ QuickMenuManager::QuickMenuManager(QObject *parent)
     m_renderTimer = new QTimer(this);
     m_renderTimer->setInterval(kRenderIntervalMs);
     connect(m_renderTimer, &QTimer::timeout, this, &QuickMenuManager::renderToSurface);
+
+    // BL-1665: gamepad nav auto-repeat timer.
+    m_navRepeatKey = 0;
+    m_navRepeatTimer = new QTimer(this);
+    connect(m_navRepeatTimer, &QTimer::timeout, this, &QuickMenuManager::onNavRepeat);
 }
 
 QuickMenuManager::~QuickMenuManager()
@@ -155,6 +166,10 @@ void QuickMenuManager::setVisible(bool visible)
         m_renderTimer->start();
     } else {
         m_renderTimer->stop();
+        // BL-1665: cancel any in-flight nav auto-repeat so a held direction doesn't keep
+        // firing into a hidden menu (and doesn't resume on the next open).
+        m_navRepeatTimer->stop();
+        m_navRepeatKey = 0;
         Session* session = Session::get();
         if (session) {
             session->getOverlayManager().setOverlayState(Overlay::OverlayQuickMenu, false);
@@ -391,6 +406,45 @@ void QuickMenuManager::injectKey(int qtKey)
     // Re-render immediately so the selection highlight updates without waiting for the
     // next timer tick.
     renderToSurface();
+}
+
+void QuickMenuManager::injectNavKey(int qtKey)
+{
+    if (!m_isVisible || !m_quickWindow) {
+        return;
+    }
+
+    // Fire once immediately, then hold for kNavRepeatInitialMs before the fast repeat kicks in
+    // (standard key-repeat feel). start() resets the interval, so a fresh press always gets the
+    // full initial delay rather than inheriting the fast cadence from a previous hold.
+    injectKey(qtKey);
+    m_navRepeatKey = qtKey;
+    m_navRepeatTimer->start(kNavRepeatInitialMs);
+}
+
+void QuickMenuManager::stopNavRepeat(int qtKey)
+{
+    // Only stop if the key being released is the one we're currently repeating — otherwise a
+    // stale release (e.g. the left stick re-centering after a d-pad hold) would cancel an
+    // unrelated active repeat.
+    if (m_navRepeatKey == qtKey) {
+        m_navRepeatTimer->stop();
+        m_navRepeatKey = 0;
+    }
+}
+
+void QuickMenuManager::onNavRepeat()
+{
+    if (!m_isVisible || m_navRepeatKey == 0) {
+        m_navRepeatTimer->stop();
+        m_navRepeatKey = 0;
+        return;
+    }
+    injectKey(m_navRepeatKey);
+    // After the first (initial-delay) fire, switch to the fast repeat cadence.
+    if (m_navRepeatTimer->interval() != kNavRepeatMs) {
+        m_navRepeatTimer->setInterval(kNavRepeatMs);
+    }
 }
 
 void QuickMenuManager::injectText(const QString& text)

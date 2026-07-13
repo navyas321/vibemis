@@ -185,13 +185,27 @@ Item {
     // events propagate to ancestors — the same path main.qml uses for ☰/Start). The category is
     // clamped to the sidebar's range with no wrap. Other screens don't bind these keys, so the
     // shoulder buttons are a harmless no-op there.
+    // BL-1667: switching category must ALSO move keyboard/gamepad focus onto the newly
+    // selected sidebar row. Selection (`category`) and focus (`activeFocus`) were two
+    // independent states, so LB/RB moved the selected-row ring while the focus ring stayed
+    // on the old row (or the d-pad/stick moved focus while selection stayed) — you could see
+    // TWO accent rings at once. focusCategoryRow() keeps them locked together: exactly one row
+    // is ever both selected and focused.
+    function focusCategoryRow(idx) {
+        settingsPage.category = idx
+        var row = sidebarRepeater.itemAt(idx)
+        if (row) {
+            row.forceActiveFocus()
+        }
+    }
+
     Keys.onPressed: {
         if (event.key === Qt.Key_MediaPrevious) {
-            settingsPage.category = Math.max(0, settingsPage.category - 1)
+            focusCategoryRow(Math.max(0, settingsPage.category - 1))
             event.accepted = true
         }
         else if (event.key === Qt.Key_MediaNext) {
-            settingsPage.category = Math.min(sidebarRepeater.count - 1, settingsPage.category + 1)
+            focusCategoryRow(Math.min(sidebarRepeater.count - 1, settingsPage.category + 1))
             event.accepted = true
         }
     }
@@ -369,6 +383,22 @@ Item {
 
                     // onClicked fires on mouse/touch, Return/Space, and gamepad Ⓐ (UI nav mode).
                     onClicked: settingsPage.category = index
+
+                    // BL-1667: selection follows focus. When the d-pad/left-stick (Tab/Backtab in
+                    // UI nav mode) or a mouse moves focus onto this row, make it the selected
+                    // category — so the selected ring and the focus ring are always the SAME row
+                    // (no more two-rings-at-once), and up/down actually switches the shown category.
+                    onActiveFocusChanged: {
+                        if (activeFocus) {
+                            settingsPage.category = index
+                        }
+                    }
+
+                    // BL-1667: explicit vertical nav for keyboard arrows / any d-pad that emits
+                    // Key_Up/Down — gives the sidebar the up/down half of full 2-D navigation
+                    // (the gamepad's Tab/Backtab path is covered by onActiveFocusChanged above).
+                    Keys.onUpPressed: settingsPage.focusCategoryRow(Math.max(0, index - 1))
+                    Keys.onDownPressed: settingsPage.focusCategoryRow(Math.min(sidebarRepeater.count - 1, index + 1))
 
                     // BL-1627: d-pad RIGHT (sent as Key_Right by SdlGamepadKeyNavigation even in
                     // UI nav mode) enters the content pane: select this row's category, then move
@@ -3391,7 +3421,7 @@ Item {
                     model: [
                         { k: qsTr("Vibemis version"), v: SystemProperties.versionString },
                         { k: qsTr("Architecture"),    v: SystemProperties.friendlyNativeArchName },
-                        { k: qsTr("Steam Deck"),      v: SystemProperties.isSteamDeck ? qsTr("Yes") : qsTr("No") },
+                        { k: qsTr("SteamOS / gamescope"), v: SystemProperties.isSteamDeck ? qsTr("Yes") : qsTr("No") },
                         { k: qsTr("Display server"),  v: SystemProperties.isRunningWayland ? (SystemProperties.isRunningXWayland ? "XWayland" : "Wayland") : "X11" },
                         { k: qsTr("Hardware decode"), v: SystemProperties.hasHardwareAcceleration ? qsTr("Available") : qsTr("Not available") },
                         { k: qsTr("HDR support"),     v: SystemProperties.supportsHdr ? qsTr("Yes") : qsTr("No") },
