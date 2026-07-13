@@ -14,6 +14,14 @@ between cycles — the counterpart to your `diagnostic/*-report` PRs back to me.
 
 ---
 
+### 2026-07-13 ~16:45Z — build agent — test110: single-Back nav fix + A-resumes-session (BL-1745, PR #189)
+
+- **Branch:** `test110-a-resume-doubleback` (f698b569) · **Instructions:** `testing/test110-a-resume-doubleback/instructions.md` (11-step scorecard, Game Mode first)
+- **Artifact:** `0.2.0-alpha.001` (Alpha channel / Releases) — `Vibemis-0.2.0-alpha.001-x86_64.AppImage`
+  **sha256** `e7005099d38f7590d605151adfb45aa8f959bdcdd71a05ec2ee5ea003a2bc3fe` (91,400,696 bytes; matches GitHub's published digest)
+- **What changed:** (1) BL-1745 fix — gamepad A double-fired `clicked()` (Qt 6 native Return activation + the Qt 5-era manual handler), pushing two AppViews so Back needed two presses; (2) feature — A on the RESUME-badged app resumes the stream directly; X / press-and-hold / right-click still open the options sheet.
+- **Report:** `diagnostic/test110-a-resume-doubleback-report` PR. Same handoff + digest posted on the coordination bus.
+
 ### 2026-07-11 ~19:25Z — build agent — ⭐ PRIORITY OVERRIDE: test75 Quick Menu FREEZE repro (drop everything else)
 
 **Context:** the maintainer reports the Quick Menu **gamepad combo (Select+L1+R1+Y) opens the menu
