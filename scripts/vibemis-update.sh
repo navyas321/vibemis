@@ -75,14 +75,14 @@ else
 fi
 DEST_DIR=$(dirname "$DEST")
 
-# Betas are published as GitHub PRE-RELEASES. /releases/latest returns ONLY the newest
-# non-prerelease, so it can never see a beta — the default channel must list ALL releases
-# (newest first) and take the first AppImage. --stable uses /releases/latest instead.
+# BL-1699 W.X.Y.Z tags: beta = W.X.Y.0 (Y>0), alpha = W.X.0.Z (Z>0), stable = W.X.0.0.
+# Legacy suffix tags (-beta./-alpha.) still exist in history. /releases/latest can't be
+# used for --stable because our betas are non-prerelease (shown as Latest) — filter the
+# full list STRUCTURALLY instead.
+API="https://api.github.com/repos/$REPO/releases"
 if [ "$CHANNEL_STABLE" -eq 1 ]; then
-    API="https://api.github.com/repos/$REPO/releases/latest"
     echo "Channel: stable"
 else
-    API="https://api.github.com/repos/$REPO/releases"
     echo "Channel: latest (includes betas)"
 fi
 
@@ -90,10 +90,48 @@ echo "Querying $REPO releases..."
 JSON=$(curl -fsSL -H "Accept: application/vnd.github+json" "$API") || {
     echo "ERROR: failed to query $API (network/offline?)." >&2; exit 1; }
 
-# First tag_name / first .AppImage asset = the newest release (the list endpoint is newest-first).
-TAG=$(printf '%s' "$JSON" | grep -m1 '"tag_name"' | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/')
-URL=$(printf '%s' "$JSON" | grep -oE '"browser_download_url": *"[^"]+\.AppImage"' \
-        | head -1 | sed -E 's/.*"(https[^"]+)"/\1/')
+is_stable_tag() {
+    # Stable: no -suffix AND (W.X.0.0 four-part, or legacy bare three-part like 1.0.1)
+    case "$1" in
+        *-*) return 1 ;;
+    esac
+    n=$(printf '%s' "$1" | awk -F. '{print NF}')
+    if [ "$n" = "4" ]; then
+        y=$(printf '%s' "$1" | cut -d. -f3); z=$(printf '%s' "$1" | cut -d. -f4)
+        [ "$y" = "0" ] && [ "$z" = "0" ]
+    else
+        [ "$n" = "3" ]
+    fi
+}
+
+TAG=""
+if [ "$CHANNEL_STABLE" -eq 1 ]; then
+    # Newest-first list: take the first structurally-stable tag whose release is NOT
+    # flagged prerelease (a parked/pulled stable gets flipped to prerelease and must
+    # be skipped — e.g. the parked 1.0.0/1.0.1).
+    URL=""
+    for t in $(printf '%s' "$JSON" | grep '"tag_name"' | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/'); do
+        is_stable_tag "$t" || continue
+        REL_JSON=$(curl -fsSL -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$REPO/releases/tags/$t") || continue
+        if printf '%s' "$REL_JSON" | grep -q '"prerelease": *true'; then
+            echo "  (skipping parked stable $t)"
+            continue
+        fi
+        TAG="$t"
+        URL=$(printf '%s' "$REL_JSON" | grep -oE '"browser_download_url": *"[^"]+\.AppImage"' \
+                | head -1 | sed -E 's/.*"(https[^"]+)"/\1/')
+        break
+    done
+    if [ -z "$TAG" ]; then
+        echo "ERROR: no stable release published yet (channel: stable)." >&2; exit 1
+    fi
+else
+    # First tag_name / first .AppImage asset = the newest release (list is newest-first).
+    TAG=$(printf '%s' "$JSON" | grep -m1 '"tag_name"' | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/')
+    URL=$(printf '%s' "$JSON" | grep -oE '"browser_download_url": *"[^"]+\.AppImage"' \
+            | head -1 | sed -E 's/.*"(https[^"]+)"/\1/')
+fi
 
 if [ -z "$URL" ]; then
     echo "ERROR: no .AppImage asset found in the newest release (${TAG:-unknown})." >&2

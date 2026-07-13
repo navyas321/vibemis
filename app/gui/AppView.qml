@@ -176,6 +176,11 @@ CenteredGridView {
         width: height * (320.0 / 430.0)
         grid: appGrid
 
+        // Maintainer find 2026-07-13 (same as PcView): Material's ItemDelegate paints a
+        // square always-visible surface behind the rounded tile — remove it; VbCard owns
+        // all tile visuals.
+        background: null
+
         property alias appContextMenu: appContextMenuLoader.item
         property alias appNameText: appNameTextLoader.item
 

@@ -173,11 +173,16 @@ static QVector<qlonglong> prereleaseNumericSegments(const QString& prerelease)
 }
 
 // Vibemis BL-1665: ordering for our CI tags ("1.0.1", "1.0.1-beta.20260713.0528+sha",
-// "1.0.1-alpha.<branch>.20260713.0528+sha"). Rules:
+// "1.0.1-alpha.<branch>.20260713.0528+sha") and BL-1699 W.X.Y.Z tags ("0.0.131.0" —
+// pure numeric segments, higher Y/Z = newer within a channel). Rules:
 //   1. numeric base versions compare first (1.0.2-beta.* > 1.0.1);
 //   2. equal base: a release with no prerelease suffix outranks any prerelease
 //      (semver — and our continuous-beta model cuts stable X only after X's betas);
 //   3. two prereleases: their numeric segments (CI date + build number) decide.
+// CROSS-SCHEME NOTE (BL-1699): legacy 1.x tags compare numerically HIGHER than the
+// re-baselined 0.x scheme, so the automatic newer-than banner stays quiet across the
+// boundary — by design the MANUAL check bridges it (it offers whatever the channel's
+// newest build is whenever it differs from the running one).
 // Returns <0 / 0 / >0 like strcmp.
 int AutoUpdateChecker::compareSemanticVersions(const QString& v1, const QString& v2)
 {
@@ -221,21 +226,58 @@ int AutoUpdateChecker::compareSemanticVersions(const QString& v1, const QString&
     return 0;
 }
 
-// Vibemis BL-1665: does this release belong on the given update channel?
-// Drafts never do. Stable = a real (non-prerelease) release; Beta/Alpha key off
-// the CI tag naming ("<base>-beta.<ts>…" / "<base>-alpha.<branch>.<ts>…").
+// Vibemis BL-1665/BL-1699: does this release belong on the given update channel?
+// Drafts never do. Primary scheme (BL-1699, maintainer 2026-07-13) is structural
+// W.X.Y.Z: Y>0 = beta, Z>0 = alpha, Y==Z==0 = stable. Legacy suffix tags from the
+// pre-W.X.Y.Z era ("…-beta.<ts>", "…-alpha.<branch>.<ts>") keep matching so the
+// feed history stays navigable; -dev tags never match any channel.
 static bool releaseMatchesChannel(const QJsonObject& release,
                                   StreamingPreferences::UpdateChannel channel)
 {
     if (release["draft"].toBool()) {
         return false;
     }
-    QString tagName = release["tag_name"].toString();
+    QString tag = release["tag_name"].toString();
+    int plusIdx = tag.indexOf('+');
+    if (plusIdx >= 0) {
+        tag = tag.left(plusIdx);
+    }
+
+    if (tag.contains('-')) {
+        // Legacy suffix era (and -dev builds, which match no channel)
+        switch (channel) {
+        case StreamingPreferences::UC_BETA:
+            return tag.contains(QLatin1String("-beta"));
+        case StreamingPreferences::UC_ALPHA:
+            return tag.contains(QLatin1String("-alpha"));
+        case StreamingPreferences::UC_STABLE:
+        default:
+            return false;   // a suffixed tag is never a stable release
+        }
+    }
+
+    const QStringList parts = tag.split('.');
+    if (parts.count() == 4) {
+        // BL-1699 W.X.Y.Z structural channels
+        qlonglong y = parts[2].toLongLong();
+        qlonglong z = parts[3].toLongLong();
+        switch (channel) {
+        case StreamingPreferences::UC_BETA:
+            return y > 0 && z == 0;
+        case StreamingPreferences::UC_ALPHA:
+            return z > 0;
+        case StreamingPreferences::UC_STABLE:
+        default:
+            return y == 0 && z == 0 && !release["prerelease"].toBool();
+        }
+    }
+
+    // Bare legacy 3-part tags (e.g. "1.0.1") are stable-shaped; the prerelease flag
+    // still gates them (parked releases are flipped to prerelease and must not match).
     switch (channel) {
     case StreamingPreferences::UC_BETA:
-        return tagName.contains(QLatin1String("-beta"));
     case StreamingPreferences::UC_ALPHA:
-        return tagName.contains(QLatin1String("-alpha"));
+        return false;
     case StreamingPreferences::UC_STABLE:
     default:
         return !release["prerelease"].toBool();

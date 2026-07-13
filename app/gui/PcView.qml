@@ -303,6 +303,11 @@ CenteredGridView {
         width: 430; height: 242;
         grid: pcGrid
 
+        // Maintainer find 2026-07-13: the Material style paints an always-visible
+        // SQUARE-cornered surface behind every ItemDelegate — visible as a grey box
+        // poking past the rounded card corners. The card supplies all visuals.
+        background: null
+
         property alias pcContextMenu : pcContextMenuLoader.item
 
         // BL-1681: instance-level nav overrides (these replace NavigableItemDelegate's

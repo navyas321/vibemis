@@ -409,12 +409,26 @@ Item {
                     }
 
                     // BL-1667/BL-1689: explicit vertical nav. Keyboard arrows AND the gamepad's
-                    // UI-nav Tab/BackTab are stepped here (Keys handlers run before default tab
-                    // handling), since non-current rows are no longer in the tab chain.
+                    // UI-nav Tab/Shift+Tab are stepped here (Keys handlers run before default
+                    // tab handling), since non-current rows are no longer in the tab chain.
+                    //
+                    // REGRESSION LESSON (maintainer-caught, "Up completely broken"): UiNav
+                    // d-pad UP arrives as Key_Tab WITH ShiftModifier (sdlgamepadkeynavigation
+                    // sendKey(Key_Tab, ShiftModifier)) — NOT Key_Backtab. Keys.onTabPressed
+                    // matches Key_Tab regardless of modifiers, so a naive onTab/onBacktab pair
+                    // made Up step DOWN. Direction must come from the modifier.
                     Keys.onUpPressed: settingsPage.focusCategoryRow(Math.max(0, index - 1))
                     Keys.onDownPressed: settingsPage.focusCategoryRow(Math.min(sidebarRepeater.count - 1, index + 1))
-                    Keys.onBacktabPressed: settingsPage.focusCategoryRow(Math.max(0, index - 1))
-                    Keys.onTabPressed: settingsPage.focusCategoryRow(Math.min(sidebarRepeater.count - 1, index + 1))
+                    Keys.onPressed: {
+                        if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
+                            var backwards = (event.key === Qt.Key_Backtab)
+                                            || (event.modifiers & Qt.ShiftModifier)
+                            settingsPage.focusCategoryRow(backwards
+                                ? Math.max(0, index - 1)
+                                : Math.min(sidebarRepeater.count - 1, index + 1))
+                            event.accepted = true
+                        }
+                    }
 
                     // BL-1627: d-pad RIGHT (sent as Key_Right by SdlGamepadKeyNavigation even in
                     // UI nav mode) enters the content pane: select this row's category, then move
