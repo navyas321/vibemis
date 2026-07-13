@@ -183,11 +183,15 @@ public:
     // Vibemis BL-1665: which release channel the update checker follows.
     // UC_STABLE preserves the pre-channel behavior (stable releases only);
     // Beta/Alpha follow the CI prerelease tiers (-beta.* / -alpha.* tags).
+    // UC_RC (BL-1722, semver era) follows "-rc.NNN" builds — the exact candidate
+    // proposed as the next stable, cut for on-device verification. Appended LAST
+    // so persisted integer settings keep their meaning.
     enum UpdateChannel
     {
         UC_STABLE,
         UC_BETA,
         UC_ALPHA,
+        UC_RC,
     };
     Q_ENUM(UpdateChannel);
 

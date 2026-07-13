@@ -244,12 +244,15 @@ static bool releaseMatchesChannel(const QJsonObject& release,
     }
 
     if (tag.contains('-')) {
-        // Legacy suffix era (and -dev builds, which match no channel)
+        // Semver suffix tags (and legacy suffix era; -dev builds match no channel)
         switch (channel) {
         case StreamingPreferences::UC_BETA:
             return tag.contains(QLatin1String("-beta"));
         case StreamingPreferences::UC_ALPHA:
             return tag.contains(QLatin1String("-alpha"));
+        case StreamingPreferences::UC_RC:
+            // BL-1722: release candidates — the build proposed as the next stable.
+            return tag.contains(QLatin1String("-rc."));
         case StreamingPreferences::UC_STABLE:
         default:
             return false;   // a suffixed tag is never a stable release
@@ -269,17 +272,20 @@ static bool releaseMatchesChannel(const QJsonObject& release,
             return y > 0 && z == 0;
         case StreamingPreferences::UC_ALPHA:
             return z > 0 && release["prerelease"].toBool();
+        case StreamingPreferences::UC_RC:
+            return false;   // rc builds are always suffix tags
         case StreamingPreferences::UC_STABLE:
         default:
             return y == 0 && !release["prerelease"].toBool();
         }
     }
 
-    // Bare legacy 3-part tags (e.g. "1.0.1") are stable-shaped; the prerelease flag
+    // Bare semver tags (e.g. "0.1.0") are stable-shaped; the prerelease flag
     // still gates them (parked releases are flipped to prerelease and must not match).
     switch (channel) {
     case StreamingPreferences::UC_BETA:
     case StreamingPreferences::UC_ALPHA:
+    case StreamingPreferences::UC_RC:
         return false;
     case StreamingPreferences::UC_STABLE:
     default:
@@ -322,6 +328,9 @@ void AutoUpdateChecker::handleUpdateCheckRequestFinished(QNetworkReply* reply)
         break;
     case StreamingPreferences::UC_ALPHA:
         channelName = tr("Alpha");
+        break;
+    case StreamingPreferences::UC_RC:
+        channelName = tr("Release candidate");
         break;
     default:
         channelName = tr("Stable");

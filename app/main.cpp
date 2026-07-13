@@ -752,6 +752,9 @@ int main(int argc, char *argv[])
             else if (ch == "alpha") {
                 prefs->updateChannel = StreamingPreferences::UC_ALPHA;
             }
+            else if (ch == "rc") {
+                prefs->updateChannel = StreamingPreferences::UC_RC;
+            }
             else {
                 prefs->updateChannel = StreamingPreferences::UC_STABLE;
             }

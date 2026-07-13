@@ -209,6 +209,7 @@ zero-padded counters. The first stable is `0.1.0`; its release-candidate lineage
 | Channel | Tag shape | Built from | Use |
 |---|---|---|---|
 | ✅ **Stable** | `0.x.y` (bare) | Explicit release cuts | **Recommended** — hand-verified on device |
+| 🎯 **Release candidate** | `0.x.y-rc.NNN` | Explicit rc cuts | The exact build proposed as the next stable, for on-device verification |
 | 🧪 **Beta** | `0.x.y-beta.NNN` | `vibemis-main` | **Manual-testing channel** — newest features |
 | 🔬 **Alpha** | `0.x.y-alpha.NNN` | `test<N>-*` branches (on request) | Automated test-agent artifacts |
 

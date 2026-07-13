@@ -29,12 +29,14 @@ set -euo pipefail
 REPO="navyas321/vibemis"
 
 CHANNEL_STABLE=0
+CHANNEL_RC=0
 CHECK_ONLY=0
 LAUNCH_AFTER=0
 DEST_OVERRIDE=""
 while [ $# -gt 0 ]; do
     case "$1" in
         --stable) CHANNEL_STABLE=1 ;;
+        --rc)     CHANNEL_RC=1 ;;    # newest release candidate (-rc.NNN, the proposed next stable)
         --check)  CHECK_ONLY=1 ;;
         --launch) LAUNCH_AFTER=1 ;;
         --path)   shift; DEST_OVERRIDE="${1:-}"; [ -n "$DEST_OVERRIDE" ] || { echo "ERROR: --path needs a file argument." >&2; exit 2; } ;;
@@ -82,6 +84,8 @@ DEST_DIR=$(dirname "$DEST")
 API="https://api.github.com/repos/$REPO/releases"
 if [ "$CHANNEL_STABLE" -eq 1 ]; then
     echo "Channel: stable"
+elif [ "$CHANNEL_RC" -eq 1 ]; then
+    echo "Channel: release candidate"
 else
     echo "Channel: latest (includes betas)"
 fi
@@ -127,6 +131,25 @@ if [ "$CHANNEL_STABLE" -eq 1 ]; then
     done
     if [ -z "$TAG" ]; then
         echo "ERROR: no stable release published yet (channel: stable)." >&2; exit 1
+    fi
+elif [ "$CHANNEL_RC" -eq 1 ]; then
+    # Newest -rc.NNN tag that actually carries an AppImage (historical rc markers may not).
+    URL=""
+    for t in $(printf '%s' "$JSON" | grep '"tag_name"' | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/'); do
+        case "$t" in
+            *-rc.*) ;;
+            *) continue ;;
+        esac
+        REL_JSON=$(curl -fsSL -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$REPO/releases/tags/$t") || continue
+        U=$(printf '%s' "$REL_JSON" | grep -oE '"browser_download_url": *"[^"]+\.AppImage"' \
+                | head -1 | sed -E 's/.*"(https[^"]+)"/\1/')
+        [ -n "$U" ] || { echo "  (skipping artifact-less rc $t)"; continue; }
+        TAG="$t"; URL="$U"
+        break
+    done
+    if [ -z "$TAG" ]; then
+        echo "ERROR: no release candidate with an AppImage found (channel: rc)." >&2; exit 1
     fi
 else
     # First tag_name / first .AppImage asset = the newest release (list is newest-first).

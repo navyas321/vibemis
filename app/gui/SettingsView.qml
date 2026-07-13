@@ -3376,6 +3376,10 @@ Item {
                             val: StreamingPreferences.UC_STABLE
                         }
                         ListElement {
+                            text: qsTr("Release candidate (pre-stable)")
+                            val: StreamingPreferences.UC_RC
+                        }
+                        ListElement {
                             text: qsTr("Beta (new features)")
                             val: StreamingPreferences.UC_BETA
                         }

@@ -28,13 +28,13 @@ on:
   workflow_dispatch:
     inputs:
       release_type:
-        description: 'Set to "stable" to publish a production release (prerelease=false, shown as latest)'
+        description: '"stable" = production release (bare semver, Latest); "rc" = release candidate of the next stable (<next>-rc.NNN, prerelease)'
         required: false
         type: choice
-        options: ['', 'stable']
+        options: ['', 'stable', 'rc']
         default: ''
       version_override:
-        description: 'Stable cuts only: exact W.X.0.Z version for a hotfix PATCH (e.g. 0.3.0.1). Leave empty for the normal W.(X+1).0.0.'
+        description: 'Stable cuts only: exact version for a hotfix patch (e.g. 0.5.1). Leave empty for the version.txt next-stable.'
         required: false
         type: string
         default: ''
@@ -237,6 +237,14 @@ jobs:
             fi
             IS_PRERELEASE="false"
             RELEASE_TIER="release"
+
+          elif [[ "${{ github.event.inputs.release_type }}" == "rc" ]]; then
+            # 🎯 Release candidate — the exact build proposed as the next stable, cut for
+            # on-device verification. Prerelease-flagged; the updater's RC channel matches
+            # the -rc suffix. Never takes Latest.
+            VERSION="${BASE_VERSION}-rc.$(next_counter rc)"
+            IS_PRERELEASE="true"
+            RELEASE_TIER="rc"
 
           elif [[ "$BRANCH_NAME" == "vibemis-main" || "$BRANCH_NAME" == "develop" ]]; then
             # 🧪 Beta — semver pre-release of the upcoming stable. Prerelease-flagged on
@@ -937,7 +945,7 @@ jobs:
     #   • beta/alpha build → keep only the newest of that class in this cycle.
     #   • stable cut      → the cycle is complete: prune ALL of its -alpha./-beta. releases.
     - name: Prune superseded releases
-      if: needs.setup-version.outputs.release_tier == 'beta' || needs.setup-version.outputs.release_tier == 'alpha' || needs.setup-version.outputs.release_tier == 'release'
+      if: needs.setup-version.outputs.release_tier == 'beta' || needs.setup-version.outputs.release_tier == 'alpha' || needs.setup-version.outputs.release_tier == 'rc' || needs.setup-version.outputs.release_tier == 'release'
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         TIER: ${{ needs.setup-version.outputs.release_tier }}
@@ -952,11 +960,14 @@ jobs:
             echo "Override cut ($KEEP_TAG) — skipping cycle prune."
             exit 0
           fi
-          PATTERN="^${BASE//./\\.}-(alpha|beta)\."
+          PATTERN="^${BASE//./\\.}-(alpha|beta|rc)\."
           echo "Stable $KEEP_TAG cut — pruning the whole ${BASE} pre-release cycle"
         elif [ "$TIER" = "beta" ]; then
           PATTERN="^${BASE//./\\.}-beta\."
           echo "Pruning ${BASE} betas except $KEEP_TAG"
+        elif [ "$TIER" = "rc" ]; then
+          PATTERN="^${BASE//./\\.}-rc\."
+          echo "Pruning ${BASE} release candidates except $KEEP_TAG"
         else
           PATTERN="^${BASE//./\\.}-alpha\."
           echo "Pruning ${BASE} alphas except $KEEP_TAG"
