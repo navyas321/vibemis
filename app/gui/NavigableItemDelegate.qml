@@ -23,10 +23,8 @@ ItemDelegate {
             nextItemInFocusChain(false).forceActiveFocus(Qt.TabFocus)
         }
     }
-    Keys.onReturnPressed: {
-        clicked()
-    }
-    Keys.onEnterPressed: {
-        clicked()
-    }
+    // BL-1745: NO manual Return/Enter -> clicked() here. On Qt 6, AbstractButton natively
+    // emits clicked() for Return/Enter on the focused control, so the old Qt 5-era manual
+    // handler made every gamepad-A / Enter activation fire clicked() TWICE (two AppViews
+    // pushed from the host card => Back had to be pressed twice to reach home).
 }

@@ -376,20 +376,18 @@ CenteredGridView {
                 }
             }
         }
+        // BL-1745: only the ghost card needs a manual Return/Enter handler (it is a pure
+        // SELECTION with no button of its own). For the real card, Qt 6 AbstractButton
+        // natively emits clicked() on Return/Enter — the old `else clicked()` branch made
+        // gamepad-A push AppView TWICE (Back then had to be pressed twice to reach home).
         Keys.onReturnPressed: {
             if (pcGrid.ghostSelected) {
                 addPcDialog.open()
-            }
-            else {
-                clicked()
             }
         }
         Keys.onEnterPressed: {
             if (pcGrid.ghostSelected) {
                 addPcDialog.open()
-            }
-            else {
-                clicked()
             }
         }
 
@@ -508,6 +506,14 @@ CenteredGridView {
         }
 
         onClicked: {
+            // BL-1745: while the ghost Add-PC card is selected, the Keys handler above owns
+            // activation (it opened the dialog on key press) — swallow any click that still
+            // reaches the delegate so it can't ALSO activate the card underneath. A stray
+            // tap while ghost-selected just clears the selection (self-healing).
+            if (pcGrid.ghostSelected) {
+                pcGrid.ghostSelected = false
+                return
+            }
             if (model.online) {
                 if (!model.serverSupported) {
                     errorDialog.text = qsTr("The version of GeForce Experience on %1 is not supported by this build of Moonlight. You must update Moonlight to stream from %1.").arg(model.name)
