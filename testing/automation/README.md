@@ -14,12 +14,18 @@ AMD Ryzen Z2 Go). It exists because a maintainer + test-agent RCA found two recu
 |---|---|---|---|
 | **Headless gamescope** (`scripts/gamescope-emulate.sh`) | App launches, renders a surface, Game-Mode WSI/HDR path, UI layout, decode of a *real* remote stream | Nothing that needs a physical seat's Steam Input | Render/crash gates, screenshot diffs, decode gates |
 | **Self-host Sunshine** (`127.0.0.1`) | Control plane only — pairing, serverinfo, applist, RTSP/launch negotiation (~25-30% fidelity) | **No video** — the loopback host has no GPU encoder, so no frames ever decode | Control-plane regression only. **Never** cite it as a streaming/decode pass |
-| **Mock Vibepollo** (`100.127.67.80` "hearth", ports 48900/48895/48901) | **Full real fidelity** — real Vibepollo 1.18 + SudoVDA Virtual Display + `-1` no-state. Actually **encodes + streams**, so the client HEVC/VAAPI **decode + EGL render** path runs for real | Physical controller routing (that's Game Mode + Steam Input) | The definitive streaming/decode validation (`mock-vibepollo-smoke.sh`) |
-| **Real host** (Navid-PC `192.168.4.78`, Apollo 7.1.x) | Same as mock, plus real-app launch | — | Final acceptance; when the mock is offline |
+| **Real host** (Navid-PC `192.168.4.78`, Apollo 7.1.x) | **Full real fidelity** — actually encodes + streams, so the client HEVC/VAAPI **decode + EGL render** path runs for real; plus real-app launch | Physical controller routing (that's Game Mode + Steam Input) | The definitive streaming/decode validation + final acceptance |
+
+> **RETIRED (BL-1620 / BL-1860):** the "Mock Vibepollo" target (a second Vibepollo instance on the
+> maintainer's host at `100.127.67.80`, offset ports 48900/48895/48901, SudoVDA virtual display) is
+> **permanently decommissioned** — the instance, its install prefix, and its SudoVDA driver have been
+> removed from the host. Do NOT stand it back up or re-add it to client host lists; the maintainer's
+> machine runs exactly ONE Vibepollo. Streaming/decode validation uses the real host, coordinated via
+> the bus so cycles don't collide.
 | **Physical device, Game Mode** | Steam Input → virtual gamepad routing, host-display restore | Can't be driven headlessly/unattended | Manual controller + display-restore tests (test9 lesson) |
 
-**Rule of thumb:** headless = *render* only; self-host = *control-plane* only; **mock/real-host =
-the only targets that prove streaming + decode.** Don't conflate them — a green self-host run says
+**Rule of thumb:** headless = *render* only; self-host = *control-plane* only; **the real host is
+the only target that proves streaming + decode.** Don't conflate them — a green self-host run says
 nothing about whether video decodes.
 
 ## Contents
@@ -51,20 +57,11 @@ Gamepad buttons: `BTN_SOUTH/EAST/WEST/NORTH` (A/B/X/Y), `BTN_TL/TR` (LB/RB), `SE
 `BTN_THUMBL/THUMBR`, and `PADDLE_BACK` (the Legion back paddle — defaults to `BTN_TRIGGER_HAPPY1`
 at the evdev level; override with `VINPUT_PADDLE_CODE=0x13a` to map it to SELECT, etc.).
 
-### `mock-vibepollo-smoke.sh` — automated full-fidelity streaming validation
-Three phases: (1) TCP reachability of the mock's 3 ports, (2) applist over paired HTTPS,
-(3) a gamescope-hosted `stream ... "Virtual Display"` that captures a frame and greps for the real
-decode signals. Serialized on `scripts/gamescope-lease.sh`; every app run is `timeout -s KILL`
-guarded (the CLI hangs headless and ignores SIGTERM).
-
-```bash
-testing/automation/mock-vibepollo-smoke.sh              # full run (needs the gamescope lease)
-testing/automation/mock-vibepollo-smoke.sh --reach-only # just phase 1 (no gamescope, safe anytime)
-```
-
-Validated 2026-07-12 on `Vibemis.AppImage`: **3/3 core decode signals** —
-`Output frame with POC`, VAAPI `Decode to surface`, `EGLRenderer` — HEVC hardware-decoded via
-VAAPI (Mesa radeonsi, Ryzen Z2 Go) with a captured 1920x1200 frame.
+### ~~`mock-vibepollo-smoke.sh`~~ — removed (mock target retired, BL-1620/BL-1860)
+The automated mock-target streaming validation script was deleted along with the mock platform
+(see the RETIRED note above; the script survives in git history if the harness patterns are ever
+needed again — its `timeout -s KILL` guards and gamescope-lease serialization live on in the RCA
+section below). Streaming/decode validation runs against the real host.
 
 ## RCA — why the headless input "wouldn't reach ready" (it was never the daemon)
 
