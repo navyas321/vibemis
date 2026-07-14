@@ -63,6 +63,24 @@ only hardware that matters.
 - If a step would require breaking any of these rules, **stop and report the blocker** —
   do not work around it.
 
+## Host-side teardown — mandatory after anything you start on the host
+
+Any check that launches something **on the host** (a Server Command like **Bubbles**, an app
+launch, a prep-cmd) must be torn down before the cycle ends — a lingering host process is a
+real-world defect, not a test detail. The Bubbles screensaver left running by test cycles kept
+the host owner's display awake **for days** (BL-1811; harness gap tracked as BL-1821).
+
+1. The cycle's `instructions.md` must contain a matching **Teardown** step for every host-side
+   launch (how to stop it, or a note that the command is self-terminating and how long that takes).
+   **If it doesn't, that is a defect in the instructions — flag it in your report** and say what
+   you left running.
+2. Your `report.md` must state teardown status explicitly: what was launched on the host, and the
+   evidence it stopped (e.g. the command is the self-terminating Bubbles wrapper, ~15 s, per
+   BL-1811 — note the timestamps you observed).
+3. Never end a cycle with a host-side process you started still running. If you cannot stop it
+   (no host access), post it on the coordination bus and in `TEST_AGENT_OUTBOX.md` so the build
+   agent kills it — before you file the report, not after.
+
 ## The checklist is your queue — work it in order
 
 There is a single ordered queue of feature test cycles awaiting verification:
