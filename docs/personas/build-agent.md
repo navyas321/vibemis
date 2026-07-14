@@ -84,6 +84,9 @@ build for it and verify on it through the test agent.
 6. **Start a test cycle** when real-hardware verification is needed:
    - rename/create the branch as **`test<N>-<slug>`** (the test agent depends on this name)
    - commit the AppImage to `testing/test<N>-<slug>/` and write `instructions.md`
+   - **every host-side launch in the instructions (Server Commands like Bubbles, app launches,
+     prep-cmds) needs a matching Teardown step** — lingering host processes are real defects
+     (the Bubbles screensaver kept the host display awake for days: BL-1811 / BL-1821)
    - tell the user the cycle is ready
 7. **Wait** for the `diagnostic/<task>-report` PR before iterating
 

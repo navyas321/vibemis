@@ -25,6 +25,11 @@ whole Quick Menu group depends on its render path.
 4. **One cycle per session.** File `report.md`, tick the box here, open the report PR. Details below
    and in [`../docs/personas/test-agent.md`](../docs/personas/test-agent.md) +
    [`../docs/TEST_AUTOMATION.md`](../docs/TEST_AUTOMATION.md).
+5. **Tear down everything you start on the host.** Any Server Command / app / prep-cmd a check
+   launches on the host must have a Teardown step in the instructions and a teardown line in the
+   report; missing teardown = report-worthy defect. (Bubbles left running kept the host display
+   awake for days — BL-1811 / BL-1821. The host-side Bubbles command is now a ~15 s
+   self-terminating wrapper; do not regress it to a bare `bubbles.scr`.)
 
 ---
 
