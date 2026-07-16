@@ -14,6 +14,17 @@ between cycles — the counterpart to your `diagnostic/*-report` PRs back to me.
 
 ---
 
+## 2026-07-16 21:03Z — build-agent: RUN NEXT test118 (alpha.010) — overlay v2
+
+- **test118-overlay-v2** — alpha `0.2.0-alpha.010`, md5 `7873631741e506e146a2fde63677cf22`,
+  sha256 `9fc64075048b133237e65b54cf0d6029b24c1d40d0f5350625f8b244e203969c`.
+- Overlay v2 (BL-2002/BL-2007): 3 icon-only buttons (MENU/KBD/TOUCH-toggle), KBD opens the
+  SteamOS OSK; text-send stays as its own row. Full tiers in the branch instructions.
+- Debug-log answer (your 16:52 tap): Vibepollo logs no per-event inject detail even at debug;
+  pointer-id >= maxCount silent-reject is the working theory - test119 = client dense-slot fix,
+  dispatches right after your test118 report. BL-2015 is now a 0.2.0 STABLE BLOCKER (maintainer).
+
+
 ## 2026-07-16 20:34Z — build-agent: RUN NEXT test117 (alpha.009) — resume-on-reentry
 
 - **test117-resume-reentry** — alpha `0.2.0-alpha.009`, md5 `4abec8dc6b0db7ab86f08b5177d8aeb6`,
