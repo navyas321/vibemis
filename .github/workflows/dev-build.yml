@@ -263,7 +263,7 @@ jobs:
           #            Agents must NEVER dispatch release_type=stable autonomously.
           # rc       dispatch release_type=rc                             <next>-rc.NNN      true
           # beta     vibemis-main PR merge / plain dispatch on main       <next>-beta.NNN    true
-          # alpha    test** push tagged [alpha] (fix/feat branches too)   <next>-alpha.NNN   true
+          # alpha    test** push tagged [alpha]                           <next>-alpha.NNN   true
           # dev      any other branch                                     <next>-dev.<run>.<branch>  true
 
           IS_PRERELEASE="true"
@@ -299,8 +299,11 @@ jobs:
             IS_PRERELEASE="true"
             RELEASE_TIER="beta"
 
-          elif [[ "$BRANCH_NAME" =~ ^test || "$BRANCH_NAME" =~ ^(fix|hotfix|feat|feature)/ ]]; then
+          elif [[ "$BRANCH_NAME" =~ ^test ]]; then
             # 🔬 Alpha — pre-release; the branch is shown in the release body.
+            # BL-1998: test** only. fix/feat/hotfix refs (reachable only via manual
+            # dispatch) version as dev — the test agent consumes test<N> branches
+            # exclusively, so a fix-branch "alpha" could never be picked up anyway.
             VERSION="${BASE_VERSION}-alpha.$(next_counter alpha)"
             RELEASE_TIER="alpha"
 
@@ -1010,8 +1013,8 @@ jobs:
           *Update now* to install this build.' ||
             needs.setup-version.outputs.release_tier == 'alpha' && '🔬 **Alpha Build**
 
-          In-progress fix/feature branch. For targeted test cycles only.
-          **Do not use as a daily driver.**
+          Test-cycle build from a test** branch, for targeted validation by the test
+          agent only. **Do not use as a daily driver.**
 
           📲 **Updating from a previous install:** Settings → Advanced → **Software
           updates**, channel **Alpha**, then *Check for updates* → *Update now*.' ||
