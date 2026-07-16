@@ -216,19 +216,39 @@ void SdlInputHandler::handleAbsoluteFingerEvent(SDL_TouchFingerEvent* event)
         return;
     }
 
-    uint32_t pointerId;
-
-    // If the pointer ID is larger than we can fit, just CRC it and use that as the ID.
-    if ((uint64_t)event->fingerId > UINT32_MAX) {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-        QByteArrayView bav((char*)&event->fingerId, sizeof(event->fingerId));
-        pointerId = qChecksum(bav);
-#else
-        pointerId = qChecksum((char*)&event->fingerId, sizeof(event->fingerId));
-#endif
+    // BL-2015: Windows InjectTouchInput rejects pointer ids >= the host's initialized
+    // max contact count (ERROR_INVALID_PARAMETER), and Apollo-lineage hosts forward the
+    // client's id into that API. Raw or CRC'd SDL finger ids are effectively always too
+    // large, so every touch DOWN failed host-side (silently — the host logs nothing) and
+    // only a hover/pointer-move survived: taps never clicked, drags never drew. Android
+    // clients send dense MotionEvent ids (0–9), which is why they work against the same
+    // host. Map each finger id to the lowest free slot for the finger's lifetime.
+    uint32_t pointerId = UINT32_MAX;
+    for (uint32_t i = 0; i < SDL_arraysize(m_TouchSlotFinger); i++) {
+        if (m_TouchSlotActive[i] && m_TouchSlotFinger[i] == event->fingerId) {
+            pointerId = i;
+            break;
+        }
     }
-    else {
-        pointerId = (uint32_t)event->fingerId;
+    if (pointerId == UINT32_MAX) {
+        // Unknown finger: allocate on DOWN, but also on MOVE/UP (a gesture that began
+        // before the slots were in play must still send a well-formed sequence).
+        for (uint32_t i = 0; i < SDL_arraysize(m_TouchSlotFinger); i++) {
+            if (!m_TouchSlotActive[i]) {
+                m_TouchSlotActive[i] = true;
+                m_TouchSlotFinger[i] = event->fingerId;
+                pointerId = i;
+                break;
+            }
+        }
+        if (pointerId == UINT32_MAX) {
+            // More concurrent fingers than slots: drop rather than send an id the host
+            // would reject anyway.
+            return;
+        }
+    }
+    if (eventType == LI_TOUCH_EVENT_UP) {
+        m_TouchSlotActive[pointerId] = false;
     }
 
     // Try to send it as a native pen/touch event, otherwise fall back to our touch emulation

@@ -278,6 +278,11 @@ private:
     // buttons; its motion/up events are swallowed so the host never sees an
     // unbalanced touch sequence (see abstouch.cpp).
     SDL_FingerID m_TouchOverlayFinger;
+    // BL-2015: dense pointer-id slots for native touch passthrough (abstouch.cpp) —
+    // hosts reject injection ids >= their max contact count, so raw finger ids can't
+    // be forwarded. 10 matches typical InitializeTouchInjection limits.
+    SDL_FingerID m_TouchSlotFinger[10] = {};
+    bool m_TouchSlotActive[10] = {};
     bool m_TouchOverlayFingerActive;
 
     SDL_TouchFingerEvent m_TouchDownEvent[MAX_FINGERS];
