@@ -13,7 +13,9 @@ no-op if the device is busy; two tiny synthesized qrc WAVs (1234Hz/-22dBFS 30ms 
 evidence). REVIEW FLAG for this cycle: two debug-only sole-ownership SDL_asserts were
 removed in sdlaud.cpp — the step-6 "game audio uninterrupted" check is the proof point.
 
-**Build tier: ALPHA (BL-2016). Hashes stamped at dispatch.**
+**Alpha:** `0.2.0-alpha.013` — asset `Vibemis-0.2.0-alpha.013-x86_64.AppImage`
+**md5:** `fdcd1144d5150e9580687fcae1f202d8`
+**sha256:** `bb2928df863fba3157bdb49d8824346097836eddd3b2c2001cf7301849e66e0d`
 
 ## Test procedure
 
