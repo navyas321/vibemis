@@ -11,7 +11,9 @@ dead). The fix edge-filters duplicate BUTTONDOWN/orphan BUTTONUP per controller 
 in SdlGamepadKeyNavigation before key translation; pressed-state clears on disable so
 nothing leaks across enable cycles.
 
-**Build tier: ALPHA (BL-2016). Hashes stamped at dispatch.**
+**Alpha:** `0.2.0-alpha.012` — asset `Vibemis-0.2.0-alpha.012-x86_64.AppImage`
+**md5:** `873d0ef14a3b181a69ec8fe07a897921`
+**sha256:** `8f0f26317a8713420a1f2a055562cdf847fe32687963b9350c5784250ca0f4d0`
 
 ## Test procedure
 
