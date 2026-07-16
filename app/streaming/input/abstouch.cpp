@@ -125,17 +125,24 @@ bool SdlInputHandler::handleTouchOverlayFingerEvent(SDL_TouchFingerEvent* event)
         int fingerX = (int)(event->x * windowWidth);
         int fingerY = (int)(event->y * windowHeight);
 
-        if (fingerY >= hitDst.y + insetPxY &&
-                fingerY <= hitDst.y + insetPxY + sizePxY) {
-            bool onMenuButton = fingerX >= hitDst.x + insetPxX &&
-                    fingerX <= hitDst.x + insetPxX + sizePxX;
-            bool onKbdButton = fingerX >= hitDst.x + hitDst.w - insetPxX - sizePxX &&
-                    fingerX <= hitDst.x + hitDst.w - insetPxX;
-            // BL-2007: TOUCH-MODE toggle sits immediately inward of KBD; the spacing
-            // gap between them belongs to neither button (matches the drawn pixels).
+        // BL-2032 (test118 finding): fingertips land ~10px off the 64px visuals, and the
+        // MENU button especially missed taps. Give every button hit-slop beyond its drawn
+        // rect: 12 stream-px on open sides, and the KBD/TOUCH gap split at its midpoint so
+        // the slop regions can never claim the same pixel. Visuals are unchanged — this is
+        // hit-test-only, and consumed taps still never reach the host.
+        int slopPxX = (int)(12 * scaleX);
+        int slopPxY = (int)(12 * scaleY);
+        int halfGapPxX = spacingPxX / 2;
+
+        if (fingerY >= hitDst.y + insetPxY - slopPxY &&
+                fingerY <= hitDst.y + insetPxY + sizePxY + slopPxY) {
+            bool onMenuButton = fingerX >= hitDst.x + insetPxX - slopPxX &&
+                    fingerX <= hitDst.x + insetPxX + sizePxX + slopPxX;
+            bool onKbdButton = fingerX >= hitDst.x + hitDst.w - insetPxX - sizePxX - halfGapPxX &&
+                    fingerX <= hitDst.x + hitDst.w - insetPxX + slopPxX;
             int touchModeRight = hitDst.x + hitDst.w - insetPxX - sizePxX - spacingPxX;
-            bool onTouchModeButton = fingerX >= touchModeRight - sizePxX &&
-                    fingerX <= touchModeRight;
+            bool onTouchModeButton = fingerX >= touchModeRight - sizePxX - slopPxX &&
+                    fingerX <= touchModeRight + halfGapPxX;
             if (onMenuButton || onKbdButton || onTouchModeButton) {
                 m_TouchOverlayFingerActive = true;
                 m_TouchOverlayFinger = event->fingerId;
