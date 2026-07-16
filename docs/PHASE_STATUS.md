@@ -80,6 +80,15 @@ heavily, so they're now one phase).
   uninstall / doctor. **Guided one-command flow `scripts/vibemis-setup.sh` test74 (#109)** — chains
   doctor → update → install → (optional) pair → add-all-games, with `--dry-run`/`--update-only`/
   `--host`/`--yes`. No sudo, $HOME-scoped.
+- **Done (BL-1786, pending on-device verification):** backlog item #4, "auto-populate Steam
+  shortcuts from host app list" — `scripts/steam-sync-host-games.py` syncs `vibemis list <host>
+  --csv` into real Steam library tiles (safe binary `shortcuts.vdf` editing: mandatory timestamped
+  backup, round-trip self-check, Steam-must-be-closed guard, byte-for-byte readback verify,
+  update-in-place idempotency, opt-in `--prune-missing`, grid artwork wiring where a cover is
+  already cached). Design + trade-off writeup + on-device test plan:
+  `docs/STEAM_ONE_CLICK_DESIGN.md`. Logic verified via an in-process test harness against a
+  synthetic Steam userdata tree (8 scenarios, all passing); **not yet run against a real Steam
+  client or the Legion Go S Z2** — see that doc's On-Device Test Plan for the next test cycle.
 - Remaining (nice-to-have): `.desktop` polish for Desktop Mode; the full host-dependent end-to-end run
   of vibemis-setup.sh is on the Deferred verification ledger (needs a host).
 - Not blocked.
