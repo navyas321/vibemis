@@ -141,6 +141,49 @@ docs(readme): update installation instructions
 3. **Update docs** - Include user-facing documentation
 4. **Respond to feedback** - Address review comments promptly
 
+## Vibemis commit format and PR scorecard
+
+These conventions apply to `vibemis-main` work (the repo's actual integration branch — see
+`docs/DEVELOPMENT.md`) and to any human contributor, not just the project's Claude agent
+sessions. Extracted here as part of the P4.0 two-repo split (BL-1565/BL-2035) so this policy
+stays public even though the day-to-day agent SOP that references it moved to a private repo.
+
+### Commit message format
+
+```
+<type>(<optional scope>): <short description>
+
+<body — what AND why>
+<references: test reports, related PRs, issue numbers>
+```
+
+Types: `feat`, `fix`, `docs`, `chore`, `testing`, `refactor`
+
+Examples:
+- `fix: surgical libva symlink to avoid Qt version collision`
+- `docs: rewrite README as Vibemis-native document`
+
+### PR body — four-test scorecard
+
+Every feature/fix PR targeting `vibemis-main` must include this section:
+
+```markdown
+## Summary
+- <bullet 1 — what changed>
+- <bullet 2 — why>
+
+## Test scorecard
+- [ ] Build: clean build on this branch (qmake6 + make, exit 0)
+- [ ] Smoke: <what was tested and the result>
+- [ ] Regression: <prior features verified still working>
+- [ ] Negative: <what happens when the precondition is missing>
+```
+
+Build and negative tests can often be done without special hardware. Smoke and regression tests
+that need a real display/GPU require hardware verification — see `docs/SELFTEST.md` for the
+scriptable checks that can substitute for a chunk of that (headless `selftest`, log-driven
+assertions, CLI host checks).
+
 ## Getting Help
 
 - **Discord**: Join the community discussions
