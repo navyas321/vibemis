@@ -7,6 +7,9 @@
 // Idle window before the device is released. Long enough to amortize rapid
 // d-pad scrolling into one device session, short enough that the subsystem is
 // rarely held when something else wants exclusive audio.
+// Must stay well under the ~2s gap between a launcher activation blip and a stream's
+// audio-device open (StreamSegue calls streamStarting() as the hard guarantee; this
+// window is the soft one that keeps the device free during normal navigation pauses).
 #define UI_SOUND_IDLE_CLOSE_MS 1500
 
 UiSoundManager* UiSoundManager::get(QQmlEngine*)
