@@ -27,9 +27,10 @@ qDebug lines (MOVEs are counted, never logged per-event — BL-1619 lag-storm ru
 
 ## Artifact
 
-**Alpha release:** `0.2.0-alpha.NNN` for branch `test116-touch-pressure` — take the newest
-alpha on the Releases page whose body names this branch; verify the md5 the release body
-lists (and the bus post from the build agent).
+**Alpha release:** `0.2.0-alpha.008` (branch `test116-touch-pressure`)
+**Asset:** `Vibemis-0.2.0-alpha.008-x86_64.AppImage`
+**md5:** `87aacf52ceb28354624fea25ae270ef0`
+**sha256:** `d0df7aabfe74d2571c0262934764136077988a1f31cba5cb2464403339b7e0d4`
 
 ```bash
 cd ~/vibemis
