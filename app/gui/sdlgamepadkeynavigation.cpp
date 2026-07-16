@@ -85,6 +85,10 @@ void SdlGamepadKeyNavigation::disable()
     updateTimerState();
     Q_ASSERT(!m_PollingTimer->isActive());
 
+    // BL-2013: pressed-state must not leak across enable cycles (a button held
+    // through disable would otherwise eat its next legitimate DOWN).
+    m_ButtonsDown.clear();
+
     while (!m_Gamepads.isEmpty()) {
         SDL_GameControllerClose(m_Gamepads[0]);
         m_Gamepads.removeAt(0);
@@ -126,6 +130,28 @@ void SdlGamepadKeyNavigation::onPollingTimerFired()
         case SDL_CONTROLLERBUTTONDOWN:
         case SDL_CONTROLLERBUTTONUP:
         {
+            // BL-2013: edge-filter — some pads/drivers deliver DUPLICATE BUTTONDOWN
+            // events for one physical d-pad press (Legion Go: slider stepped +10 while
+            // a keyboard arrow stepped +5 through the same handler). Track pressed
+            // state per controller instance and pass only the first DOWN and the
+            // matching UP; duplicates and orphan UPs are dropped before translation.
+            {
+                quint32& downMask = m_ButtonsDown[event.cbutton.which];
+                quint32 bit = 1u << event.cbutton.button;
+                if (event.type == SDL_CONTROLLERBUTTONDOWN) {
+                    if (downMask & bit) {
+                        break;
+                    }
+                    downMask |= bit;
+                }
+                else {
+                    if (!(downMask & bit)) {
+                        break;
+                    }
+                    downMask &= ~bit;
+                }
+            }
+
             QEvent::Type type =
                     event.type == SDL_CONTROLLERBUTTONDOWN ?
                         QEvent::Type::KeyPress : QEvent::Type::KeyRelease;
