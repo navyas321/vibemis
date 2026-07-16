@@ -101,15 +101,25 @@ AppImage to a stable path with a clean `Vibemis` desktop entry, ready to Add to 
 
 - **Game Mode Quick Menu** — the in-stream menu is rendered offscreen and composited into the
   video (works under Gamescope, not just the desktop), with full gamepad navigation and a
-  discoverable "Resume Game" exit (B / Back / Start)
+  discoverable "Resume Game" exit (B / Back / Start). From it you can upload / fetch the host
+  clipboard, paste clipboard text as keystrokes, type text to the host (on-screen text-send),
+  run server commands, send special keys (Ctrl+Alt+Del, Alt+F4, Win/Super, Esc), view stream
+  info, toggle performance stats / mouse & keyboard capture / fullscreen / the touch overlay,
+  and disconnect or quit the game
+- **Touchscreen passthrough & touch modes** — the handheld's touchscreen forwards native
+  taps and drags to Apollo-lineage hosts, or acts as a virtual trackpad instead (switchable
+  via "Use touchscreen as a virtual trackpad" in Input settings)
+- **On-screen touch controls** *(opt-in)* — two translucent buttons composited into the
+  stream: **MENU** (top-left) opens the Quick Menu, **KBD** (top-right) opens text-send.
+  Finger taps only — mouse clicks in those corners pass through to the game
 - **Tailscale-first remote play** — one-command `scripts/setup-tailscale.sh`, an in-app setup
   button, and automatic preference for tailnet addresses when reaching a host
 - **SteamOS one-click integration** — `scripts/vibemis-setup.sh` guided setup (doctor → update →
   install → pair → add games to Steam), plus per-script helpers and a self-update command
 - **Settings export / import** — portable `.ini` backup of the full configuration
-- **In-app updates with channels** — pick Stable / Beta / Alpha in Settings → Advanced →
-  "Software updates", check for updates on demand, and (when running as an AppImage) install
-  the new build in place with one tap — no browser or terminal needed
+- **In-app updates with channels** — pick Stable / Release candidate / Beta / Alpha in
+  Settings → Advanced → "Software updates", check for updates on demand, and (when running as
+  an AppImage) install the new build in place with one tap — no browser or terminal needed
 - **Performance overlay controls** — corner anchoring, text size, optional wall clock, and a
   data-usage estimate next to the bitrate slider
 - **Handheld quality-of-life** — battery-saver bitrate, controller-rumble suppression, motion
@@ -121,9 +131,26 @@ AppImage to a stable path with a clean `Vibemis` desktop entry, ready to Add to 
 - **Auto-reconnect** *(opt-in)* — a dropped stream retries in place (3 attempts with backoff)
   instead of dumping you back to the game grid
 - **Gamepad-first redesign** — a full controller-first UI on a unified dark design-token system
-  (one accent/surface/type language), across every screen: the Computers list (rich status cards +
-  live host count), app grid, Add-PC dialog, Host-options side-sheet, Settings (a category sidebar),
-  and in-stream Help — per-screen chrome, a single header, the accent focus-ring, and line icons
+  (one accent/surface/type language), across every screen: the Computers list (rich status cards
+  with a host-type badge — Vibepollo / Apollo / Sunshine — and a live host count), the app grid
+  (a live RESUME badge on the running game — **A** resumes it, **Y** quits it), Add-PC dialog,
+  Host-options side-sheet, Settings (a category sidebar), and in-stream Help — per-screen chrome,
+  a single header, the accent focus-ring, and line icons
+
+### Known issues
+
+Confirmed bugs in the current build, with workarounds. (Fixes in flight are noted; rows drop
+off as fixes land.)
+
+| Issue | Workaround | Status |
+|---|---|---|
+| **D-pad steps twice** on adjustable Settings controls (e.g. the resolution-scale slider moves ±10 per press instead of ±5) | Use keyboard arrows, touch drag, or the mouse | Confirmed; fix queued (gamepad→key translation layer) |
+| **In-stream touch taps still don't click** (and drags don't draw) on the host in direct-touch mode — the client now sends correct full-contact touch, but the host injects it as hover | Enable "Use touchscreen as a virtual trackpad" in Input settings | Client side fixed; awaiting a host-side (Vibepollo) fix |
+| **Quick Menu items can't be tapped** — menu navigation is gamepad/keyboard only, so a touch-only user can open the menu but not operate it | Navigate with D-pad + A, or arrow keys + Enter | Confirmed; touch operability planned |
+| **Text-send has no on-screen keyboard** — on a keyboard-less handheld there's no way to type into it; the first character can also drop if you type immediately | Use a physical/USB keyboard, or Paste Clipboard (clipboard sync) instead | Confirmed; OSK planned |
+| **MENU / KBD touch buttons have small tap targets** | Aim carefully, or use the gamepad combo / keyboard shortcut | Confirmed; enlargement queued |
+| **Settings page doesn't drag-scroll** (touch or pointer drag) | Use the scroll wheel or D-pad/stick navigation | Confirmed on 0.2.0-beta.013 |
+| **Host-type badge can mislabel** Apollo-lineage vs Sunshine hosts | Cosmetic only — streaming is unaffected | Fix in flight |
 
 ### Known limitations
 
@@ -166,7 +193,8 @@ personal use, end-to-end encrypted (WireGuard), and handles NAT traversal automa
 | Input | Shortcut |
 |-------|----------|
 | Keyboard | `Ctrl + Alt + Shift + \` |
-| Gamepad | `Select + L1 + R1 + Y` |
+| Gamepad | `Select + L1 + R1 + Y` (default — configurable in Settings → Input) |
+| Touch | **MENU** button, top-left *(needs the opt-in on-screen touch controls)* |
 
 ### Full Keyboard Reference
 
@@ -185,17 +213,28 @@ All shortcuts require `Ctrl + Alt + Shift`:
 | `V` | Paste clipboard text |
 | `L` | Toggle pointer region lock |
 | `D` | Minimize window |
+| `=` / `-` | Zoom the video in / out |
+| `0` | Reset zoom (and re-center) |
+| Arrow keys | Pan the video while zoomed |
 
 ### Gamepad Reference
 
 | Combo | Action |
 |-------|--------|
-| `Select + L1 + R1 + Y` | Toggle Quick Menu |
+| `Select + L1 + R1 + Y` (configurable) | Toggle Quick Menu |
 | D-pad / `A` (while menu open) | Navigate / activate menu item |
 | `B`, `Back/Select`, or `Start` (while menu open) | Close menu / resume game |
 | `Start + Select + L1 + R1` | Quit stream |
 | `Select + L1 + R1 + X` | Toggle performance stats overlay |
 | Long press `Start` | Toggle mouse emulation mode |
+
+### Touch Reference
+
+| Input | Action |
+|-------|--------|
+| Tap / drag on the stream | Forwarded to the host as native touch — or moves the cursor when "Use touchscreen as a virtual trackpad" is on (Settings → Input) |
+| **MENU** button (top-left) | Open the Quick Menu *(opt-in on-screen touch controls)* |
+| **KBD** button (top-right) | Open "Send text to host" *(opt-in on-screen touch controls)* |
 
 ---
 
