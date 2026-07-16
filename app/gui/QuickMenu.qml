@@ -522,6 +522,12 @@ Rectangle {
             action: "key_esc"
             description: qsTr("Send the Escape key to the host")
         }
+        ListElement {
+            text: qsTr("Send Shift+Tab")
+            icon: "key"
+            action: "key_shift_tab"
+            description: qsTr("Reverse-tab focus on the host")
+        }
     }
     
     // P3.20 (test86): ship the field contents to the host and return to the main menu.

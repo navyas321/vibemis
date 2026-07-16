@@ -647,6 +647,9 @@ void QuickMenuManager::sendSpecialKey(const QString &action)
         modifiers = MODIFIER_ALT;
     } else if (action == "key_esc") {
         vk = 0x1B;                                 // VK_ESCAPE
+    } else if (action == "key_shift_tab") {
+        vk = 0x09;                                 // VK_TAB (BL-1788: reverse focus traversal)
+        modifiers = MODIFIER_SHIFT;
     } else {
         return;
     }
