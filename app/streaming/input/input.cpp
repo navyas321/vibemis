@@ -484,6 +484,15 @@ void SdlInputHandler::handleTouchFingerEvent(SDL_TouchFingerEvent* event)
     return;
 #endif
 
+    // Vibemis BL-1748: the on-screen MENU/KBD overlay buttons are drawn in both touch
+    // modes, so intercept them here — BEFORE the absolute/relative split — so a tap on
+    // a button works in relative / virtual-trackpad mode too, not just absolute mode.
+    // A swallowed finger returns early and never reaches either host path, so the
+    // relative bookkeeping (m_TouchDownEvent[]/m_NumFingersDown) never desyncs.
+    if (handleTouchOverlayFingerEvent(event)) {
+        return;
+    }
+
     if (m_AbsoluteTouchMode) {
         handleAbsoluteFingerEvent(event);
     }
