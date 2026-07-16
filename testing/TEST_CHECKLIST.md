@@ -182,9 +182,11 @@ ticking a row above does NOT clear its entry here.
 - [ ] **test82** — motion forwarding, Tier 2 — with a **gyro/accel controller in Game Mode** + a host
   that requests motion, confirm live gyro/accel reaches the host and honours the report rate (source-
   confirmed by report PR #162; default-off = safe).
-- [ ] **BL-1528 (P3.23)** — touchscreen passthrough, on-device — confirm the **Legion Go touchscreen**
-  forwards native touch to an Apollo host via `LiSendTouchEvent` (code already present from upstream,
-  gated by `absoluteTouchMode`; never runtime-verified on this device).
+- [ ] ✗ **BL-1528 (P3.23)** — touchscreen passthrough, on-device — **e2e FAIL, client half VERIFIED**
+  (test116, 2026-07-16): client forwards native touch correctly (`Touch DOWN pressure 1 err 0`,
+  swipe `UP after 40 moves`; BL-2015 zero-pressure clamp works) and the host arms its virtual touch
+  device, but Vibepollo injects hover/no-contact regardless — no ink host-side. BL-2015 rescoped
+  HOST-side; re-verify e2e after the host fix (`testing/test116-touch-pressure/report.md`).
 - [ ] **test62** — Adaptive bitrate, Tiers 2–3 — on a **degrading stream**, confirm the
   `[adaptive-bitrate]` recommendation is logged on `CONN_STATUS_POOR` and no regression to the
   slow-connection overlay. *(Note: runtime bitrate-stepping itself is still `TODO(P3.12)` — only the
