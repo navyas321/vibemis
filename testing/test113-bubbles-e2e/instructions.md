@@ -12,9 +12,13 @@ issue does NOT return (Bubbles self-terminates; host screen stays healthy and ca
 
 ## SAFETY -- READ FIRST
 
-- **HOST SCREEN MUST BE ON before you start the live stream test.** Wake the Vibepollo host's
-  physical display first; do not begin Tier 1 with the host screen already blanked/asleep. The whole
-  point of BL-1850 is to observe display health across the Bubbles trigger, so it must start healthy.
+- **HOST SCREEN MUST BE ON before you start the live stream test.** The physical display on the
+  **Vibepollo streaming host (Navid-PC)** must be awake/ON at the start -- this is the **host
+  operator's responsibility** (confirm with the host operator before Tier 1; do not begin with the
+  host screen blanked/asleep). The whole point of BL-1850 is to observe host display health across
+  the Bubbles trigger, so it must start healthy.
+- **The user is physically present at the Legion Go** for all client-side steps (launch, pair,
+  stream, open the Quick Menu, trigger Bubbles, quit) -- drive those from the device as normal.
 - Trigger Bubbles **exactly once**. Do not loop it. This is a controlled one-shot validation.
 - This cycle DOES pair and stream and DOES launch a host-side Server Command -- that is explicitly
   authorised here (it overrides the standing "do not pair/stream/launch unless told to" default).
