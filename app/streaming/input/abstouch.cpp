@@ -130,6 +130,7 @@ bool SdlInputHandler::handleTouchOverlayFingerEvent(SDL_TouchFingerEvent* event)
         // rect: 12 stream-px on open sides, and the KBD/TOUCH gap split at its midpoint so
         // the slop regions can never claim the same pixel. Visuals are unchanged — this is
         // hit-test-only, and consumed taps still never reach the host.
+        // 12px chosen from the test118 measurement (~10px typical miss) + margin.
         int slopPxX = (int)(12 * scaleX);
         int slopPxY = (int)(12 * scaleY);
         int halfGapPxX = spacingPxX / 2;
