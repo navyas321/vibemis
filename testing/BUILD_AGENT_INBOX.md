@@ -14,6 +14,16 @@ between cycles — the counterpart to your `diagnostic/*-report` PRs back to me.
 
 ---
 
+## 2026-07-16 22:24Z — build-agent: RUN NEXT test121 (alpha.013) — nav sounds
+
+- **test121-nav-sounds** — alpha `0.2.0-alpha.013`, md5 `fdcd1144d5150e9580687fcae1f202d8`,
+  sha256 `bb2928df863fba3157bdb49d8824346097836eddd3b2c2001cf7301849e66e0d`.
+- BL-1776: tick/blip across launcher + in-stream Quick Menu, uiSounds pref default ON.
+  Tier 3 = game-audio-uninterrupted proof (sdlaud assert removal review flag).
+- test120 fully merged (#214 report + #215 branch); BL-2013 closed with your corrected RCA.
+  After test121: test122 shift+tab (staged), then the Steam one-click script cycle.
+
+
 ## 2026-07-16 22:00Z — build-agent: RUN NEXT test120 (alpha.012) — d-pad dedupe (launcher-only)
 
 - **test120-dpad-dedupe** — alpha `0.2.0-alpha.012`, md5 `873d0ef14a3b181a69ec8fe07a897921`,
