@@ -43,7 +43,7 @@ without its `test<N>` cycle (alpha tier) passing or an explicit maintainer waive
    `gh workflow run dev-build.yml --ref vibemis-main` (a plain dispatch on `vibemis-main`
    builds a beta; dispatch always builds — it skips the docs-only smart-build check).
 3. **Update the docs to current state in the same window** (README Known-issues pruning —
-   drop rows the merge set fixed; `docs/PHASE_STATUS.md`; `testing/TEST_CHECKLIST.md` ticks).
+   drop rows the merge set fixed; the phase tracker and test checklist in the agent-meta repo).
    The README current-state rule is hardest at a stable.
 
 **Who:** build agent.
@@ -136,7 +136,7 @@ A burnt number stays burnt.
    post-merge reality, and the channel table needs no change. Refresh
    `docs/RELEASE_HISTORY.md` only if the catalog convention requires the new stable's row.
 6. **Announce / handoff** — post the cut (tag, sha256, "Latest updated") on the coordination
-   bus and in `testing/BUILD_AGENT_INBOX.md`; update `docs/PHASE_STATUS.md` (second stable
+   bus and in the agent-meta repo's build-agent inbox; update the phase tracker (second stable
    shipped) and the session handoff doc.
 
 **Who:** build agent (all mechanical); maintainer sees the announcement.
