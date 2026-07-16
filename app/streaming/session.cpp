@@ -1476,6 +1476,9 @@ private:
             if (m_Session->m_AsyncConnectionSuccess) {
                 QWriteLocker lock(&m_Session->m_Computer->lock);
                 m_Session->m_Computer->currentGameId = m_Session->m_App.id;
+                // Greppable evidence for the resume-vs-launch validation (test117).
+                qInfo() << "Session ended without quit; app" << m_Session->m_App.id
+                        << "stays current for AppView resume";
             }
 
             emit m_Session->sessionFinished(m_Session->m_PortTestResults);
