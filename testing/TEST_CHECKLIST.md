@@ -142,7 +142,10 @@ whole Quick Menu group depends on its render path.
 
 ## 5b6. UI / scaling (P3.6)
 
-- [ ] **test109** — Gamescope High-DPI UI scaling fix — base `vibemis-main` — ☐ (`testing/test109-gamescope-scaling/instructions.md`)
+- [x] **test109** — Gamescope High-DPI UI scaling fix — base `vibemis-main` — ☑ **PASS**
+  (report `testing/test109-gamescope-scaling/report.md`, 2026-07-16 on alpha.013 per BL-2016:
+  gamescope-emulate 1920×1200 pixel-perfect + 1280×800 responsive, zero clipping; Desktop-Mode
+  auto-DPI regression clean)
 
 ## 5c. CLI
 
