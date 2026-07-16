@@ -213,6 +213,12 @@ Rectangle {
                 font.family: VbTokens.fontBody
                 font.pixelSize: 16
                 selectByMouse: true
+                // BL-2000: keep typed text inside the styled border — the field fills
+                // width with a bordered background but had no clip and no horizontal
+                // padding, so long text ran to/past the border edge.
+                clip: true
+                leftPadding: 12
+                rightPadding: 12
                 // BL-1688: token field — window-dark well + accent focus border.
                 background: Rectangle {
                     color: VbTokens.bgWindow

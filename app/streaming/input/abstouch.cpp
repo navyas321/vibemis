@@ -66,29 +66,36 @@ void SdlInputHandler::disableTouchFeedback()
 #endif
 }
 
-void SdlInputHandler::handleAbsoluteFingerEvent(SDL_TouchFingerEvent* event)
+// Vibemis BL-1748: mode-agnostic on-screen touch-overlay hit-test. The MENU
+// (top-left) / KBD (top-right) buttons are drawn in BOTH absolute and relative
+// touch modes, but the interception used to live only in handleAbsoluteFingerEvent.
+// In relative / virtual-trackpad mode the tap fell through to handleRelativeFingerEvent
+// and was forwarded to the host as a click, so the buttons were inert. This method is
+// now called from handleTouchFingerEvent BEFORE the absolute/relative split, so a tap
+// on a button is consumed in either mode: MENU toggles the Quick Menu, KBD opens its
+// text-send view. The rest of the captured finger's gesture (motion/up) is swallowed
+// too so neither host path ever sees an unbalanced touch sequence. Returns true when
+// the event was consumed (caller must stop processing it), false otherwise.
+bool SdlInputHandler::handleTouchOverlayFingerEvent(SDL_TouchFingerEvent* event)
 {
-    SDL_Rect src, dst;
-    int windowWidth, windowHeight;
-
-    SDL_GetWindowSize(m_Window, &windowWidth, &windowHeight);
-
-    // Vibemis BL-1562: on-screen touch controls overlay. When enabled, a finger-down
-    // landing on the MENU (top-left) / KBD (top-right) button is consumed locally —
-    // MENU toggles the Quick Menu, KBD opens its text-send view — instead of being
-    // forwarded to the host. The rest of that finger's gesture (motion/up) is
-    // swallowed too so the host never sees an unbalanced touch sequence.
     if (m_TouchOverlayFingerActive) {
         if (event->fingerId == m_TouchOverlayFinger) {
             if (event->type == SDL_FINGERUP) {
                 m_TouchOverlayFingerActive = false;
             }
-            return;
+            // Eat the rest of the captured finger's gesture.
+            return true;
         }
+        // A different finger while one is captured — let it be processed normally.
+        return false;
     }
-    else if (event->type == SDL_FINGERDOWN &&
-             Session::get() != nullptr &&
-             Session::get()->getOverlayManager().isOverlayEnabled(Overlay::OverlayTouchButtonMenu)) {
+
+    if (event->type == SDL_FINGERDOWN &&
+        Session::get() != nullptr &&
+        Session::get()->getOverlayManager().isOverlayEnabled(Overlay::OverlayTouchButtonMenu)) {
+        int windowWidth, windowHeight;
+        SDL_GetWindowSize(m_Window, &windowWidth, &windowHeight);
+
         // Maintainer-caught (2026-07-13): the buttons are COMPOSITED INTO THE VIDEO
         // FRAME in STREAM pixels, but this hit-test measured raw WINDOW pixels from
         // the window origin. Under gamescope scaling / letterboxing the two spaces
@@ -131,10 +138,20 @@ void SdlInputHandler::handleAbsoluteFingerEvent(SDL_TouchFingerEvent* event)
                     QMetaObject::invokeMethod(qmm, onMenuButton ? "toggle" : "openTextSend",
                                               Qt::QueuedConnection);
                 }
-                return;
+                return true;
             }
         }
     }
+
+    return false;
+}
+
+void SdlInputHandler::handleAbsoluteFingerEvent(SDL_TouchFingerEvent* event)
+{
+    SDL_Rect src, dst;
+    int windowWidth, windowHeight;
+
+    SDL_GetWindowSize(m_Window, &windowWidth, &windowHeight);
 
     src.x = src.y = 0;
     src.w = m_StreamWidth;
