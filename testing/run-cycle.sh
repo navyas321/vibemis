@@ -31,9 +31,22 @@ if [ -n "$COMMITTED" ]; then
 fi
 
 # 2) Otherwise download the branch's alpha pre-release (newer cycles auto-publish one).
+# SemVer tags (BL-1770+) are dense counters with NO branch segment (0.2.0-alpha.008), so the
+# branch is resolved from the release BODY ("**Branch**: `<slug>`" line), newest alpha first.
+# The legacy grep stays as a fallback for pre-SemVer tags (…-alpha.<branch>.<timestamp>).
 if [ -z "$APP" ]; then
-  TAG=$("$GH" release list --limit 100 --json tagName --jq '.[].tagName' 2>/dev/null \
-        | grep "alpha\.${SLUG}\." | head -1)
+  TAG=$("$GH" release list --limit 30 --json tagName --jq '.[].tagName' 2>/dev/null \
+        | grep -E -- '-alpha\.[0-9]+$' \
+        | while IFS= read -r t; do
+            if "$GH" release view "$t" --json body --jq .body 2>/dev/null | grep -q "${SLUG}"; then
+              echo "$t"
+              break
+            fi
+          done)
+  if [ -z "$TAG" ]; then
+    TAG=$("$GH" release list --limit 100 --json tagName --jq '.[].tagName' 2>/dev/null \
+          | grep "alpha\.${SLUG}\." | head -1)
+  fi
   if [ -n "$TAG" ]; then
     echo "Downloading alpha release: $TAG"
     "$GH" release download "$TAG" --dir "$OUT" --pattern '*.AppImage' --clobber \
