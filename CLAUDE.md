@@ -85,9 +85,10 @@ Build agent rule: before starting a test cycle, rename (or create fresh from) th
 (every open feature test PR, grouped by phase, with branch · PR# · base · ☐/☑ status) and
 `gh pr list --state open`. Don't maintain a duplicate table here — read those.
 
-**High-water mark (snapshot, re-derive from git):** highest test branch is **`test52`** →
-next new cycle = **`test53`**. test49 (perf-overlay corner), test51 (prefer-Tailscale, P3.7) and
-test52 (`vibemis selftest`) all built **alpha-green** via CI. test50 (perf-overlay text size) green too.
+**High-water mark (snapshot, re-derive from git):** highest test branch is **`test118`**
+(overlay v2) → next new cycle = **`test119`** (BL-2015 pointer-slot fix, pre-built on
+`wip/BL-2015-pointer-slots`). The 0.2.0 release train + gate live in
+`docs/RELEASE_RUNBOOK_0.2.0.md`; BL-2015 (e2e touch) is a maintainer-declared stable blocker.
 
 **Recently landed on `vibemis-main`** (beyond features): the CI tier+auto-prune fix
 (`.github/workflows/dev-build.yml` — only `vibemis-main` builds beta, `test**` builds alpha, old
@@ -408,10 +409,12 @@ commit before the fix), not the new one.
 3. **Test instruction commits (`test: ...`) should come BEFORE the fix commit**, not after.
    Order matters because CI evaluates the HEAD commit only.
 
-4. **If you've already pushed a docs-only commit and need to force a new build:** make a
-   trivial meaningful code change (e.g. add/update a comment in a `.cpp` file) with
-   `fix:` in the commit title and push it. Do NOT use `workflow_dispatch` alone —
-   it still goes through the smart-build check and will skip if HEAD is docs-only.
+4. **If you've already pushed a docs-only commit and need a new build:** either make a
+   trivial meaningful code change (e.g. a constraint comment in a `.cpp` file) with
+   `fix:` in the title and push it, or — on `vibemis-main` only — use
+   `gh workflow run dev-build.yml --ref vibemis-main`: a manual dispatch ALWAYS builds
+   (it bypasses the docs-only skip — verified against dev-build.yml, BL-2017 audit).
+   Push-triggered runs on a docs-only HEAD still skip.
 
 5. **The `create-dev-release` job publishes only from `test**`, `vibemis-main`,
    `main`/`master`, `release/**`, or a stable dispatch (BL-1998).** Other branch prefixes

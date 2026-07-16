@@ -10,6 +10,7 @@
 #include "streaming/streamutils.h"
 
 #include <QtMath>
+#include <QDebug>
 
 // How long the fingers must be stationary to start a right click
 #define LONG_PRESS_ACTIVATION_DELAY 650
@@ -66,29 +67,38 @@ void SdlInputHandler::disableTouchFeedback()
 #endif
 }
 
-void SdlInputHandler::handleAbsoluteFingerEvent(SDL_TouchFingerEvent* event)
+// Vibemis BL-1748: mode-agnostic on-screen touch-overlay hit-test. The overlay
+// buttons are drawn in BOTH absolute and relative touch modes, but the interception
+// used to live only in handleAbsoluteFingerEvent. In relative / virtual-trackpad
+// mode the tap fell through to handleRelativeFingerEvent and was forwarded to the
+// host as a click, so the buttons were inert. This method is now called from
+// handleTouchFingerEvent BEFORE the absolute/relative split, so a tap on a button
+// is consumed in either mode. BL-2002/BL-2007 button roster: MENU (top-left)
+// toggles the Quick Menu, KBD (far top-right) requests the SteamOS on-screen
+// keyboard, TOUCH-MODE (inward of KBD) live-toggles touchpad-emulation vs direct
+// touch. The rest of the captured finger's gesture (motion/up) is swallowed too so
+// neither host path ever sees an unbalanced touch sequence. Returns true when the
+// event was consumed (caller must stop processing it), false otherwise.
+bool SdlInputHandler::handleTouchOverlayFingerEvent(SDL_TouchFingerEvent* event)
 {
-    SDL_Rect src, dst;
-    int windowWidth, windowHeight;
-
-    SDL_GetWindowSize(m_Window, &windowWidth, &windowHeight);
-
-    // Vibemis BL-1562: on-screen touch controls overlay. When enabled, a finger-down
-    // landing on the MENU (top-left) / KBD (top-right) button is consumed locally —
-    // MENU toggles the Quick Menu, KBD opens its text-send view — instead of being
-    // forwarded to the host. The rest of that finger's gesture (motion/up) is
-    // swallowed too so the host never sees an unbalanced touch sequence.
     if (m_TouchOverlayFingerActive) {
         if (event->fingerId == m_TouchOverlayFinger) {
             if (event->type == SDL_FINGERUP) {
                 m_TouchOverlayFingerActive = false;
             }
-            return;
+            // Eat the rest of the captured finger's gesture.
+            return true;
         }
+        // A different finger while one is captured — let it be processed normally.
+        return false;
     }
-    else if (event->type == SDL_FINGERDOWN &&
-             Session::get() != nullptr &&
-             Session::get()->getOverlayManager().isOverlayEnabled(Overlay::OverlayTouchButtonMenu)) {
+
+    if (event->type == SDL_FINGERDOWN &&
+        Session::get() != nullptr &&
+        Session::get()->getOverlayManager().isOverlayEnabled(Overlay::OverlayTouchButtonMenu)) {
+        int windowWidth, windowHeight;
+        SDL_GetWindowSize(m_Window, &windowWidth, &windowHeight);
+
         // Maintainer-caught (2026-07-13): the buttons are COMPOSITED INTO THE VIDEO
         // FRAME in STREAM pixels, but this hit-test measured raw WINDOW pixels from
         // the window origin. Under gamescope scaling / letterboxing the two spaces
@@ -110,6 +120,7 @@ void SdlInputHandler::handleAbsoluteFingerEvent(SDL_TouchFingerEvent* event)
         int insetPxY = (int)(Overlay::TouchButtonInset * scaleY);
         int sizePxX = (int)(Overlay::TouchButtonSize * scaleX);
         int sizePxY = (int)(Overlay::TouchButtonSize * scaleY);
+        int spacingPxX = (int)(Overlay::TouchButtonSpacing * scaleX);
 
         int fingerX = (int)(event->x * windowWidth);
         int fingerY = (int)(event->y * windowHeight);
@@ -120,21 +131,62 @@ void SdlInputHandler::handleAbsoluteFingerEvent(SDL_TouchFingerEvent* event)
                     fingerX <= hitDst.x + insetPxX + sizePxX;
             bool onKbdButton = fingerX >= hitDst.x + hitDst.w - insetPxX - sizePxX &&
                     fingerX <= hitDst.x + hitDst.w - insetPxX;
-            if (onMenuButton || onKbdButton) {
+            // BL-2007: TOUCH-MODE toggle sits immediately inward of KBD; the spacing
+            // gap between them belongs to neither button (matches the drawn pixels).
+            int touchModeRight = hitDst.x + hitDst.w - insetPxX - sizePxX - spacingPxX;
+            bool onTouchModeButton = fingerX >= touchModeRight - sizePxX &&
+                    fingerX <= touchModeRight;
+            if (onMenuButton || onKbdButton || onTouchModeButton) {
                 m_TouchOverlayFingerActive = true;
                 m_TouchOverlayFinger = event->fingerId;
 
-                // The Quick Menu lives on the Qt main thread — hop threads via a
-                // queued invocation like the gamepad/keyboard intercepts do.
                 QuickMenuManager* qmm = Session::get()->getQuickMenuManager();
-                if (qmm != nullptr) {
-                    QMetaObject::invokeMethod(qmm, onMenuButton ? "toggle" : "openTextSend",
+
+                if (onTouchModeButton) {
+                    // BL-2007: flip touchpad-emulation vs direct touch LIVE.
+                    // m_AbsoluteTouchMode is only read on this thread, so flipping it
+                    // here is race-free — but only flip while this is the sole finger
+                    // down: fingers mid-gesture in the OLD mode would otherwise leave
+                    // unbalanced state behind (relative-mode drag bookkeeping, host-side
+                    // native touch pointers that would never see their UP). A tap that
+                    // arrives with other fingers down is still consumed, just inert.
+                    // (Tap-release timers from a just-finished relative-mode tap may
+                    // still fire after the flip; they only release a mouse button,
+                    // which is harmless in either mode.)
+                    if (SDL_GetNumTouchFingers(event->touchId) <= 1) {
+                        m_AbsoluteTouchMode = !m_AbsoluteTouchMode;
+
+                        // Persisting the preference and toasting the new mode name
+                        // happen on the Qt main thread.
+                        if (qmm != nullptr) {
+                            QMetaObject::invokeMethod(qmm, "commitTouchMode",
+                                                      Qt::QueuedConnection,
+                                                      Q_ARG(bool, m_AbsoluteTouchMode));
+                        }
+                    }
+                }
+                else if (qmm != nullptr) {
+                    // The Quick Menu lives on the Qt main thread — hop threads via a
+                    // queued invocation like the gamepad/keyboard intercepts do.
+                    // BL-2002: KBD requests the SteamOS on-screen keyboard (the
+                    // text-send view remains reachable as its own Quick Menu row).
+                    QMetaObject::invokeMethod(qmm, onMenuButton ? "toggle" : "openSteamKeyboard",
                                               Qt::QueuedConnection);
                 }
-                return;
+                return true;
             }
         }
     }
+
+    return false;
+}
+
+void SdlInputHandler::handleAbsoluteFingerEvent(SDL_TouchFingerEvent* event)
+{
+    SDL_Rect src, dst;
+    int windowWidth, windowHeight;
+
+    SDL_GetWindowSize(m_Window, &windowWidth, &windowHeight);
 
     src.x = src.y = 0;
     src.w = m_StreamWidth;
@@ -164,19 +216,39 @@ void SdlInputHandler::handleAbsoluteFingerEvent(SDL_TouchFingerEvent* event)
         return;
     }
 
-    uint32_t pointerId;
-
-    // If the pointer ID is larger than we can fit, just CRC it and use that as the ID.
-    if ((uint64_t)event->fingerId > UINT32_MAX) {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-        QByteArrayView bav((char*)&event->fingerId, sizeof(event->fingerId));
-        pointerId = qChecksum(bav);
-#else
-        pointerId = qChecksum((char*)&event->fingerId, sizeof(event->fingerId));
-#endif
+    // BL-2015: Windows InjectTouchInput rejects pointer ids >= the host's initialized
+    // max contact count (ERROR_INVALID_PARAMETER), and Apollo-lineage hosts forward the
+    // client's id into that API. Raw or CRC'd SDL finger ids are effectively always too
+    // large, so every touch DOWN failed host-side (silently — the host logs nothing) and
+    // only a hover/pointer-move survived: taps never clicked, drags never drew. Android
+    // clients send dense MotionEvent ids (0–9), which is why they work against the same
+    // host. Map each finger id to the lowest free slot for the finger's lifetime.
+    uint32_t pointerId = UINT32_MAX;
+    for (uint32_t i = 0; i < SDL_arraysize(m_TouchSlotFinger); i++) {
+        if (m_TouchSlotActive[i] && m_TouchSlotFinger[i] == event->fingerId) {
+            pointerId = i;
+            break;
+        }
     }
-    else {
-        pointerId = (uint32_t)event->fingerId;
+    if (pointerId == UINT32_MAX) {
+        // Unknown finger: allocate on DOWN, but also on MOVE/UP (a gesture that began
+        // before the slots were in play must still send a well-formed sequence).
+        for (uint32_t i = 0; i < SDL_arraysize(m_TouchSlotFinger); i++) {
+            if (!m_TouchSlotActive[i]) {
+                m_TouchSlotActive[i] = true;
+                m_TouchSlotFinger[i] = event->fingerId;
+                pointerId = i;
+                break;
+            }
+        }
+        if (pointerId == UINT32_MAX) {
+            // More concurrent fingers than slots: drop rather than send an id the host
+            // would reject anyway.
+            return;
+        }
+    }
+    if (eventType == LI_TOUCH_EVENT_UP) {
+        m_TouchSlotActive[pointerId] = false;
     }
 
     // Try to send it as a native pen/touch event, otherwise fall back to our touch emulation
@@ -197,14 +269,45 @@ void SdlInputHandler::handleAbsoluteFingerEvent(SDL_TouchFingerEvent* event)
         }
 
         if (isPen) {
+            // Pens keep the reported pressure as-is: 0.0 while in range is a REAL state
+            // (hovering nib) that the host must see to distinguish hover from contact.
             LiSendPenEvent(eventType, LI_TOOL_TYPE_PEN, 0, vidrelx / dst.w, vidrely / dst.h, event->pressure,
                            0.0f, 0.0f, LI_ROT_UNKNOWN, LI_TILT_UNKNOWN);
         }
         else
 #endif
         {
-            LiSendTouchEvent(eventType, pointerId, vidrelx / dst.w, vidrely / dst.h, event->pressure,
-                             0.0f, 0.0f, LI_ROT_UNKNOWN);
+            // BL-2015: many touchscreens (the Legion Go panel included) report SDL finger
+            // pressure as 0.0, and Apollo-lineage hosts inject pressure<=0 DOWN/MOVE as
+            // hover — the pointer relocates but never makes contact, so taps don't click
+            // and drags don't draw. A capacitive finger can't hover: treat missing
+            // pressure as full contact. UP keeps 0.0 (contact release).
+            float pressure = event->pressure;
+            if (eventType != LI_TOUCH_EVENT_UP && pressure <= 0.0f) {
+                pressure = 1.0f;
+            }
+
+            int err = LiSendTouchEvent(eventType, pointerId, vidrelx / dst.w, vidrely / dst.h, pressure,
+                                       0.0f, 0.0f, LI_ROT_UNKNOWN);
+
+            // BL-2015 observability (test-agent ask): the send path was previously
+            // unloggable. DOWN/UP only — never per-MOVE (input-path logging caused the
+            // BL-1619 lag storm); moves are counted and summarized on UP. Single shared
+            // counter: diagnostic-grade for the dominant single-finger case.
+            static uint32_t s_MovesSinceDown = 0;
+            if (eventType == LI_TOUCH_EVENT_DOWN) {
+                s_MovesSinceDown = 0;
+                qDebug() << "Touch DOWN id" << pointerId
+                         << "norm" << vidrelx / dst.w << vidrely / dst.h
+                         << "pressure" << pressure << "err" << err;
+            }
+            else if (eventType == LI_TOUCH_EVENT_MOVE) {
+                s_MovesSinceDown++;
+            }
+            else {
+                qDebug() << "Touch UP id" << pointerId << "after" << s_MovesSinceDown
+                         << "moves, err" << err;
+            }
         }
 
         if (!m_DisabledTouchFeedback) {

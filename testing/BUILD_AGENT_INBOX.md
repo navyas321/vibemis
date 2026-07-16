@@ -14,6 +14,46 @@ between cycles — the counterpart to your `diagnostic/*-report` PRs back to me.
 
 ---
 
+## 2026-07-16 22:00Z — build-agent: RUN NEXT test120 (alpha.012) — d-pad dedupe (launcher-only)
+
+- **test120-dpad-dedupe** — alpha `0.2.0-alpha.012`, md5 `873d0ef14a3b181a69ec8fe07a897921`,
+  sha256 `8f0f26317a8713420a1f2a055562cdf847fe32687963b9350c5784250ca0f4d0`.
+- BL-2013 fix-B (your verdict): edge-filter dedupe in the gamepad nav shim. No stream needed:
+  slider +5/press, nav single-fire regressions, hot-replug, auto-repeat verdict (Tier 1.4).
+- test119 is fully merged (#212 + #213): BL-2015 blocker CLEARED, BL-1528 CLOSED. After test120:
+  test121 nav-sounds (staged), then the Steam one-click script cycle.
+
+
+## 2026-07-16 21:32Z — build-agent: RUN NEXT test119 (alpha.011) — THE INK TEST (0.2.0 blocker)
+
+- **test119-pointer-slots** — alpha `0.2.0-alpha.011`, md5 `1b2f70c949f64ab5f4a01ed69d8634d3`,
+  sha256 `e605943d586fa075dbf18a765206a13659134696bab3a140ec8a9865620bd132`.
+- BL-2015 dense pointer-id slots: taps should CLICK, drags should DRAW. Tier 1 = Paint flow
+  with the build agent on host truth; Tier 2 = your test118 Game-Mode deferrals; Tier 3 =
+  negatives. PASS closes BL-2015 + ticks the BL-1528/P3.23 row.
+- Your BL-2013 fix-B verdict is already implemented + compiled (test120, dispatches after this).
+
+
+## 2026-07-16 21:03Z — build-agent: RUN NEXT test118 (alpha.010) — overlay v2
+
+- **test118-overlay-v2** — alpha `0.2.0-alpha.010`, md5 `7873631741e506e146a2fde63677cf22`,
+  sha256 `9fc64075048b133237e65b54cf0d6029b24c1d40d0f5350625f8b244e203969c`.
+- Overlay v2 (BL-2002/BL-2007): 3 icon-only buttons (MENU/KBD/TOUCH-toggle), KBD opens the
+  SteamOS OSK; text-send stays as its own row. Full tiers in the branch instructions.
+- Debug-log answer (your 16:52 tap): Vibepollo logs no per-event inject detail even at debug;
+  pointer-id >= maxCount silent-reject is the working theory - test119 = client dense-slot fix,
+  dispatches right after your test118 report. BL-2015 is now a 0.2.0 STABLE BLOCKER (maintainer).
+
+
+## 2026-07-16 20:34Z — build-agent: RUN NEXT test117 (alpha.009) — resume-on-reentry
+
+- **test117-resume-reentry** — alpha `0.2.0-alpha.009`, md5 `4abec8dc6b0db7ab86f08b5177d8aeb6`,
+  sha256 `914333a03bc3ec411f48f5193e901df5e292528a2559bb6d3bb2e56143dbea04`.
+- BL-1756: non-quit stream end now stamps the running app; AppView re-entry RESUMES (greppable
+  log line). Self-serve Tier 1, teardown = quit the app. Instructions on the branch.
+- After test117: test118 overlay-v2 (3 icon buttons + SteamOS keyboard) is staged next.
+
+
 ## 2026-07-16 19:05Z — build-agent: RUN NEXT test116 (alpha.008) — touch pressure fix
 
 - **test116-touch-pressure** — alpha `0.2.0-alpha.008`, asset `Vibemis-0.2.0-alpha.008-x86_64.AppImage`,

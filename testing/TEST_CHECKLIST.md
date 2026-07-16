@@ -182,9 +182,13 @@ ticking a row above does NOT clear its entry here.
 - [ ] **test82** — motion forwarding, Tier 2 — with a **gyro/accel controller in Game Mode** + a host
   that requests motion, confirm live gyro/accel reaches the host and honours the report rate (source-
   confirmed by report PR #162; default-off = safe).
-- [ ] **BL-1528 (P3.23)** — touchscreen passthrough, on-device — confirm the **Legion Go touchscreen**
-  forwards native touch to an Apollo host via `LiSendTouchEvent` (code already present from upstream,
-  gated by `absoluteTouchMode`; never runtime-verified on this device).
+- [x] ☑ **BL-1528 (P3.23)** — touchscreen passthrough, on-device — **PASS (real-usage), test119**
+  (2026-07-16): dense pointer-id slots fixed it — taps INK at the exact mapped point and the
+  maintainer's real-finger freehand strokes DRAW continuously through the stream (264 moves @~90Hz,
+  slots 0/1 multi-finger clean, touchpad-emu negative holds). Residual (non-blocking, upstream
+  Vibepollo note): slow *synthetic* drags with sparse/irregular updates can drop mid-gesture
+  contact in the forwarding path — real fingers unaffected
+  (`testing/test119-pointer-slots/report.md`; evidence chain test116 → BL-2015 → test119).
 - [ ] **test62** — Adaptive bitrate, Tiers 2–3 — on a **degrading stream**, confirm the
   `[adaptive-bitrate]` recommendation is logged on `CONN_STATUS_POOR` and no regression to the
   slow-connection overlay. *(Note: runtime bitrate-stepping itself is still `TODO(P3.12)` — only the

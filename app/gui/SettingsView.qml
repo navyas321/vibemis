@@ -2027,6 +2027,7 @@ Item {
                     width: parent.width
 
                     Label {
+                        id: scaleFactorLabel
                         text: qsTr("Scale Factor:")
                         font.pointSize: 10
                         anchors.verticalCenter: parent.verticalCenter
@@ -2038,6 +2039,21 @@ Item {
                         to: 200     // 200%
                         stepSize: 5
                         value: StreamingPreferences.resolutionScaleFactor
+
+                        // BL-1747: this Slider sits in a plain Row and its background derives
+                        // width from availableWidth (contributing no implicitWidth), so without
+                        // an explicit width it collapsed to ~0px and the handle was undraggable.
+                        // Mirror the Video-page bitrate slider: fill the row between the labels.
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: parent.width - scaleFactorLabel.width - scaleValueLabel.width - (2 * parent.spacing)
+
+                        // BL-1747: guarantee one arrow / d-pad press moves exactly one stepSize
+                        // (5). The default handling was observed stepping twice (+10); overriding
+                        // Left/Right with a single accepted increase()/decrease() forces one step
+                        // per press and stops Left from bubbling to the Flickable's focus-return
+                        // handler mid-adjustment. Range 50-200 / stepSize 5 unchanged.
+                        Keys.onLeftPressed: { resolutionScaleSlider.decrease(); event.accepted = true }
+                        Keys.onRightPressed: { resolutionScaleSlider.increase(); event.accepted = true }
 
                         // BL-1628: same track/handle recipe as the Video page's bitrate slider.
                         background: Rectangle {
@@ -2069,6 +2085,7 @@ Item {
                     }
 
                     Label {
+                        id: scaleValueLabel
                         text: resolutionScaleSlider.value + "%"
                         font.pointSize: 10
                         anchors.verticalCenter: parent.verticalCenter
@@ -3562,7 +3579,7 @@ Item {
                     ToolTip.delay: 1000
                     ToolTip.timeout: 5000
                     ToolTip.visible: hovered
-                    ToolTip.text: qsTr("Composites two translucent buttons into the stream: MENU (top-left, opens the Quick Menu) and KBD (top-right, opens text-send). Finger taps only — mouse clicks in those corners pass through to the game.") + "\n\n" +
+                    ToolTip.text: qsTr("Composites three translucent buttons into the stream: MENU (top-left, opens the Quick Menu), KBD (top-right, opens the SteamOS on-screen keyboard) and a touch-mode toggle (next to KBD, switches trackpad/direct touch). Finger taps only — mouse clicks in those corners pass through to the game.") + "\n\n" +
                                   qsTr("Can also be toggled mid-stream from the Quick Menu (\"Touch overlay\").")
                 }
 

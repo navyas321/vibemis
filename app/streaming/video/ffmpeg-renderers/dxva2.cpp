@@ -867,11 +867,15 @@ void DXVA2Renderer::notifyOverlayUpdated(Overlay::OverlayType type)
         renderRect.x = 0;
         renderRect.y = 0;
     }
-    else if (type == Overlay::OverlayTouchButtonMenu || type == Overlay::OverlayTouchButtonKbd) {
-        // Vibemis BL-1562: touch buttons inset from the top corners (upper-left origin)
+    else if (type == Overlay::OverlayTouchButtonMenu || type == Overlay::OverlayTouchButtonKbd ||
+             type == Overlay::OverlayTouchButtonTouchMode) {
+        // Vibemis BL-1562/BL-2007: MENU top-left, KBD far top-right, TOUCH-MODE
+        // immediately inward of KBD (upper-left origin).
         renderRect.x = (type == Overlay::OverlayTouchButtonMenu)
                 ? Overlay::TouchButtonInset
-                : (m_DisplayWidth - Overlay::TouchButtonInset - newSurface->w);
+                : (m_DisplayWidth - Overlay::TouchButtonInset - newSurface->w
+                   - ((type == Overlay::OverlayTouchButtonTouchMode)
+                      ? (Overlay::TouchButtonSize + Overlay::TouchButtonSpacing) : 0));
         renderRect.y = Overlay::TouchButtonInset;
     }
 
