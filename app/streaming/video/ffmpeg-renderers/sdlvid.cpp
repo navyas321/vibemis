@@ -258,13 +258,17 @@ void SdlRenderer::renderOverlay(Overlay::OverlayType type)
                 m_OverlayRects[type].x = (viewportRect.w - newSurface->w) / 2;
                 m_OverlayRects[type].y = (viewportRect.h - newSurface->h) / 2;
             }
-            else if (type == Overlay::OverlayTouchButtonMenu || type == Overlay::OverlayTouchButtonKbd) {
-                // Vibemis BL-1562: touch buttons inset from the top corners
+            else if (type == Overlay::OverlayTouchButtonMenu || type == Overlay::OverlayTouchButtonKbd ||
+                     type == Overlay::OverlayTouchButtonTouchMode) {
+                // Vibemis BL-1562/BL-2007: MENU top-left, KBD far top-right,
+                // TOUCH-MODE immediately inward of KBD.
                 SDL_Rect viewportRect;
                 SDL_RenderGetViewport(m_Renderer, &viewportRect);
                 m_OverlayRects[type].x = (type == Overlay::OverlayTouchButtonMenu)
                         ? Overlay::TouchButtonInset
-                        : (viewportRect.w - Overlay::TouchButtonInset - newSurface->w);
+                        : (viewportRect.w - Overlay::TouchButtonInset - newSurface->w
+                           - ((type == Overlay::OverlayTouchButtonTouchMode)
+                              ? (Overlay::TouchButtonSize + Overlay::TouchButtonSpacing) : 0));
                 m_OverlayRects[type].y = Overlay::TouchButtonInset;
             } else {
                 // Unknown overlay type — center it rather than asserting.

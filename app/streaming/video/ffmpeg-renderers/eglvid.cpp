@@ -248,12 +248,16 @@ void EGLRenderer::renderOverlay(Overlay::OverlayType type, int viewportWidth, in
             overlayRect.x = (viewportWidth - newSurface->w) / 2;
             overlayRect.y = (viewportHeight - newSurface->h) / 2;
         }
-        else if (type == Overlay::OverlayTouchButtonMenu || type == Overlay::OverlayTouchButtonKbd) {
-            // Vibemis BL-1562: touch buttons inset from the top corners.
-            // NB: OpenGL origin is lower-left, so "top" is the high-Y edge here.
+        else if (type == Overlay::OverlayTouchButtonMenu || type == Overlay::OverlayTouchButtonKbd ||
+                 type == Overlay::OverlayTouchButtonTouchMode) {
+            // Vibemis BL-1562/BL-2007: MENU top-left, KBD far top-right, TOUCH-MODE
+            // immediately inward of KBD. NB: OpenGL origin is lower-left, so "top"
+            // is the high-Y edge here.
             overlayRect.x = (type == Overlay::OverlayTouchButtonMenu)
                     ? Overlay::TouchButtonInset
-                    : (viewportWidth - Overlay::TouchButtonInset - newSurface->w);
+                    : (viewportWidth - Overlay::TouchButtonInset - newSurface->w
+                       - ((type == Overlay::OverlayTouchButtonTouchMode)
+                          ? (Overlay::TouchButtonSize + Overlay::TouchButtonSpacing) : 0));
             overlayRect.y = viewportHeight - Overlay::TouchButtonInset - newSurface->h;
         } else {
             // Unknown overlay type — center it rather than asserting, so new overlay

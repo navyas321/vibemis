@@ -3553,7 +3553,7 @@ Item {
                     ToolTip.delay: 1000
                     ToolTip.timeout: 5000
                     ToolTip.visible: hovered
-                    ToolTip.text: qsTr("Composites two translucent buttons into the stream: MENU (top-left, opens the Quick Menu) and KBD (top-right, opens text-send). Finger taps only — mouse clicks in those corners pass through to the game.") + "\n\n" +
+                    ToolTip.text: qsTr("Composites three translucent buttons into the stream: MENU (top-left, opens the Quick Menu), KBD (top-right, opens the SteamOS on-screen keyboard) and a touch-mode toggle (next to KBD, switches trackpad/direct touch). Finger taps only — mouse clicks in those corners pass through to the game.") + "\n\n" +
                                   qsTr("Can also be toggled mid-stream from the Quick Menu (\"Touch overlay\").")
                 }
 

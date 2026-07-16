@@ -45,13 +45,16 @@ OverlayManager::OverlayManager() :
     // and published via updateOverlaySurface(). No font/colour is used here.
     m_Overlays[OverlayType::OverlayQuickMenu].fontSize = 0;
 
-    // Vibemis BL-1562: on-screen touch buttons. The label is rendered via the normal
-    // TTF text path, then composited onto a semi-transparent button background in
-    // notifyOverlayUpdated() so the buttons read as tappable targets over video.
+    // Vibemis BL-1562/BL-2007: on-screen touch buttons. Icon-only — the glyph is
+    // drawn from primitive shapes onto a semi-transparent button background in
+    // renderTouchButtonSurface(); no TTF is involved, so fontSize stays 0. The
+    // color is the glyph paint color.
     m_Overlays[OverlayType::OverlayTouchButtonMenu].color = {0xFF, 0xFF, 0xFF, 0xFF};
-    m_Overlays[OverlayType::OverlayTouchButtonMenu].fontSize = 16;
+    m_Overlays[OverlayType::OverlayTouchButtonMenu].fontSize = 0;
     m_Overlays[OverlayType::OverlayTouchButtonKbd].color = {0xFF, 0xFF, 0xFF, 0xFF};
-    m_Overlays[OverlayType::OverlayTouchButtonKbd].fontSize = 16;
+    m_Overlays[OverlayType::OverlayTouchButtonKbd].fontSize = 0;
+    m_Overlays[OverlayType::OverlayTouchButtonTouchMode].color = {0xFF, 0xFF, 0xFF, 0xFF};
+    m_Overlays[OverlayType::OverlayTouchButtonTouchMode].fontSize = 0;
 
     // While TTF will usually not be initialized here, it is valid for that not to
     // be the case, since Session destruction is deferred and could overlap with
@@ -162,7 +165,7 @@ void OverlayManager::setOverlayRenderer(IOverlayRenderer* renderer)
     }
 
     // Vibemis BL-1562: the touch buttons render their surface once when toggled on
-    // (their text never refreshes, unlike the perf overlay), so a renderer created or
+    // (their glyphs never refresh, unlike the perf overlay), so a renderer created or
     // recreated after that point would never receive their surface and the buttons
     // would silently vanish. Regenerate them whenever a new renderer registers.
     // NB: must be outside the lock scope above — notifyOverlayUpdated() re-acquires it.
@@ -172,6 +175,9 @@ void OverlayManager::setOverlayRenderer(IOverlayRenderer* renderer)
         }
         if (m_Overlays[OverlayTouchButtonKbd].enabled) {
             notifyOverlayUpdated(OverlayTouchButtonKbd);
+        }
+        if (m_Overlays[OverlayTouchButtonTouchMode].enabled) {
+            notifyOverlayUpdated(OverlayTouchButtonTouchMode);
         }
     }
 }
@@ -192,6 +198,108 @@ void OverlayManager::updateOverlaySurface(OverlayType type, SDL_Surface* surface
     }
 }
 
+// Vibemis BL-2007 — primitive-shape glyph painters for the icon-only touch buttons.
+// SDL_Surface has no circle/line primitives and the buttons must not pull in new
+// font or image assets, so the glyphs are built from filled rects (SDL_FillRect)
+// plus a scanline-rasterized ring for the touch glyph's dot and arcs.
+
+static void fillGlyphRect(SDL_Surface* surface, int x, int y, int w, int h, Uint32 color)
+{
+    SDL_Rect rect = { x, y, w, h };
+    SDL_FillRect(surface, &rect, color);
+}
+
+// Paint the annulus innerR <= dist <= outerR around (cx, cy); innerR = 0 degenerates
+// to a filled circle. With upperHalfOnly, rows below the center are skipped so the
+// ring reads as an arc radiating upward.
+static void fillGlyphRing(SDL_Surface* surface, int cx, int cy, int innerR, int outerR,
+                          Uint32 color, bool upperHalfOnly)
+{
+    if (SDL_MUSTLOCK(surface)) {
+        if (SDL_LockSurface(surface) != 0) {
+            return;
+        }
+    }
+
+    Uint32* pixels = (Uint32*)surface->pixels;
+    int pitchPx = surface->pitch / (int)sizeof(Uint32);
+    for (int y = SDL_max(cy - outerR, 0); y <= SDL_min(cy + outerR, surface->h - 1); y++) {
+        if (upperHalfOnly && y > cy) {
+            break;
+        }
+        for (int x = SDL_max(cx - outerR, 0); x <= SDL_min(cx + outerR, surface->w - 1); x++) {
+            int dx = x - cx;
+            int dy = y - cy;
+            int distSq = dx * dx + dy * dy;
+            if (distSq <= outerR * outerR && distSq >= innerR * innerR) {
+                pixels[y * pitchPx + x] = color;
+            }
+        }
+    }
+
+    if (SDL_MUSTLOCK(surface)) {
+        SDL_UnlockSurface(surface);
+    }
+}
+
+SDL_Surface* OverlayManager::renderTouchButtonSurface(OverlayType type)
+{
+    SDL_Surface* button = SDL_CreateRGBSurfaceWithFormat(0, TouchButtonSize, TouchButtonSize,
+                                                         32, SDL_PIXELFORMAT_ARGB8888);
+    if (button == nullptr) {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "SDL_CreateRGBSurfaceWithFormat() failed: %s",
+                    SDL_GetError());
+        return nullptr;
+    }
+
+    // Same semi-transparent box style the labeled BL-1562 buttons used.
+    Uint32 background = SDL_MapRGBA(button->format, 0x20, 0x20, 0x20, 0x90);
+    SDL_Color glyphColor = m_Overlays[type].color;
+    Uint32 glyph = SDL_MapRGBA(button->format, glyphColor.r, glyphColor.g, glyphColor.b, glyphColor.a);
+    SDL_FillRect(button, nullptr, background);
+
+    switch (type) {
+    case OverlayTouchButtonMenu:
+        // Hamburger: three horizontal bars.
+        fillGlyphRect(button, 17, 22, 30, 4, glyph);
+        fillGlyphRect(button, 17, 30, 30, 4, glyph);
+        fillGlyphRect(button, 17, 38, 30, 4, glyph);
+        break;
+
+    case OverlayTouchButtonKbd:
+        // Keyboard: rect outline (1px corners knocked out so it reads as rounded),
+        // two rows of key dots, and a space bar.
+        fillGlyphRect(button, 14, 21, 36, 2, glyph);        // top edge
+        fillGlyphRect(button, 14, 41, 36, 2, glyph);        // bottom edge
+        fillGlyphRect(button, 14, 21, 2, 22, glyph);        // left edge
+        fillGlyphRect(button, 48, 21, 2, 22, glyph);        // right edge
+        fillGlyphRect(button, 14, 21, 1, 1, background);
+        fillGlyphRect(button, 49, 21, 1, 1, background);
+        fillGlyphRect(button, 14, 42, 1, 1, background);
+        fillGlyphRect(button, 49, 42, 1, 1, background);
+        for (int keyX = 19; keyX <= 43; keyX += 6) {        // 5 columns of 2x2 keys
+            fillGlyphRect(button, keyX, 26, 2, 2, glyph);
+            fillGlyphRect(button, keyX, 31, 2, 2, glyph);
+        }
+        fillGlyphRect(button, 24, 36, 16, 2, glyph);        // space bar
+        break;
+
+    case OverlayTouchButtonTouchMode:
+        // Touch: fingertip dot with two arcs radiating upward (tap gesture).
+        fillGlyphRing(button, 32, 40, 0, 7, glyph, false);
+        fillGlyphRing(button, 32, 40, 13, 16, glyph, true);
+        fillGlyphRing(button, 32, 40, 20, 23, glyph, true);
+        break;
+
+    default:
+        SDL_assert(false);
+        break;
+    }
+
+    return button;
+}
+
 void OverlayManager::notifyOverlayUpdated(OverlayType type)
 {
     if (m_Renderer == nullptr) {
@@ -202,6 +310,27 @@ void OverlayManager::notifyOverlayUpdated(OverlayType type)
     // the renderer of the enable/disable state change — don't run the text path which
     // would clobber the externally-rendered surface.
     if (type == OverlayQuickMenu) {
+        QMutexLocker locker(&m_RendererLock);
+        if (m_Renderer != nullptr) {
+            m_Renderer->notifyOverlayUpdated(type);
+        }
+        return;
+    }
+
+    // Vibemis BL-2007: the touch buttons are icon-only — their glyph surfaces are
+    // drawn from primitive shapes, bypassing the TTF text path entirely (they have
+    // no text, and TTF would render an empty string to nullptr anyway).
+    if (type == OverlayTouchButtonMenu || type == OverlayTouchButtonKbd ||
+            type == OverlayTouchButtonTouchMode) {
+        SDL_Surface* oldSurface = (SDL_Surface*)SDL_AtomicSetPtr((void**)&m_Overlays[type].surface, nullptr);
+        if (oldSurface != nullptr) {
+            SDL_FreeSurface(oldSurface);
+        }
+
+        if (m_Overlays[type].enabled) {
+            SDL_AtomicSetPtr((void**)&m_Overlays[type].surface, renderTouchButtonSurface(type));
+        }
+
         QMutexLocker locker(&m_RendererLock);
         if (m_Renderer != nullptr) {
             m_Renderer->notifyOverlayUpdated(type);
@@ -244,24 +373,6 @@ void OverlayManager::notifyOverlayUpdated(OverlayType type)
                                                               m_Overlays[type].text,
                                                               m_Overlays[type].color,
                                                               1024);
-
-        // Vibemis BL-1562: the touch buttons composite their label centered onto a
-        // fixed-size semi-transparent box so they are visible over the video. The
-        // box size matches the hit rects tested in abstouch.cpp.
-        if (surface != nullptr &&
-                (type == OverlayTouchButtonMenu || type == OverlayTouchButtonKbd)) {
-            SDL_Surface* button = SDL_CreateRGBSurfaceWithFormat(0, TouchButtonSize, TouchButtonSize,
-                                                                 32, SDL_PIXELFORMAT_ARGB8888);
-            if (button != nullptr) {
-                SDL_FillRect(button, nullptr, SDL_MapRGBA(button->format, 0x20, 0x20, 0x20, 0x90));
-                SDL_Rect labelRect = { (button->w - surface->w) / 2,
-                                       (button->h - surface->h) / 2,
-                                       0, 0 };
-                SDL_BlitSurface(surface, nullptr, button, &labelRect);
-                SDL_FreeSurface(surface);
-                surface = button;
-            }
-        }
 
         SDL_AtomicSetPtr((void**)&m_Overlays[type].surface, surface);
     }
