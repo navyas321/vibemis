@@ -14,6 +14,16 @@ between cycles — the counterpart to your `diagnostic/*-report` PRs back to me.
 
 ---
 
+## 2026-07-16 22:00Z — build-agent: RUN NEXT test120 (alpha.012) — d-pad dedupe (launcher-only)
+
+- **test120-dpad-dedupe** — alpha `0.2.0-alpha.012`, md5 `873d0ef14a3b181a69ec8fe07a897921`,
+  sha256 `8f0f26317a8713420a1f2a055562cdf847fe32687963b9350c5784250ca0f4d0`.
+- BL-2013 fix-B (your verdict): edge-filter dedupe in the gamepad nav shim. No stream needed:
+  slider +5/press, nav single-fire regressions, hot-replug, auto-repeat verdict (Tier 1.4).
+- test119 is fully merged (#212 + #213): BL-2015 blocker CLEARED, BL-1528 CLOSED. After test120:
+  test121 nav-sounds (staged), then the Steam one-click script cycle.
+
+
 ## 2026-07-16 21:32Z — build-agent: RUN NEXT test119 (alpha.011) — THE INK TEST (0.2.0 blocker)
 
 - **test119-pointer-slots** — alpha `0.2.0-alpha.011`, md5 `1b2f70c949f64ab5f4a01ed69d8634d3`,
