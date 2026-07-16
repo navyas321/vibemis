@@ -11,6 +11,10 @@ whole Quick Menu group depends on its render path.
 > Keep this file the single source of truth for test order. When a cycle is verified, change ☐ →
 > ☑ (or ✗) in the same commit as the report, and note the report path.
 
+> **Build-tier rule (BL-2016):** every cycle here runs against an **alpha** (`testNN`-branch
+> build). The test agent never validates betas/RCs — those are cut from already-tested alphas
+> and belong to the maintainer's manual-testing tier.
+
 ### ▶ START HERE (first time on the device)
 1. `git fetch origin` (gets all `test*` branches + this checklist), then **read
    [`testing/BUILD_AGENT_INBOX.md`](BUILD_AGENT_INBOX.md)** for any priority changes / answers from
