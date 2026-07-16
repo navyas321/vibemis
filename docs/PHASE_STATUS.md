@@ -238,7 +238,15 @@ slow-recover policy at runtime (gated on moonlight-common-c runtime bitrate supp
 submodule for `LiSetVideoBitrate`-class symbols before starting; if absent, document and park the
 phase as upstream-gated, do NOT hack the control stream).
 
-## P4.1 — First stable release  ✅ SHIPPED as **0.3.0.0** (2026-07-13, W.X.Y.Z scheme)
+## P4.1 — First stable release  ✅ SHIPPED — current stable train: SemVer, first stable = **0.1.0**
+
+> **2026-07-16 correction (BL-2017 release audit):** everything below this heading is
+> HISTORICAL RECORD from the retired W.X.Y.Z / 1.0.x interim schemes — do NOT act on it.
+> The live scheme is strict SemVer 2.0.0: shipped stable = `0.1.0`, next stable = `0.2.0`
+> (see `docs/RELEASE_RUNBOOK_0.2.0.md` for the current gate + exact dispatch commands;
+> stable cuts REQUIRE `stable_confirm=CONFIRM-STABLE` and explicit maintainer approval).
+> In particular, the old "cut tag `1.0.1` / attach release-notes-v1.0.1.md" instruction
+> further down is DEAD — never dispatch it.
 Cut from the fully fixed line (three maintainer device passes + harness-validated nav fixes +
 prefs-UAF fix + touch-overlay hit-test fix + Quick Menu redesign + in-app updater proven
 end-to-end). 0.1.0.0 was burnt (tag-reuse lesson — see the versioning memory/commits); legacy
