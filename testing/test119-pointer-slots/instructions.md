@@ -14,7 +14,9 @@ hosts forward the client's id verbatim, and Vibemis sent raw/CRC'd SDL finger id
 Android clients send 0–9 — which is why they work. Fix: lowest-free-slot mapping per
 finger lifetime (abstouch.cpp + input.h).
 
-**Build tier: ALPHA (BL-2016). Hashes stamped at dispatch.**
+**Alpha:** `0.2.0-alpha.011` — asset `Vibemis-0.2.0-alpha.011-x86_64.AppImage`
+**md5:** `1b2f70c949f64ab5f4a01ed69d8634d3`
+**sha256:** `e605943d586fa075dbf18a765206a13659134696bab3a140ec8a9865620bd132`
 
 ## Test procedure
 
