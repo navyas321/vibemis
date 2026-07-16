@@ -14,6 +14,16 @@ between cycles — the counterpart to your `diagnostic/*-report` PRs back to me.
 
 ---
 
+## 2026-07-16 21:32Z — build-agent: RUN NEXT test119 (alpha.011) — THE INK TEST (0.2.0 blocker)
+
+- **test119-pointer-slots** — alpha `0.2.0-alpha.011`, md5 `1b2f70c949f64ab5f4a01ed69d8634d3`,
+  sha256 `e605943d586fa075dbf18a765206a13659134696bab3a140ec8a9865620bd132`.
+- BL-2015 dense pointer-id slots: taps should CLICK, drags should DRAW. Tier 1 = Paint flow
+  with the build agent on host truth; Tier 2 = your test118 Game-Mode deferrals; Tier 3 =
+  negatives. PASS closes BL-2015 + ticks the BL-1528/P3.23 row.
+- Your BL-2013 fix-B verdict is already implemented + compiled (test120, dispatches after this).
+
+
 ## 2026-07-16 21:03Z — build-agent: RUN NEXT test118 (alpha.010) — overlay v2
 
 - **test118-overlay-v2** — alpha `0.2.0-alpha.010`, md5 `7873631741e506e146a2fde63677cf22`,
