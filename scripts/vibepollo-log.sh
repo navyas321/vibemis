@@ -50,7 +50,7 @@ if [ "${#CANDIDATES[@]}" -eq 0 ]; then
     echo "[vibepollo-log] Could not auto-detect a Vibepollo log under /mnt/c." >&2
     echo "  - Confirm the C: drive is mounted:  ls /mnt/c/Users" >&2
     echo "  - Or set the path explicitly:       VIBEPOLLO_LOG=/mnt/c/.../sunshine.log $0" >&2
-    echo "  - Then add that path to CLAUDE.md (P3.5) so future sessions can tail it." >&2
+    echo "  - Then note that path in the agent-meta repo (P3.5) so future sessions can tail it." >&2
     exit 1
 fi
 

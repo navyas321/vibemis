@@ -661,7 +661,7 @@ int main(int argc, char *argv[])
     // Vibemis: `vibemis selftest [--json]` — a scriptable, non-destructive launcher smoke test for
     // the Legion Go test agent. Runs sanity checks on the preferences subsystem (no host, stream,
     // GUI window, or SDL video required) and exits 0 (all PASS) / 1 (any FAIL). Runs before SDL/GUI
-    // init so it works headlessly in any session. See docs/TEST_AUTOMATION.md.
+    // init so it works headlessly in any session. See docs/SELFTEST.md.
     //   default : one "SELFTEST <name>: PASS|FAIL" line per check + a "SELFTEST RESULT: …" summary
     //   --json  : a single compact JSON object {"result","failures","checks":{…}} for parsing
     if (commandLineParserResult == GlobalCommandLineParser::SelfTestRequested) {

@@ -4,8 +4,8 @@ This folder is the **bridge between [Claude Design](https://claude.ai/design) an
 The maintainer designs Vibemis screens in Claude Design and drops the export here; the build agent
 picks it up and implements it in QML against the `Theme` tokens (`app/gui/Theme.qml`, P3.17/test73).
 
-See `docs/PHASE_STATUS.md` → **P3.18** for the full pipeline and `docs/DESIGN_SYSTEM.md` for the token
-vocabulary both sides share.
+See `docs/DESIGN_SYSTEM.md` for the token vocabulary both sides share. (Pipeline/phase status for
+this handoff is tracked in the private agent-meta repo.)
 
 ## How to hand a design to the build agent
 
@@ -20,7 +20,7 @@ vocabulary both sides share.
    ```
    (PDF/PPTX exports are fine too, but **HTML is the most useful** — the build agent can read the
    markup/CSS to extract exact colors, sizes, and spacing.)
-3. Tell the build agent (in chat, or via `testing/BUILD_AGENT_INBOX.md`) e.g. *"implement
+3. Tell the build agent (in chat, or via its inbox channel) e.g. *"implement
    docs/design/settings"*. It will translate the handoff into QML as a launcher-only `test<N>` PR
    (one screen per PR) and queue it for verification.
 

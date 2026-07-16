@@ -1,6 +1,6 @@
 # Vibemis — Development Notes
 
-> The full workflow SOP (keyword shortcuts, test cycle process, PR format) is in [WORKFLOW.md](WORKFLOW.md).
+> Contributing conventions (commit format, PR test scorecard) are in [CONTRIBUTING.md](../CONTRIBUTING.md).
 > The project phase roadmap and user decisions are in `C:\Users\navya\.claude\plans\pure-purring-pillow.md` (build host local).
 
 ## Project structure
@@ -17,18 +17,19 @@ vibemis/
 ├── qmdnsengine/            # Submodule — mDNS discovery
 ├── scripts/
 │   └── build-appimage.sh   # AppImage bundler (linuxdeploy-based)
-├── testing/                # In-repo test cycle handoff
-│   └── <task>/
-│       ├── instructions.md # Written by build agent, read by test agent
-│       ├── report.md       # Written by test agent, read by build agent
-│       └── *.AppImage      # Tracked artifact (unignored via !testing/**/*.AppImage)
 ├── docs/
-│   ├── WORKFLOW.md         # SOP — keyword shortcuts, PR format, test cycle
 │   ├── BUILD_SYSTEM.md     # Build environment, AppImage, submodule notes
+│   ├── RELEASING.md        # Versioning, CI release tiers, AppImage pipeline
+│   ├── SELFTEST.md         # Scriptable self-test / verification surfaces
 │   └── DEVELOPMENT.md      # This file — project structure, key files
 ├── CLAUDE.md               # Session orientation for Claude agents
+├── CONTRIBUTING.md         # Commit format, PR test scorecard
 └── README.md               # User-facing project README
 ```
+
+> The agent-to-agent test-cycle handoff (per-cycle instructions, reports, the test checklist,
+> and the build/test agent channels) that used to live in `testing/` moved to the private
+> `navyas321/vibemis-agent-meta` repo as part of the P4.0 two-repo split — see `CLAUDE.md`.
 
 ## Key source files
 

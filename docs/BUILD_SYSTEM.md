@@ -1,6 +1,6 @@
 # Vibemis — Build System
 
-> This file covers the Vibemis build environment. For the full development workflow (keywords, test cycles, PR process) see [WORKFLOW.md](WORKFLOW.md).
+> This file covers the Vibemis build environment. For contributing conventions (commit format, PR test scorecard) see [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 ## Build host
 
