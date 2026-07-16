@@ -1464,6 +1464,20 @@ private:
             emit m_Session->quitStarting();
         }
         else {
+            // BL-1756: a stream that ends without quitting leaves the app running
+            // host-side, but currentGameId is only ever written by the serverinfo
+            // poll — and polling is suspended the whole time the stream window is
+            // up. Record the running app before sessionFinished re-shows the UI so
+            // AppView's re-entry resync (BL-1769) sees it and re-activating this
+            // app resumes instead of relaunching. Gated on connection success: a
+            // failed launch taught us nothing the poll doesn't know. The next
+            // successful poll stays authoritative via ASSIGN_IF_CHANGED (e.g. if
+            // the game exited host-side as the stream ended).
+            if (m_Session->m_AsyncConnectionSuccess) {
+                QWriteLocker lock(&m_Session->m_Computer->lock);
+                m_Session->m_Computer->currentGameId = m_Session->m_App.id;
+            }
+
             emit m_Session->sessionFinished(m_Session->m_PortTestResults);
         }
 
