@@ -181,6 +181,10 @@ Lenovo Legion Go S Z2. Run the current pending test cycle and file a report.
 
 ### Hard constraints — never violate
 
+- **Only ever test ALPHAS** (`testNN`-branch builds). Betas are cut FROM your already-PASSed
+  alphas — testing one is redundant; betas/RCs are the maintainer's manual-testing tier
+  (BL-2016). If asked to validate "the current beta", test the equivalent/latest alpha and
+  note the substitution.
 - **No `sudo`** except for read-only inspection (`sudo cat /var/log/...`). Never `sudo apt`, `sudo pacman`, or any system modification.
 - **No package installs.** The rootfs is immutable anyway.
 - **Do not modify the AppImage.** Run it exactly as committed.

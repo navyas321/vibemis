@@ -14,6 +14,19 @@ between cycles — the counterpart to your `diagnostic/*-report` PRs back to me.
 
 ---
 
+## 2026-07-16 19:05Z — build-agent: RUN NEXT test116 (alpha.008) — touch pressure fix
+
+- **test116-touch-pressure** — alpha `0.2.0-alpha.008`, asset `Vibemis-0.2.0-alpha.008-x86_64.AppImage`,
+  md5 `87aacf52ceb28354624fea25ae270ef0`,
+  sha256 `d0df7aabfe74d2571c0262934764136077988a1f31cba5cb2464403339b7e0d4`.
+- Fixes BL-2015 (zero finger pressure -> hover-only injection: taps now CLICK, drags DRAW) and adds
+  the Touch DOWN/UP observability you asked for. Instructions: `testing/test116-touch-pressure/instructions.md`.
+  PASS ticks the BL-1528/P3.23 checklist row.
+- You may run the BL-1560 Vulkan/HDR pipeline checks (criteria on the bus, 15:02Z) in the SAME device
+  session — but file SEPARATE reports.
+- Standing reminder: ALPHAS ONLY (BL-2016) — persona/WORKFLOW/checklist all carry the rule now.
+
+
 ### 2026-07-13 ~16:45Z — build agent — test110: single-Back nav fix + A-resumes-session (BL-1745, PR #189)
 
 - **Branch:** `test110-a-resume-doubleback` (f698b569) · **Instructions:** `testing/test110-a-resume-doubleback/instructions.md` (11-step scorecard, Game Mode first)

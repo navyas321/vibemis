@@ -263,7 +263,7 @@ jobs:
           #            Agents must NEVER dispatch release_type=stable autonomously.
           # rc       dispatch release_type=rc                             <next>-rc.NNN      true
           # beta     vibemis-main PR merge / plain dispatch on main       <next>-beta.NNN    true
-          # alpha    test** push tagged [alpha] (fix/feat branches too)   <next>-alpha.NNN   true
+          # alpha    test** push tagged [alpha]                           <next>-alpha.NNN   true
           # dev      any other branch                                     <next>-dev.<run>.<branch>  true
 
           IS_PRERELEASE="true"
@@ -299,8 +299,11 @@ jobs:
             IS_PRERELEASE="true"
             RELEASE_TIER="beta"
 
-          elif [[ "$BRANCH_NAME" =~ ^test || "$BRANCH_NAME" =~ ^(fix|hotfix|feat|feature)/ ]]; then
+          elif [[ "$BRANCH_NAME" =~ ^test ]]; then
             # 🔬 Alpha — pre-release; the branch is shown in the release body.
+            # BL-1998: test** only. fix/feat/hotfix refs (reachable only via manual
+            # dispatch) version as dev — the test agent consumes test<N> branches
+            # exclusively, so a fix-branch "alpha" could never be picked up anyway.
             VERSION="${BASE_VERSION}-alpha.$(next_counter alpha)"
             RELEASE_TIER="alpha"
 
@@ -827,13 +830,40 @@ jobs:
       id: changelog
       run: |
         CURRENT_VERSION="${{ needs.setup-version.outputs.version }}"
-        PREV_TAG=$(git tag --sort=-creatordate | grep -v "$CURRENT_VERSION" | head -n1)
+        # BL-1871: a promoted release must NOT drop the changelist of the pre-releases it
+        # was cut from. The old logic anchored to the most-recent tag by date regardless of
+        # tier, so a beta cut right after an alpha only spanned alpha..beta and lost every
+        # commit the alpha itself had introduced (and the same for the rc/stable chain).
+        # Fix: anchor to the previous tag of the SAME-OR-HIGHER stability tier so the range
+        # covers the full promotion window — a beta spans since the previous beta (including
+        # the alphas merged in between), an rc since the previous rc (including betas+alphas),
+        # a stable since the previous stable (everything). An alpha still spans since the last
+        # release of any releasable tier, unchanged. Stability rank: dev < alpha < beta < rc < stable.
+        tier_rank() {  # $1 = tag/version string -> numeric stability rank (higher = more stable)
+          case "$1" in
+            *-alpha.*) echo 1 ;;
+            *-beta.*)  echo 2 ;;
+            *-rc.*)    echo 3 ;;
+            *-dev.*)   echo 0 ;;
+            *)         echo 4 ;;  # bare (no pre-release suffix) = stable
+          esac
+        }
+        CUR_RANK=$(tier_rank "$CURRENT_VERSION")
+        PREV_TAG=""
+        # Tags never contain whitespace, so word-splitting the newest-first list is safe.
+        for t in $(git tag --sort=-creatordate); do
+          [ "$t" = "$CURRENT_VERSION" ] && continue
+          if [ "$(tier_rank "$t")" -ge "$CUR_RANK" ]; then
+            PREV_TAG="$t"
+            break
+          fi
+        done
         if [ -z "$PREV_TAG" ]; then
           SINCE_DATE=$(date -d '7 days ago' '+%Y-%m-%d')
-          echo "No previous release found. Getting commits since $SINCE_DATE"
+          echo "No previous same-or-higher-tier release found. Getting commits since $SINCE_DATE"
           COMMITS=$(git log --since="$SINCE_DATE" --pretty=format:"%h|%s|%an|%ad" --date=short --no-merges)
         else
-          echo "Getting commits since last release: $PREV_TAG"
+          echo "Getting commits since last same-or-higher-tier release: $PREV_TAG"
           COMMITS=$(git log ${PREV_TAG}..$CURRENT_VERSION --pretty=format:"%h|%s|%an|%ad" --date=short --no-merges)
         fi
         FEATURES=""
@@ -983,8 +1013,8 @@ jobs:
           *Update now* to install this build.' ||
             needs.setup-version.outputs.release_tier == 'alpha' && '🔬 **Alpha Build**
 
-          In-progress fix/feature branch. For targeted test cycles only.
-          **Do not use as a daily driver.**
+          Test-cycle build from a test** branch, for targeted validation by the test
+          agent only. **Do not use as a daily driver.**
 
           📲 **Updating from a previous install:** Settings → Advanced → **Software
           updates**, channel **Alpha**, then *Check for updates* → *Update now*.' ||

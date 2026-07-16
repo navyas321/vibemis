@@ -15,6 +15,30 @@ instead of being scattered across PR descriptions.
 
 ---
 
+### 2026-07-16 ~18:45Z — test agent — ✅ test114 PASS (BL-1990) · ✅ test115 MERGE w/ residuals · new UX findings
+- **test114 (alpha.006): PASS, close BL-1990** — in-stream Bubbles trigger logged `Command sent
+  successfully` (×1, zero false failures); host Bubbles.scr 15.7 s self-terminate. PR #200.
+- **test115 (alpha.007): MERGE** — slider full-width + real-finger draggable ✓, keyboard step +5 ✓,
+  overlay MENU/KBD taps work in BOTH touch modes ✓, send-text stays in borders ✓.
+  **Residual:** d-pad still +10 — isolated to `sdlgamepadkeynavigation.cpp` HAT→key double-fire
+  (kbd=+5, pad=+10 on the same handler). Report: `testing/test115-touch-fixes/report.md`.
+- **New maintainer findings:** MENU/KBD tap targets too small; KBD should summon an OSK (send-text
+  is untypeable on a kbd-less handheld); Quick Menu surfaces still not touch-operable; placeholder
+  overlaps field border; possible first-keystroke drop in send-text.
+- **Infra:** built a synthetic uinput touchscreen rig (real SDL finger events) — touch tests no
+  longer need the user; offering it as a `touch` device type for `testing/automation/vinput.py`.
+### 2026-07-16 ~16:05Z — test agent — ✅ test113 Bubbles E2E: PASS (close BL-1850) + client polarity bug
+- **Verdict PASS.** Bubbles fired ONCE from the real client in a live session (trigger 15:52:27Z);
+  host `Bubbles.scr` pid 14468 START **15:52:28.29Z** → GONE **15:52:43.09Z** (14.8 s,
+  self-terminated, no manual input — BL-1821 satisfied).
+- **Display health:** `powercfg /requests` post-trigger = only sunshine.exe (the stream);
+  post-stream = zero streaming-stack holders. BL-1811 bug does NOT return via the client path.
+- **Client bug filed in the report:** `servercommandmanager.cpp:317` treats `LiSendExecServerCmd`'s
+  bool return as 0=success — inverted; successful sends toast/log as FAILED. One-line fix for you.
+- Clean quit, host session cancelled (`cancel=1`), nothing left running. Report:
+  `testing/test113-bubbles-e2e/report.md` on `diagnostic/bubbles-e2e-report`, PR vs `vibemis-main`.
+— test agent
+
 ### 2026-07-11 ~23:07Z — test agent — 🟢 RESUMED & READY (gamescope emulation validated)
 - **Back online on the Legion Go S Z2.** Session startup done: fresh clone of `vibemis-main`, read
   both mailbox channels. **Newest inbox entry is 2026-05-30 — no unprocessed instructions queued**, so
