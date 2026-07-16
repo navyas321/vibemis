@@ -10,6 +10,7 @@
 #include "streaming/streamutils.h"
 
 #include <QtMath>
+#include <QDebug>
 
 // How long the fingers must be stationary to start a right click
 #define LONG_PRESS_ACTIVATION_DELAY 650
@@ -214,14 +215,45 @@ void SdlInputHandler::handleAbsoluteFingerEvent(SDL_TouchFingerEvent* event)
         }
 
         if (isPen) {
+            // Pens keep the reported pressure as-is: 0.0 while in range is a REAL state
+            // (hovering nib) that the host must see to distinguish hover from contact.
             LiSendPenEvent(eventType, LI_TOOL_TYPE_PEN, 0, vidrelx / dst.w, vidrely / dst.h, event->pressure,
                            0.0f, 0.0f, LI_ROT_UNKNOWN, LI_TILT_UNKNOWN);
         }
         else
 #endif
         {
-            LiSendTouchEvent(eventType, pointerId, vidrelx / dst.w, vidrely / dst.h, event->pressure,
-                             0.0f, 0.0f, LI_ROT_UNKNOWN);
+            // BL-2015: many touchscreens (the Legion Go panel included) report SDL finger
+            // pressure as 0.0, and Apollo-lineage hosts inject pressure<=0 DOWN/MOVE as
+            // hover — the pointer relocates but never makes contact, so taps don't click
+            // and drags don't draw. A capacitive finger can't hover: treat missing
+            // pressure as full contact. UP keeps 0.0 (contact release).
+            float pressure = event->pressure;
+            if (eventType != LI_TOUCH_EVENT_UP && pressure <= 0.0f) {
+                pressure = 1.0f;
+            }
+
+            int err = LiSendTouchEvent(eventType, pointerId, vidrelx / dst.w, vidrely / dst.h, pressure,
+                                       0.0f, 0.0f, LI_ROT_UNKNOWN);
+
+            // BL-2015 observability (test-agent ask): the send path was previously
+            // unloggable. DOWN/UP only — never per-MOVE (input-path logging caused the
+            // BL-1619 lag storm); moves are counted and summarized on UP. Single shared
+            // counter: diagnostic-grade for the dominant single-finger case.
+            static uint32_t s_MovesSinceDown = 0;
+            if (eventType == LI_TOUCH_EVENT_DOWN) {
+                s_MovesSinceDown = 0;
+                qDebug() << "Touch DOWN id" << pointerId
+                         << "norm" << vidrelx / dst.w << vidrely / dst.h
+                         << "pressure" << pressure << "err" << err;
+            }
+            else if (eventType == LI_TOUCH_EVENT_MOVE) {
+                s_MovesSinceDown++;
+            }
+            else {
+                qDebug() << "Touch UP id" << pointerId << "after" << s_MovesSinceDown
+                         << "moves, err" << err;
+            }
         }
 
         if (!m_DisabledTouchFeedback) {

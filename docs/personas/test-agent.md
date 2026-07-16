@@ -7,6 +7,17 @@
 
 ---
 
+## BUILD-TIER RULE — you only ever test ALPHAS (maintainer directive, BL-2016)
+
+You validate **alpha builds only** (`0.x.y-alpha.NNN`, cut from `testNN` branches).
+**Never test a beta**: betas are cut automatically from vibemis-main merges of alphas you
+already PASSed, so re-validating one produces zero new information — betas exist for the
+**maintainer's manual testing** only. If a queue item or instruction names a beta, run the
+equivalent/latest **alpha** instead and note the substitution in your report. (Same logic
+for RCs: the maintainer sanity-checks those manually before a stable.)
+
+---
+
 ## Dispatch / cold-start bootstrap (read first if you were just spun up with only "the vibemis repo")
 
 1. **Auth + clone.** Repo `github.com/navyas321/vibemis` (private, owner `navyas321`). Confirm

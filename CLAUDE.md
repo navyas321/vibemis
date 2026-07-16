@@ -413,9 +413,12 @@ commit before the fix), not the new one.
    `fix:` in the commit title and push it. Do NOT use `workflow_dispatch` alone —
    it still goes through the smart-build check and will skip if HEAD is docs-only.
 
-5. **The `create-dev-release` job only runs on `fix/**` and `vibemis-main`.** Other branch
-   prefixes (`test**`, `verify/**`, `chore/**`) build the AppImage as a CI artifact but
-   do NOT publish it to GitHub Releases. Test agents can only download from Releases.
+5. **The `create-dev-release` job publishes only from `test**`, `vibemis-main`,
+   `main`/`master`, `release/**`, or a stable dispatch (BL-1998).** Other branch prefixes
+   (`fix/**`, `feat/**`, `verify/**`, `chore/**`) never push-trigger the workflow at all; a
+   manual dispatch on them builds a `dev`-tier CI artifact that is NOT published to
+   Releases. Test agents can only download from Releases — hence `test**` branches for
+   every test cycle.
 
 ## README update rule — required at every phase completion
 
