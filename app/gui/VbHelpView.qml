@@ -4,9 +4,21 @@ import QtQuick.Layouts 1.2
 import Vibemis.Redesign 1.0
 
 // Redesign screen 1f — Help. docs/design/redesign, preview 1f. Pure presentation (no host/
-// streaming wiring): a hero Quick Menu card + gamepad shortcuts (left) and keyboard shortcuts
-// + remote-play note (right), on the token system. Pushed onto the StackView by the Help
-// button; Ⓑ / Esc / Back pops it.
+// streaming wiring): four reference cards — Quick Menu, Keyboard shortcuts, Gamepad shortcuts,
+// Remote play — on the token system. Pushed onto the StackView by the Help button; Ⓑ / Esc /
+// Back pops it.
+//
+// BL-1684 (T6 redesign): the maintainer's manual pass wanted (a) UNIFORM card dimensions,
+// (b) everything on ONE screen with NO scrolling/movement, and (c) NO focus highlight — nothing
+// on this page is actionable (it is a static reference sheet), only Ⓑ/Back leaves it. So:
+//   * the BL-1669 Flickable + arrow-scroll handlers are GONE — the four cards live in a fixed
+//     2×2 GridLayout that fills the body, so every card is exactly the same size and the content
+//     always fits without scrolling at any window height.
+//   * the hero Quick Menu card's accent-gradient wash + accent border are GONE — that decorative
+//     wash read as "one card is highlighted"; all four cards are now the same plain elevated
+//     surface, so the page has no highlight of any kind.
+//   * no VbCard binds `focused`, and there is no focusable Control on the page, so nothing ever
+//     draws a focus ring.
 Item {
     id: helpView
     anchors.fill: parent
@@ -14,198 +26,91 @@ Item {
     // Full-bleed window background.
     Rectangle { anchors.fill: parent; color: VbTokens.bgWindow }
 
-    // BL-1669: the Help screen had NO focusable element, so on entry focus stuck on the global
-    // toolbar (only the ☰ settings icon was reachable) and gamepad Ⓑ/Back did nothing — the
-    // screen read as "unusable / frozen". Grab focus on entry so Ⓑ/Esc pop and up/down scroll.
+    // BL-1669 / BL-1684: this screen has no actionable/focusable element, so on entry focus would
+    // otherwise stick on the global toolbar and gamepad Ⓑ/Back would do nothing ("frozen" screen).
+    // Grab focus on the (invisible) root Item — an Item draws no highlight — purely so Ⓑ/Esc/Back
+    // are handled here and pop the screen. No arrow-key navigation: the page does not scroll.
     focus: true
     Component.onCompleted: helpView.forceActiveFocus()
     Keys.onEscapePressed: stackView.pop()
     Keys.onBackPressed: stackView.pop()
 
-    // BL-1669: scroll the (previously fixed, overflowing) body. The gamepad sends Key_Up/Down in
-    // arrow nav mode and Tab/Backtab in UI nav mode, so accept BOTH plus PageUp/Down — whatever
-    // the current mode emits scrolls the card body instead of doing nothing.
-    Keys.onPressed: {
-        if (event.key === Qt.Key_Down || event.key === Qt.Key_Tab || event.key === Qt.Key_PageDown) {
-            helpFlick.contentY = Math.min(Math.max(0, helpFlick.contentHeight - helpFlick.height),
-                                          helpFlick.contentY + 140)
-            event.accepted = true
-        } else if (event.key === Qt.Key_Up || event.key === Qt.Key_Backtab || event.key === Qt.Key_PageUp) {
-            helpFlick.contentY = Math.max(0, helpFlick.contentY - 140)
-            event.accepted = true
-        }
-    }
-
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
 
-        // ---- Header (Back + "Help") MOVED to the always-present global toolbar (main.qml), kept
-        // present so it renders under gamescope. Hidden here to avoid a double header. ----
-        Item {
-            visible: false
-            Layout.fillWidth: true
-            Layout.preferredHeight: 0
-            RowLayout {
-                anchors.fill: parent
-                anchors.leftMargin: VbTokens.screenPadX
-                anchors.rightMargin: VbTokens.screenPadX
-                spacing: 20
-                Button {
-                    id: backBtn
-                    implicitWidth: VbTokens.iconButton; implicitHeight: VbTokens.iconButton
-                    background: Rectangle {
-                        radius: VbTokens.radiusIconButton
-                        color: backBtn.activeFocus ? VbTokens.focusedFill : VbTokens.bgElev
-                        border.width: 1; border.color: backBtn.activeFocus ? VbTokens.accent : VbTokens.stroke
-                    }
-                    contentItem: Text {
-                        text: "‹"; anchors.centerIn: parent
-                        font.family: VbTokens.fontDisplay; font.pixelSize: 24
-                        color: VbTokens.text; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
-                    }
-                    onClicked: stackView.pop()
-                }
-                Text {
-                    text: qsTr("Help")
-                    font.family: VbTokens.fontDisplay; font.weight: Font.Bold; font.pixelSize: VbTokens.sizeScreenTitle
-                    color: VbTokens.text
-                    Layout.fillWidth: true
-                }
-            }
-            Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: VbTokens.strokeSoft }
-        }
-
-        // ---- Body: two columns, wrapped in a Flickable so tall content (or a small window)
-        // scrolls instead of clipping the cards off the top/bottom edge (BL-1669). ----
-        Flickable {
-            id: helpFlick
+        // ---- Body: a fixed 2×2 grid of UNIFORM cards, filling all space between the (global)
+        // header and the hint bar. Every card gets an equal share of width and height, so the
+        // four cards are identical in size and the whole page fits one screen without scrolling. ----
+        GridLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            clip: true
-            contentWidth: width
-            contentHeight: bodyRow.implicitHeight + VbTokens.screenPadY * 2
-            boundsBehavior: Flickable.StopAtBounds
-            ScrollBar.vertical: ScrollBar { }
+            Layout.leftMargin: VbTokens.screenPadX
+            Layout.rightMargin: VbTokens.screenPadX
+            Layout.topMargin: VbTokens.screenPadY
+            Layout.bottomMargin: VbTokens.screenPadY
+            columns: 2
+            columnSpacing: VbTokens.cardGap
+            rowSpacing: VbTokens.cardGap
 
-        RowLayout {
-            id: bodyRow
-            x: VbTokens.screenPadX
-            y: VbTokens.screenPadY
-            width: helpFlick.width - VbTokens.screenPadX * 2
-            spacing: VbTokens.cardGap
+            // Row-major fill order → top-left, top-right, bottom-left, bottom-right.
 
-            // LEFT column: Quick Menu hero + gamepad shortcuts. BL-1669: `Layout.preferredWidth`
-            // was set to 1.1 / 1.0 as if it were a CSS flex ratio — but in QML it is an ABSOLUTE
-            // pixel width (≈1px), which fought fillWidth and skewed the scaling. Use real relative
-            // stretch widths instead (left slightly wider, as the design intends).
-            ColumnLayout {
+            // TOP-LEFT: Quick Menu (the primary reference). Plain elevated surface — same size and
+            // style as every other card (no accent wash / border, so it does not read as "highlighted").
+            VbCard {
                 Layout.fillWidth: true
-                Layout.preferredWidth: 110
-                spacing: 22
-
-                // Hero Quick Menu card (accent gradient wash + accent border, 20px radius)
-                VbCard {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: heroCol.implicitHeight + 64
-                    radius: 20
-                    baseColor: VbTokens.bgElev
-                    Rectangle {
-                        anchors.fill: parent; radius: 20
-                        border.width: 1
-                        border.color: Qt.rgba(VbTokens.accent.r, VbTokens.accent.g, VbTokens.accent.b, 0.3)
-                        // Approximates the HTML's linear-gradient(135deg, color-mix(ac 20%, bgElev), bgElev);
-                        // QtQuick 2.9's Gradient has no angle, so this fades top-to-bottom instead of diagonally.
-                        gradient: Gradient {
-                            GradientStop {
-                                position: 0.0
-                                color: Qt.rgba(VbTokens.accent.r * 0.2 + VbTokens.bgElev.r * 0.8,
-                                               VbTokens.accent.g * 0.2 + VbTokens.bgElev.g * 0.8,
-                                               VbTokens.accent.b * 0.2 + VbTokens.bgElev.b * 0.8, 1.0)
-                            }
-                            GradientStop { position: 1.0; color: VbTokens.bgElev }
-                        }
+                Layout.fillHeight: true
+                Layout.preferredWidth: 1
+                Layout.preferredHeight: 1
+                radius: 20
+                ColumnLayout {
+                    anchors.left: parent.left; anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.margins: 30
+                    spacing: 12
+                    Text {
+                        text: qsTr("QUICK MENU")
+                        font.family: VbTokens.fontBody; font.weight: Font.ExtraBold; font.pixelSize: 14
+                        font.letterSpacing: 1.4
+                        color: VbTokens.accent
                     }
-                    ColumnLayout {
-                        id: heroCol
-                        anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
-                        anchors.margins: 32; spacing: 14
-                        Text {
-                            text: qsTr("QUICK MENU")
-                            font.family: VbTokens.fontBody; font.weight: Font.ExtraBold; font.pixelSize: 14
-                            font.letterSpacing: 1.4
-                            color: VbTokens.accent
-                        }
-                        Text {
-                            text: qsTr("Open the in-stream overlay")
-                            font.family: VbTokens.fontDisplay; font.weight: Font.Bold; font.pixelSize: 24
-                            color: VbTokens.text
-                        }
-                        Text {
-                            text: qsTr("Clipboard sync, server commands, and stream controls — any time during a session.")
-                            font.family: VbTokens.fontBody; font.pixelSize: VbTokens.sizeBody; lineHeight: 1.5
-                            color: VbTokens.textMute; wrapMode: Text.WordWrap; Layout.fillWidth: true
-                        }
-                        // Chord as key-caps: Select + L1 + R1 + (Y in a circle), "+" separators between
-                        RowLayout {
-                            spacing: 10
-                            Repeater {
-                                model: ["Select", "L1", "R1", "Y"]
-                                delegate: RowLayout {
-                                    Layout.alignment: Qt.AlignVCenter
-                                    spacing: 10
-                                    Rectangle {
-                                        implicitWidth: modelData === "Y" ? 38 : (chordText.implicitWidth + 28)
-                                        implicitHeight: 38
-                                        radius: modelData === "Y" ? 19 : 9
-                                        color: VbTokens.bgWindow
-                                        border.width: 1; border.color: Qt.rgba(1, 1, 1, 0.14)
-                                        Text {
-                                            id: chordText; anchors.centerIn: parent; text: modelData
-                                            font.family: VbTokens.fontBody; font.pixelSize: 15
-                                            font.weight: modelData === "Y" ? Font.ExtraBold : Font.Bold
-                                            color: VbTokens.text
-                                        }
-                                    }
+                    Text {
+                        text: qsTr("Open the in-stream overlay")
+                        font.family: VbTokens.fontDisplay; font.weight: Font.Bold; font.pixelSize: 22
+                        color: VbTokens.text
+                    }
+                    Text {
+                        text: qsTr("Clipboard sync, server commands, and stream controls — any time during a session.")
+                        font.family: VbTokens.fontBody; font.pixelSize: VbTokens.sizeBody; lineHeight: 1.4
+                        color: VbTokens.textMute; wrapMode: Text.WordWrap; Layout.fillWidth: true
+                    }
+                    // Chord as key-caps: Select + L1 + R1 + (Y in a circle), "+" separators between.
+                    RowLayout {
+                        Layout.topMargin: 4
+                        spacing: 10
+                        Repeater {
+                            model: ["Select", "L1", "R1", "Y"]
+                            delegate: RowLayout {
+                                Layout.alignment: Qt.AlignVCenter
+                                spacing: 10
+                                Rectangle {
+                                    implicitWidth: modelData === "Y" ? 38 : (chordText.implicitWidth + 28)
+                                    implicitHeight: 38
+                                    radius: modelData === "Y" ? 19 : 9
+                                    color: VbTokens.bgWindow
+                                    border.width: 1; border.color: Qt.rgba(1, 1, 1, 0.14)
                                     Text {
-                                        visible: index < 3
-                                        text: "+"
+                                        id: chordText; anchors.centerIn: parent; text: modelData
                                         font.family: VbTokens.fontBody; font.pixelSize: 15
-                                        color: VbTokens.textDim
+                                        font.weight: modelData === "Y" ? Font.ExtraBold : Font.Bold
+                                        color: VbTokens.text
                                     }
                                 }
-                            }
-                        }
-                    }
-                }
-
-                // Gamepad shortcuts card — sized to content (fix: VbCard has no implicitHeight,
-                // so a fillHeight card starves to 0 when the column has no surplus space).
-                VbCard {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: gpCol.implicitHeight + 56
-                    radius: 20
-                    ColumnLayout {
-                        id: gpCol
-                        anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
-                        anchors.margins: 28; spacing: 18
-                        Text {
-                            text: qsTr("Gamepad shortcuts")
-                            font.family: VbTokens.fontDisplay; font.weight: Font.Bold; font.pixelSize: 19; color: VbTokens.text
-                        }
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 14
-                            Repeater {
-                                model: [
-                                    { k: "Start + Select + L1 + R1", v: qsTr("Quit stream") },
-                                    { k: "Select + L1 + R1 + X", v: qsTr("Performance stats") },
-                                    { k: qsTr("Long press Start"), v: qsTr("Mouse emulation") }
-                                ]
-                                delegate: RowLayout {
-                                    Layout.fillWidth: true; spacing: 16
-                                    Text { text: modelData.v; font.family: VbTokens.fontBody; font.pixelSize: VbTokens.sizeBody; color: VbTokens.textMute; Layout.fillWidth: true }
-                                    Text { text: modelData.k; font.family: VbTokens.fontBody; font.pixelSize: VbTokens.sizeLabel; font.weight: Font.DemiBold; color: VbTokens.textDim }
+                                Text {
+                                    visible: index < 3
+                                    text: "+"
+                                    font.family: VbTokens.fontBody; font.pixelSize: 15
+                                    color: VbTokens.textDim
                                 }
                             }
                         }
@@ -213,79 +118,114 @@ Item {
                 }
             }
 
-            // RIGHT column: keyboard shortcuts + remote play
-            ColumnLayout {
+            // TOP-RIGHT: keyboard shortcuts.
+            VbCard {
                 Layout.fillWidth: true
-                Layout.preferredWidth: 100
-                spacing: 22
-
-                VbCard {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: kbCol.implicitHeight + 56
-                    radius: 20
+                Layout.fillHeight: true
+                Layout.preferredWidth: 1
+                Layout.preferredHeight: 1
+                radius: 20
+                ColumnLayout {
+                    anchors.left: parent.left; anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.margins: 30
+                    spacing: 14
+                    Text {
+                        text: qsTr("Keyboard shortcuts")
+                        font.family: VbTokens.fontDisplay; font.weight: Font.Bold; font.pixelSize: 19; color: VbTokens.text
+                    }
+                    Text {
+                        textFormat: Text.StyledText
+                        text: qsTr("All require <font color='%1'>Ctrl + Alt + Shift</font>").arg(VbTokens.textMute)
+                        font.family: VbTokens.fontBody; font.pixelSize: VbTokens.sizeLabel; color: VbTokens.textDim
+                    }
                     ColumnLayout {
-                        id: kbCol
-                        anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
-                        anchors.margins: 28; spacing: 18
-                        Text {
-                            text: qsTr("Keyboard shortcuts")
-                            font.family: VbTokens.fontDisplay; font.weight: Font.Bold; font.pixelSize: 19; color: VbTokens.text
-                        }
-                        Text {
-                            textFormat: Text.StyledText
-                            text: qsTr("All require <font color='%1'>Ctrl + Alt + Shift</font>").arg(VbTokens.textMute)
-                            font.family: VbTokens.fontBody; font.pixelSize: VbTokens.sizeLabel; color: VbTokens.textDim
-                        }
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 12
-                            Repeater {
-                                model: [
-                                    { k: "\\", v: qsTr("Toggle Quick Menu") },
-                                    { k: "Q", v: qsTr("Quit stream") },
-                                    { k: "X", v: qsTr("Toggle fullscreen") },
-                                    { k: "V", v: qsTr("Paste clipboard") }
-                                ]
-                                delegate: RowLayout {
-                                    Layout.fillWidth: true; spacing: 16
-                                    Text { text: modelData.v; font.family: VbTokens.fontBody; font.pixelSize: VbTokens.sizeBody; color: VbTokens.textMute; Layout.fillWidth: true }
-                                    Rectangle {
-                                        implicitWidth: 34; implicitHeight: 34; radius: 8; color: VbTokens.bgWindow
-                                        border.width: 1; border.color: Qt.rgba(1, 1, 1, 0.14)
-                                        Text { anchors.centerIn: parent; text: modelData.k; font.family: VbTokens.fontBody; font.pixelSize: 15; font.weight: Font.Bold; color: VbTokens.text }
-                                    }
+                        Layout.fillWidth: true
+                        spacing: 12
+                        Repeater {
+                            model: [
+                                { k: "\\", v: qsTr("Toggle Quick Menu") },
+                                { k: "Q", v: qsTr("Quit stream") },
+                                { k: "X", v: qsTr("Toggle fullscreen") },
+                                { k: "V", v: qsTr("Paste clipboard") }
+                            ]
+                            delegate: RowLayout {
+                                Layout.fillWidth: true; spacing: 16
+                                Text { text: modelData.v; font.family: VbTokens.fontBody; font.pixelSize: VbTokens.sizeBody; color: VbTokens.textMute; Layout.fillWidth: true }
+                                Rectangle {
+                                    implicitWidth: 34; implicitHeight: 34; radius: 8; color: VbTokens.bgWindow
+                                    border.width: 1; border.color: Qt.rgba(1, 1, 1, 0.14)
+                                    Text { anchors.centerIn: parent; text: modelData.k; font.family: VbTokens.fontBody; font.pixelSize: 15; font.weight: Font.Bold; color: VbTokens.text }
                                 }
                             }
                         }
                     }
                 }
+            }
 
-                VbCard {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: rpCol.implicitHeight + 56
-                    radius: 20
+            // BOTTOM-LEFT: gamepad shortcuts.
+            VbCard {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.preferredWidth: 1
+                Layout.preferredHeight: 1
+                radius: 20
+                ColumnLayout {
+                    anchors.left: parent.left; anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.margins: 30
+                    spacing: 14
+                    Text {
+                        text: qsTr("Gamepad shortcuts")
+                        font.family: VbTokens.fontDisplay; font.weight: Font.Bold; font.pixelSize: 19; color: VbTokens.text
+                    }
                     ColumnLayout {
-                        id: rpCol
-                        anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
-                        anchors.margins: 28; spacing: 12
-                        Text {
-                            text: qsTr("Remote play")
-                            font.family: VbTokens.fontDisplay; font.weight: Font.Bold; font.pixelSize: 19; color: VbTokens.text
-                        }
-                        Text {
-                            textFormat: Text.StyledText
-                            text: qsTr("Streaming over LAN works out of the box. For a different network, put both devices on <font color='%1'><b>Tailscale</b></font> and add the host by its Tailscale address — no port forwarding.")
-                                  .arg(VbTokens.accent)
-                            font.family: VbTokens.fontBody; font.pixelSize: 16; lineHeight: 1.6
-                            color: VbTokens.textMute; wrapMode: Text.WordWrap; Layout.fillWidth: true
+                        Layout.fillWidth: true
+                        spacing: 14
+                        Repeater {
+                            model: [
+                                { k: "Start + Select + L1 + R1", v: qsTr("Quit stream") },
+                                { k: "Select + L1 + R1 + X", v: qsTr("Performance stats") },
+                                { k: qsTr("Long press Start"), v: qsTr("Mouse emulation") }
+                            ]
+                            delegate: RowLayout {
+                                Layout.fillWidth: true; spacing: 16
+                                Text { text: modelData.v; font.family: VbTokens.fontBody; font.pixelSize: VbTokens.sizeBody; color: VbTokens.textMute; Layout.fillWidth: true }
+                                Text { text: modelData.k; font.family: VbTokens.fontBody; font.pixelSize: VbTokens.sizeLabel; font.weight: Font.DemiBold; color: VbTokens.textDim }
+                            }
                         }
                     }
                 }
             }
-        }
+
+            // BOTTOM-RIGHT: remote play.
+            VbCard {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.preferredWidth: 1
+                Layout.preferredHeight: 1
+                radius: 20
+                ColumnLayout {
+                    anchors.left: parent.left; anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.margins: 30
+                    spacing: 12
+                    Text {
+                        text: qsTr("Remote play")
+                        font.family: VbTokens.fontDisplay; font.weight: Font.Bold; font.pixelSize: 19; color: VbTokens.text
+                    }
+                    Text {
+                        textFormat: Text.StyledText
+                        text: qsTr("Streaming over LAN works out of the box. For a different network, put both devices on <font color='%1'><b>Tailscale</b></font> and add the host by its Tailscale address — no port forwarding.")
+                              .arg(VbTokens.accent)
+                        font.family: VbTokens.fontBody; font.pixelSize: 16; lineHeight: 1.5
+                        color: VbTokens.textMute; wrapMode: Text.WordWrap; Layout.fillWidth: true
+                    }
+                }
+            }
         }
 
-        // ---- Gamepad hint bar ----
+        // ---- Gamepad hint bar (Back is the only action on the page) ----
         VbHintBar {
             Layout.fillWidth: true
             hints: [ { glyph: "Ⓑ", label: qsTr("Back") } ]
