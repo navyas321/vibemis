@@ -2,6 +2,7 @@ import QtQuick 2.9
 import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.2
 import ServerCommandManager 1.0
+import UiSoundManager 1.0
 import Vibemis.Redesign 1.0
 
 // BL-1688: redesigned onto the Vibemis token system (dark elevated panel, Sora/Manrope
@@ -94,6 +95,10 @@ Rectangle {
             // so the ListView must not also claim focus (events are injected to the root).
             focus: false
             currentIndex: 0
+            // BL-1776: focus tick. The menu lives in an offscreen window (separate QML
+            // engine), so the launcher's activeFocusItem hook can't see it — currentIndex
+            // is this menu's focus cursor (moved via injected Up/Down keys and hover).
+            onCurrentIndexChanged: UiSoundManager.focusMoved()
             // Bug fix: without clip the 16 delegates (≈960px of content) painted OUTSIDE the
             // ~250px viewport, bleeding over the footer "Resume Game" hint and the title —
             // this is what made the last visible row (e.g. "Fetch Clipboard") and the footer
@@ -213,6 +218,12 @@ Rectangle {
                 font.family: VbTokens.fontBody
                 font.pixelSize: 16
                 selectByMouse: true
+                // BL-2000: keep typed text inside the styled border — the field fills
+                // width with a bordered background but had no clip and no horizontal
+                // padding, so long text ran to/past the border edge.
+                clip: true
+                leftPadding: 12
+                rightPadding: 12
                 // BL-1688: token field — window-dark well + accent focus border.
                 background: Rectangle {
                     color: VbTokens.bgWindow
@@ -437,6 +448,14 @@ Rectangle {
             description: qsTr("Fetch clipboard from server")
         }
         ListElement {
+            // BL-2002: same target as the overlay's KBD button — the SteamOS OSK
+            // types straight into the stream, unlike the buffered text-send view.
+            text: qsTr("On-screen keyboard")
+            icon: "keyboard"
+            action: "open_steam_keyboard"
+            description: qsTr("Open the SteamOS on-screen keyboard")
+        }
+        ListElement {
             text: qsTr("Type text")
             icon: "keyboard"
             action: "type_text"
@@ -482,7 +501,7 @@ Rectangle {
             text: qsTr("Touch overlay")
             icon: "touch"
             action: "toggle_touch_overlay"
-            description: qsTr("Show/hide the on-screen MENU / KBD touch buttons")
+            description: qsTr("Show/hide the on-screen MENU / KBD / touch-mode buttons")
         }
         ListElement {
             text: qsTr("Send Ctrl+Alt+Del")
@@ -550,7 +569,11 @@ Rectangle {
     
     function executeAction(action) {
         console.log("Executing action:", action)
-        
+
+        // BL-1776: activation blip — single funnel for injected A/Enter
+        // (executeCurrentItem) and mouse/touch row clicks alike
+        UiSoundManager.activated()
+
         // Handle navigation actions
         if (action === "type_text") {
             currentMenu = "text_send"
@@ -628,6 +651,9 @@ Rectangle {
                 break
             case "toggle_touch_overlay":
                 message = "Toggling touch overlay..."
+                break
+            case "open_steam_keyboard":
+                message = "Opening Steam keyboard..."
                 break
             default:
                 message = "Executing action..."

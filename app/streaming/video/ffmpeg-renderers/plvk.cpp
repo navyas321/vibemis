@@ -817,11 +817,15 @@ void PlVkRenderer::renderFrame(AVFrame *frame)
                 overlayParts[i].dst.x0 = 0;
                 overlayParts[i].dst.y0 = 0;
             }
-            else if (i == Overlay::OverlayTouchButtonMenu || i == Overlay::OverlayTouchButtonKbd) {
-                // Vibemis BL-1562: touch buttons inset from the top corners
+            else if (i == Overlay::OverlayTouchButtonMenu || i == Overlay::OverlayTouchButtonKbd ||
+                     i == Overlay::OverlayTouchButtonTouchMode) {
+                // Vibemis BL-1562/BL-2007: MENU top-left, KBD far top-right,
+                // TOUCH-MODE immediately inward of KBD.
                 overlayParts[i].dst.x0 = (i == Overlay::OverlayTouchButtonMenu)
                         ? Overlay::TouchButtonInset
-                        : SDL_max(0, targetFrame.crop.x1 - Overlay::TouchButtonInset - overlayParts[i].src.x1);
+                        : SDL_max(0, targetFrame.crop.x1 - Overlay::TouchButtonInset - overlayParts[i].src.x1
+                                  - ((i == Overlay::OverlayTouchButtonTouchMode)
+                                     ? (Overlay::TouchButtonSize + Overlay::TouchButtonSpacing) : 0));
                 overlayParts[i].dst.y0 = Overlay::TouchButtonInset;
             }
             overlayParts[i].dst.x1 = overlayParts[i].dst.x0 + overlayParts[i].src.x1;

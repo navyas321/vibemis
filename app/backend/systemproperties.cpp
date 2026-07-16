@@ -5,6 +5,8 @@
 #include <QLibraryInfo>
 #include <QFile>
 #include <QProcess>
+#include <QDesktopServices>
+#include <QUrl>
 
 #include "streaming/session.h"
 #include "streaming/streamutils.h"
@@ -149,6 +151,40 @@ QString SystemProperties::checkTailscaleStatus()
         return tr("Connected — this device's Tailscale IP is %1.").arg(ip);
     }
     return tr("Tailscale is installed but not connected. Run the one-command setup or `tailscale up`.");
+}
+
+bool SystemProperties::openUrl(const QString& url)
+{
+    // Maintainer-caught (2026-07-13): links "did nothing" on device. Root cause: the
+    // AppImage runtime exports LD_LIBRARY_PATH / Qt plugin paths pointing into the bundle;
+    // QDesktopServices/xdg-open spawn the host browser WITH that environment, so it loads
+    // the bundled libraries and crashes on startup — silently, from the user's seat.
+    // Launch xdg-open with a cleaned environment instead; fall back to QDesktopServices
+    // off-AppImage (e.g. Windows dev builds) or if xdg-open is unavailable.
+    if (!url.startsWith(QLatin1String("http://")) && !url.startsWith(QLatin1String("https://"))) {
+        qWarning() << "openUrl: refusing non-http(s) url" << url;
+        return false;
+    }
+#ifdef Q_OS_LINUX
+    QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+    if (env.contains(QStringLiteral("APPIMAGE")) || env.contains(QStringLiteral("APPDIR"))) {
+        for (const char* var : {"LD_LIBRARY_PATH", "LD_PRELOAD", "QT_PLUGIN_PATH",
+                                "QML2_IMPORT_PATH", "QML_IMPORT_PATH",
+                                "QT_QPA_PLATFORM_PLUGIN_PATH", "PYTHONPATH",
+                                "GDK_PIXBUF_MODULE_FILE", "GST_PLUGIN_SYSTEM_PATH"}) {
+            env.remove(QString::fromLatin1(var));
+        }
+    }
+    QProcess proc;
+    proc.setProgram(QStringLiteral("xdg-open"));
+    proc.setArguments(QStringList() << url);
+    proc.setProcessEnvironment(env);
+    if (proc.startDetached()) {
+        return true;
+    }
+    qWarning() << "openUrl: xdg-open unavailable, falling back to QDesktopServices";
+#endif
+    return QDesktopServices::openUrl(QUrl(url));
 }
 
 class QuerySdlVideoThread : public QThread

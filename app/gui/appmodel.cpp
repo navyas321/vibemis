@@ -278,10 +278,24 @@ void AppModel::handleComputerStateChanged(NvComputer* computer)
     }
 
     // Finally, process changes to the active app
-    if (computer->currentGameId != m_CurrentGameId) {
+    resyncRunningState();
+}
+
+// BL-1769: factored from handleComputerStateChanged so QML can force a resync. The
+// poll-delta signal never fires when NvComputer.currentGameId was already current
+// before the poll's field diff ran (the launch/quit flow updated it first), which
+// left the RESUME badge and the Ⓨ Quit-session hint stale until the view was
+// recreated. Safe to call any time: a no-op (no signals) when nothing changed.
+void AppModel::resyncRunningState()
+{
+    if (m_Computer == nullptr) {
+        return;
+    }
+
+    if (m_Computer->currentGameId != m_CurrentGameId) {
         // First, invalidate the running state of newly running game
         for (int i = 0; i < m_VisibleApps.count(); i++) {
-            if (m_VisibleApps[i].id == computer->currentGameId) {
+            if (m_VisibleApps[i].id == m_Computer->currentGameId) {
                 emit dataChanged(createIndex(i, 0),
                                  createIndex(i, 0),
                                  QVector<int>() << RunningRole);

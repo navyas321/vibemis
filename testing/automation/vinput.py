@@ -304,13 +304,20 @@ def _dispatch(kind, fd, line, stop, navfd=None):
         elif k == "HOLD" and len(p) >= 3:
             code = PAD_BUTTONS.get(p[1].upper());
             if code is not None: pad_press(fd, code, float(p[2]))
-        elif k in ("DPAD", "LS") and len(p) >= 2:
+        elif k in ("DPAD", "DPADNAV", "LS") and len(p) >= 2:
+            # BL-2013 post-mortem (2026-07-16): plain DPAD must emit ONLY the HAT event.
+            # The old behavior ALSO tapped the matching arrow key on the companion nav
+            # keyboard (navfd), so every DPAD press hit the app TWICE (gamepad + kbd) —
+            # that double was misread as an app bug (the alpha.012 edge-filter chased it).
+            # The dual-emit was a crutch for the old headless-gamescope rig where gamepad
+            # events didn't navigate; if a harness still needs it, it must now ask
+            # explicitly with DPADNAV.
             _dirs = {"UP": (0, -1), "DOWN": (0, 1), "LEFT": (-1, 0), "RIGHT": (1, 0),
                      "U": (0, -1), "D": (0, 1), "L": (-1, 0), "R": (1, 0)}
             v = _dirs.get(p[1].upper())
             if v:
-                (pad_dpad if k == "DPAD" else pad_stick)(fd, v[0], v[1])
-                if navfd is not None:
+                (pad_stick if k == "LS" else pad_dpad)(fd, v[0], v[1])
+                if k == "DPADNAV" and navfd is not None:
                     arrow = {(0, -1): KEYS["UP"], (0, 1): KEYS["DOWN"],
                              (-1, 0): KEYS["LEFT"], (1, 0): KEYS["RIGHT"]}[v]
                     key_tap(navfd, [arrow])

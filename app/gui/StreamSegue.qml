@@ -6,6 +6,7 @@ import SdlGamepadKeyNavigation 1.0
 import Session 1.0
 import StreamingPreferences 1.0
 import SystemProperties 1.0
+import UiSoundManager 1.0
 
 Item {
     property Session session
@@ -178,6 +179,11 @@ Item {
     StackView.onActivated: {
         // Hide the toolbar before we start loading
         toolBar.visible = false
+
+        // BL-1776: release the UI-sound audio device now (well before Session
+        // constructs its audio renderer) so the renderer's device open never
+        // contends with a lingering UI-sound device on exclusive-audio systems.
+        UiSoundManager.streamStarting()
 
         // Hook up our signals
         session.stageStarting.connect(stageStarting)

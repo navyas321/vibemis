@@ -3,14 +3,33 @@ import QtQuick.Controls 2.2
 
 import SdlGamepadKeyNavigation 1.0
 import SystemProperties 1.0
+import UiSoundManager 1.0
 
 // https://stackoverflow.com/questions/45029968/how-do-i-set-the-combobox-width-to-fit-the-largest-item
 ComboBox {
+    id: comboRoot
+
     property int textWidth
     property int desiredWidth : leftPadding + textWidth + indicator.width + rightPadding
     property int maximumWidth : parent.width
 
     implicitWidth: desiredWidth < maximumWidth ? desiredWidth : maximumWidth
+
+    // BL-1776: popup navigation tick + selection blip. Connections, not plain
+    // handlers, because instances override base handlers (BL-1664 above).
+    // highlightedIndex also syncs while the popup is closed (model/currentIndex
+    // churn at init) — the popup.visible guard keeps those silent.
+    Connections {
+        target: comboRoot
+        function onHighlightedIndexChanged() {
+            if (comboRoot.popup.visible) {
+                UiSoundManager.focusMoved()
+            }
+        }
+        function onActivated(index) {
+            UiSoundManager.activated()
+        }
+    }
 
     TextMetrics {
         id: popupMetrics

@@ -39,6 +39,12 @@ public:
     // status line (the device's tailnet IP if up, or an install/up hint) so the user can
     // confirm their tailnet from Settings without a terminal. Best-effort; never throws.
     Q_INVOKABLE QString checkTailscaleStatus();
+
+    // Maintainer 2026-07-13: open a URL in the HOST browser with a CLEANED environment.
+    // Qt.openUrlExternally spawns xdg-open/the browser with the AppImage's LD_LIBRARY_PATH
+    // and Qt plugin paths inherited, so the host browser loads bundled libs and dies
+    // silently — About/Help links "did nothing" on device. Use this from QML instead.
+    Q_INVOKABLE bool openUrl(const QString& url);
     
     static bool isSteamDeckOrGamescope();
     static bool hasVulkanHdrSupport();

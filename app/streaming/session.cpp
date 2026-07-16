@@ -1464,6 +1464,23 @@ private:
             emit m_Session->quitStarting();
         }
         else {
+            // BL-1756: a stream that ends without quitting leaves the app running
+            // host-side, but currentGameId is only ever written by the serverinfo
+            // poll — and polling is suspended the whole time the stream window is
+            // up. Record the running app before sessionFinished re-shows the UI so
+            // AppView's re-entry resync (BL-1769) sees it and re-activating this
+            // app resumes instead of relaunching. Gated on connection success: a
+            // failed launch taught us nothing the poll doesn't know. The next
+            // successful poll stays authoritative via ASSIGN_IF_CHANGED (e.g. if
+            // the game exited host-side as the stream ended).
+            if (m_Session->m_AsyncConnectionSuccess) {
+                QWriteLocker lock(&m_Session->m_Computer->lock);
+                m_Session->m_Computer->currentGameId = m_Session->m_App.id;
+                // Greppable evidence for the resume-vs-launch validation (test117).
+                qInfo() << "Session ended without quit; app" << m_Session->m_App.id
+                        << "stays current for AppView resume";
+            }
+
             emit m_Session->sessionFinished(m_Session->m_PortTestResults);
         }
 
@@ -2276,14 +2293,14 @@ void Session::execInternal()
     // Toggle the stats overlay if requested by the user
     m_OverlayManager.setOverlayState(Overlay::OverlayDebug, m_Preferences->showPerformanceOverlay);
 
-    // Vibemis BL-1562: opt-in on-screen touch controls overlay (MENU opens the Quick
-    // Menu, KBD opens its text-send view). The labels must be (re)set before enabling
-    // because setOverlayState() clears the overlay text on disable.
+    // Vibemis BL-1562/BL-2002/BL-2007: opt-in on-screen touch controls overlay —
+    // three icon-only buttons (MENU opens the Quick Menu, KBD requests the SteamOS
+    // keyboard, TOUCH-MODE live-toggles touchpad-emulation vs direct touch). The
+    // glyph surfaces regenerate inside setOverlayState(); no label text involved.
     if (m_Preferences->enableTouchOverlay) {
-        m_OverlayManager.updateOverlayText(Overlay::OverlayTouchButtonMenu, "MENU");
-        m_OverlayManager.updateOverlayText(Overlay::OverlayTouchButtonKbd, "KBD");
         m_OverlayManager.setOverlayState(Overlay::OverlayTouchButtonMenu, true);
         m_OverlayManager.setOverlayState(Overlay::OverlayTouchButtonKbd, true);
+        m_OverlayManager.setOverlayState(Overlay::OverlayTouchButtonTouchMode, true);
     }
 
     // Hijack this thread to be the SDL main thread. We have to do this

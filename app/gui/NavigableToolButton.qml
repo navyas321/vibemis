@@ -3,12 +3,23 @@ import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
 import Vibemis.Redesign 1.0
 
+import UiSoundManager 1.0
+
 // Used only by the global toolbar (main.qml), which is the redesign header bar. Styled to the design
 // handoff's 52px header icon buttons: a rounded-square token surface (bgElev, 1px stroke, radius 14)
 // with an accent focus ring and a ~22px centered icon.
 ToolButton {
     id: btn
     property string iconSource
+
+    // BL-1776: activation blip — Connections so the instances' own onClicked
+    // declarations (every toolbar button has one) can't override it (BL-1664).
+    Connections {
+        target: btn
+        function onClicked() {
+            UiSoundManager.activated()
+        }
+    }
 
     activeFocusOnTab: true
     implicitWidth: VbTokens.iconButton

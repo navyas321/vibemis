@@ -17,6 +17,7 @@
 #define SER_HEIGHT "height"
 #define SER_UI_SHOWHINTS "uishowhints"
 #define SER_UI_ACCENTINDEX "uiaccentindex"
+#define SER_UISOUNDS "uisounds"
 #define SER_FPS "fps"
 #define SER_BITRATE "bitrate"
 #define SER_UNLOCK_BITRATE "unlockbitrate"
@@ -203,6 +204,7 @@ void StreamingPreferences::reload()
     enableHdr = settings.value(SER_HDR, false).toBool();
     uiShowHints = settings.value(SER_UI_SHOWHINTS, true).toBool();
     uiAccentIndex = qBound(0, settings.value(SER_UI_ACCENTINDEX, 0).toInt(), 3);
+    uiSounds = settings.value(SER_UISOUNDS, true).toBool();
     displayHdrCapability = settings.value(SER_DISPLAY_HDR_CAPABILITY, true).toBool();
     captureSysKeysMode = static_cast<CaptureSysKeysMode>(settings.value(SER_CAPTURESYSKEYS,
                                                          static_cast<int>(CaptureSysKeysMode::CSK_OFF)).toInt());
@@ -426,6 +428,7 @@ void StreamingPreferences::save()
     settings.setValue(SER_HDR, enableHdr);
     settings.setValue(SER_UI_SHOWHINTS, uiShowHints);
     settings.setValue(SER_UI_ACCENTINDEX, uiAccentIndex);
+    settings.setValue(SER_UISOUNDS, uiSounds);
     settings.setValue(SER_DISPLAY_HDR_CAPABILITY, displayHdrCapability);
     settings.setValue(SER_YUV444, enableYUV444);
     settings.setValue(SER_VIDEOCFG, static_cast<int>(videoCodecConfig));

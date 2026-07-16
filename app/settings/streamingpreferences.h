@@ -183,11 +183,15 @@ public:
     // Vibemis BL-1665: which release channel the update checker follows.
     // UC_STABLE preserves the pre-channel behavior (stable releases only);
     // Beta/Alpha follow the CI prerelease tiers (-beta.* / -alpha.* tags).
+    // UC_RC (BL-1722, semver era) follows "-rc.NNN" builds — the exact candidate
+    // proposed as the next stable, cut for on-device verification. Appended LAST
+    // so persisted integer settings keep their meaning.
     enum UpdateChannel
     {
         UC_STABLE,
         UC_BETA,
         UC_ALPHA,
+        UC_RC,
     };
     Q_ENUM(UpdateChannel);
 
@@ -205,10 +209,12 @@ public:
     Q_PROPERTY(bool quitAppAfter MEMBER quitAppAfter NOTIFY quitAppAfterChanged)
     Q_PROPERTY(bool absoluteMouseMode MEMBER absoluteMouseMode NOTIFY absoluteMouseModeChanged)
     Q_PROPERTY(bool absoluteTouchMode MEMBER absoluteTouchMode NOTIFY absoluteTouchModeChanged)
-    // Vibemis BL-1562: opt-in on-screen touch controls overlay for touch handhelds.
-    // When enabled, two semi-transparent buttons are composited into the stream:
-    // MENU (top-left, opens the Quick Menu) and KBD (top-right, opens the Quick
-    // Menu's text-send view). Off by default so existing users are unaffected.
+    // Vibemis BL-1562/BL-2007: opt-in on-screen touch controls overlay for touch
+    // handhelds. When enabled, three semi-transparent icon-only buttons are
+    // composited into the stream: MENU (top-left, opens the Quick Menu), KBD (far
+    // top-right, requests the SteamOS on-screen keyboard) and TOUCH-MODE (inward of
+    // KBD, live-toggles touchpad-emulation vs direct touch). Off by default so
+    // existing users are unaffected.
     Q_PROPERTY(bool enableTouchOverlay MEMBER enableTouchOverlay NOTIFY enableTouchOverlayChanged)
     Q_PROPERTY(bool framePacing MEMBER framePacing NOTIFY framePacingChanged)
     Q_PROPERTY(bool connectionWarnings MEMBER connectionWarnings NOTIFY connectionWarningsChanged)
@@ -237,6 +243,9 @@ public:
     // Vibemis redesign UI prefs: gamepad hint-bar visibility + accent color (index into the 4 token accents).
     Q_PROPERTY(bool uiShowHints MEMBER uiShowHints NOTIFY uiShowHintsChanged)
     Q_PROPERTY(int uiAccentIndex MEMBER uiAccentIndex NOTIFY uiAccentIndexChanged)
+    // Vibemis BL-1776: short UI sounds on controller-nav focus moves and activations
+    // (launcher + in-stream Quick Menu). Played by UiSoundManager.
+    Q_PROPERTY(bool uiSounds MEMBER uiSounds NOTIFY uiSoundsChanged)
     // Vibemis: companion gate to enableHdr. When the user enables HDR but their
     // display can't actually show HDR (e.g. Legion Go S Z2 LCD), the host
     // streams HDR PQ-encoded content that looks washed out on the SDR panel.
@@ -322,6 +331,7 @@ public:
     bool enableHdr;
     bool uiShowHints;
     int uiAccentIndex;
+    bool uiSounds;
     // Vibemis: see Q_PROPERTY comment above; gates HDR request on display capability.
     bool displayHdrCapability;
     bool enableYUV444;
@@ -368,6 +378,7 @@ signals:
     void enableHdrChanged();
     void uiShowHintsChanged();
     void uiAccentIndexChanged();
+    void uiSoundsChanged();
     void displayHdrCapabilityChanged();
     void enableYUV444Changed();
     void videoDecoderSelectionChanged();

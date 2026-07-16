@@ -11,6 +11,10 @@ whole Quick Menu group depends on its render path.
 > Keep this file the single source of truth for test order. When a cycle is verified, change ☐ →
 > ☑ (or ✗) in the same commit as the report, and note the report path.
 
+> **Build-tier rule (BL-2016):** every cycle here runs against an **alpha** (`testNN`-branch
+> build). The test agent never validates betas/RCs — those are cut from already-tested alphas
+> and belong to the maintainer's manual-testing tier.
+
 ### ▶ START HERE (first time on the device)
 1. `git fetch origin` (gets all `test*` branches + this checklist), then **read
    [`testing/BUILD_AGENT_INBOX.md`](BUILD_AGENT_INBOX.md)** for any priority changes / answers from
@@ -25,6 +29,11 @@ whole Quick Menu group depends on its render path.
 4. **One cycle per session.** File `report.md`, tick the box here, open the report PR. Details below
    and in [`../docs/personas/test-agent.md`](../docs/personas/test-agent.md) +
    [`../docs/TEST_AUTOMATION.md`](../docs/TEST_AUTOMATION.md).
+5. **Tear down everything you start on the host.** Any Server Command / app / prep-cmd a check
+   launches on the host must have a Teardown step in the instructions and a teardown line in the
+   report; missing teardown = report-worthy defect. (Bubbles left running kept the host display
+   awake for days — BL-1811 / BL-1821. The host-side Bubbles command is now a ~15 s
+   self-terminating wrapper; do not regress it to a bare `bubbles.scr`.)
 
 ---
 
@@ -133,7 +142,10 @@ whole Quick Menu group depends on its render path.
 
 ## 5b6. UI / scaling (P3.6)
 
-- [ ] **test109** — Gamescope High-DPI UI scaling fix — base `vibemis-main` — ☐ (`testing/test109-gamescope-scaling/instructions.md`)
+- [x] **test109** — Gamescope High-DPI UI scaling fix — base `vibemis-main` — ☑ **PASS**
+  (report `testing/test109-gamescope-scaling/report.md`, 2026-07-16 on alpha.013 per BL-2016:
+  gamescope-emulate 1920×1200 pixel-perfect + 1280×800 responsive, zero clipping; Desktop-Mode
+  auto-DPI regression clean)
 
 ## 5c. CLI
 
@@ -173,9 +185,13 @@ ticking a row above does NOT clear its entry here.
 - [ ] **test82** — motion forwarding, Tier 2 — with a **gyro/accel controller in Game Mode** + a host
   that requests motion, confirm live gyro/accel reaches the host and honours the report rate (source-
   confirmed by report PR #162; default-off = safe).
-- [ ] **BL-1528 (P3.23)** — touchscreen passthrough, on-device — confirm the **Legion Go touchscreen**
-  forwards native touch to an Apollo host via `LiSendTouchEvent` (code already present from upstream,
-  gated by `absoluteTouchMode`; never runtime-verified on this device).
+- [x] ☑ **BL-1528 (P3.23)** — touchscreen passthrough, on-device — **PASS (real-usage), test119**
+  (2026-07-16): dense pointer-id slots fixed it — taps INK at the exact mapped point and the
+  maintainer's real-finger freehand strokes DRAW continuously through the stream (264 moves @~90Hz,
+  slots 0/1 multi-finger clean, touchpad-emu negative holds). Residual (non-blocking, upstream
+  Vibepollo note): slow *synthetic* drags with sparse/irregular updates can drop mid-gesture
+  contact in the forwarding path — real fingers unaffected
+  (`testing/test119-pointer-slots/report.md`; evidence chain test116 → BL-2015 → test119).
 - [ ] **test62** — Adaptive bitrate, Tiers 2–3 — on a **degrading stream**, confirm the
   `[adaptive-bitrate]` recommendation is logged on `CONN_STATUS_POOR` and no regression to the
   slow-connection overlay. *(Note: runtime bitrate-stepping itself is still `TODO(P3.12)` — only the

@@ -1,6 +1,7 @@
 import QtQuick 2.0
 import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.2
+import SystemProperties 1.0
 
 NavigableDialog {
     id: dialog
@@ -71,7 +72,7 @@ NavigableDialog {
         }
 
         onHelpRequested: {
-            Qt.openUrlExternally(helpUrl)
+            SystemProperties.openUrl(helpUrl)
             close()
         }
     }

@@ -42,6 +42,7 @@ enum KeyCombo {
 #include <QTimer>
 #include <QWindow>
 #include <QUrl>
+#include <QDesktopServices>
 #include <QDebug>
 
 #include <SDL.h>
@@ -512,6 +513,8 @@ void QuickMenuManager::executeAction(const QString &action)
         showStreamInfo();
     } else if (action == "toggle_touch_overlay") {
         toggleTouchOverlay();
+    } else if (action == "open_steam_keyboard") {
+        openSteamKeyboard();
     }
 }
 
@@ -520,11 +523,49 @@ void QuickMenuManager::openTextSend()
     // BL-1562: show the menu (lazily initializing the offscreen renderer if needed),
     // then jump straight to the text-send view — the same path as picking "Type Text"
     // from the main menu, so field focus and text-input routing behave identically.
+    // (BL-2002: no longer the overlay KBD button's target — that requests the SteamOS
+    // keyboard via openSteamKeyboard(); this stays as the programmatic text-send entry.)
     show();
     if (m_rootItem) {
         QMetaObject::invokeMethod(m_rootItem, "executeAction",
                                   Q_ARG(QVariant, QStringLiteral("type_text")));
     }
+}
+
+void QuickMenuManager::openSteamKeyboard()
+{
+    // BL-2002: raise the SteamOS on-screen keyboard over the stream. Gamescope pops
+    // the OSK for the steam://open/keyboard URL and the typed keys arrive as normal
+    // key events, flowing to the host through the standard keyboard path. SDL_OpenURL
+    // (SDL >= 2.0.14) needs no Qt platform URL handler, so try it first; fall back to
+    // QDesktopServices for older SDL or on SDL failure.
+    bool requested = false;
+#if SDL_VERSION_ATLEAST(2, 0, 14)
+    requested = SDL_OpenURL("steam://open/keyboard") == 0;
+#endif
+    if (!requested) {
+        requested = QDesktopServices::openUrl(QUrl(QStringLiteral("steam://open/keyboard")));
+    }
+
+    // "requested", not "opened": QDesktopServices can report success whenever a URL
+    // handler launches, even if no keyboard actually rises (Steam absent but handler
+    // registered) — the toast must not overclaim.
+    showToast(requested ? QStringLiteral("Steam keyboard requested")
+                        : QStringLiteral("Steam not available"));
+}
+
+void QuickMenuManager::commitTouchMode(bool absoluteTouchMode)
+{
+    // BL-2007: the SDL input thread already flipped its live m_AbsoluteTouchMode —
+    // mirror the new mode into the persisted preference (the Settings toggle stays
+    // in sync through the NOTIFY signal) and announce it.
+    auto prefs = StreamingPreferences::get();
+    prefs->absoluteTouchMode = absoluteTouchMode;
+    prefs->save();
+    emit prefs->absoluteTouchModeChanged();
+
+    showToast(absoluteTouchMode ? QStringLiteral("Touch mode: Direct touch")
+                                : QStringLiteral("Touch mode: Virtual trackpad"));
 }
 
 void QuickMenuManager::toggleTouchOverlay()
@@ -537,15 +578,12 @@ void QuickMenuManager::toggleTouchOverlay()
 
     Session* session = Session::get();   // BL-1630: single fetch (TOCTOU vs pool-thread clear)
     if (session) {
+        // BL-2007: icon-only buttons — the glyph surfaces regenerate inside
+        // setOverlayState(), no label text involved.
         auto& overlayManager = session->getOverlayManager();
-        if (prefs->enableTouchOverlay) {
-            // The labels must be (re)set before enabling because setOverlayState()
-            // clears the overlay text on disable.
-            overlayManager.updateOverlayText(Overlay::OverlayTouchButtonMenu, "MENU");
-            overlayManager.updateOverlayText(Overlay::OverlayTouchButtonKbd, "KBD");
-        }
         overlayManager.setOverlayState(Overlay::OverlayTouchButtonMenu, prefs->enableTouchOverlay);
         overlayManager.setOverlayState(Overlay::OverlayTouchButtonKbd, prefs->enableTouchOverlay);
+        overlayManager.setOverlayState(Overlay::OverlayTouchButtonTouchMode, prefs->enableTouchOverlay);
     }
 
     showToast(prefs->enableTouchOverlay ? QStringLiteral("Touch overlay: On")
@@ -621,9 +659,32 @@ void QuickMenuManager::sendSpecialKey(const QString &action)
 void QuickMenuManager::showToast(const QString &message) {
     // Route the toast through the in-menu QML toast (visible while the menu is open).
     // The old standalone QQuickView toast window did not composite in Game Mode.
-    if (m_rootItem) {
+    if (m_isVisible && m_rootItem) {
         QMetaObject::invokeMethod(m_rootItem, "showToastMessage",
                                   Q_ARG(QVariant, message));
+    }
+    else {
+        // BL-2002/BL-2007: the overlay KBD / TOUCH-MODE buttons act with the menu
+        // CLOSED, where the QML toast never composites. Surface the message through
+        // the transient centered text overlay instead — the same mechanism (and 2s
+        // auto-hide) executeServerCommand() uses for its out-of-menu error.
+        Session* session = Session::get();   // BL-1630: single fetch (TOCTOU)
+        if (session) {
+            auto& overlayManager = session->getOverlayManager();
+            overlayManager.setOverlayState(Overlay::OverlayServerCommands, true);
+            overlayManager.updateOverlayText(Overlay::OverlayServerCommands,
+                                             message.toUtf8().constData());
+
+            // test81 (review fix): don't capture the session-owned OverlayManager by
+            // reference — the session can be torn down inside the 2s window (UAF).
+            // Re-fetch the live session (if any) when the timer fires.
+            QTimer::singleShot(2000, []() {
+                Session* s = Session::get();   // BL-1630: single fetch (TOCTOU)
+                if (s) {
+                    s->getOverlayManager().setOverlayState(Overlay::OverlayServerCommands, false);
+                }
+            });
+        }
     }
     qDebug() << "QuickMenuManager: showToast(" << message << ")";
 }

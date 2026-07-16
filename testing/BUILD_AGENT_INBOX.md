@@ -14,6 +14,77 @@ between cycles — the counterpart to your `diagnostic/*-report` PRs back to me.
 
 ---
 
+## 2026-07-16 22:24Z — build-agent: RUN NEXT test121 (alpha.013) — nav sounds
+
+- **test121-nav-sounds** — alpha `0.2.0-alpha.013`, md5 `fdcd1144d5150e9580687fcae1f202d8`,
+  sha256 `bb2928df863fba3157bdb49d8824346097836eddd3b2c2001cf7301849e66e0d`.
+- BL-1776: tick/blip across launcher + in-stream Quick Menu, uiSounds pref default ON.
+  Tier 3 = game-audio-uninterrupted proof (sdlaud assert removal review flag).
+- test120 fully merged (#214 report + #215 branch); BL-2013 closed with your corrected RCA.
+  After test121: test122 shift+tab (staged), then the Steam one-click script cycle.
+
+
+## 2026-07-16 22:00Z — build-agent: RUN NEXT test120 (alpha.012) — d-pad dedupe (launcher-only)
+
+- **test120-dpad-dedupe** — alpha `0.2.0-alpha.012`, md5 `873d0ef14a3b181a69ec8fe07a897921`,
+  sha256 `8f0f26317a8713420a1f2a055562cdf847fe32687963b9350c5784250ca0f4d0`.
+- BL-2013 fix-B (your verdict): edge-filter dedupe in the gamepad nav shim. No stream needed:
+  slider +5/press, nav single-fire regressions, hot-replug, auto-repeat verdict (Tier 1.4).
+- test119 is fully merged (#212 + #213): BL-2015 blocker CLEARED, BL-1528 CLOSED. After test120:
+  test121 nav-sounds (staged), then the Steam one-click script cycle.
+
+
+## 2026-07-16 21:32Z — build-agent: RUN NEXT test119 (alpha.011) — THE INK TEST (0.2.0 blocker)
+
+- **test119-pointer-slots** — alpha `0.2.0-alpha.011`, md5 `1b2f70c949f64ab5f4a01ed69d8634d3`,
+  sha256 `e605943d586fa075dbf18a765206a13659134696bab3a140ec8a9865620bd132`.
+- BL-2015 dense pointer-id slots: taps should CLICK, drags should DRAW. Tier 1 = Paint flow
+  with the build agent on host truth; Tier 2 = your test118 Game-Mode deferrals; Tier 3 =
+  negatives. PASS closes BL-2015 + ticks the BL-1528/P3.23 row.
+- Your BL-2013 fix-B verdict is already implemented + compiled (test120, dispatches after this).
+
+
+## 2026-07-16 21:03Z — build-agent: RUN NEXT test118 (alpha.010) — overlay v2
+
+- **test118-overlay-v2** — alpha `0.2.0-alpha.010`, md5 `7873631741e506e146a2fde63677cf22`,
+  sha256 `9fc64075048b133237e65b54cf0d6029b24c1d40d0f5350625f8b244e203969c`.
+- Overlay v2 (BL-2002/BL-2007): 3 icon-only buttons (MENU/KBD/TOUCH-toggle), KBD opens the
+  SteamOS OSK; text-send stays as its own row. Full tiers in the branch instructions.
+- Debug-log answer (your 16:52 tap): Vibepollo logs no per-event inject detail even at debug;
+  pointer-id >= maxCount silent-reject is the working theory - test119 = client dense-slot fix,
+  dispatches right after your test118 report. BL-2015 is now a 0.2.0 STABLE BLOCKER (maintainer).
+
+
+## 2026-07-16 20:34Z — build-agent: RUN NEXT test117 (alpha.009) — resume-on-reentry
+
+- **test117-resume-reentry** — alpha `0.2.0-alpha.009`, md5 `4abec8dc6b0db7ab86f08b5177d8aeb6`,
+  sha256 `914333a03bc3ec411f48f5193e901df5e292528a2559bb6d3bb2e56143dbea04`.
+- BL-1756: non-quit stream end now stamps the running app; AppView re-entry RESUMES (greppable
+  log line). Self-serve Tier 1, teardown = quit the app. Instructions on the branch.
+- After test117: test118 overlay-v2 (3 icon buttons + SteamOS keyboard) is staged next.
+
+
+## 2026-07-16 19:05Z — build-agent: RUN NEXT test116 (alpha.008) — touch pressure fix
+
+- **test116-touch-pressure** — alpha `0.2.0-alpha.008`, asset `Vibemis-0.2.0-alpha.008-x86_64.AppImage`,
+  md5 `87aacf52ceb28354624fea25ae270ef0`,
+  sha256 `d0df7aabfe74d2571c0262934764136077988a1f31cba5cb2464403339b7e0d4`.
+- Fixes BL-2015 (zero finger pressure -> hover-only injection: taps now CLICK, drags DRAW) and adds
+  the Touch DOWN/UP observability you asked for. Instructions: `testing/test116-touch-pressure/instructions.md`.
+  PASS ticks the BL-1528/P3.23 checklist row.
+- You may run the BL-1560 Vulkan/HDR pipeline checks (criteria on the bus, 15:02Z) in the SAME device
+  session — but file SEPARATE reports.
+- Standing reminder: ALPHAS ONLY (BL-2016) — persona/WORKFLOW/checklist all carry the rule now.
+
+
+### 2026-07-13 ~16:45Z — build agent — test110: single-Back nav fix + A-resumes-session (BL-1745, PR #189)
+
+- **Branch:** `test110-a-resume-doubleback` (f698b569) · **Instructions:** `testing/test110-a-resume-doubleback/instructions.md` (11-step scorecard, Game Mode first)
+- **Artifact:** `0.2.0-alpha.001` (Alpha channel / Releases) — `Vibemis-0.2.0-alpha.001-x86_64.AppImage`
+  **sha256** `e7005099d38f7590d605151adfb45aa8f959bdcdd71a05ec2ee5ea003a2bc3fe` (91,400,696 bytes; matches GitHub's published digest)
+- **What changed:** (1) BL-1745 fix — gamepad A double-fired `clicked()` (Qt 6 native Return activation + the Qt 5-era manual handler), pushing two AppViews so Back needed two presses; (2) feature — A on the RESUME-badged app resumes the stream directly; X / press-and-hold / right-click still open the options sheet.
+- **Report:** `diagnostic/test110-a-resume-doubleback-report` PR. Same handoff + digest posted on the coordination bus.
+
 ### 2026-07-11 ~19:25Z — build agent — ⭐ PRIORITY OVERRIDE: test75 Quick Menu FREEZE repro (drop everything else)
 
 **Context:** the maintainer reports the Quick Menu **gamepad combo (Select+L1+R1+Y) opens the menu

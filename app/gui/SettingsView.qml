@@ -10,12 +10,17 @@ import SystemProperties 1.0
 import ClipboardManager 1.0
 import ServerCommandManager 1.0
 import AutoUpdateChecker 1.0
+import UiSoundManager 1.0
 
 import Vibemis.Redesign 1.0
 
 Item {
     id: settingsPage
     objectName: qsTr("Settings")
+
+    // BL-1776: LB/RB category flips change `category` without moving item focus,
+    // so the launcher-wide focus tick (main.qml) never fires for them — tick here.
+    onCategoryChanged: UiSoundManager.focusMoved()
 
     // Redesign 1e (sidebar categories). The root was a Flickable; it is now an Item hosting a
     // fixed header + a 340px category sidebar + a right-hand Flickable panel (settingsFlick)
@@ -93,6 +98,16 @@ Item {
         height: Math.max(70, toggleTitle.implicitHeight + 28)
         hoverEnabled: true
         opacity: enabled ? 1.0 : 0.5
+
+        // BL-1776: activation blip on user toggles only — toggled() never fires
+        // for programmatic checked changes (the pref-binding churn at load).
+        // Connections so a future instance-level onToggled can't override it (BL-1664).
+        Connections {
+            target: toggleRoot
+            function onToggled() {
+                UiSoundManager.activated()
+            }
+        }
 
         indicator: Item {}
         background: Item {
@@ -417,14 +432,31 @@ Item {
                     // sendKey(Key_Tab, ShiftModifier)) — NOT Key_Backtab. Keys.onTabPressed
                     // matches Key_Tab regardless of modifiers, so a naive onTab/onBacktab pair
                     // made Up step DOWN. Direction must come from the modifier.
-                    Keys.onUpPressed: settingsPage.focusCategoryRow(Math.max(0, index - 1))
+                    // BL-1709: Up at the TOP row (Video) escapes to the toolbar instead of
+                    // self-focusing (focusCategoryRow(0) on row 0 consumed the press and made
+                    // the toolbar unreachable by d-pad — maintainer launch blocker). Leaving
+                    // the event unaccepted lets the default BackTab chain walk out of the
+                    // sidebar (this row is the only tab-focusable one, so chain-previous is
+                    // the toolbar).
+                    Keys.onUpPressed: {
+                        if (index === 0) {
+                            event.accepted = false
+                        }
+                        else {
+                            settingsPage.focusCategoryRow(index - 1)
+                        }
+                    }
                     Keys.onDownPressed: settingsPage.focusCategoryRow(Math.min(sidebarRepeater.count - 1, index + 1))
                     Keys.onPressed: {
                         if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
                             var backwards = (event.key === Qt.Key_Backtab)
                                             || (event.modifiers & Qt.ShiftModifier)
+                            if (backwards && index === 0) {
+                                event.accepted = false   // BL-1709: escape to the toolbar
+                                return
+                            }
                             settingsPage.focusCategoryRow(backwards
-                                ? Math.max(0, index - 1)
+                                ? index - 1
                                 : Math.min(sidebarRepeater.count - 1, index + 1))
                             event.accepted = true
                         }
@@ -611,7 +643,8 @@ Item {
 
                 Text {
                     width: parent.width
-                    text: qsTr("Vibepollo Presets")
+                    // Maintainer 2026-07-13: generic wording — no host/device product names.
+                    text: qsTr("Presets")
                     font.family: VbTokens.fontBody
                     font.weight: Font.DemiBold
                     font.pixelSize: VbTokens.sizeLabel
@@ -620,7 +653,7 @@ Item {
 
                 Label {
                     width: parent.width
-                    text: qsTr("One-click quality profiles tuned for the Legion Go S Z2 (HEVC, hardware decode). Adjust anything below afterwards.")
+                    text: qsTr("One-click starting points for common quality/performance trade-offs (HEVC, hardware decode). Pick one, then fine-tune anything below.")
                     font.pointSize: 9
                     wrapMode: Text.Wrap
                 }
@@ -1994,6 +2027,7 @@ Item {
                     width: parent.width
 
                     Label {
+                        id: scaleFactorLabel
                         text: qsTr("Scale Factor:")
                         font.pointSize: 10
                         anchors.verticalCenter: parent.verticalCenter
@@ -2005,6 +2039,21 @@ Item {
                         to: 200     // 200%
                         stepSize: 5
                         value: StreamingPreferences.resolutionScaleFactor
+
+                        // BL-1747: this Slider sits in a plain Row and its background derives
+                        // width from availableWidth (contributing no implicitWidth), so without
+                        // an explicit width it collapsed to ~0px and the handle was undraggable.
+                        // Mirror the Video-page bitrate slider: fill the row between the labels.
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: parent.width - scaleFactorLabel.width - scaleValueLabel.width - (2 * parent.spacing)
+
+                        // BL-1747: guarantee one arrow / d-pad press moves exactly one stepSize
+                        // (5). The default handling was observed stepping twice (+10); overriding
+                        // Left/Right with a single accepted increase()/decrease() forces one step
+                        // per press and stops Left from bubbling to the Flickable's focus-return
+                        // handler mid-adjustment. Range 50-200 / stepSize 5 unchanged.
+                        Keys.onLeftPressed: { resolutionScaleSlider.decrease(); event.accepted = true }
+                        Keys.onRightPressed: { resolutionScaleSlider.increase(); event.accepted = true }
 
                         // BL-1628: same track/handle recipe as the Video page's bitrate slider.
                         background: Rectangle {
@@ -2036,6 +2085,7 @@ Item {
                     }
 
                     Label {
+                        id: scaleValueLabel
                         text: resolutionScaleSlider.value + "%"
                         font.pointSize: 10
                         anchors.verticalCenter: parent.verticalCenter
@@ -2441,6 +2491,17 @@ Item {
                     onCheckedChanged: {
                         StreamingPreferences.configurationWarnings = checked
                     }
+                }
+
+                // BL-1776: gate for the controller-nav UI sounds (UiSoundManager)
+                VbToggleRow {
+                    id: uiSoundsCheck
+                    text: qsTr("Play navigation sounds")
+                    checked: StreamingPreferences.uiSounds
+                    onCheckedChanged: StreamingPreferences.uiSounds = checked
+                    ToolTip.text: qsTr("Play a short sound when moving focus or activating items with the gamepad or keyboard, including the in-stream Quick Menu.")
+                    ToolTip.delay: 1000
+                    ToolTip.visible: hovered
                 }
 
                 VbToggleRow {
@@ -3358,6 +3419,10 @@ Item {
                             val: StreamingPreferences.UC_STABLE
                         }
                         ListElement {
+                            text: qsTr("Release candidate (pre-stable)")
+                            val: StreamingPreferences.UC_RC
+                        }
+                        ListElement {
                             text: qsTr("Beta (new features)")
                             val: StreamingPreferences.UC_BETA
                         }
@@ -3437,7 +3502,7 @@ Item {
                         visible: false
                         onClicked: {
                             if (releaseUrl) {
-                                Qt.openUrlExternally(releaseUrl)
+                                SystemProperties.openUrl(releaseUrl)
                             }
                         }
                     }
@@ -3500,6 +3565,24 @@ Item {
                     width: parent.width
                 }
 
+                // Maintainer find 2026-07-13: the BL-1562 touch-overlay PREF shipped with a
+                // Quick-Menu toggle but never got its Settings row — unfindable outside a
+                // stream. Same opt-in default (off).
+                VbToggleRow {
+                    id: touchOverlayCheck
+                    text: qsTr("On-screen touch controls while streaming")
+                    checked: StreamingPreferences.enableTouchOverlay
+                    onCheckedChanged: {
+                        StreamingPreferences.enableTouchOverlay = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Composites three translucent buttons into the stream: MENU (top-left, opens the Quick Menu), KBD (top-right, opens the SteamOS on-screen keyboard) and a touch-mode toggle (next to KBD, switches trackpad/direct touch). Finger taps only — mouse clicks in those corners pass through to the game.") + "\n\n" +
+                                  qsTr("Can also be toggled mid-stream from the Quick Menu (\"Touch overlay\").")
+                }
+
                 VbToggleRow {
                     id: preferTailscaleCheck
                     text: qsTr("Prefer Tailscale addresses for remote play")
@@ -3529,12 +3612,12 @@ Item {
                     spacing: 8
                     Button {
                         text: qsTr("Set up Tailscale")
-                        onClicked: Qt.openUrlExternally("https://tailscale.com/kb/installation")
+                        onClicked: SystemProperties.openUrl("https://tailscale.com/kb/installation")
                         visible: SystemProperties.hasBrowser
                     }
                     Button {
                         text: qsTr("One-command setup (guide)")
-                        onClicked: Qt.openUrlExternally("https://github.com/navyas321/vibemis/blob/vibemis-main/scripts/setup-tailscale.sh")
+                        onClicked: SystemProperties.openUrl("https://github.com/navyas321/vibemis/blob/vibemis-main/scripts/setup-tailscale.sh")
                         visible: SystemProperties.hasBrowser
                     }
                     // Vibemis P3.7 (test93): check the tailnet status in-app (no terminal needed).
@@ -3598,8 +3681,16 @@ Item {
                         { k: qsTr("SteamOS / gamescope"), v: SystemProperties.isSteamDeck ? qsTr("Yes") : qsTr("No") },
                         { k: qsTr("Display server"),  v: SystemProperties.isRunningWayland ? (SystemProperties.isRunningXWayland ? "XWayland" : "Wayland") : "X11" },
                         { k: qsTr("Hardware decode"), v: SystemProperties.hasHardwareAcceleration ? qsTr("Available") : qsTr("Not available") },
-                        { k: qsTr("HDR support"),     v: SystemProperties.supportsHdr ? qsTr("Yes") : qsTr("No") },
-                        { k: qsTr("Max resolution"),  v: SystemProperties.maximumResolution.width + "×" + SystemProperties.maximumResolution.height }
+                        // Maintainer 2026-07-13: these two report the DECODER, not the panel —
+                        // 'HDR support: Yes' on an SDR device and 'Max resolution: 0×0' were
+                        // both technically-true sentinels rendered misleadingly. supportsHdr =
+                        // the decoder can decode HDR streams; maximumResolution 0×0 = the probe
+                        // found no ceiling above 1080p (see the Video page NOTE(test68)).
+                        { k: qsTr("Display resolution"), v: Screen.width + "×" + Screen.height },
+                        { k: qsTr("HDR decode"),      v: SystemProperties.supportsHdr ? qsTr("Supported (stream decode)") : qsTr("No") },
+                        { k: qsTr("Max decode resolution"),  v: (SystemProperties.maximumResolution.width > 0 && SystemProperties.maximumResolution.height > 0)
+                                                                ? (SystemProperties.maximumResolution.width + "×" + SystemProperties.maximumResolution.height)
+                                                                : qsTr("No limit found (above 1080p)") }
                     ]
                     delegate: RowLayout {
                         width: systemInfoGroupBox.availableWidth
@@ -3663,7 +3754,7 @@ Item {
                 Label {
                     width: parent.width
                     text: "<a href=\"https://github.com/navyas321/vibemis\">github.com/navyas321/vibemis</a>"
-                    onLinkActivated: Qt.openUrlExternally(link)
+                    onLinkActivated: SystemProperties.openUrl(link)
                     font.pointSize: 9
                     wrapMode: Text.Wrap
                     color: "#aaaaaa"
@@ -3699,15 +3790,15 @@ Item {
 
                 Button {
                     text: qsTr("Vibemis on GitHub")
-                    onClicked: Qt.openUrlExternally("https://github.com/navyas321/vibemis")
+                    onClicked: SystemProperties.openUrl("https://github.com/navyas321/vibemis")
                 }
                 Button {
                     text: qsTr("Install guide (README)")
-                    onClicked: Qt.openUrlExternally("https://github.com/navyas321/vibemis#readme")
+                    onClicked: SystemProperties.openUrl("https://github.com/navyas321/vibemis#readme")
                 }
                 Button {
                     text: qsTr("Remote play over Tailscale — setup")
-                    onClicked: Qt.openUrlExternally("https://tailscale.com/kb/installation")
+                    onClicked: SystemProperties.openUrl("https://tailscale.com/kb/installation")
                 }
             }
         }

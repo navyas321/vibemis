@@ -85,9 +85,10 @@ Build agent rule: before starting a test cycle, rename (or create fresh from) th
 (every open feature test PR, grouped by phase, with branch · PR# · base · ☐/☑ status) and
 `gh pr list --state open`. Don't maintain a duplicate table here — read those.
 
-**High-water mark (snapshot, re-derive from git):** highest test branch is **`test52`** →
-next new cycle = **`test53`**. test49 (perf-overlay corner), test51 (prefer-Tailscale, P3.7) and
-test52 (`vibemis selftest`) all built **alpha-green** via CI. test50 (perf-overlay text size) green too.
+**High-water mark (snapshot, re-derive from git):** highest test branch is **`test118`**
+(overlay v2) → next new cycle = **`test119`** (BL-2015 pointer-slot fix, pre-built on
+`wip/BL-2015-pointer-slots`). The 0.2.0 release train + gate live in
+`docs/RELEASE_RUNBOOK_0.2.0.md`; BL-2015 (e2e touch) is a maintainer-declared stable blocker.
 
 **Recently landed on `vibemis-main`** (beyond features): the CI tier+auto-prune fix
 (`.github/workflows/dev-build.yml` — only `vibemis-main` builds beta, `test**` builds alpha, old
@@ -331,24 +332,52 @@ Key implementation steps (branch: feat/quickmenu-sdl-overlay):
 **When testing:** prioritise Game Mode. Desktop Mode results are informative but secondary.
 If a feature works only in Desktop Mode, it's not ready.
 
-## Versioning / release cadence — build agent MUST keep this moving (maintainer directive 2026-07-11)
+## Versioning — Semantic Versioning 2.0.0 (maintainer /goal 2026-07-13)
 
-`app/version.txt` is the single version source; CI derives every tag from it
-(`<base>-beta.<ts>` on `vibemis-main`, `<base>-alpha.<branch>.<ts>` on `test**`).
-**Do not let the base version lag behind shipped work** (0.6.7 sat unchanged across ~40 merged
-features — never again):
+`app/version.txt` holds the **next stable version** (e.g. `0.5.0`); CI derives every tag:
 
-- **Bump MINOR** (`0.7.0` → `0.8.0`) when a feature wave merges to `vibemis-main`
-  (one or more verified `test<N>` feature PRs).
-- **Bump PATCH** for a fix-only wave.
-- Bump `app/version.txt` **in the same push as (or immediately after) the merge**. Mechanics
-  (verified 2026-07-11 against `check-changes`): on `vibemis-main`, betas publish **only on PR
-  merge commits that touch code** — a direct push (even code-touching) never releases. So a bump
-  pushed directly cuts its beta at the **next PR merge**; to release immediately, run
-  `gh workflow run dev-build.yml --ref vibemis-main` (workflow_dispatch always builds).
-- **Stable releases stay explicit** (workflow_dispatch `release_type=stable` or a `release/**`
-  branch) — cut one at milestones (e.g. after a verification wave clears); don't let stable lag
-  more than a few minor versions behind beta.
+- **Bump policy (maintainer 2026-07-13): STRICT SEMVER.** Patch = bug fixes only;
+  minor = ANY new feature (backward-compatible); major = breaking changes.
+- **Stable** = the bare version itself, non-prerelease, takes Latest; cut via
+  workflow_dispatch `release_type=stable`. Hotfix patches via the `version_override`
+  input (`0.5.1`). **Bump version.txt to the next stable right after every cut.**
+- **When each tier cuts (maintainer 2026-07-13):**
+  | Tier | Trigger | Who decides |
+  |------|---------|-------------|
+  | alpha | `test**` push whose HEAD commit carries `[alpha]` | automatic (test agent requests) |
+  | beta | PR merge into `vibemis-main` touching code; or plain dispatch on `vibemis-main` | automatic |
+  | rc | dispatch `release_type=rc` when the next stable is feature-complete and betas are green | agent may propose & cut |
+  | stable | dispatch `release_type=stable` | **MAINTAINER APPROVAL REQUIRED** |
+
+  ⚠ **Stable cuts are approval-gated: an agent must NEVER dispatch
+  `release_type=stable` (or push `release/**`/`main`/`master`) without the
+  maintainer explicitly approving that specific cut in the current conversation.**
+  Alphas, betas and RCs are agent-cuttable per the matrix above.
+  **CI-enforced (BL-1741):** a stable dispatch additionally requires the input
+  `stable_confirm=CONFIRM-STABLE` — without it the run fails at Setup Version
+  before anything builds. Type the phrase only when relaying the maintainer's
+  explicit approval of that specific cut.
+- **Beta** = `0.5.0-beta.NNN` (vibemis-main), **alpha** = `0.5.0-alpha.NNN` (test
+  branches), dev = `0.5.0-dev.<run>.<branch>`. NNN is dense + zero-padded, computed
+  from existing tags — never delete a tag. **Page-ordering decision (BL-1772,
+  maintainer final 2026-07-13): tags stay clean and the GitHub Releases/Tags pages
+  keep their SemVer-precedence order** (alphas list after betas of the same base —
+  spec §11.4; GitHub has no page-sort setting; an ordinal-first tag scheme fixed the
+  ordering but was reverted as too ugly). Chronological views: `RELEASES.md`
+  (auto-refreshed every cut), the releases Atom feed, the API, and the in-app
+  channels — all date-ordered. Don't reopen this trade-off without new options.
+- All suffixed builds are GitHub-prerelease; only bare stables are full releases.
+- **Releases are PERMANENT, like tags (maintainer 2026-07-13, BL-1736).** Every cut
+  stays on the Releases page forever — SemVer §3 released-version immutability; the
+  Releases list mirrors the Tags list. Never delete a release. (This supersedes the
+  earlier auto-prune policy; the prune step was removed from dev-build.yml.)
+- The first stable is bare `0.1.0` (Latest). The full historical catalog (0.1.0
+  alpha/beta/rc trains incl. the folded interim-scheme cuts rc.001-006) is documented
+  in `docs/RELEASE_HISTORY.md` — never prune or reuse it.
+- **A release number is NEVER reused for different bits** — a burnt number stays burnt.
+- Release titles are uniform: `Vibemis release <tag>`.
+- Betas publish **only on PR merge commits that touch code** — a direct push never
+  releases; `gh workflow run dev-build.yml --ref vibemis-main` builds immediately.
 
 ## CI / AppImage release rules — READ BEFORE PUSHING
 
@@ -380,14 +409,19 @@ commit before the fix), not the new one.
 3. **Test instruction commits (`test: ...`) should come BEFORE the fix commit**, not after.
    Order matters because CI evaluates the HEAD commit only.
 
-4. **If you've already pushed a docs-only commit and need to force a new build:** make a
-   trivial meaningful code change (e.g. add/update a comment in a `.cpp` file) with
-   `fix:` in the commit title and push it. Do NOT use `workflow_dispatch` alone —
-   it still goes through the smart-build check and will skip if HEAD is docs-only.
+4. **If you've already pushed a docs-only commit and need a new build:** either make a
+   trivial meaningful code change (e.g. a constraint comment in a `.cpp` file) with
+   `fix:` in the title and push it, or — on `vibemis-main` only — use
+   `gh workflow run dev-build.yml --ref vibemis-main`: a manual dispatch ALWAYS builds
+   (it bypasses the docs-only skip — verified against dev-build.yml, BL-2017 audit).
+   Push-triggered runs on a docs-only HEAD still skip.
 
-5. **The `create-dev-release` job only runs on `fix/**` and `vibemis-main`.** Other branch
-   prefixes (`test**`, `verify/**`, `chore/**`) build the AppImage as a CI artifact but
-   do NOT publish it to GitHub Releases. Test agents can only download from Releases.
+5. **The `create-dev-release` job publishes only from `test**`, `vibemis-main`,
+   `main`/`master`, `release/**`, or a stable dispatch (BL-1998).** Other branch prefixes
+   (`fix/**`, `feat/**`, `verify/**`, `chore/**`) never push-trigger the workflow at all; a
+   manual dispatch on them builds a `dev`-tier CI artifact that is NOT published to
+   Releases. Test agents can only download from Releases — hence `test**` branches for
+   every test cycle.
 
 ## README update rule — required at every phase completion
 

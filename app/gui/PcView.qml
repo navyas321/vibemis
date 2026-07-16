@@ -300,6 +300,7 @@ CenteredGridView {
     model: computerModel
 
     delegate: NavigableItemDelegate {
+        id: pcDelegate
         width: 430; height: 242;
         grid: pcGrid
 
@@ -349,13 +350,36 @@ CenteredGridView {
             else {
                 grid.moveCurrentIndexUp()
 
-                // If we've reached the top of the grid, move focus to the toolbar
-                // (preserves NavigableItemDelegate's base behavior we override here)
-                if (grid.currentItem === this) {
-                    nextItemInFocusChain(false).forceActiveFocus(Qt.TabFocus)
+                // BL-1709 (launch blocker, harness-validated RCA): at the top of the grid,
+                // hop focus to the toolbar. The upstream one-liner
+                // `nextItemInFocusChain(false).forceActiveFocus()` is structurally broken in
+                // the redesign nesting — the delegate's chain-previous is the GRID itself
+                // (its ancestor FocusScope), and focusing an ancestor just re-descends into
+                // this same delegate (observed: focus never left the card). Walk the chain
+                // PAST ancestors to the first real outside item (the toolbar buttons).
+                if (grid.currentItem === pcDelegate) {
+                    var prev = pcDelegate.nextItemInFocusChain(false)
+                    var guard = 0
+                    while (prev && guard++ < 8) {
+                        var isAncestor = false
+                        for (var p = pcDelegate.parent; p; p = p.parent) {
+                            if (p === prev) { isAncestor = true; break }
+                        }
+                        if (!isAncestor) {
+                            break
+                        }
+                        prev = prev.nextItemInFocusChain(false)
+                    }
+                    if (prev) {
+                        prev.forceActiveFocus(Qt.TabFocus)
+                    }
                 }
             }
         }
+        // BL-1745 round 2: the manual clicked() calls are REQUIRED (ItemDelegate has no
+        // native Return/Enter activation — removing these bricked A on-device in
+        // alpha.001). The double-push symptom is fixed by the stackView.busy guard in
+        // onClicked below, which turns any duplicate activation into a no-op.
         Keys.onReturnPressed: {
             if (pcGrid.ghostSelected) {
                 addPcDialog.open()
@@ -488,6 +512,20 @@ CenteredGridView {
         }
 
         onClicked: {
+            // BL-1745 round 2: idempotent activation — if the stack is already mid-push
+            // (a duplicate clicked() from the same A press, or a double-tap), drop it.
+            // THIS is the actual double-Back fix: one activation, one AppView, one Back.
+            if (stackView.busy) {
+                return
+            }
+            // While the ghost Add-PC card is selected, the Keys handler above owns
+            // activation (it opened the dialog on key press) — swallow any click that still
+            // reaches the delegate so it can't ALSO activate the card underneath. A stray
+            // tap while ghost-selected just clears the selection (self-healing).
+            if (pcGrid.ghostSelected) {
+                pcGrid.ghostSelected = false
+                return
+            }
             if (model.online) {
                 if (!model.serverSupported) {
                     errorDialog.text = qsTr("The version of GeForce Experience on %1 is not supported by this build of Moonlight. You must update Moonlight to stream from %1.").arg(model.name)

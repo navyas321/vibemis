@@ -48,6 +48,7 @@
 #include "streaming/session.h"
 #include "settings/streamingpreferences.h"
 #include "gui/sdlgamepadkeynavigation.h"
+#include "gui/uisoundmanager.h"
 #include "backend/clipboardmanager.h"
 #include "backend/servercommandmanager.h"
 #include "backend/quickmenumanager.h"
@@ -752,6 +753,9 @@ int main(int argc, char *argv[])
             else if (ch == "alpha") {
                 prefs->updateChannel = StreamingPreferences::UC_ALPHA;
             }
+            else if (ch == "rc") {
+                prefs->updateChannel = StreamingPreferences::UC_RC;
+            }
             else {
                 prefs->updateChannel = StreamingPreferences::UC_STABLE;
             }
@@ -930,7 +934,15 @@ int main(int argc, char *argv[])
     qmlRegisterSingletonType<StreamingPreferences>("StreamingPreferences", 1, 0,
                                                    "StreamingPreferences",
                                                    [](QQmlEngine* qmlEngine, QJSEngine*) -> QObject* {
-                                                       return StreamingPreferences::get(qmlEngine);
+                                                       StreamingPreferences* prefs = StreamingPreferences::get(qmlEngine);
+                                                       // Maintainer-caught CRITICAL (2026-07-13): this GLOBAL is served to
+                                                       // every engine — including the Quick Menu's offscreen engine (its
+                                                       // VbTokens import reads accent prefs). Engine-owned singletons are
+                                                       // DELETED with their engine, so the overlay teardown after each
+                                                       // disconnect freed the shared object and Settings showed
+                                                       // "undefinedxundefined / NaN Mbps". C++ owns it; engines never may.
+                                                       QQmlEngine::setObjectOwnership(prefs, QQmlEngine::CppOwnership);
+                                                       return prefs;
                                                    });
     qmlRegisterSingletonType<ClipboardManager>("ClipboardManager", 1, 0,
                                                "ClipboardManager",
@@ -950,6 +962,15 @@ int main(int argc, char *argv[])
                                                 [](QQmlEngine*, QJSEngine*) -> QObject* {
                                                     return new AppProfileManager();
                                                 });
+    qmlRegisterSingletonType<UiSoundManager>("UiSoundManager", 1, 0,
+                                             "UiSoundManager",
+                                             [](QQmlEngine*, QJSEngine*) -> QObject* {
+                                                 // BL-1776: shared with the Quick Menu's offscreen engine,
+                                                 // so C++ must own it — same rule as StreamingPreferences above.
+                                                 UiSoundManager* sounds = UiSoundManager::get();
+                                                 QQmlEngine::setObjectOwnership(sounds, QQmlEngine::CppOwnership);
+                                                 return sounds;
+                                             });
 
     // Vibemis design-token singleton (P3.17) — a QML-only singleton (pragma Singleton in
     // gui/Theme.qml). Lets QML reference Theme.accent / Theme.spacingM / etc. See docs/DESIGN_SYSTEM.md.

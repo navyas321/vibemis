@@ -10,6 +10,7 @@ import AutoUpdateChecker 1.0
 import StreamingPreferences 1.0
 import SystemProperties 1.0
 import SdlGamepadKeyNavigation 1.0
+import UiSoundManager 1.0
 import Theme 1.0
 
 ApplicationWindow {
@@ -25,6 +26,19 @@ ApplicationWindow {
     // BL-1668: 600 was an absurdly short default that squished the app grid on first paint even
     // on a desktop; 720 is a saner minimum. Handhelds fill the screen (see Component.onCompleted).
     height: 720
+
+    // BL-1776: single launcher-wide choke point for the focus-move tick — every
+    // d-pad/stick/arrow/Tab move lands here as an activeFocusItem change
+    // (SdlGamepadKeyNavigation already translates gamepad input to key events).
+    // Null transitions are window activation / view teardown, not navigation,
+    // so both endpoints must be real items before the tick plays.
+    property Item vbPreviousFocusItem: null
+    onActiveFocusItemChanged: {
+        if (activeFocusItem && vbPreviousFocusItem) {
+            UiSoundManager.focusMoved()
+        }
+        vbPreviousFocusItem = activeFocusItem
+    }
 
     // This function runs prior to creation of the initial StackView item
     function doEarlyInit() {
@@ -283,6 +297,28 @@ ApplicationWindow {
         anchors.topMargin: 0
         anchors.bottomMargin: 0
 
+        // BL-1709 (launch blocker #2, "back needs two presses"): the toolbar lives in the
+        // window HEADER — outside the StackView — so when focus sits on a toolbar button
+        // (e.g. after d-pad Up from a grid), Ⓑ/Esc bubbled up the header chain and never
+        // reached stackView's back handlers; the press was silently lost and only a second
+        // press (after focus fell back into the page) worked. Mirror the back handling here.
+        Keys.onEscapePressed: {
+            if (stackView.depth > 1) {
+                goBack()
+            }
+            else {
+                quitConfirmationDialog.open()
+            }
+        }
+        Keys.onBackPressed: {
+            if (stackView.depth > 1) {
+                goBack()
+            }
+            else {
+                quitConfirmationDialog.open()
+            }
+        }
+
         // Redesign: dark token-styled surface. This global toolbar stays visible on the home screens
         // (1a Computers / 1b app grid) — where it can't collapse without resizing the window during
         // gamescope swapchain creation (the 0.25.0 black-screen cause) — so it must LOOK like the
@@ -463,7 +499,7 @@ ApplicationWindow {
                 ToolTip.text: qsTr("Join our community on Discord")
 
                 // TODO need to make sure browser is brought to foreground.
-                onClicked: Qt.openUrlExternally("https://moonlight-stream.org/discord");
+                onClicked: SystemProperties.openUrl("https://moonlight-stream.org/discord");
 
                 Keys.onDownPressed: {
                     stackView.currentItem.forceActiveFocus(Qt.TabFocus)
@@ -531,7 +567,7 @@ ApplicationWindow {
 
                 onClicked: {
                     if (SystemProperties.hasBrowser) {
-                        Qt.openUrlExternally(browserUrl);
+                        SystemProperties.openUrl(browserUrl);
                     }
                 }
 
@@ -576,7 +612,7 @@ ApplicationWindow {
                     if (comp.status === Component.Ready) {
                         stackView.push(comp)
                     } else {
-                        Qt.openUrlExternally("https://github.com/navyas321/vibemis")
+                        SystemProperties.openUrl("https://github.com/navyas321/vibemis")
                     }
                 }
 
@@ -649,7 +685,7 @@ ApplicationWindow {
         standardButtons: Dialog.Ok | Dialog.Cancel
         text: qsTr("This version of Vibemis isn't optimized for your PC. Please download the '%1' version of Vibemis for the best streaming performance.").arg(SystemProperties.friendlyNativeArchName)
         onAccepted: {
-            Qt.openUrlExternally("https://github.com/navyas321/vibemis/releases");
+            SystemProperties.openUrl("https://github.com/navyas321/vibemis/releases");
         }
     }
 

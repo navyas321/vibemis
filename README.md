@@ -27,6 +27,11 @@ Streaming clients in this world come in two flavors, and until now you couldn't 
 No building, no installer, no dependencies. Vibemis is a single self-contained file —
 **download it and double-click it.**
 
+> 📲 **Already have Vibemis installed?** Skip the download — it updates itself. In the app
+> open Settings → Advanced → **Software updates**, pick your channel (**Stable** recommended;
+> **Beta** for the newest features), then *Check for updates* → *Update now*. Details in
+> [Downloads & updates](#downloads--updates).
+
 ### Easiest way (Steam Deck / SteamOS)
 
 1. **Switch to Desktop Mode.** (Hold the **power button** → **Switch to Desktop**.)
@@ -96,15 +101,25 @@ AppImage to a stable path with a clean `Vibemis` desktop entry, ready to Add to 
 
 - **Game Mode Quick Menu** — the in-stream menu is rendered offscreen and composited into the
   video (works under Gamescope, not just the desktop), with full gamepad navigation and a
-  discoverable "Resume Game" exit (B / Back / Start)
+  discoverable "Resume Game" exit (B / Back / Start). From it you can upload / fetch the host
+  clipboard, paste clipboard text as keystrokes, type text to the host (on-screen text-send),
+  run server commands, send special keys (Ctrl+Alt+Del, Alt+F4, Win/Super, Esc), view stream
+  info, toggle performance stats / mouse & keyboard capture / fullscreen / the touch overlay,
+  and disconnect or quit the game
+- **Touchscreen passthrough & touch modes** — the handheld's touchscreen forwards native
+  taps and drags to Apollo-lineage hosts, or acts as a virtual trackpad instead (switchable
+  via "Use touchscreen as a virtual trackpad" in Input settings)
+- **On-screen touch controls** *(opt-in)* — two translucent buttons composited into the
+  stream: **MENU** (top-left) opens the Quick Menu, **KBD** (top-right) opens text-send.
+  Finger taps only — mouse clicks in those corners pass through to the game
 - **Tailscale-first remote play** — one-command `scripts/setup-tailscale.sh`, an in-app setup
   button, and automatic preference for tailnet addresses when reaching a host
 - **SteamOS one-click integration** — `scripts/vibemis-setup.sh` guided setup (doctor → update →
   install → pair → add games to Steam), plus per-script helpers and a self-update command
 - **Settings export / import** — portable `.ini` backup of the full configuration
-- **In-app updates with channels** — pick Stable / Beta / Alpha in Settings → Advanced →
-  "Software updates", check for updates on demand, and (when running as an AppImage) install
-  the new build in place with one tap — no browser or terminal needed
+- **In-app updates with channels** — pick Stable / Release candidate / Beta / Alpha in
+  Settings → Advanced → "Software updates", check for updates on demand, and (when running as
+  an AppImage) install the new build in place with one tap — no browser or terminal needed
 - **Performance overlay controls** — corner anchoring, text size, optional wall clock, and a
   data-usage estimate next to the bitrate slider
 - **Handheld quality-of-life** — battery-saver bitrate, controller-rumble suppression, motion
@@ -116,9 +131,26 @@ AppImage to a stable path with a clean `Vibemis` desktop entry, ready to Add to 
 - **Auto-reconnect** *(opt-in)* — a dropped stream retries in place (3 attempts with backoff)
   instead of dumping you back to the game grid
 - **Gamepad-first redesign** — a full controller-first UI on a unified dark design-token system
-  (one accent/surface/type language), across every screen: the Computers list (rich status cards +
-  live host count), app grid, Add-PC dialog, Host-options side-sheet, Settings (a category sidebar),
-  and in-stream Help — per-screen chrome, a single header, the accent focus-ring, and line icons
+  (one accent/surface/type language), across every screen: the Computers list (rich status cards
+  with a host-type badge — Vibepollo / Apollo / Sunshine — and a live host count), the app grid
+  (a live RESUME badge on the running game — **A** resumes it, **Y** quits it), Add-PC dialog,
+  Host-options side-sheet, Settings (a category sidebar), and in-stream Help — per-screen chrome,
+  a single header, the accent focus-ring, and line icons
+
+### Known issues
+
+Confirmed bugs in the current build, with workarounds. (Fixes in flight are noted; rows drop
+off as fixes land.)
+
+| Issue | Workaround | Status |
+|---|---|---|
+| **D-pad steps twice** on adjustable Settings controls (e.g. the resolution-scale slider moves ±10 per press instead of ±5) | Use keyboard arrows, touch drag, or the mouse | Confirmed; fix queued (gamepad→key translation layer) |
+| **In-stream touch taps still don't click** (and drags don't draw) on the host in direct-touch mode — the client now sends correct full-contact touch, but the host injects it as hover | Enable "Use touchscreen as a virtual trackpad" in Input settings | Client side fixed; awaiting a host-side (Vibepollo) fix |
+| **Quick Menu items can't be tapped** — menu navigation is gamepad/keyboard only, so a touch-only user can open the menu but not operate it | Navigate with D-pad + A, or arrow keys + Enter | Confirmed; touch operability planned |
+| **Text-send has no on-screen keyboard** — on a keyboard-less handheld there's no way to type into it; the first character can also drop if you type immediately | Use a physical/USB keyboard, or Paste Clipboard (clipboard sync) instead | Confirmed; OSK planned |
+| **MENU / KBD touch buttons have small tap targets** | Aim carefully, or use the gamepad combo / keyboard shortcut | Confirmed; enlargement queued |
+| **Settings page doesn't drag-scroll** (touch or pointer drag) | Use the scroll wheel or D-pad/stick navigation | Confirmed on 0.2.0-beta.013 |
+| **Host-type badge can mislabel** Apollo-lineage vs Sunshine hosts | Cosmetic only — streaming is unaffected | Fix in flight |
 
 ### Known limitations
 
@@ -161,7 +193,8 @@ personal use, end-to-end encrypted (WireGuard), and handles NAT traversal automa
 | Input | Shortcut |
 |-------|----------|
 | Keyboard | `Ctrl + Alt + Shift + \` |
-| Gamepad | `Select + L1 + R1 + Y` |
+| Gamepad | `Select + L1 + R1 + Y` (default — configurable in Settings → Input) |
+| Touch | **MENU** button, top-left *(needs the opt-in on-screen touch controls)* |
 
 ### Full Keyboard Reference
 
@@ -180,31 +213,66 @@ All shortcuts require `Ctrl + Alt + Shift`:
 | `V` | Paste clipboard text |
 | `L` | Toggle pointer region lock |
 | `D` | Minimize window |
+| `=` / `-` | Zoom the video in / out |
+| `0` | Reset zoom (and re-center) |
+| Arrow keys | Pan the video while zoomed |
 
 ### Gamepad Reference
 
 | Combo | Action |
 |-------|--------|
-| `Select + L1 + R1 + Y` | Toggle Quick Menu |
+| `Select + L1 + R1 + Y` (configurable) | Toggle Quick Menu |
 | D-pad / `A` (while menu open) | Navigate / activate menu item |
 | `B`, `Back/Select`, or `Start` (while menu open) | Close menu / resume game |
 | `Start + Select + L1 + R1` | Quit stream |
 | `Select + L1 + R1 + X` | Toggle performance stats overlay |
 | Long press `Start` | Toggle mouse emulation mode |
 
+### Touch Reference
+
+| Input | Action |
+|-------|--------|
+| Tap / drag on the stream | Forwarded to the host as native touch — or moves the cursor when "Use touchscreen as a virtual trackpad" is on (Settings → Input) |
+| **MENU** button (top-left) | Open the Quick Menu *(opt-in on-screen touch controls)* |
+| **KBD** button (top-right) | Open "Send text to host" *(opt-in on-screen touch controls)* |
+
 ---
 
-## Downloads
+## Downloads & updates
 
 Each release ships a single **`.AppImage`** — download and double-click; nothing to extract.
 
-| Tier | When | Use |
-|---|---|---|
-| 🔬 **Alpha** | Every push to a `test<N>-*` feature branch | Hardware test cycles during development |
-| 🧪 **Beta** | Every PR merged into `vibemis-main` | Latest features; may change between releases |
-| ✅ **Release** | Milestone (1.0.0+) | **Recommended** — verified stable |
+📲 **Already have a previous version installed? Update in-app — no download needed.**
+Open Settings → Advanced → **Software updates**, pick the channel that matches the build
+you want (see the table below — **Stable** for `0.x.y`, **Release candidate** for `-rc`,
+**Beta** for `-beta`, **Alpha** for `-alpha`), then *Check for updates* → *Update now*.
+The AppImage swaps itself in place (the previous build stays alongside as `.old` for
+rollback) and relaunches. The `scripts/vibemis-update.sh` helper does the same from a
+terminal or a Steam shortcut.
 
-**[→ Download the latest release](https://github.com/navyas321/vibemis/releases/latest)**
+Versions follow **[Semantic Versioning 2.0.0](https://semver.org)** — pre-releases are
+suffixed versions of the stable they precede (`0.5.0-beta.007` → `0.5.0`), with dense
+zero-padded counters. The first stable is `0.1.0`; its release-candidate lineage (`0.1.0-rc.001..006`, including the interim-scheme cuts) is preserved on the releases page.
+
+| Channel | Tag shape | Built from | Use |
+|---|---|---|---|
+| ✅ **Stable** | `0.x.y` (bare) | Explicit release cuts | **Recommended** — hand-verified on device |
+| 🎯 **Release candidate** | `0.x.y-rc.NNN` | Explicit rc cuts | The exact build proposed as the next stable, for on-device verification |
+| 🧪 **Beta** | `0.x.y-beta.NNN` | `vibemis-main` | **Manual-testing channel** — newest features |
+| 🔬 **Alpha** | `0.x.y-alpha.NNN` | `test<N>-*` branches (on request) | Automated test-agent artifacts |
+
+**[→ Download the latest stable](https://github.com/navyas321/vibemis/releases/latest)** · **[📅 build timeline — newest first, all channels](RELEASES.md)** · [all releases](https://github.com/navyas321/vibemis/releases) · [newest betas](https://github.com/navyas321/vibemis/releases?q=beta&expanded=false) · [newest alphas](https://github.com/navyas321/vibemis/releases?q=alpha&expanded=false)
+
+> ℹ️ GitHub's Releases and Tags pages sort by **SemVer precedence**, not date — and per
+> SemVer, `alpha` pre-releases rank *below* `beta` ones of the same version, so the newest
+> alpha appears **after all the betas** (often on page 2). Use the filtered links above, or
+> the in-app channel picker, to find the newest build of a specific tier.
+
+The releases page lists the project's **complete build history** under the semver catalog —
+from `0.1.0-alpha.001` (the first automated build, July 2025) through the beta and rc
+trains to the `0.1.0` stable. Historical entries are prerelease-flagged markers without
+artifacts; see [`docs/RELEASE_HISTORY.md`](docs/RELEASE_HISTORY.md) for the full map
+(original tags, commits, CI runs, and the story of every stable number).
 
 ---
 

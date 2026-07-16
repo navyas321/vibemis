@@ -309,13 +309,17 @@ void ServerCommandManager::sendCommandExecution(const QString &commandId)
     qDebug() << "ServerCommandManager: Using ENet-based command execution";
     int result = LiSendExecServerCmd(static_cast<uint8_t>(cmdId));
 
-    // Process result
+    // Process result. LiSendExecServerCmd() returns the bool from
+    // sendMessageAndForget() (moonlight-common-c ControlStream.c): NONZERO/true means
+    // the command was sent to the host OK, 0/false means the send failed. Treat nonzero
+    // as success -- the old "result == 0" check was inverted and logged a successful
+    // send (result 1) as "execution failed with result: 1" (BL-1990).
     m_isExecuting = false;
     m_currentExecutingCommand.clear();
     emit executionStateChanged();
 
-    if (result == 0) {
-        qDebug() << "ServerCommandManager: Command executed successfully:" << commandId;
+    if (result != 0) {
+        qDebug() << "ServerCommandManager: Command sent successfully:" << commandId;
         emit commandExecuted(commandId, true, "Command executed successfully");
     } else {
         qWarning() << "ServerCommandManager: Command execution failed:" << commandId << "with result:" << result;
