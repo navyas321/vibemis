@@ -48,6 +48,7 @@
 #include "streaming/session.h"
 #include "settings/streamingpreferences.h"
 #include "gui/sdlgamepadkeynavigation.h"
+#include "gui/uisoundmanager.h"
 #include "backend/clipboardmanager.h"
 #include "backend/servercommandmanager.h"
 #include "backend/quickmenumanager.h"
@@ -961,6 +962,15 @@ int main(int argc, char *argv[])
                                                 [](QQmlEngine*, QJSEngine*) -> QObject* {
                                                     return new AppProfileManager();
                                                 });
+    qmlRegisterSingletonType<UiSoundManager>("UiSoundManager", 1, 0,
+                                             "UiSoundManager",
+                                             [](QQmlEngine*, QJSEngine*) -> QObject* {
+                                                 // BL-1776: shared with the Quick Menu's offscreen engine,
+                                                 // so C++ must own it — same rule as StreamingPreferences above.
+                                                 UiSoundManager* sounds = UiSoundManager::get();
+                                                 QQmlEngine::setObjectOwnership(sounds, QQmlEngine::CppOwnership);
+                                                 return sounds;
+                                             });
 
     // Vibemis design-token singleton (P3.17) — a QML-only singleton (pragma Singleton in
     // gui/Theme.qml). Lets QML reference Theme.accent / Theme.spacingM / etc. See docs/DESIGN_SYSTEM.md.

@@ -241,6 +241,9 @@ public:
     // Vibemis redesign UI prefs: gamepad hint-bar visibility + accent color (index into the 4 token accents).
     Q_PROPERTY(bool uiShowHints MEMBER uiShowHints NOTIFY uiShowHintsChanged)
     Q_PROPERTY(int uiAccentIndex MEMBER uiAccentIndex NOTIFY uiAccentIndexChanged)
+    // Vibemis BL-1776: short UI sounds on controller-nav focus moves and activations
+    // (launcher + in-stream Quick Menu). Played by UiSoundManager.
+    Q_PROPERTY(bool uiSounds MEMBER uiSounds NOTIFY uiSoundsChanged)
     // Vibemis: companion gate to enableHdr. When the user enables HDR but their
     // display can't actually show HDR (e.g. Legion Go S Z2 LCD), the host
     // streams HDR PQ-encoded content that looks washed out on the SDR panel.
@@ -326,6 +329,7 @@ public:
     bool enableHdr;
     bool uiShowHints;
     int uiAccentIndex;
+    bool uiSounds;
     // Vibemis: see Q_PROPERTY comment above; gates HDR request on display capability.
     bool displayHdrCapability;
     bool enableYUV444;
@@ -372,6 +376,7 @@ signals:
     void enableHdrChanged();
     void uiShowHintsChanged();
     void uiAccentIndexChanged();
+    void uiSoundsChanged();
     void displayHdrCapabilityChanged();
     void enableYUV444Changed();
     void videoDecoderSelectionChanged();

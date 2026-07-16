@@ -10,12 +10,17 @@ import SystemProperties 1.0
 import ClipboardManager 1.0
 import ServerCommandManager 1.0
 import AutoUpdateChecker 1.0
+import UiSoundManager 1.0
 
 import Vibemis.Redesign 1.0
 
 Item {
     id: settingsPage
     objectName: qsTr("Settings")
+
+    // BL-1776: LB/RB category flips change `category` without moving item focus,
+    // so the launcher-wide focus tick (main.qml) never fires for them — tick here.
+    onCategoryChanged: UiSoundManager.focusMoved()
 
     // Redesign 1e (sidebar categories). The root was a Flickable; it is now an Item hosting a
     // fixed header + a 340px category sidebar + a right-hand Flickable panel (settingsFlick)
@@ -93,6 +98,16 @@ Item {
         height: Math.max(70, toggleTitle.implicitHeight + 28)
         hoverEnabled: true
         opacity: enabled ? 1.0 : 0.5
+
+        // BL-1776: activation blip on user toggles only — toggled() never fires
+        // for programmatic checked changes (the pref-binding churn at load).
+        // Connections so a future instance-level onToggled can't override it (BL-1664).
+        Connections {
+            target: toggleRoot
+            function onToggled() {
+                UiSoundManager.activated()
+            }
+        }
 
         indicator: Item {}
         background: Item {
@@ -2459,6 +2474,17 @@ Item {
                     onCheckedChanged: {
                         StreamingPreferences.configurationWarnings = checked
                     }
+                }
+
+                // BL-1776: gate for the controller-nav UI sounds (UiSoundManager)
+                VbToggleRow {
+                    id: uiSoundsCheck
+                    text: qsTr("Play navigation sounds")
+                    checked: StreamingPreferences.uiSounds
+                    onCheckedChanged: StreamingPreferences.uiSounds = checked
+                    ToolTip.text: qsTr("Play a short sound when moving focus or activating items with the gamepad or keyboard, including the in-stream Quick Menu.")
+                    ToolTip.delay: 1000
+                    ToolTip.visible: hovered
                 }
 
                 VbToggleRow {
