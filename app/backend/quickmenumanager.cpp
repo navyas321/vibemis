@@ -648,7 +648,9 @@ void QuickMenuManager::sendSpecialKey(const QString &action)
     } else if (action == "key_esc") {
         vk = 0x1B;                                 // VK_ESCAPE
     } else if (action == "key_shift_tab") {
-        vk = 0x09;                                 // VK_TAB (BL-1788: reverse focus traversal)
+        // BL-1788: MODIFIER_SHIFT must ride the same DOWN/UP pair as VK_TAB — hosts
+        // apply modifiers per-event, so a separate shift press would race focus code.
+        vk = 0x09;                                 // VK_TAB (reverse focus traversal)
         modifiers = MODIFIER_SHIFT;
     } else {
         return;
