@@ -547,6 +547,9 @@ void QuickMenuManager::openSteamKeyboard()
         requested = QDesktopServices::openUrl(QUrl(QStringLiteral("steam://open/keyboard")));
     }
 
+    // "requested", not "opened": QDesktopServices can report success whenever a URL
+    // handler launches, even if no keyboard actually rises (Steam absent but handler
+    // registered) — the toast must not overclaim.
     showToast(requested ? QStringLiteral("Steam keyboard requested")
                         : QStringLiteral("Steam not available"));
 }
