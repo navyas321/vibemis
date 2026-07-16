@@ -209,10 +209,12 @@ public:
     Q_PROPERTY(bool quitAppAfter MEMBER quitAppAfter NOTIFY quitAppAfterChanged)
     Q_PROPERTY(bool absoluteMouseMode MEMBER absoluteMouseMode NOTIFY absoluteMouseModeChanged)
     Q_PROPERTY(bool absoluteTouchMode MEMBER absoluteTouchMode NOTIFY absoluteTouchModeChanged)
-    // Vibemis BL-1562: opt-in on-screen touch controls overlay for touch handhelds.
-    // When enabled, two semi-transparent buttons are composited into the stream:
-    // MENU (top-left, opens the Quick Menu) and KBD (top-right, opens the Quick
-    // Menu's text-send view). Off by default so existing users are unaffected.
+    // Vibemis BL-1562/BL-2007: opt-in on-screen touch controls overlay for touch
+    // handhelds. When enabled, three semi-transparent icon-only buttons are
+    // composited into the stream: MENU (top-left, opens the Quick Menu), KBD (far
+    // top-right, requests the SteamOS on-screen keyboard) and TOUCH-MODE (inward of
+    // KBD, live-toggles touchpad-emulation vs direct touch). Off by default so
+    // existing users are unaffected.
     Q_PROPERTY(bool enableTouchOverlay MEMBER enableTouchOverlay NOTIFY enableTouchOverlayChanged)
     Q_PROPERTY(bool framePacing MEMBER framePacing NOTIFY framePacingChanged)
     Q_PROPERTY(bool connectionWarnings MEMBER connectionWarnings NOTIFY connectionWarningsChanged)

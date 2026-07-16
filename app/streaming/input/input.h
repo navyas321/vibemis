@@ -205,7 +205,8 @@ private:
     void handleAbsoluteFingerEvent(SDL_TouchFingerEvent* event);
 
     // BL-1748: mode-agnostic overlay hit-test; called before the absolute/relative
-    // split so the MENU/KBD buttons work in both touch modes. Returns true if consumed.
+    // split so the MENU/KBD/TOUCH-MODE buttons work in both touch modes. Returns
+    // true if consumed.
     bool handleTouchOverlayFingerEvent(SDL_TouchFingerEvent* event);
 
     void emulateAbsoluteFingerEvent(SDL_TouchFingerEvent* event);

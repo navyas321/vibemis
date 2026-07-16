@@ -443,6 +443,14 @@ Rectangle {
             description: qsTr("Fetch clipboard from server")
         }
         ListElement {
+            // BL-2002: same target as the overlay's KBD button — the SteamOS OSK
+            // types straight into the stream, unlike the buffered text-send view.
+            text: qsTr("On-screen keyboard")
+            icon: "keyboard"
+            action: "open_steam_keyboard"
+            description: qsTr("Open the SteamOS on-screen keyboard")
+        }
+        ListElement {
             text: qsTr("Type text")
             icon: "keyboard"
             action: "type_text"
@@ -488,7 +496,7 @@ Rectangle {
             text: qsTr("Touch overlay")
             icon: "touch"
             action: "toggle_touch_overlay"
-            description: qsTr("Show/hide the on-screen MENU / KBD touch buttons")
+            description: qsTr("Show/hide the on-screen MENU / KBD / touch-mode buttons")
         }
         ListElement {
             text: qsTr("Send Ctrl+Alt+Del")
@@ -634,6 +642,9 @@ Rectangle {
                 break
             case "toggle_touch_overlay":
                 message = "Toggling touch overlay..."
+                break
+            case "open_steam_keyboard":
+                message = "Opening Steam keyboard..."
                 break
             default:
                 message = "Executing action..."

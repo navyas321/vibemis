@@ -93,9 +93,21 @@ public:
     bool isTextInputActive() const { return m_textInputActive; }
     Q_INVOKABLE void setTextInputActive(bool active) { m_textInputActive = active; }
 
-    // Vibemis BL-1562: open the Quick Menu directly into its text-send view (used by
-    // the on-screen touch overlay's KBD button).
+    // Vibemis BL-1562: open the Quick Menu directly into its text-send view.
+    // (BL-2002 repointed the overlay KBD button at openSteamKeyboard(); the
+    // text-send view stays reachable via the Quick Menu's "Type text" row.)
     Q_INVOKABLE void openTextSend();
+
+    // Vibemis BL-2002: request the SteamOS on-screen keyboard over the stream via
+    // the steam://open/keyboard URL (SDL_OpenURL first, QDesktopServices fallback).
+    // Toasts the outcome; degrades to "Steam not available" when neither works.
+    Q_INVOKABLE void openSteamKeyboard();
+
+    // Vibemis BL-2007: mirror a touch-mode flip made live by the SDL input thread
+    // (the overlay's TOUCH-MODE button) into the persisted preference and toast the
+    // new mode name. The input thread owns the live m_AbsoluteTouchMode flip; this
+    // only handles the pref + UI side, on the Qt main thread.
+    Q_INVOKABLE void commitTouchMode(bool absoluteTouchMode);
 
     // Vibemis BL-1562: live-toggle the on-screen touch controls overlay. Flips and
     // persists StreamingPreferences::enableTouchOverlay and applies the new state to

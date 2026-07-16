@@ -66,16 +66,18 @@ void SdlInputHandler::disableTouchFeedback()
 #endif
 }
 
-// Vibemis BL-1748: mode-agnostic on-screen touch-overlay hit-test. The MENU
-// (top-left) / KBD (top-right) buttons are drawn in BOTH absolute and relative
-// touch modes, but the interception used to live only in handleAbsoluteFingerEvent.
-// In relative / virtual-trackpad mode the tap fell through to handleRelativeFingerEvent
-// and was forwarded to the host as a click, so the buttons were inert. This method is
-// now called from handleTouchFingerEvent BEFORE the absolute/relative split, so a tap
-// on a button is consumed in either mode: MENU toggles the Quick Menu, KBD opens its
-// text-send view. The rest of the captured finger's gesture (motion/up) is swallowed
-// too so neither host path ever sees an unbalanced touch sequence. Returns true when
-// the event was consumed (caller must stop processing it), false otherwise.
+// Vibemis BL-1748: mode-agnostic on-screen touch-overlay hit-test. The overlay
+// buttons are drawn in BOTH absolute and relative touch modes, but the interception
+// used to live only in handleAbsoluteFingerEvent. In relative / virtual-trackpad
+// mode the tap fell through to handleRelativeFingerEvent and was forwarded to the
+// host as a click, so the buttons were inert. This method is now called from
+// handleTouchFingerEvent BEFORE the absolute/relative split, so a tap on a button
+// is consumed in either mode. BL-2002/BL-2007 button roster: MENU (top-left)
+// toggles the Quick Menu, KBD (far top-right) requests the SteamOS on-screen
+// keyboard, TOUCH-MODE (inward of KBD) live-toggles touchpad-emulation vs direct
+// touch. The rest of the captured finger's gesture (motion/up) is swallowed too so
+// neither host path ever sees an unbalanced touch sequence. Returns true when the
+// event was consumed (caller must stop processing it), false otherwise.
 bool SdlInputHandler::handleTouchOverlayFingerEvent(SDL_TouchFingerEvent* event)
 {
     if (m_TouchOverlayFingerActive) {
@@ -117,6 +119,7 @@ bool SdlInputHandler::handleTouchOverlayFingerEvent(SDL_TouchFingerEvent* event)
         int insetPxY = (int)(Overlay::TouchButtonInset * scaleY);
         int sizePxX = (int)(Overlay::TouchButtonSize * scaleX);
         int sizePxY = (int)(Overlay::TouchButtonSize * scaleY);
+        int spacingPxX = (int)(Overlay::TouchButtonSpacing * scaleX);
 
         int fingerX = (int)(event->x * windowWidth);
         int fingerY = (int)(event->y * windowHeight);
@@ -127,15 +130,46 @@ bool SdlInputHandler::handleTouchOverlayFingerEvent(SDL_TouchFingerEvent* event)
                     fingerX <= hitDst.x + insetPxX + sizePxX;
             bool onKbdButton = fingerX >= hitDst.x + hitDst.w - insetPxX - sizePxX &&
                     fingerX <= hitDst.x + hitDst.w - insetPxX;
-            if (onMenuButton || onKbdButton) {
+            // BL-2007: TOUCH-MODE toggle sits immediately inward of KBD; the spacing
+            // gap between them belongs to neither button (matches the drawn pixels).
+            int touchModeRight = hitDst.x + hitDst.w - insetPxX - sizePxX - spacingPxX;
+            bool onTouchModeButton = fingerX >= touchModeRight - sizePxX &&
+                    fingerX <= touchModeRight;
+            if (onMenuButton || onKbdButton || onTouchModeButton) {
                 m_TouchOverlayFingerActive = true;
                 m_TouchOverlayFinger = event->fingerId;
 
-                // The Quick Menu lives on the Qt main thread — hop threads via a
-                // queued invocation like the gamepad/keyboard intercepts do.
                 QuickMenuManager* qmm = Session::get()->getQuickMenuManager();
-                if (qmm != nullptr) {
-                    QMetaObject::invokeMethod(qmm, onMenuButton ? "toggle" : "openTextSend",
+
+                if (onTouchModeButton) {
+                    // BL-2007: flip touchpad-emulation vs direct touch LIVE.
+                    // m_AbsoluteTouchMode is only read on this thread, so flipping it
+                    // here is race-free — but only flip while this is the sole finger
+                    // down: fingers mid-gesture in the OLD mode would otherwise leave
+                    // unbalanced state behind (relative-mode drag bookkeeping, host-side
+                    // native touch pointers that would never see their UP). A tap that
+                    // arrives with other fingers down is still consumed, just inert.
+                    // (Tap-release timers from a just-finished relative-mode tap may
+                    // still fire after the flip; they only release a mouse button,
+                    // which is harmless in either mode.)
+                    if (SDL_GetNumTouchFingers(event->touchId) <= 1) {
+                        m_AbsoluteTouchMode = !m_AbsoluteTouchMode;
+
+                        // Persisting the preference and toasting the new mode name
+                        // happen on the Qt main thread.
+                        if (qmm != nullptr) {
+                            QMetaObject::invokeMethod(qmm, "commitTouchMode",
+                                                      Qt::QueuedConnection,
+                                                      Q_ARG(bool, m_AbsoluteTouchMode));
+                        }
+                    }
+                }
+                else if (qmm != nullptr) {
+                    // The Quick Menu lives on the Qt main thread — hop threads via a
+                    // queued invocation like the gamepad/keyboard intercepts do.
+                    // BL-2002: KBD requests the SteamOS on-screen keyboard (the
+                    // text-send view remains reachable as its own Quick Menu row).
+                    QMetaObject::invokeMethod(qmm, onMenuButton ? "toggle" : "openSteamKeyboard",
                                               Qt::QueuedConnection);
                 }
                 return true;

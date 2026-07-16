@@ -2276,14 +2276,14 @@ void Session::execInternal()
     // Toggle the stats overlay if requested by the user
     m_OverlayManager.setOverlayState(Overlay::OverlayDebug, m_Preferences->showPerformanceOverlay);
 
-    // Vibemis BL-1562: opt-in on-screen touch controls overlay (MENU opens the Quick
-    // Menu, KBD opens its text-send view). The labels must be (re)set before enabling
-    // because setOverlayState() clears the overlay text on disable.
+    // Vibemis BL-1562/BL-2002/BL-2007: opt-in on-screen touch controls overlay —
+    // three icon-only buttons (MENU opens the Quick Menu, KBD requests the SteamOS
+    // keyboard, TOUCH-MODE live-toggles touchpad-emulation vs direct touch). The
+    // glyph surfaces regenerate inside setOverlayState(); no label text involved.
     if (m_Preferences->enableTouchOverlay) {
-        m_OverlayManager.updateOverlayText(Overlay::OverlayTouchButtonMenu, "MENU");
-        m_OverlayManager.updateOverlayText(Overlay::OverlayTouchButtonKbd, "KBD");
         m_OverlayManager.setOverlayState(Overlay::OverlayTouchButtonMenu, true);
         m_OverlayManager.setOverlayState(Overlay::OverlayTouchButtonKbd, true);
+        m_OverlayManager.setOverlayState(Overlay::OverlayTouchButtonTouchMode, true);
     }
 
     // Hijack this thread to be the SDL main thread. We have to do this
