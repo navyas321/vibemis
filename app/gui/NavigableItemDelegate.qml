@@ -1,10 +1,25 @@
 import QtQuick 2.0
 import QtQuick.Controls 2.2
 
+import UiSoundManager 1.0
+
 ItemDelegate {
+    id: navDelegate
+
     property GridView grid
 
     highlighted: grid.activeFocus && grid.currentItem === this
+
+    // BL-1776: activation blip. Wired via Connections rather than an onClicked
+    // handler because instance-level onClicked declarations override base
+    // handlers (the BL-1664 lesson). clicked() is the single funnel for
+    // A/Enter (the load-bearing Keys handlers below) and mouse/touch alike.
+    Connections {
+        target: navDelegate
+        function onClicked() {
+            UiSoundManager.activated()
+        }
+    }
 
     Keys.onLeftPressed: {
         grid.moveCurrentIndexLeft()

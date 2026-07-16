@@ -202,6 +202,7 @@ SOURCES += \
     path.cpp \
     settings/mappingmanager.cpp \
     gui/sdlgamepadkeynavigation.cpp \
+    gui/uisoundmanager.cpp \
     streaming/video/overlaymanager.cpp \
     backend/systemproperties.cpp \
     backend/clipboardmanager.cpp \
@@ -247,6 +248,7 @@ HEADERS += \
     path.h \
     settings/mappingmanager.h \
     gui/sdlgamepadkeynavigation.h \
+    gui/uisoundmanager.h \
     streaming/video/overlaymanager.h \
     backend/systemproperties.h \
     backend/clipboardmanager.h \

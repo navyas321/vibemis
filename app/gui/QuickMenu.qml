@@ -2,6 +2,7 @@ import QtQuick 2.9
 import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.2
 import ServerCommandManager 1.0
+import UiSoundManager 1.0
 import Vibemis.Redesign 1.0
 
 // BL-1688: redesigned onto the Vibemis token system (dark elevated panel, Sora/Manrope
@@ -94,6 +95,10 @@ Rectangle {
             // so the ListView must not also claim focus (events are injected to the root).
             focus: false
             currentIndex: 0
+            // BL-1776: focus tick. The menu lives in an offscreen window (separate QML
+            // engine), so the launcher's activeFocusItem hook can't see it — currentIndex
+            // is this menu's focus cursor (moved via injected Up/Down keys and hover).
+            onCurrentIndexChanged: UiSoundManager.focusMoved()
             // Bug fix: without clip the 16 delegates (≈960px of content) painted OUTSIDE the
             // ~250px viewport, bleeding over the footer "Resume Game" hint and the title —
             // this is what made the last visible row (e.g. "Fetch Clipboard") and the footer
@@ -564,7 +569,11 @@ Rectangle {
     
     function executeAction(action) {
         console.log("Executing action:", action)
-        
+
+        // BL-1776: activation blip — single funnel for injected A/Enter
+        // (executeCurrentItem) and mouse/touch row clicks alike
+        UiSoundManager.activated()
+
         // Handle navigation actions
         if (action === "type_text") {
             currentMenu = "text_send"

@@ -10,6 +10,7 @@ import AutoUpdateChecker 1.0
 import StreamingPreferences 1.0
 import SystemProperties 1.0
 import SdlGamepadKeyNavigation 1.0
+import UiSoundManager 1.0
 import Theme 1.0
 
 ApplicationWindow {
@@ -25,6 +26,19 @@ ApplicationWindow {
     // BL-1668: 600 was an absurdly short default that squished the app grid on first paint even
     // on a desktop; 720 is a saner minimum. Handhelds fill the screen (see Component.onCompleted).
     height: 720
+
+    // BL-1776: single launcher-wide choke point for the focus-move tick — every
+    // d-pad/stick/arrow/Tab move lands here as an activeFocusItem change
+    // (SdlGamepadKeyNavigation already translates gamepad input to key events).
+    // Null transitions are window activation / view teardown, not navigation,
+    // so both endpoints must be real items before the tick plays.
+    property Item vbPreviousFocusItem: null
+    onActiveFocusItemChanged: {
+        if (activeFocusItem && vbPreviousFocusItem) {
+            UiSoundManager.focusMoved()
+        }
+        vbPreviousFocusItem = activeFocusItem
+    }
 
     // This function runs prior to creation of the initial StackView item
     function doEarlyInit() {
