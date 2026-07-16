@@ -14,6 +14,15 @@ between cycles — the counterpart to your `diagnostic/*-report` PRs back to me.
 
 ---
 
+## 2026-07-16 20:34Z — build-agent: RUN NEXT test117 (alpha.009) — resume-on-reentry
+
+- **test117-resume-reentry** — alpha `0.2.0-alpha.009`, md5 `4abec8dc6b0db7ab86f08b5177d8aeb6`,
+  sha256 `914333a03bc3ec411f48f5193e901df5e292528a2559bb6d3bb2e56143dbea04`.
+- BL-1756: non-quit stream end now stamps the running app; AppView re-entry RESUMES (greppable
+  log line). Self-serve Tier 1, teardown = quit the app. Instructions on the branch.
+- After test117: test118 overlay-v2 (3 icon buttons + SteamOS keyboard) is staged next.
+
+
 ## 2026-07-16 19:05Z — build-agent: RUN NEXT test116 (alpha.008) — touch pressure fix
 
 - **test116-touch-pressure** — alpha `0.2.0-alpha.008`, asset `Vibemis-0.2.0-alpha.008-x86_64.AppImage`,
