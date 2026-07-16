@@ -14,8 +14,9 @@ running app until the next poll. The fix stamps the running app id as the sessio
 (gated on connection success; the next poll stays authoritative). File:
 app/streaming/session.cpp (+14 lines).
 
-**Build tier: ALPHA (BL-2016). Take the newest alpha whose release body names this branch;
-hashes get stamped here + inbox + bus at dispatch.**
+**Alpha:** `0.2.0-alpha.009` — asset `Vibemis-0.2.0-alpha.009-x86_64.AppImage`
+**md5:** `4abec8dc6b0db7ab86f08b5177d8aeb6`
+**sha256:** `914333a03bc3ec411f48f5193e901df5e292528a2559bb6d3bb2e56143dbea04`
 
 ## Test procedure
 
