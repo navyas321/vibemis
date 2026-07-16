@@ -6,7 +6,9 @@ always-visible buttons — MENU (hamburger, top-left), KBD (keyboard glyph, far 
 TOUCH-MODE toggle (touch glyph, left of KBD) — and KBD summons the **SteamOS on-screen
 keyboard** instead of the text-send view.
 
-**Build tier: ALPHA (BL-2016). Hashes stamped at dispatch (instructions/inbox/bus).**
+**Alpha:** `0.2.0-alpha.010` — asset `Vibemis-0.2.0-alpha.010-x86_64.AppImage`
+**md5:** `7873631741e506e146a2fde63677cf22`
+**sha256:** `9fc64075048b133237e65b54cf0d6029b24c1d40d0f5350625f8b244e203969c`
 
 ## Test procedure
 
