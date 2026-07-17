@@ -199,7 +199,9 @@ void StreamingPreferences::reload()
     keepAwake = settings.value(SER_KEEPAWAKE, true).toBool();
     reduceBitrateOnBattery = settings.value(SER_REDUCEBITRATEONBATTERY, false).toBool();
     // P3.21 (test80): default OFF for the first slice; flip after on-device verification.
-    autoReconnect = settings.value(SER_AUTORECONNECT, false).toBool();
+    // BL-2072: default ON (Android parity, per docs/PHASE_STATUS.md). Was shipped OFF with no
+    // Settings toggle, making the feature unreachable; the toggle now lives in SettingsView.
+    autoReconnect = settings.value(SER_AUTORECONNECT, true).toBool();
     seenWelcomeHint = settings.value(SER_SEENWELCOMEHINT, false).toBool();
     enableHdr = settings.value(SER_HDR, false).toBool();
     uiShowHints = settings.value(SER_UI_SHOWHINTS, true).toBool();

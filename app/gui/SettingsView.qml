@@ -2225,6 +2225,20 @@ Item {
                     ToolTip.visible: hovered
                     ToolTip.text: qsTr("This will close the app or game you are streaming when you end your stream. You will lose any unsaved progress!")
                 }
+
+                VbToggleRow {
+                    id: autoReconnectCheck
+                    text: qsTr("Automatically reconnect if the stream drops")
+                    checked: StreamingPreferences.autoReconnect
+                    onCheckedChanged: {
+                        StreamingPreferences.autoReconnect = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("If a stream ends unexpectedly (a network blip or the host waking), Vibemis will try to reconnect automatically.")
+                }
             }
         }
 
