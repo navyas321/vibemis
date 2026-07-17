@@ -1,13 +1,37 @@
 # BL-2035 cutover checklist — remaining orchestrator steps
 
-State as of the 2026-07-16 incremental reconciliation (second worker pass). The cutover hold
-continues; this branch is kept rebased so cutover stays trivial.
+State as of the 2026-07-16 readiness audit (third worker pass). The cutover hold continues; this
+branch is kept rebased so cutover stays trivial. **This branch has NOT been re-rebased onto the
+current tip yet** — see the staleness note below; a trial rebase confirmed it resolves cleanly
+via the recipe.
 
 **Branch base: `fd053081`** (origin/vibemis-main, "testing: inbox - dispatch test121 alpha.013")
 — rebased from the original base `222b0187` after test119 and test120 closed and merged.
 `wip/BL-2035-split-execution` holds 5 commits on that base and **is local-only (never pushed to
 origin)**. The private repo `navyas321/vibemis-agent-meta` is fully populated, reconciled
 through `fd053081`, and pushed.
+
+**⚠ Base is now stale — `origin/vibemis-main` has advanced to `00e0e676` (13 commits past
+`fd053081`).** The 2026-07-16 audit trial-rebased a throwaway copy onto `00e0e676` and it
+resolved to a correct tree (testing/ = stub README only; test121/test119 BL fixes present;
+`app/version.txt` = 0.2.0). Two things changed the rebase story since the second pass, both
+because upstream landed parts of the split independently and must be reflected before the freeze
+re-rebase:
+
+- **wip commit `48a14ab6` (P4.0 step 3, extract public policy) is now AUTO-DROPPED** by rebase
+  as "previously applied" — `origin/vibemis-main` landed the identical extraction via `9cdfe8cb`
+  (`docs/RELEASING.md`, `docs/SELFTEST.md`, `CONTRIBUTING.md`). No conflict; it just becomes a
+  no-op, leaving 4 commits to replay.
+- **`CLAUDE.md` now CONFLICTS during the move-commit replay** — `origin/vibemis-main` slimmed it
+  independently via `caea34d6`, so it is no longer untouched upstream (the caveat in step 3's
+  recipe below is now void for CLAUDE.md *and* CONTRIBUTING.md). Resolution is trivial: the wip
+  branch's final `CLAUDE.md` is **byte-identical** to `origin/vibemis-main`'s, so
+  `git checkout --ours CLAUDE.md && git add CLAUDE.md`. After the move commit, the slim-CLAUDE
+  commit `d5f47b44` replays without further CLAUDE.md conflict and the delta vs main shows no
+  CLAUDE.md change (already slim on main).
+- **INBOX drift:** `testing/BUILD_AGENT_INBOX.md` gained the 2026-07-17 test123 dispatch block
+  on main (commit `00e0e676`); it was mirrored into the meta repo (`sync:` commit `0faadc9`) and
+  the move commit's modify/delete on it is resolved by `git rm` as before.
 
 ---
 
@@ -26,8 +50,8 @@ The drift that the first pass flagged as CRITICAL is **resolved**:
   tree (testing/ = stub README.md only — the CI guard's own logic passes locally).
 
 **Standing instruction — final reconciliation loop at cutover day.** The dev loop is still live
-(test121 dispatched, test122 queued), so main will keep moving. Right before cutover, repeat
-what this pass did:
+(test121 merged; test122 host-visual re-fix in flight; test123 dispatched (alpha.015); test124
+queued), so main will keep moving. Right before cutover, repeat what this pass did:
 
 1. `git fetch origin && git diff fd053081..origin/vibemis-main --name-status` (in the vibemis
    repo). KEEP-class changes (app/, scripts/, .github/ product files) need nothing — the rebase
@@ -35,14 +59,24 @@ what this pass did:
 2. For every MOVE-classified path in that diff (anything under `testing/`, the moved docs/
    files): copy current-main content into `vibemis-agent-meta` (mirrored path), commit + push
    there.
-3. `git rebase origin/vibemis-main wip/BL-2035-split-execution`. Proven conflict recipe from
-   this pass: upstream-modified moved files (INBOX/CHECKLIST/vinput.py this time) surface as
-   modify/delete when the move commit replays — `git rm` each (deletion stands; step 2 already
-   saved the content). Upstream-ADDED testing/ files (new test dirs) do NOT conflict — they
-   silently survive unless removed, so explicitly `git rm -r testing/<new-dirs>` at the same
-   conflict stop, then `git rebase --continue` (folds into the move commit). The other four
-   commits replay clean as long as upstream hasn't touched CLAUDE.md, dev-build.yml, .gitignore,
-   CONTRIBUTING.md, or the Group A/B fix sites.
+3. `git rebase origin/vibemis-main wip/BL-2035-split-execution`. Proven conflict recipe (updated
+   by the 2026-07-16 trial rebase onto `00e0e676`):
+   - **Move-commit stop.** Upstream-modified moved files (INBOX/CHECKLIST — vinput.py was
+     untouched this time) surface as modify/delete — `git rm` each (deletion stands; step 2
+     already saved the content). Upstream-ADDED testing/ files (new test dirs / reports) do NOT
+     conflict — they silently survive unless removed, so explicitly `git rm -r testing/<new-dirs>`
+     at the same conflict stop (this pass: `testing/test121-nav-sounds` +
+     `testing/test109-gamescope-scaling/report.md`).
+   - **CLAUDE.md content conflict (NEW).** Upstream slimmed CLAUDE.md itself (`caea34d6`), so it
+     now conflicts at the move-commit replay. The wip branch's final CLAUDE.md is byte-identical
+     to main's — resolve with `git checkout --ours CLAUDE.md && git add CLAUDE.md`. Then
+     `git rebase --continue`.
+   - **`48a14ab6` auto-drops** as already-applied (upstream `9cdfe8cb`); the remaining three
+     commits (`d5f47b44`, `f26ce0f5`, `8130ed82` + this note) replay clean **provided upstream
+     hasn't ALSO touched dev-build.yml, .gitignore, or the Group A/B fix sites.** ⚠ The earlier
+     "hasn't touched CLAUDE.md or CONTRIBUTING.md" assumption is now VOID — upstream landed both
+     (CLAUDE.md via `caea34d6`, CONTRIBUTING.md via `9cdfe8cb`); handled above and by the
+     auto-drop respectively.
 4. Re-verify: `ls testing/` = README.md only; guard logic passes; BL-fixes still in tree;
    `bash -n` scripts; version.txt untouched.
 
