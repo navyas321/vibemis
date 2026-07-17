@@ -1,6 +1,6 @@
 name: Rebuild Historical Artifact
 
-# Maintainer directive 2026-07-13: every catalog release must carry its AppImage.
+# Every catalog release must carry its AppImage.
 # The original artifacts were purged with their releases (unrecoverable), so this
 # workflow reproducibly rebuilds a build from its recorded commit and attaches the
 # AppImage to the given (already existing) release. Dispatched per entry by the

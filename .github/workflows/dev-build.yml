@@ -7,8 +7,8 @@ name: Development Build
 #   commits) do NOT build a beta — this is what keeps the Releases page quiet.
 # - release/** / main / master / workflow_dispatch: ALWAYS build + create production releases
 #
-# Beta policy = "beta tracks PR merges into vibemis-main, nothing else." Releases are PERMANENT
-# (maintainer directive): every cut stays on the Releases page forever, like tags —
+# Beta policy = "beta tracks PR merges into vibemis-main, nothing else." Releases are PERMANENT:
+# every cut stays on the Releases page forever, like tags —
 # SemVer §3 released-version immutability. Superseded releases are never deleted.
 
 on:
@@ -103,7 +103,7 @@ jobs:
         env:
           # Pass the commit message via env, NOT inline ${{ }} interpolation. A commit body with
           # backticks/parens/quotes injected directly into the shell caused a parse error here and
-          # failed the whole job (e.g. test62). Reading it from an env var is injection-safe.
+          # failed the whole job. Reading it from an env var is injection-safe.
           HEAD_COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
           # Always build on true release branches and workflow_dispatch.
@@ -1005,7 +1005,7 @@ jobs:
       uses: softprops/action-gh-release@v3
       with:
         tag_name: ${{ needs.setup-version.outputs.version }}
-        # Uniform titles (maintainer directive): the tag alone carries tier + version;
+        # Uniform titles: the tag alone carries tier + version;
         # the body's first line states the tier.
         name: Vibemis release ${{ needs.setup-version.outputs.version }}
         body: |
@@ -1074,7 +1074,7 @@ jobs:
           </details>
 
           > Any modern Linux desktop works the same way — download the `.AppImage`, make it executable, double-click.' || 'No installation files are available for this release. Please check recent releases or feature branches for builds.' }}
-        # Ship ONLY the AppImage (maintainer directive): one double-clickable
+        # Ship ONLY the AppImage: one double-clickable
         # artifact per release — no tarballs/zips/raw binaries cluttering the assets list.
         files: |
           artifacts/**/*.AppImage
@@ -1085,7 +1085,7 @@ jobs:
         # f698b569). Tag provenance must identify the build's true source.
         target_commitish: ${{ github.sha }}
         prerelease: ${{ needs.setup-version.outputs.is_prerelease }}
-        # Maintainer directive: the GitHub "Latest" badge points at the STABLE release only.
+        # The GitHub "Latest" badge points at the STABLE release only.
         # Betas stay non-prerelease (visible, not hidden) but no longer claim Latest. The
         # in-app updater and vibemis-update.sh select channels STRUCTURALLY from the full
         # release list (never /releases/latest), so update flows are unaffected.
@@ -1122,12 +1122,12 @@ jobs:
         fi
         echo "RELEASES.md timeline refreshed"
 
-    # ── Releases are PERMANENT, like tags (maintainer directive) ──
+    # ── Releases are PERMANENT, like tags ──
     # SemVer 2.0.0 §3: "Once a versioned package has been released, the contents of that
     # version MUST NOT be modified." The Releases list preserves the complete build
     # history — same behavior as the Tags page — matching the README's "complete build
     # history" promise. The former "Prune superseded releases" step (keep only the
     # newest beta/alpha; wipe the cycle on a stable cut) was removed here; do NOT
-    # reintroduce release deletion without an explicit maintainer directive. The
+    # reintroduce release deletion without an explicit policy decision. The
     # updater is unaffected: it selects the newest release per channel structurally,
     # and only bare stables carry make_latest=true.

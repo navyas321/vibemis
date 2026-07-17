@@ -3,16 +3,16 @@
 This is the public record of Vibemis's release policy: SemVer rules, the release-tier matrix,
 the CI smart-build behavior, and the README-update rule.
 
-## Versioning — Semantic Versioning 2.0.0 (maintainer /goal 2026-07-13)
+## Versioning — Semantic Versioning 2.0.0
 
 `app/version.txt` holds the **next stable version** (e.g. `0.5.0`); CI derives every tag:
 
-- **Bump policy (maintainer 2026-07-13): STRICT SEMVER.** Patch = bug fixes only;
+- **Bump policy: STRICT SEMVER.** Patch = bug fixes only;
   minor = ANY new feature (backward-compatible); major = breaking changes.
 - **Stable** = the bare version itself, non-prerelease, takes Latest; cut via
   workflow_dispatch `release_type=stable`. Hotfix patches via the `version_override`
   input (`0.5.1`). **Bump version.txt to the next stable right after every cut.**
-- **When each tier cuts (maintainer 2026-07-13):**
+- **When each tier cuts:**
   | Tier | Trigger | Who decides |
   |------|---------|-------------|
   | alpha | `test**` push whose HEAD commit carries `[alpha]` | automatic (on request) |
@@ -30,15 +30,15 @@ the CI smart-build behavior, and the README-update rule.
   explicit approval of that specific cut.
 - **Beta** = `0.5.0-beta.NNN` (vibemis-main), **alpha** = `0.5.0-alpha.NNN` (test
   branches), dev = `0.5.0-dev.<run>.<branch>`. NNN is dense + zero-padded, computed
-  from existing tags — never delete a tag. **Page-ordering decision
-  (maintainer final 2026-07-13): tags stay clean and the GitHub Releases/Tags pages
+  from existing tags — never delete a tag. **Page-ordering decision:
+  tags stay clean and the GitHub Releases/Tags pages
   keep their SemVer-precedence order** (alphas list after betas of the same base —
   spec §11.4; GitHub has no page-sort setting; an ordinal-first tag scheme fixed the
   ordering but was reverted as too ugly). Chronological views: `RELEASES.md`
   (auto-refreshed every cut), the releases Atom feed, the API, and the in-app
   channels — all date-ordered. Don't reopen this trade-off without new options.
 - All suffixed builds are GitHub-prerelease; only bare stables are full releases.
-- **Releases are PERMANENT, like tags (maintainer 2026-07-13).** Every cut
+- **Releases are PERMANENT, like tags.** Every cut
   stays on the Releases page forever — SemVer §3 released-version immutability; the
   Releases list mirrors the Tags list. Never delete a release. (This supersedes the
   earlier auto-prune policy; the prune step was removed from dev-build.yml.)
@@ -60,7 +60,7 @@ build and `create-dev-release` jobs are **skipped entirely** — no AppImage is 
 
 ```
 git commit -m "fix: real code change"        ← code touches .cpp/.h/.qml
-git commit -m "test: add testN instructions" ← only .md files
+git commit -m "docs: update release notes"    ← only .md files
 git push                                     ← CI sees HEAD = .md only → skips
 ```
 
@@ -89,16 +89,16 @@ the OLD one (from the commit before the fix).
    manual dispatch on them builds a `dev`-tier CI artifact that is NOT published to
    Releases.
 
-## README update rule — required at every phase completion
+## README update rule — required at every release
 
-After each phase merges to `vibemis-main`, update `README.md` before closing the phase.
+After merging a feature to `vibemis-main`, update `README.md` before the release.
 The README is NOT a changelog — it describes what Vibemis IS and DOES right now:
 
 - **Features section** — add any new user-visible features under the right heading
   (Inherited from Moonlight Qt / Artemis Qt / Added by Vibemis)
-- **Known Issues table** — list current confirmed bugs with workaround and phase status
+- **Known Issues table** — list current confirmed bugs with workaround and status
 - **Downloads section** — reflect current release tier model if it changed
 - **Keyboard/Gamepad shortcuts** — update if anything changed
 
-Do NOT list "what was fixed in this phase" — that belongs in commit messages and PRs.
+Do NOT list "what was fixed in this release" — that belongs in commit messages and PRs.
 The README is always the present-tense description of the current build.

@@ -935,7 +935,7 @@ int main(int argc, char *argv[])
                                                    "StreamingPreferences",
                                                    [](QQmlEngine* qmlEngine, QJSEngine*) -> QObject* {
                                                        StreamingPreferences* prefs = StreamingPreferences::get(qmlEngine);
-                                                       // Maintainer-caught CRITICAL (2026-07-13): this GLOBAL is served to
+                                                       // CRITICAL: this GLOBAL is served to
                                                        // every engine — including the Quick Menu's offscreen engine (its
                                                        // VbTokens import reads accent prefs). Engine-owned singletons are
                                                        // DELETED with their engine, so the overlay teardown after each

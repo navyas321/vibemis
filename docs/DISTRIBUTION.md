@@ -50,7 +50,7 @@ Valve's own Steam Link; no Moonlight-lineage client has ever been on the store).
 Sources: Moonlight Flathub manifest repo; Flathub submission + requirements docs; Steam Deck install
 guides (XDA / Pi My Life Up); MoonDeck/Decky for Game-Mode launching.
 
-## 2026-07-13 research refresh (confirms the plan, adds specifics)
+## Research refresh (confirms the plan, adds specifics)
 
 Ranked by real one-click-ness for a Game-Mode user vs maintainer effort:
 
@@ -69,7 +69,7 @@ Confirmed specifics to fold into the manifest work:
 - Wire `x-checker-data` (git tag-pattern) on the app source so stable-tag bumps arrive as
   **automated update PRs** in the flathub repo; merging publishes.
 - Verification = GitHub login in the Flathub Developer Portal (io.github.* IDs).
-- **Phase E UX polish:** an in-app "Add me to Steam" button (Heroic precedent — shortcuts.vdf
+- **Later / optional UX polish:** an in-app "Add me to Steam" button (Heroic precedent — shortcuts.vdf
   write, or `steamos-add-to-steam` via `flatpak-spawn --host`; expect reviewers to question the
   permission) + a first-run SteamOS hint. README install section then reads:
   "Discover → Vibemis → Install → right-click → Add to Steam."

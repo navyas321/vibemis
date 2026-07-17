@@ -602,7 +602,7 @@ macx {
 }
 
 # version.txt is the single version source (CI derives all release tags from it).
-# Cadence: bump MINOR per merged feature wave, PATCH per fix wave — see
+# Cadence: bump MINOR per merged feature, PATCH per fix release — see
 # docs/RELEASING.md "Versioning". A bump commit must touch a code file (this one
 # counts) or the smart-build check skips the release.
 VERSION = "$$cat(version.txt)"

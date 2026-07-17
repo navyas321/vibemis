@@ -48,7 +48,7 @@ vibemis/
 
 | File | What it does |
 |------|-------------|
-| `app/gui/SettingsView.qml` | Settings screen. Contains the `displayHdrCapability` checkbox added in Phase 2 #13. |
+| `app/gui/SettingsView.qml` | Settings screen. Contains the `displayHdrCapability` checkbox added in the HDR display-capability gate (PR #5). |
 | `app/gui/QuickMenu.qml` | In-stream Quick Menu overlay (9 actions). |
 
 ### Build
@@ -66,7 +66,7 @@ vibemis/
 | `app/main.cpp` | `setOrganizationName("Vibemis Project")`, `setApplicationName("Vibemis")`. Sets QSettings path to `~/.config/Vibemis Project/Vibemis.conf`. |
 | `app/version.txt` | Current semver (`0.6.7`). |
 
-## Phase 2 issues tracker
+## Issues tracker
 
 | # | Issue | Status | Branch / PR |
 |---|-------|--------|-------------|
@@ -77,9 +77,9 @@ vibemis/
 ## Vibemis vs upstream diff highlights
 
 ### vs Vibemis Qt (`wjbeckett/vibemis develop`)
-- Upstream moonlight-qt sync (Phase 1.5 merge, May 2026)
-- `displayHdrCapability` preference + `effectiveHdr` gate in session.cpp (Phase 2 #13)
-- AppImage apprun-hook: LIBVA_DRIVERS_PATH + surgical libva symlink (Phase 2 #11)
+- Upstream moonlight-qt sync (May 2026)
+- `displayHdrCapability` preference + `effectiveHdr` gate in session.cpp (PR #5)
+- AppImage apprun-hook: LIBVA_DRIVERS_PATH + surgical libva symlink (PR #4)
 - `moonlight-common-c.pro`: uses `reedsolomon/rs.c` not `src/rswrapper.c`
 
 ### vs moonlight-stream/moonlight-qt master

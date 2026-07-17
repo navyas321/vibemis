@@ -161,7 +161,7 @@ show_next_steps() {
             ;;
     esac
     
-    echo "   3. Begin with Phase 1 features:"
+    echo "   3. Begin with the core features:"
     echo "      - Clipboard sync"
     echo "      - Server commands"
     echo "      - OTP pairing"
