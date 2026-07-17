@@ -3189,6 +3189,30 @@ Item {
                                        "Unchecking keeps the HDR codec path off; re-check it later if you connect an HDR display.")
                 }
 
+                // Vibemis BL-1561 (P3.8 parity): client-side HDR tone-mapping toggle.
+                // When on, the Vulkan renderer tone-maps HDR content down to SDR on this
+                // device (rather than passing HDR through to the display). Effective only
+                // on the Vulkan/libplacebo renderer, which is the HDR-capable one on Linux.
+                VbToggleRow {
+                    id: hdrTonemapping
+                    text: qsTr("    Tone-map HDR to SDR on this device (Experimental)")
+
+                    visible: enableHdr.checked
+                    enabled: enableHdr.checked
+                    checked: StreamingPreferences.hdrTonemapping
+                    onCheckedChanged: {
+                        StreamingPreferences.hdrTonemapping = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 6000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Force the client to tone-map HDR content down to SDR instead of sending HDR to your display. " +
+                                       "Turn this ON if your display reports HDR support but HDR looks too dim, over-saturated, or wrong, " +
+                                       "and you'd rather view a tone-mapped SDR image. Leave OFF (default) to pass HDR through to HDR-capable displays. " +
+                                       "Applies on the Vulkan renderer (Steam Deck / most Linux handhelds).")
+                }
+
                 VbToggleRow {
                     id: enableYUV444
                     text: qsTr("Enable YUV 4:4:4 (Experimental)")

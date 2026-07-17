@@ -767,7 +767,39 @@ void PlVkRenderer::renderFrame(AVFrame *frame)
     if (!pl_color_space_equal(&mappedFrame.color, &m_LastColorspace)) {
         m_LastColorspace = mappedFrame.color;
         SDL_assert(pl_color_space_equal(&mappedFrame.color, &m_LastColorspace));
-        pl_swapchain_colorspace_hint(m_Swapchain, &mappedFrame.color);
+
+        // Vibemis BL-1561 (P3.8 parity): client-side HDR tone-mapping toggle.
+        // When "Tone-map HDR to SDR on this device" is enabled, we hint an SDR output
+        // colorspace to the swapchain regardless of the source. libplacebo's
+        // pl_render_image() then tone-maps HDR content down to SDR on this client
+        // instead of the swapchain entering HDR (passthrough) mode. When disabled
+        // (default), we hint the source colorspace so HDR-capable displays receive
+        // native HDR passthrough (SDR displays are tone-mapped anyway because their
+        // swapchain can't enter HDR mode). This complements displayHdrCapability, which
+        // gates HDR at codec negotiation; this gate operates at render/output time.
+        //
+        // Only re-evaluated on colorspace transitions (stream start / HDR toggling),
+        // so reading the preference singleton here has negligible cost.
+        bool forceSdrToneMap = false;
+        if (auto prefs = StreamingPreferences::get()) {
+            forceSdrToneMap = prefs->hdrTonemapping;
+        }
+
+        if (forceSdrToneMap) {
+            struct pl_color_space sdrHint = pl_color_space_srgb;
+            pl_swapchain_colorspace_hint(m_Swapchain, &sdrHint);
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                        "PlVkRenderer: HDR tone-map to SDR ENABLED — hinting SDR output "
+                        "(source transfer=%d); libplacebo will tone-map HDR to SDR",
+                        (int)mappedFrame.color.transfer);
+        }
+        else {
+            pl_swapchain_colorspace_hint(m_Swapchain, &mappedFrame.color);
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                        "PlVkRenderer: HDR tone-map to SDR disabled — passthrough "
+                        "(source transfer=%d)",
+                        (int)mappedFrame.color.transfer);
+        }
     }
 
     // Reserve enough space to avoid allocating under the overlay lock

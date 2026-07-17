@@ -35,6 +35,9 @@
 // display is SDR (e.g. Legion Go S Z2 LCD) can uncheck "My display supports HDR"
 // in Settings to avoid washed-out picture without disabling HDR streaming entirely.
 #define SER_DISPLAY_HDR_CAPABILITY "displayHdrCapability"
+// Vibemis BL-1561: client-side HDR->SDR tone-map toggle. Defaults to false
+// (passthrough) so HDR-display users are not regressed.
+#define SER_HDR_TONEMAP "hdrTonemapping"
 #define SER_YUV444 "yuv444"
 #define SER_VIDEODEC "videodec"
 #define SER_WINDOWMODE "windowmode"
@@ -208,6 +211,7 @@ void StreamingPreferences::reload()
     uiAccentIndex = qBound(0, settings.value(SER_UI_ACCENTINDEX, 0).toInt(), 3);
     uiSounds = settings.value(SER_UISOUNDS, true).toBool();
     displayHdrCapability = settings.value(SER_DISPLAY_HDR_CAPABILITY, true).toBool();
+    hdrTonemapping = settings.value(SER_HDR_TONEMAP, false).toBool();
     captureSysKeysMode = static_cast<CaptureSysKeysMode>(settings.value(SER_CAPTURESYSKEYS,
                                                          static_cast<int>(CaptureSysKeysMode::CSK_OFF)).toInt());
     audioConfig = static_cast<AudioConfig>(settings.value(SER_AUDIOCFG,
@@ -432,6 +436,7 @@ void StreamingPreferences::save()
     settings.setValue(SER_UI_ACCENTINDEX, uiAccentIndex);
     settings.setValue(SER_UISOUNDS, uiSounds);
     settings.setValue(SER_DISPLAY_HDR_CAPABILITY, displayHdrCapability);
+    settings.setValue(SER_HDR_TONEMAP, hdrTonemapping);
     settings.setValue(SER_YUV444, enableYUV444);
     settings.setValue(SER_VIDEOCFG, static_cast<int>(videoCodecConfig));
     settings.setValue(SER_VIDEODEC, static_cast<int>(videoDecoderSelection));
