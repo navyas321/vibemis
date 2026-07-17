@@ -685,7 +685,7 @@ Item {
                     width: parent.width
                     text: ""
                     visible: text !== ""
-                    color: "#00cccc"
+                    color: VbTokens.accent  // BL-2077: brand accent via token, single source of truth
                     font.pointSize: 9
                     wrapMode: Text.Wrap
                 }
@@ -2604,7 +2604,7 @@ Item {
                     width: parent.width
                     text: ""
                     visible: text !== ""
-                    color: "#00cccc"
+                    color: VbTokens.accent  // BL-2077: brand accent via token, single source of truth
                     font.pointSize: 9
                     wrapMode: Text.Wrap
                 }

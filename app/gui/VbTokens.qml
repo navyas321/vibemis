@@ -21,8 +21,10 @@ QtObject {
     readonly property color textDim:      "#98A1AB"  // secondary / label text
     readonly property color textMute:     "#B9C0C8"  // tertiary / inactive item labels
 
-    // Accent is swappable — one of the 4 curated values (index 0 = default #2FC6D0).
-    readonly property var accentOptions:  ["#2FC6D0", "#7C8CF8", "#3ED598", "#F0A868"]
+    // Accent is swappable — one of the 4 curated values. Index 0 is the Vibemis brand
+    // teal #00CCCC (BL-2077): the single canonical accent that Theme.qml + all literals now
+    // resolve through, and the anchor for the P3.17/P3.18 design work.
+    readonly property var accentOptions:  ["#00CCCC", "#7C8CF8", "#3ED598", "#F0A868"]
     // Bound to the saved preference (Settings > accent picker); persists across restarts.
     property int accentIndex: StreamingPreferences.uiAccentIndex
     readonly property color accent:       accentOptions[accentIndex]
