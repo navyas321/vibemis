@@ -424,6 +424,14 @@ void AutoUpdateChecker::handleUpdateCheckRequestFinished(QNetworkReply* reply)
             // Strictly newer: light up the toolbar banner (auto + manual)
             qDebug() << "Update available";
             emit onUpdateAvailable(version, htmlUrl);
+            if (!manualCheck) {
+                // Auto-check: ALSO surface the asset URL so the TOOLBAR update button can
+                // install in place. The manualCheck branch below emits this for the Settings
+                // page; without it, an auto-check left the toolbar button with an empty
+                // assetUrl, so a click fell back to opening the release page in a browser
+                // instead of auto-updating (the 0.3.1/0.3.2 defect).
+                emit updateCheckFinished(true, version, htmlUrl, assetUrl, QString());
+            }
         }
 
         if (manualCheck) {
