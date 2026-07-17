@@ -73,14 +73,17 @@ QVariant ComputerModel::data(const QModelIndex& index, int role) const
         }
     }
     case HostTypeRole: {
-        // Redesign 1a host-type badge. Detection is best-effort (Vibepollo deliberately mimics
-        // Sunshine's serverinfo — no ApolloVersion, state=SUNSHINE_SERVER_FREE), so we key on the
-        // Apollo-lineage PERMISSION model: Apollo advertises ApolloVersion; Vibepollo does not but
-        // still exposes serverPermissions once paired; vanilla Sunshine has no permission model.
+        // Redesign 1a host-type badge (accuracy fixed in BL-2008). Vibepollo deliberately mimics
+        // Sunshine's serverinfo (no ApolloVersion, state=SUNSHINE_SERVER_FREE), but it DOES emit
+        // the Apollo-lineage <Permission> tag — current builds even on unpaired probes (verified
+        // against a live Vibepollo host: <Permission>0</Permission> with PairStatus 0). So key on
+        // tag PRESENCE (hasPermissionModel), which vanilla Sunshine never emits, instead of a
+        // nonzero value that only appears after pairing. The value check stays as a fallback for
+        // older Vibepollo builds that omitted the tag until paired.
         if (!computer->apolloVersion.isEmpty()) {
             return QStringLiteral("APOLLO");
         }
-        else if (computer->serverPermissions != 0) {
+        else if (computer->hasPermissionModel || computer->serverPermissions != 0) {
             return QStringLiteral("VIBEPOLLO");
         }
         else {

@@ -98,6 +98,11 @@ NvComputer::NvComputer(QSettings& settings)
     this->isSupportedServerVersion = true;
     this->externalPort = this->remoteAddress.port();
     this->activeHttpsPort = 0;
+    // Not persisted (like apolloVersion) — refreshed by the first serverinfo poll. serverPermissions
+    // is a POD member, so leaving it out here read uninitialized memory for settings-loaded hosts
+    // until that poll (garbage host-type badge / permission summary at startup).
+    this->serverPermissions = 0;
+    this->hasPermissionModel = false;
 }
 
 void NvComputer::setRemoteAddress(QHostAddress address)
@@ -155,6 +160,7 @@ bool NvComputer::isEqualSerialized(const NvComputer &that) const
            this->apolloVersion == that.apolloVersion &&
            this->serverCommands == that.serverCommands &&
            this->serverPermissions == that.serverPermissions &&
+           this->hasPermissionModel == that.hasPermissionModel &&
            this->appList == that.appList;
 }
 
@@ -261,8 +267,11 @@ NvComputer::NvComputer(NvHTTP& http, QString serverInfo)
     // Parse server commands (Apollo/Sunshine servers only)
     this->serverCommands = NvHTTP::getXmlArray(serverInfo, "ServerCommand");
     
-    // Parse server permissions (Apollo servers only)
+    // Parse server permissions (Apollo-lineage servers only). Tag presence — even with value 0 on
+    // an unpaired probe — marks a permission-model host (Vibepollo/Apollo); vanilla Sunshine never
+    // emits it. Kept separate from the numeric value so the host-type badge is right pre-pairing.
     QString permissionStr = NvHTTP::getXmlString(serverInfo, "Permission");
+    this->hasPermissionModel = !permissionStr.isEmpty();
     if (!permissionStr.isEmpty()) {
         bool ok;
         this->serverPermissions = permissionStr.toUInt(&ok);
@@ -648,6 +657,13 @@ bool NvComputer::update(const NvComputer& that)
     ASSIGN_IF_CHANGED_AND_NONEMPTY(displayModes);
     ASSIGN_IF_CHANGED(serverCommands);
     ASSIGN_IF_CHANGED(serverPermissions);
+    // Sticky, not ASSIGN_IF_CHANGED: older Vibepollo builds omit the <Permission> tag on unpaired
+    // probes, and a single tag-less poll must not flap an identified Vibepollo back to SUNSHINE.
+    // (Self-heals on app restart if the host genuinely changed software.)
+    if (that.hasPermissionModel && !this->hasPermissionModel) {
+        this->hasPermissionModel = true;
+        changed = true;
+    }
 
     // Carry forward the most recent "seen online" timestamp, but do NOT flag `changed`:
     // it advances on every successful poll and would otherwise spam computerStateChanged
