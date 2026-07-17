@@ -635,9 +635,38 @@ void QuickMenuManager::pasteClipboard()
 void QuickMenuManager::sendSpecialKey(const QString &action)
 {
     // Send a special key chord to the host (remote-desktop control). Windows VK codes.
+    //
+    // The `modifiers` argument of LiSendKeyboardEvent is only a per-event BITFIELD
+    // annotation — it does NOT press the physical modifier key. Sunshine-lineage hosts
+    // (Vibepollo/Apollo) derive the held-modifier state from real VK_LSHIFT/VK_LCONTROL/
+    // VK_LMENU key events, not from this bitfield (moonlight-common-c only synthesizes a
+    // modifier from the keycode for non-Sunshine GFE — see the !IS_SUNSHINE() fixup in
+    // InputStream.c). So a chord that needs a modifier genuinely held (e.g. Shift+Tab)
+    // must send a REAL modifier key DOWN/UP around the target key, exactly like the
+    // physical keyboard path does (keyboard.cpp sends keyCode 0xA0 for a Shift press).
+    if (action == "key_shift_tab") {
+        // BL-1788: Shift+Tab (reverse focus traversal) was a host NO-OP. The old code
+        // set MODIFIER_SHIFT only as a bitfield on the VK_TAB event and never pressed
+        // Shift, so the host had no Shift held and the modified Tab did nothing — not
+        // even a forward Tab. (A bare "Send Esc" from this same menu DOES close host
+        // dialogs, which proves the delivery path is fine; only the missing real Shift
+        // was the bug.) Fix: wrap VK_TAB in a real VK_LSHIFT press, mirroring the
+        // physical keyboard path.
+        LiSendKeyboardEvent(0xA0, KEY_ACTION_DOWN, MODIFIER_SHIFT);  // VK_LSHIFT down
+        LiSendKeyboardEvent(0x09, KEY_ACTION_DOWN, MODIFIER_SHIFT);  // VK_TAB down
+        LiSendKeyboardEvent(0x09, KEY_ACTION_UP,   MODIFIER_SHIFT);  // VK_TAB up
+        LiSendKeyboardEvent(0xA0, KEY_ACTION_UP,   0);               // VK_LSHIFT up (no modifier held)
+        showToast(QStringLiteral("Sent key to host"));
+        return;
+    }
+
     short vk = 0;
     char modifiers = 0;
     if (action == "key_ctrl_alt_del") {
+        // NB: Ctrl+Alt+Del intentionally rides the modifier BITFIELD (no real Ctrl/Alt
+        // key events) — hosts special-case CAD and honor it from the bitfield, so it
+        // keeps working. Do NOT copy this shortcut for ordinary chords: any other
+        // modifier combo needs a real modifier key event (see key_shift_tab above).
         vk = 0x2E;                                 // VK_DELETE
         modifiers = MODIFIER_CTRL | MODIFIER_ALT;
     } else if (action == "key_super") {
