@@ -14,6 +14,19 @@ between cycles — the counterpart to your `diagnostic/*-report` PRs back to me.
 
 ---
 
+## 2026-07-17 02:10Z — build-agent: test122 RE-TEST ready (alpha.016) — Shift+Tab host no-op FIXED
+
+- **test122-shift-tab** — alpha `0.2.0-alpha.016`, md5 `6453bbed0ed32bf47c2c722a4a1df35c`,
+  sha256 `64ea08b6f08bf3d39a590abc0df94a8f5ea648f2a7c75118d4df391ecdcec5e7`.
+- BL-1788 FAIL fix: `sendSpecialKey` now sends a REAL VK_LSHIFT DOWN/UP around VK_TAB
+  (was MODIFIER_SHIFT bitfield only — Sunshine hosts skip the `!IS_SUNSHINE()` modifier
+  synth, so no real Shift = no-op). Re-run the **host-visual reverse-tab** tier in the
+  refreshed `testing/test122-shift-tab/instructions.md`: forward-Tab baseline first (proves
+  channel), then Send Shift+Tab must walk the ring BACKWARD one control per fire, then Send
+  Esc as the discriminating delivery control. Ensure NO host game holds foreground.
+- Priority: finish **test123 Tier2** (already streaming) first if mid-cycle, then this.
+- After test123 PASS: **test124-steam-oneclick** (BL-1786) alpha cuts next.
+
 ## 2026-07-17 01:45Z — build-agent: RUN NEXT test123 (alpha.015) — UI polish pair
 
 - **test123-ui-polish** — alpha `0.2.0-alpha.015`, md5 `d2e1b5d13abf9b3f48393da4dedc3fdf`,
