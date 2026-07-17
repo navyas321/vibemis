@@ -17,9 +17,9 @@ Rectangle {
     width: 520
     height: 420
     // Don't use anchors with SizeViewToRootObject - position manually
-    color: VbTokens.bgElev
+    color: VbTokens.surfaceRaised
     radius: VbTokens.radiusWindow
-    border.color: VbTokens.stroke
+    border.color: VbTokens.divider
     border.width: 1
     visible: true  // Always visible when created
     opacity: 1.0
@@ -75,14 +75,14 @@ Rectangle {
             font.family: VbTokens.fontDisplay
             font.weight: Font.Bold
             font.pixelSize: 24
-            color: VbTokens.text
+            color: VbTokens.textPrimary
             Layout.fillWidth: true
             elide: Text.ElideRight
         }
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 1
-            color: VbTokens.strokeSoft
+            color: VbTokens.dividerSoft
         }
 
         // Menu items
@@ -137,8 +137,8 @@ Rectangle {
                 // clipped list, so the ring is border-only here).
                 background: Rectangle {
                     radius: VbTokens.radiusControl
-                    color: menuRow.down ? Qt.darker(VbTokens.focusedFill, 1.15)
-                                        : (menuRow.active ? VbTokens.focusedFill : "transparent")
+                    color: menuRow.down ? Qt.darker(VbTokens.interactiveFocus, 1.15)
+                                        : (menuRow.active ? VbTokens.interactiveFocus : "transparent")
                     border.color: menuRow.active ? VbTokens.accent : "transparent"
                     border.width: VbTokens.focusBorder
                 }
@@ -165,7 +165,7 @@ Rectangle {
                     VbSheetIcon {
                         kind: model.icon
                         color: menuRow.danger ? VbTokens.statusDanger
-                                              : (menuRow.active ? VbTokens.accent : VbTokens.textDim)
+                                              : (menuRow.active ? VbTokens.accent : VbTokens.textSecondary)
                         Layout.preferredWidth: 26
                         Layout.preferredHeight: 26
                         Layout.alignment: Qt.AlignVCenter
@@ -181,7 +181,7 @@ Rectangle {
                             font.family: VbTokens.fontBody
                             font.pixelSize: 17
                             font.weight: menuRow.active ? Font.Bold : Font.DemiBold
-                            color: menuRow.danger ? VbTokens.statusDanger : VbTokens.text
+                            color: menuRow.danger ? VbTokens.statusDanger : VbTokens.textPrimary
                             Layout.fillWidth: true
                             elide: Text.ElideRight
                         }
@@ -190,7 +190,7 @@ Rectangle {
                             text: model.description
                             font.family: VbTokens.fontBody
                             font.pixelSize: 12
-                            color: VbTokens.textDim
+                            color: VbTokens.textSecondary
                             Layout.fillWidth: true
                             elide: Text.ElideRight
                         }
@@ -213,8 +213,8 @@ Rectangle {
                 id: sendTextField
                 Layout.fillWidth: true
                 placeholderText: qsTr("Type text to send to the host…")
-                color: VbTokens.text
-                placeholderTextColor: VbTokens.textDim
+                color: VbTokens.textPrimary
+                placeholderTextColor: VbTokens.textSecondary
                 font.family: VbTokens.fontBody
                 font.pixelSize: 16
                 selectByMouse: true
@@ -226,8 +226,8 @@ Rectangle {
                 rightPadding: 12
                 // Token field — window-dark well + accent focus border.
                 background: Rectangle {
-                    color: VbTokens.bgWindow
-                    border.color: sendTextField.activeFocus ? VbTokens.accent : VbTokens.stroke
+                    color: VbTokens.surfaceBase
+                    border.color: sendTextField.activeFocus ? VbTokens.accent : VbTokens.divider
                     border.width: VbTokens.focusBorder
                     radius: VbTokens.radiusControl
                 }
@@ -257,7 +257,7 @@ Rectangle {
                 text: qsTr("Enter sends · Ⓑ / Esc returns to the menu")
                 font.family: VbTokens.fontBody
                 font.pixelSize: 13
-                color: VbTokens.textDim
+                color: VbTokens.textSecondary
                 Layout.alignment: Qt.AlignHCenter
             }
 
@@ -269,7 +269,7 @@ Rectangle {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 1
-            color: VbTokens.strokeSoft
+            color: VbTokens.dividerSoft
         }
 
         // Footer restyled as a hint bar (circled glyphs + labels, like every
@@ -286,33 +286,51 @@ Rectangle {
 
                 Row {
                     spacing: 8
-                    Text {
-                        text: "Ⓐ"
-                        font.pixelSize: 20
-                        color: VbTokens.textDim
+                    Rectangle {
                         anchors.verticalCenter: parent.verticalCenter
+                        implicitWidth: 30; implicitHeight: 30; radius: 15
+                        color: "transparent"
+                        border.width: 2
+                        border.color: VbTokens.textSecondary
+                        Text {
+                            anchors.centerIn: parent
+                            text: "A"
+                            font.family: VbTokens.fontBody
+                            font.pixelSize: 14
+                            font.weight: Font.ExtraBold
+                            color: VbTokens.textPrimary
+                        }
                     }
                     Text {
                         text: qsTr("Select")
                         font.family: VbTokens.fontBody
                         font.pixelSize: VbTokens.sizeLabel
-                        color: VbTokens.textDim
+                        color: VbTokens.textSecondary
                         anchors.verticalCenter: parent.verticalCenter
                     }
                 }
                 Row {
                     spacing: 8
-                    Text {
-                        text: "Ⓑ"
-                        font.pixelSize: 20
-                        color: VbTokens.textDim
+                    Rectangle {
                         anchors.verticalCenter: parent.verticalCenter
+                        implicitWidth: 30; implicitHeight: 30; radius: 15
+                        color: "transparent"
+                        border.width: 2
+                        border.color: VbTokens.textSecondary
+                        Text {
+                            anchors.centerIn: parent
+                            text: "B"
+                            font.family: VbTokens.fontBody
+                            font.pixelSize: 14
+                            font.weight: Font.ExtraBold
+                            color: VbTokens.textPrimary
+                        }
                     }
                     Text {
                         text: currentMenu === "main" ? qsTr("Resume game") : qsTr("Back")
                         font.family: VbTokens.fontBody
                         font.pixelSize: VbTokens.sizeLabel
-                        color: VbTokens.textDim
+                        color: VbTokens.textSecondary
                         anchors.verticalCenter: parent.verticalCenter
                     }
                 }
@@ -343,7 +361,7 @@ Rectangle {
         height: 40
         radius: VbTokens.radiusPill
         // Token pill (elevated chip + accent edge) instead of grey-on-grey.
-        color: VbTokens.bgElev2
+        color: VbTokens.surfaceOverlay
         border.color: VbTokens.accent
         border.width: 1
         visible: showToast
@@ -356,7 +374,7 @@ Rectangle {
         Text {
             id: toastText
             text: toastMessage
-            color: VbTokens.text
+            color: VbTokens.textPrimary
             font.family: VbTokens.fontBody
             font.pixelSize: 14
             anchors.centerIn: parent
