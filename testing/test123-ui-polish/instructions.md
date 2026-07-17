@@ -12,7 +12,9 @@ are ~15-line UI polish with disjoint check rows; per-fix verdicts below stay sep
 - **BL-2032** (your test118 finding): overlay buttons now accept taps 12 stream-px beyond
   their 64px visuals; the KBD/TOUCH gap splits at midpoint. Hit-test only.
 
-**Build tier: ALPHA (BL-2016). Hashes stamped at dispatch.**
+**Alpha:** `0.2.0-alpha.015` — asset `Vibemis-0.2.0-alpha.015-x86_64.AppImage`
+**md5:** `d2e1b5d13abf9b3f48393da4dedc3fdf`
+**sha256:** `4bf28f4f7af8f7f5cec3a9e2e01e1f555b4ec3f5d68c7e8f3e242cd739aaa5b3`
 
 ## Test procedure
 
