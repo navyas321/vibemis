@@ -894,6 +894,9 @@ jobs:
         while IFS='|' read -r hash subject author date; do
           if [ -z "$hash" ]; then continue; fi
           subject=$(echo "$subject" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+          # BL-tag scrub: internal backlog ids (BL-NNNN) never reach the public changelog
+          # (release bodies were retro-scrubbed 2026-07-17; this keeps new cuts clean).
+          subject=$(echo "$subject" | sed -E 's/ *\(((BL|LIT)-[0-9]+[,/ ]*)+\)//g; s/\[?(BL|LIT)-[0-9]+\]?[:]?[[:space:]]*//g; s/  +/ /g; s/ +$//')
           if echo "$subject" | grep -iE "^(feat|feature|add|implement|new)[:|\s]" > /dev/null; then
             FEATURES="${FEATURES}- ${subject} (${hash})\n"
           elif echo "$subject" | grep -iE "^(fix|bug|resolve|correct)[:|\s]" > /dev/null; then
