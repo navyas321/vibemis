@@ -31,6 +31,24 @@ ComboBox {
         }
     }
 
+    // BL-2021: with the popup CLOSED, ComboBox's built-in key handling edits the value on
+    // arrow Up/Down — so KEYBOARD-arrow focus-walking through a settings combo silently
+    // changed it. (Gamepad d-pad is unaffected in Settings: UiNavMode translates it to
+    // Tab/Shift+Tab; the on-device repro traced to the test rig's synthetic keyboard
+    // arrows.) Closed = arrows navigate focus, matching NavigableMessageDialog's idiom;
+    // value editing requires opening the popup (A/Enter) first, where default arrow
+    // behavior still applies.
+    Keys.onUpPressed: function(event) {
+        if (popup.visible) { event.accepted = false; return }
+        event.accepted = true
+        nextItemInFocusChain(false).forceActiveFocus(Qt.BacktabFocusReason)
+    }
+    Keys.onDownPressed: function(event) {
+        if (popup.visible) { event.accepted = false; return }
+        event.accepted = true
+        nextItemInFocusChain(true).forceActiveFocus(Qt.TabFocusReason)
+    }
+
     TextMetrics {
         id: popupMetrics
     }
