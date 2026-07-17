@@ -1,0 +1,67 @@
+{
+  "$meta": {
+    "name": "Vibemis",
+    "description": "Canonical design tokens for the Vibemis redesign. Gamepad-first Linux/SteamOS game-streaming client (Moonlight/Artemis fork) for Apollo/Vibepollo hosts. Map these 1:1 into the QML/Qt6 theme. Values are exact.",
+    "canvas": { "design": "1920x1200 (Legion Go S)", "also": "1280x800 (Steam Deck), scale proportionally" },
+    "theme": "Dark only"
+  },
+  "color": {
+    "bg.app":       { "value": "#08090B", "use": "outermost app background behind the rounded window" },
+    "bg.window":    { "value": "#0E1013", "use": "main screen background" },
+    "bg.elev":      { "value": "#15181D", "use": "cards, panels, dialogs, sidebar rows" },
+    "bg.elev2":     { "value": "#1B1F26", "use": "focused/selected surface fill, chips" },
+    "bg.footer":    { "value": "#0B0D10", "use": "bottom gamepad hint bar" },
+    "stroke":       { "value": "rgba(255,255,255,0.08)", "use": "default 1px card border" },
+    "stroke.soft":  { "value": "rgba(255,255,255,0.06)", "use": "header/footer dividers" },
+    "text":         { "value": "#ECEEF1", "use": "primary text" },
+    "text.dim":     { "value": "#98A1AB", "use": "secondary / label text" },
+    "text.mute":    { "value": "#B9C0C8", "use": "tertiary / inactive item labels" },
+    "accent":       { "value": "#2FC6D0", "use": "focus rings, selection, primary buttons, badges, key stats", "alts": ["#7C8CF8", "#3ED598", "#F0A868"] },
+    "accent.hi":    { "value": "#6ADDE7", "use": "accent gradient light stop, link hover" },
+    "status.online":{ "value": "#3ED598", "use": "online dot, RESUME badge" },
+    "status.offline":{ "value": "#5A626C", "use": "offline dot / greyed monitor icon" },
+    "status.danger":{ "value": "#F26D6D", "use": "destructive actions (Delete PC)" }
+  },
+  "font": {
+    "display": { "family": "Sora", "weights": [700, 800], "use": "screen titles, card names, wordmark, all-caps labels", "wordmark": { "size": 21, "weight": 800, "letterSpacing": "3px" } },
+    "body":    { "family": "Manrope", "weights": [400, 500, 600, 700, 800], "use": "body + UI text" }
+  },
+  "type.scale": {
+    "screenTitle": { "font": "Sora", "weight": 700, "size": 34 },
+    "sectionTitle":{ "font": "Sora", "weight": 700, "size": 28 },
+    "cardName":    { "font": "Sora", "weight": 700, "size": 27 },
+    "body":        { "font": "Manrope", "size": 16, "range": [16, 18] },
+    "label":       { "font": "Manrope", "size": 14, "range": [14, 16], "color": "text.dim" },
+    "badge":       { "font": "Manrope", "weight": 800, "size": 13, "letterSpacing": "1.2px" }
+  },
+  "radius": { "window": 20, "card": 16, "dialog": 24, "control": 14, "iconButton": 14, "pill": 999, "badge": 7 },
+  "space": { "screenPadX": 56, "screenPadY": 52, "headerH": 84, "footerH": 72, "cardGap": 32, "tileGap": 36, "iconButton": 52 },
+  "gamepad": {
+    "minHitTarget": 56,
+    "listRowH": 66,
+    "buttonGlyphD": 30,
+    "note": "Every actionable element has one visible focus state; exactly one focused element per screen; persistent hint bar (footerH) on every screen."
+  },
+  "focusRing": {
+    "border": "2px solid {color.accent}",
+    "glow": "0 0 0 5px color-mix(in srgb, {color.accent} 22%, transparent)",
+    "drop": "0 18px 48px rgba(0,0,0,0.45)",
+    "focusedFill": "{color.bg.elev2}",
+    "recipe": "border + glow + drop combined; focused cards also switch fill to bg.elev2"
+  },
+  "shadow": {
+    "dialog": "0 40px 100px rgba(0,0,0,0.6)",
+    "sideSheet": "-30px 0 80px rgba(0,0,0,0.5)"
+  },
+  "status.badge": {
+    "hostType": { "vibepollo": "accent outline", "apollo": "accent outline", "sunshine": "neutral outline (text.dim)" },
+    "online": "pill, status.online dot (pulse 2.4s) + label",
+    "offline": "pill, status.offline dot, card opacity 0.75, 'Last seen …'"
+  },
+  "motion": {
+    "onlinePulse": "opacity 1 -> 0.45 -> 1 over 2.4s, infinite",
+    "caretBlink": "1s steps, infinite (Add-PC input)",
+    "sheetIn": "slide from right over 60% scrim",
+    "dialogScrim": "rgba(4,5,7,0.72)"
+  }
+}
