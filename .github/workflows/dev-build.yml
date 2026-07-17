@@ -230,6 +230,33 @@ jobs:
           fi
           echo "Stable approval confirmed (stable_confirm=CONFIRM-STABLE)."
 
+      # rc-before-stable policy (maintainer 2026-07-17): a stable release MUST be promoted from a
+      # release candidate. A release_type=stable dispatch FAILS here unless a matching
+      # <target>-rc.* tag already exists. Because an rc tag is only ever created by a SUCCESSFUL
+      # rc build (Create Development Release runs last), this also proves the candidate built green.
+      # Prevents cutting stable straight from a beta and skipping the rc stage.
+      - name: Enforce rc-before-stable gate
+        if: github.event.inputs.release_type == 'stable'
+        run: |
+          TARGET="${{ github.event.inputs.version_override }}"
+          if [ -z "$TARGET" ]; then
+            TARGET=$(cat app/version.txt | tr -d '\n\r')
+            # legacy two-segment "W.X" base -> next stable "W.(X+1).0" (mirror Generate semantic version)
+            if [[ "$TARGET" =~ ^[0-9]+\.[0-9]+$ ]]; then
+              TARGET="$(echo "$TARGET" | cut -d. -f1).$(( $(echo "$TARGET" | cut -d. -f2) + 1 )).0"
+            fi
+          fi
+          # Match both the clean (<base>-rc.NNN) and legacy ordinal-first (<base>-nXXXXX-rc.NNN) shapes.
+          RC_COUNT=$(git ls-remote --tags origin "refs/tags/${TARGET}-*" 2>/dev/null \
+                     | grep -Ec "refs/tags/${TARGET}(-n[0-9]+)?-rc\.[0-9]+\$" || true)
+          if [ "${RC_COUNT:-0}" -eq 0 ]; then
+            echo "::error::Stable cut REFUSED: no release candidate exists for ${TARGET}."
+            echo "::error::Policy (rc-before-stable): a stable release must be promoted from a green rc."
+            echo "::error::Cut one first — dispatch release_type=rc (builds ${TARGET}-rc.NNN), verify it, THEN re-dispatch stable."
+            exit 1
+          fi
+          echo "rc-before-stable satisfied: found ${RC_COUNT} ${TARGET}-rc.* tag(s)."
+
       - name: Generate semantic version
         id: version
         run: |

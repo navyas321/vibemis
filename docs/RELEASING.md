@@ -18,7 +18,7 @@ the CI smart-build behavior, and the README-update rule.
   | alpha | `test**` push whose HEAD commit carries `[alpha]` | automatic (on request) |
   | beta | PR merge into `vibemis-main` touching code; or plain dispatch on `vibemis-main` | automatic |
   | rc | dispatch `release_type=rc` when the next stable is feature-complete and betas are green | maintainer discretion |
-  | stable | dispatch `release_type=stable` | **MAINTAINER APPROVAL REQUIRED** |
+  | stable | dispatch `release_type=stable` | **MAINTAINER APPROVAL REQUIRED** (rc must already exist) |
 
   ⚠ **Stable cuts are approval-gated: never dispatch
   `release_type=stable` (or push `release/**`/`main`/`master`) without the
@@ -28,6 +28,15 @@ the CI smart-build behavior, and the README-update rule.
   `stable_confirm=CONFIRM-STABLE` — without it the run fails at Setup Version
   before anything builds. Type the phrase only when relaying the maintainer's
   explicit approval of that specific cut.
+
+  ⚠ **rc-before-stable (maintainer 2026-07-17): a stable release MUST be promoted
+  from a release candidate — you cannot cut stable straight from a beta.** The train
+  is beta → **rc** → stable: dispatch `release_type=rc` (builds `<version>-rc.NNN`),
+  verify it green, THEN cut stable. **CI-enforced:** the `Enforce rc-before-stable
+  gate` step in `dev-build.yml` fails a `release_type=stable` dispatch unless a
+  matching `<version>-rc.*` tag already exists (rc tags only appear after a successful
+  rc build, so this also proves the candidate built green). A stable cut therefore
+  needs BOTH `stable_confirm=CONFIRM-STABLE` AND a pre-existing rc for that version.
 - **Beta** = `0.5.0-beta.NNN` (vibemis-main), **alpha** = `0.5.0-alpha.NNN` (test
   branches), dev = `0.5.0-dev.<run>.<branch>`. NNN is dense + zero-padded, computed
   from existing tags — never delete a tag. **Page-ordering decision:
