@@ -58,11 +58,13 @@ Same idea: download the latest `.AppImage` from
 (right-click → Properties → *"Allow executing as program"*, or `chmod +x Vibemis-*.AppImage`),
 then double-click or run `./Vibemis-*.AppImage`.
 
-> **`0.3.2` is the current stable.** The **`.AppImage` is Vibemis's distribution channel** on
-> every distro — download it, run it, and it keeps itself up to date in place (see
-> [Auto-updates](#auto-updates)). A Flathub (Flatpak) package was explored but **declined under
-> Flathub's policy on generative-AI-assisted projects**, so there is no Flatpak build; the
-> self-updating AppImage is the supported way to install and stay current.
+> **`0.2.0` is the current stable; `0.3.0` is in release-candidate verification (`0.3.0-rc.002`).**
+> The earlier 0.3.x stable cuts were withdrawn while the auto-updater was rebuilt from scratch;
+> the clean `0.3.0` ships once its candidate passes on-device verification. The **`.AppImage` is
+> Vibemis's distribution channel** on every distro — download it, run it, and it keeps itself up
+> to date in place (see [Auto-updates](#auto-updates)). A Flathub (Flatpak) package was explored
+> but **declined under Flathub's policy on generative-AI-assisted projects**, so there is no
+> Flatpak build; the self-updating AppImage is the supported way to install and stay current.
 
 ### Add to Steam (SteamOS / Steam Deck)
 
