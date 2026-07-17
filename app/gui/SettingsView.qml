@@ -66,7 +66,7 @@ Item {
     // Card-style settings group — same recipe as the Video page's Vibepollo Presets card
     // (bgElev fill, radiusCard, 1px stroke border, 24px padding, label rendered inside).
     component VbSettingsCard: GroupBox {
-        padding: 24
+        padding: VbTokens.space5
         label: Item {}
         background: Rectangle {
             color: VbTokens.bgElev
@@ -84,7 +84,7 @@ Item {
         font.weight: Font.Bold
         font.pixelSize: 20
         color: VbTokens.text
-        bottomPadding: 6
+        bottomPadding: VbTokens.space2
         wrapMode: Text.Wrap
     }
 
@@ -116,8 +116,8 @@ Item {
             // the standard focused fill + accent border when the row holds active focus.
             Rectangle {
                 anchors.fill: parent
-                anchors.topMargin: 4
-                anchors.bottomMargin: 4
+                anchors.topMargin: VbTokens.space1
+                anchors.bottomMargin: VbTokens.space1
                 radius: 10
                 visible: toggleRoot.activeFocus
                 color: VbTokens.focusedFill
@@ -140,7 +140,7 @@ Item {
                 // the first letters (padding is permanent — text must not shift on focus).
                 anchors.leftMargin: 14
                 anchors.right: togglePill.left
-                anchors.rightMargin: 16
+                anchors.rightMargin: VbTokens.space4
                 anchors.verticalCenter: parent.verticalCenter
                 text: toggleRoot.text
                 font.family: VbTokens.fontBody
@@ -247,7 +247,7 @@ Item {
             anchors.fill: parent
             anchors.leftMargin: VbTokens.screenPadX
             anchors.rightMargin: VbTokens.screenPadX
-            spacing: 20
+            spacing: VbTokens.space5
 
             Button {
                 id: backBtn
@@ -336,7 +336,7 @@ Item {
             anchors.topMargin: 28
             anchors.leftMargin: 20
             anchors.rightMargin: 20
-            spacing: 6
+            spacing: VbTokens.space2
 
             Repeater {
                 id: sidebarRepeater
@@ -352,8 +352,8 @@ Item {
                     width: sidebarColumn.width
                     height: 58
                     padding: 0
-                    leftPadding: 16
-                    rightPadding: 16
+                    leftPadding: VbTokens.space4
+                    rightPadding: VbTokens.space4
                     readonly property bool selected: settingsPage.category === index
 
                     background: Item {
@@ -383,7 +383,7 @@ Item {
                     }
 
                     contentItem: RowLayout {
-                        spacing: 14
+                        spacing: VbTokens.space4
                         VbSheetIcon {
                             kind: modelData.icon
                             width: 24; height: 24
@@ -557,7 +557,7 @@ Item {
         padding: 40
         id: settingsColumn1
         width: settingsFlick.width - 20
-        spacing: 20
+        spacing: VbTokens.space5
 
         // ---- Category title (redesign). "Video" / "Audio" / etc, Sora 28px bold, matching
         // the currently-selected sidebar row's label. ----
@@ -599,7 +599,7 @@ Item {
             id: vibepolloPresetsGroupBox
             visible: settingsPage.category === 0
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
-            padding: 24
+            padding: VbTokens.space5
             label: Item {}
             background: Rectangle {
                 color: VbTokens.bgElev
@@ -639,7 +639,7 @@ Item {
 
             Column {
                 anchors.fill: parent
-                spacing: 8
+                spacing: VbTokens.space2
 
                 Text {
                     width: parent.width
@@ -654,13 +654,14 @@ Item {
                 Label {
                     width: parent.width
                     text: qsTr("One-click starting points for common quality/performance trade-offs (HEVC, hardware decode). Pick one, then fine-tune anything below.")
-                    font.pointSize: 9
+                    font.pixelSize: VbTokens.typeCaption
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
                 }
 
                 Flow {
                     width: parent.width
-                    spacing: 8
+                    spacing: VbTokens.space2
 
                     Button {
                         text: qsTr("Quality · 1200p120")
@@ -686,7 +687,8 @@ Item {
                     text: ""
                     visible: text !== ""
                     color: VbTokens.accent  // BL-2077: brand accent via token, single source of truth
-                    font.pointSize: 9
+                    font.pixelSize: VbTokens.typeCaption
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
                 }
             }
@@ -702,7 +704,7 @@ Item {
 
             Column {
                 anchors.fill: parent
-                spacing: 20
+                spacing: VbTokens.space5
 
                 // Vibemis: recommend this device's native resolution so users pick the sharpest
                 // option without guesswork.
@@ -720,10 +722,11 @@ Item {
                     visible: nativeResW > 0 && nativeResH > 0
                     text: "💡 " + qsTr("This device's native resolution is %1×%2 — matching it gives the sharpest image (use a lower resolution only if you need more performance).")
                           .arg(nativeResW).arg(nativeResH)
-                    font.pointSize: 9
+                    font.pixelSize: VbTokens.typeCaption
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
                     color: VbTokens.textTertiary
-                    bottomPadding: 4
+                    bottomPadding: VbTokens.space1
                 }
 
                 // Vibemis: extra detail beyond the live summary line (which now lives at the top
@@ -732,14 +735,15 @@ Item {
                     width: parent.width
                     id: resFPSdesc
                     text: qsTr("Setting values too high for your PC or network connection may cause lag, stuttering, or errors.")
-                    font.pointSize: 9
+                    font.pixelSize: VbTokens.typeCaption
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
                     color: VbTokens.textDim
                 }
 
                 // ---- Resolution / Frame rate cards (redesign) ----
                 Row {
-                    spacing: 20
+                    spacing: VbTokens.space5
                     width: parent.width
 
                     AutoResizingComboBox {
@@ -761,8 +765,8 @@ Item {
                         contentItem: Column {
                             id: resolutionCardContent
                             anchors.fill: parent
-                            anchors.margins: 24
-                            spacing: 10
+                            anchors.margins: VbTokens.space5
+                            spacing: VbTokens.space3
                             Text {
                                 width: parent.width
                                 text: qsTr("Resolution")
@@ -1130,8 +1134,8 @@ Item {
                         contentItem: Column {
                             id: fpsCardContent
                             anchors.fill: parent
-                            anchors.margins: 24
-                            spacing: 10
+                            anchors.margins: VbTokens.space5
+                            spacing: VbTokens.space3
                             Text {
                                 width: parent.width
                                 text: qsTr("Frame rate")
@@ -1297,7 +1301,7 @@ Item {
                             ColumnLayout {
                                 anchors.centerIn: parent
                                 width: Math.max(300, customFpsDialog.availableWidth)
-                                spacing: 10
+                                spacing: VbTokens.space3
 
                                 Label {
                                     text: qsTr("Enter a custom display refresh rate (Hz):")
@@ -1464,7 +1468,8 @@ Item {
                     width: parent.width
                     id: bitrateDesc
                     text: qsTr("Lower the bitrate on slower connections. Raise the bitrate to increase image quality.")
-                    font.pointSize: 9
+                    font.pixelSize: VbTokens.typeCaption
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
                     color: VbTokens.textDim
                 }
@@ -1481,8 +1486,8 @@ Item {
                     Column {
                         id: bitrateCardColumn
                         anchors.fill: parent
-                        anchors.margins: 26
-                        spacing: 16
+                        anchors.margins: VbTokens.space5
+                        spacing: VbTokens.space4
 
                         Item {
                             width: parent.width
@@ -1512,7 +1517,7 @@ Item {
 
                         Row {
                             width: parent.width
-                            spacing: 12
+                            spacing: VbTokens.space3
 
                             Slider {
                                 id: slider
@@ -1647,17 +1652,19 @@ Item {
                     visible: StreamingPreferences.bitrateKbps >
                              StreamingPreferences.getDefaultBitrate(StreamingPreferences.width, StreamingPreferences.height, StreamingPreferences.fps, StreamingPreferences.enableYUV444) * 2
                     text: "⚠ " + qsTr("This bitrate is much higher than recommended for the selected resolution. On Wi-Fi this often causes stutter or dropped frames — lower it if the stream isn't smooth.")
-                    font.pointSize: 9
+                    font.pixelSize: VbTokens.typeCaption
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
                     color: VbTokens.statusWarning
-                    topPadding: 4
+                    topPadding: VbTokens.space1
                 }
 
                 Label {
                     width: parent.width
                     id: windowModeTitle
                     text: qsTr("Display mode")
-                    font.pointSize: 12
+                    font.pixelSize: VbTokens.typeLabel
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
                     visible: SystemProperties.hasDesktopEnvironment
                 }
@@ -1743,7 +1750,8 @@ Item {
                     width: parent.width
                     id: videoScaleModeTitle
                     text: qsTr("Video scaling")
-                    font.pointSize: 12
+                    font.pixelSize: VbTokens.typeLabel
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
                 }
 
@@ -1809,7 +1817,7 @@ Item {
                             anchors.left: parent.left
                             anchors.verticalCenter: parent.verticalCenter
                             width: parent.width - 80
-                            spacing: 2
+                            spacing: VbTokens.space1
                             Text {
                                 text: qsTr("V-Sync")
                                 font.family: VbTokens.fontBody
@@ -1874,7 +1882,7 @@ Item {
                             anchors.left: parent.left
                             anchors.verticalCenter: parent.verticalCenter
                             width: parent.width - 80
-                            spacing: 2
+                            spacing: VbTokens.space1
                             Text {
                                 text: qsTr("Frame pacing")
                                 font.family: VbTokens.fontBody
@@ -1943,11 +1951,11 @@ Item {
             id: artemisStreamingGroupBox
             visible: settingsPage.category === 3
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
-            font.pointSize: 12
+            font.pixelSize: VbTokens.typeBody
 
             Column {
                 anchors.fill: parent
-                spacing: 12
+                spacing: VbTokens.space3
 
                 VbSectionHeader {
                     text: qsTr("Vibemis Streaming Enhancements")
@@ -1956,14 +1964,16 @@ Item {
                 Label {
                     width: parent.width
                     text: qsTr("Client-side streaming enhancements")
-                    font.pointSize: 12
+                    font.pixelSize: VbTokens.typeLabel
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
                 }
 
                 Label {
                     width: parent.width
                     text: qsTr("These features require an Apollo / Vibepollo host (they use Apollo's extended protocol — not available with plain Sunshine or GeForce Experience).")
-                    font.pointSize: 9
+                    font.pixelSize: VbTokens.typeCaption
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
                     color: VbTokens.textDim
                 }
@@ -1991,19 +2001,21 @@ Item {
                     width: parent.width
                     visible: virtualDisplayCheck.checked
                     text: qsTr("✓ Your Apollo / Vibepollo host will create a virtual display matching your selected resolution and refresh rate — recommended on a handheld (the host's physical monitor is left untouched).")
-                    font.pointSize: 9
+                    font.pixelSize: VbTokens.typeCaption
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
                     color: VbTokens.statusSuccess
-                    leftPadding: 8
+                    leftPadding: VbTokens.space2
                 }
                 Label {
                     width: parent.width
                     visible: !virtualDisplayCheck.checked
                     text: qsTr("Without a virtual display, the stream uses the host's current physical display resolution. Enable this with an Apollo / Vibepollo host to match this device's resolution automatically.")
-                    font.pointSize: 9
+                    font.pixelSize: VbTokens.typeCaption
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
                     color: VbTokens.textTertiary
-                    leftPadding: 8
+                    leftPadding: VbTokens.space2
                 }
 
                 // Resolution Scaling
@@ -2022,14 +2034,15 @@ Item {
                 }
 
                 Row {
-                    spacing: 10
+                    spacing: VbTokens.space3
                     visible: StreamingPreferences.enableResolutionScaling
                     width: parent.width
 
                     Label {
                         id: scaleFactorLabel
                         text: qsTr("Scale Factor:")
-                        font.pointSize: 10
+                        font.pixelSize: VbTokens.typeCaption
+                        font.family: VbTokens.fontBody
                         anchors.verticalCenter: parent.verticalCenter
                     }
 
@@ -2087,7 +2100,8 @@ Item {
                     Label {
                         id: scaleValueLabel
                         text: resolutionScaleSlider.value + "%"
-                        font.pointSize: 10
+                        font.pixelSize: VbTokens.typeCaption
+                        font.family: VbTokens.fontBody
                         anchors.verticalCenter: parent.verticalCenter
                         width: 40
                     }
@@ -2100,11 +2114,11 @@ Item {
             id: audioSettingsGroupBox
             visible: settingsPage.category === 1
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
-            font.pointSize: 12
+            font.pixelSize: VbTokens.typeBody
 
             Column {
                 anchors.fill: parent
-                spacing: 12
+                spacing: VbTokens.space3
 
                 VbSectionHeader {
                     text: qsTr("Audio Settings")
@@ -2114,7 +2128,8 @@ Item {
                     width: parent.width
                     id: resAudioTitle
                     text: qsTr("Audio configuration")
-                    font.pointSize: 12
+                    font.pixelSize: VbTokens.typeLabel
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
                 }
 
@@ -2193,11 +2208,11 @@ Item {
             id: hostSettingsGroupBox
             visible: settingsPage.category === 3
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
-            font.pointSize: 12
+            font.pixelSize: VbTokens.typeBody
 
             Column {
                 anchors.fill: parent
-                spacing: 12
+                spacing: VbTokens.space3
 
                 VbSectionHeader {
                     text: qsTr("Host Settings")
@@ -2247,11 +2262,11 @@ Item {
             id: uiSettingsGroupBox
             visible: settingsPage.category === 4
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
-            font.pointSize: 12
+            font.pixelSize: VbTokens.typeBody
 
             Column {
                 anchors.fill: parent
-                spacing: 12
+                spacing: VbTokens.space3
 
                 VbSectionHeader {
                     text: qsTr("UI Settings")
@@ -2261,7 +2276,8 @@ Item {
                     width: parent.width
                     id: languageTitle
                     text: qsTr("Language")
-                    font.pointSize: 12
+                    font.pixelSize: VbTokens.typeLabel
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
                 }
 
@@ -2439,7 +2455,8 @@ Item {
                     width: parent.width
                     id: uiDisplayModeTitle
                     text: qsTr("GUI display mode")
-                    font.pointSize: 12
+                    font.pixelSize: VbTokens.typeLabel
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
                     visible: SystemProperties.hasDesktopEnvironment
                 }
@@ -2564,12 +2581,13 @@ Item {
                 Label {
                     width: parent.width
                     text: qsTr("Settings backup")
-                    font.pointSize: 12
-                    topPadding: 6
+                    font.pixelSize: VbTokens.typeLabel
+                    font.family: VbTokens.fontBody
+                    topPadding: VbTokens.space2
                 }
 
                 Row {
-                    spacing: 8
+                    spacing: VbTokens.space2
 
                     Button {
                         text: qsTr("Export settings")
@@ -2605,7 +2623,8 @@ Item {
                     text: ""
                     visible: text !== ""
                     color: VbTokens.accent  // BL-2077: brand accent via token, single source of truth
-                    font.pointSize: 9
+                    font.pixelSize: VbTokens.typeCaption
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
                 }
             }
@@ -2613,14 +2632,14 @@ Item {
     }
 
     Column {
-        padding: 10
-        rightPadding: 20
-        bottomPadding: 30
+        padding: VbTokens.space3
+        rightPadding: VbTokens.space5
+        bottomPadding: VbTokens.space6
         anchors.top: settingsColumn1.bottom
         anchors.left: settingsColumn1.left
         id: settingsColumn2
         width: settingsFlick.width - 20
-        spacing: 15
+        spacing: VbTokens.space4
 
         // Restyled to the Video-page card pattern. Bindings unchanged. The
         // capture-shortcuts checkbox + mode combo were a side-by-side Row; the toggle row is
@@ -2630,11 +2649,11 @@ Item {
             id: inputSettingsGroupBox
             visible: settingsPage.category === 2
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
-            font.pointSize: 12
+            font.pixelSize: VbTokens.typeBody
 
             Column {
                 anchors.fill: parent
-                spacing: 12
+                spacing: VbTokens.space3
 
                 VbSectionHeader {
                     text: qsTr("Input Settings")
@@ -2763,11 +2782,11 @@ Item {
             id: gamepadSettingsGroupBox
             visible: settingsPage.category === 2
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
-            font.pointSize: 12
+            font.pixelSize: VbTokens.typeBody
 
             Column {
                 anchors.fill: parent
-                spacing: 12
+                spacing: VbTokens.space3
 
                 VbSectionHeader {
                     text: qsTr("Gamepad Settings")
@@ -2798,7 +2817,8 @@ Item {
                 Label {
                     width: parent.width
                     text: qsTr("Accent color")
-                    font.pointSize: 12
+                    font.pixelSize: VbTokens.typeLabel
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
                 }
 
@@ -2823,7 +2843,8 @@ Item {
                     width: parent.width
                     id: quickMenuComboTitle
                     text: qsTr("Quick Menu shortcut")
-                    font.pointSize: 12
+                    font.pixelSize: VbTokens.typeLabel
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
                 }
 
@@ -2958,11 +2979,11 @@ Item {
             id: advancedSettingsGroupBox
             visible: settingsPage.category === 4
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
-            font.pointSize: 12
+            font.pixelSize: VbTokens.typeBody
 
             Column {
                 anchors.fill: parent
-                spacing: 12
+                spacing: VbTokens.space3
 
                 VbSectionHeader {
                     text: qsTr("Advanced Settings")
@@ -2972,7 +2993,8 @@ Item {
                     width: parent.width
                     id: resVDSTitle
                     text: qsTr("Video decoder")
-                    font.pointSize: 12
+                    font.pixelSize: VbTokens.typeLabel
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
                 }
 
@@ -3024,17 +3046,19 @@ Item {
                     width: parent.width
                     visible: StreamingPreferences.videoDecoderSelection === StreamingPreferences.VDS_FORCE_SOFTWARE
                     text: "⚠ " + qsTr("Software decoding adds latency (≈8 ms vs ≈2 ms for hardware) and raises CPU/battery use. Prefer \"Automatic\" unless hardware decoding is broken on this device.")
-                    font.pointSize: 9
+                    font.pixelSize: VbTokens.typeCaption
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
                     color: VbTokens.statusWarning
-                    topPadding: 4
+                    topPadding: VbTokens.space1
                 }
 
                 Label {
                     width: parent.width
                     id: resVCCTitle
                     text: qsTr("Video codec")
-                    font.pointSize: 12
+                    font.pixelSize: VbTokens.typeLabel
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
                 }
 
@@ -3094,19 +3118,21 @@ Item {
                     width: parent.width
                     visible: StreamingPreferences.videoCodecConfig === StreamingPreferences.VCC_FORCE_AV1
                     text: qsTr("AV1 offers better quality at the same bitrate, but requires an Apollo/Sunshine host with an AV1-capable GPU (e.g. NVIDIA RTX 40, AMD RX 7000, Intel Arc). If streaming fails or falls back, choose \"Automatic\".")
-                    font.pointSize: 9
+                    font.pixelSize: VbTokens.typeCaption
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
                     color: VbTokens.statusInfo
-                    topPadding: 4
+                    topPadding: VbTokens.space1
                 }
 
                 // Preferred renderer backend
                 Label {
                     width: parent.width
                     text: qsTr("Preferred renderer")
-                    font.pointSize: 12
+                    font.pixelSize: VbTokens.typeLabel
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
-                    topPadding: 12
+                    topPadding: VbTokens.space3
                 }
 
                 AutoResizingComboBox {
@@ -3337,7 +3363,8 @@ Item {
                     width: parent.width
                     id: perfOverlayTextSizeTitle
                     text: qsTr("Performance overlay text size")
-                    font.pointSize: 12
+                    font.pixelSize: VbTokens.typeLabel
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
                     visible: showPerformanceOverlay.checked
                 }
@@ -3386,7 +3413,8 @@ Item {
                     width: parent.width
                     id: perfOverlayPositionTitle
                     text: qsTr("Performance overlay position")
-                    font.pointSize: 12
+                    font.pixelSize: VbTokens.typeLabel
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
                     visible: showPerformanceOverlay.checked
                 }
@@ -3442,9 +3470,10 @@ Item {
                     width: parent.width
                     id: updateChannelTitle
                     text: qsTr("Software updates")
-                    font.pointSize: 12
+                    font.pixelSize: VbTokens.typeLabel
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
-                    topPadding: 8
+                    topPadding: VbTokens.space2
                 }
 
                 AutoResizingComboBox {
@@ -3497,7 +3526,7 @@ Item {
                 }
 
                 Row {
-                    spacing: 8
+                    spacing: VbTokens.space2
 
                     Button {
                         id: checkUpdatesButton
@@ -3550,7 +3579,8 @@ Item {
                     id: updateStatusLabel
                     width: parent.width
                     text: qsTr("Current version: %1").arg(AutoUpdateChecker.currentVersion())
-                    font.pointSize: 10
+                    font.pixelSize: VbTokens.typeCaption
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
                 }
 
@@ -3588,11 +3618,11 @@ Item {
             id: artemisSettingsGroupBox
             visible: settingsPage.category === 3
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
-            font.pointSize: 12
+            font.pixelSize: VbTokens.typeBody
 
             Column {
                 anchors.fill: parent
-                spacing: 12
+                spacing: VbTokens.space3
 
                 VbSectionHeader {
                     text: qsTr("Vibemis Features")
@@ -3642,12 +3672,13 @@ Item {
                 Label {
                     width: parent.width
                     text: qsTr("Remote play (stream from anywhere): set up Tailscale, then enable \"Prefer Tailscale addresses\" above.")
-                    font.pointSize: 10
+                    font.pixelSize: VbTokens.typeCaption
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
-                    topPadding: 6
+                    topPadding: VbTokens.space2
                 }
                 Row {
-                    spacing: 8
+                    spacing: VbTokens.space2
                     Button {
                         text: qsTr("Set up Tailscale")
                         onClicked: SystemProperties.openUrl("https://tailscale.com/kb/installation")
@@ -3669,14 +3700,16 @@ Item {
                     width: parent.width
                     text: ""
                     visible: text !== ""
-                    font.pointSize: 10
+                    font.pixelSize: VbTokens.typeCaption
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
-                    topPadding: 4
+                    topPadding: VbTokens.space1
                 }
                 Label {
                     width: parent.width
                     text: qsTr("Tip: on SteamOS, run scripts/setup-tailscale.sh for a one-command, no-sudo setup.")
-                    font.pointSize: 9
+                    font.pixelSize: VbTokens.typeCaption
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
                     color: VbTokens.textTertiary
                 }
@@ -3685,10 +3718,11 @@ Item {
                 Label {
                     width: parent.width
                     text: qsTr("Server Commands are available during streaming sessions via the game menu when connected to Apollo / Vibepollo hosts.")
-                    font.pointSize: 9
+                    font.pixelSize: VbTokens.typeCaption
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
                     color: VbTokens.textTertiary
-                    topPadding: 10
+                    topPadding: VbTokens.space3
                 }
             }
         }
@@ -3701,11 +3735,11 @@ Item {
             id: systemInfoGroupBox
             visible: settingsPage.category === 4
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
-            font.pointSize: 12
+            font.pixelSize: VbTokens.typeBody
 
             Column {
                 anchors.fill: parent
-                spacing: 6
+                spacing: VbTokens.space2
 
                 VbSectionHeader {
                     text: qsTr("System Information")
@@ -3732,16 +3766,18 @@ Item {
                     ]
                     delegate: RowLayout {
                         width: systemInfoGroupBox.availableWidth
-                        spacing: 8
+                        spacing: VbTokens.space2
                         Label {
                             text: modelData.k
-                            font.pointSize: 11
+                            font.pixelSize: VbTokens.typeLabel
+                            font.family: VbTokens.fontBody
                             color: VbTokens.textTertiary
                             Layout.preferredWidth: 200
                         }
                         Label {
                             text: modelData.v
-                            font.pointSize: 11
+                            font.pixelSize: VbTokens.typeLabel
+                            font.family: VbTokens.fontBody
                             Layout.fillWidth: true
                             wrapMode: Text.Wrap
                             textFormat: Text.PlainText
@@ -3752,10 +3788,11 @@ Item {
                 Label {
                     width: parent.width
                     text: qsTr("Useful when filing a bug report. The headless 'vibemis selftest' command reports the same kind of information for automated checks.")
-                    font.pointSize: 9
+                    font.pixelSize: VbTokens.typeCaption
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
                     color: VbTokens.textTertiary
-                    topPadding: 6
+                    topPadding: VbTokens.space2
                 }
             }
         }
@@ -3765,11 +3802,11 @@ Item {
             id: aboutGroupBox
             visible: settingsPage.category === 4
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
-            font.pointSize: 12
+            font.pixelSize: VbTokens.typeBody
 
             Column {
                 anchors.fill: parent
-                spacing: 6
+                spacing: VbTokens.space2
 
                 VbSectionHeader {
                     text: qsTr("About")
@@ -3778,14 +3815,15 @@ Item {
                 Label {
                     width: parent.width
                     text: qsTr("Vibemis %1").arg(SystemProperties.versionString)
-                    font.pointSize: 12
+                    font.pixelSize: VbTokens.typeBody
                     font.bold: true
                     wrapMode: Text.Wrap
                 }
                 Label {
                     width: parent.width
                     text: qsTr("The actively maintained Apollo / Vibepollo game-streaming client for Linux and SteamOS.")
-                    font.pointSize: 9
+                    font.pixelSize: VbTokens.typeCaption
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
                     color: VbTokens.textTertiary
                 }
@@ -3793,7 +3831,8 @@ Item {
                     width: parent.width
                     text: "<a href=\"https://github.com/navyas321/vibemis\">github.com/navyas321/vibemis</a>"
                     onLinkActivated: SystemProperties.openUrl(link)
-                    font.pointSize: 9
+                    font.pixelSize: VbTokens.typeCaption
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
                     color: VbTokens.textTertiary
                 }
@@ -3808,11 +3847,11 @@ Item {
             id: helpLinksGroupBox
             visible: SystemProperties.hasBrowser && settingsPage.category === 4
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
-            font.pointSize: 12
+            font.pixelSize: VbTokens.typeBody
 
             Column {
                 anchors.fill: parent
-                spacing: 8
+                spacing: VbTokens.space2
 
                 VbSectionHeader {
                     text: qsTr("Help & Links")
@@ -3821,7 +3860,8 @@ Item {
                 Label {
                     width: parent.width
                     text: qsTr("Vibemis is the Linux/SteamOS client for Apollo & Sunshine hosts. These open in your browser.")
-                    font.pointSize: 9
+                    font.pixelSize: VbTokens.typeCaption
+                    font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
                     color: VbTokens.textTertiary
                 }
