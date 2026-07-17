@@ -103,6 +103,22 @@ Tab at all. Host-side Vibepollo input log + the build agent's UIA focus log at
 21:41:19 / 21:43:12 / 21:46:03 are the corroborating artifacts (timestamps posted on the bus
 2026-07-16 21:44:57 and 21:48:03).
 
+**Confound-free re-fire (21:55:18 EDT, second fresh stream).** The build agent raised that a
+host game (Trails in the Sky) had been holding foreground and eating injected keys, then closed
+it and re-staged. On the clean stage: `windowactivate` + a plain stream **Tab** landed *real*
+focus on the **File name** edit (its text became selected) — proving the stream keyboard reaches
+the host dialog *at that moment, with no game in the way*. Immediately after, QM **Send Shift+Tab**
+(`key_shift_tab` logged) left focus **unchanged on File name** — no wrap-back to the last control.
+This removes the foreground confound entirely and independently locks the FAIL.
+
+**Build-agent corroboration (bus, 21:53:33):** FAIL confirmed via their UIA focus logger + code
+read. Confirmed RCA: the QM path passes `MODIFIER_SHIFT` as a per-event bitfield with **no real
+VK_LSHIFT key event**, whereas the client's physical-keyboard path (`keyboard.cpp:473`) sends
+`VK_LSHIFT (0xA0)` as a genuine key. Vibepollo never sees Shift held, so the modified Tab is
+dropped (not even forward). **BL-1788 REOPENED**; fix (wrap VK_TAB with explicit VK_LSHIFT
+down/up) in flight as **alpha.016 / test122b**. The host-visual re-confirm caught a broken
+feature before it could ship in stable.
+
 **Also observed (minor):** activating a QM row closes the menu immediately; the "Sent key to
 host" toast was not visible in a +1.0 s screenshot after fire 1 (the in-menu toast has no
 surface once the menu closes — same class as the BL-2002/BL-2007 out-of-menu toast gap).
