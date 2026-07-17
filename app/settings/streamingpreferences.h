@@ -252,6 +252,13 @@ public:
     // Defaults to true so existing HDR users aren't regressed; users who hit
     // the wash-out can uncheck it in Settings without disabling HDR entirely.
     Q_PROPERTY(bool displayHdrCapability MEMBER displayHdrCapability NOTIFY displayHdrCapabilityChanged)
+    // Vibemis BL-1561 (P3.8 parity): client-side HDR tone-mapping toggle. When on,
+    // the Vulkan (libplacebo) renderer forces an SDR output colorspace so HDR content
+    // is tone-mapped down to SDR on this device instead of being passed through to the
+    // display. Complements displayHdrCapability (that gate operates at codec negotiation;
+    // this one operates at render/output time). Defaults to false = passthrough, so
+    // existing HDR-display users keep native HDR output unchanged.
+    Q_PROPERTY(bool hdrTonemapping MEMBER hdrTonemapping NOTIFY hdrTonemappingChanged)
     Q_PROPERTY(bool enableYUV444 MEMBER enableYUV444 NOTIFY enableYUV444Changed)
     Q_PROPERTY(VideoDecoderSelection videoDecoderSelection MEMBER videoDecoderSelection NOTIFY videoDecoderSelectionChanged)
     Q_PROPERTY(WindowMode windowMode MEMBER windowMode NOTIFY windowModeChanged)
@@ -334,6 +341,9 @@ public:
     bool uiSounds;
     // Vibemis: see Q_PROPERTY comment above; gates HDR request on display capability.
     bool displayHdrCapability;
+    // Vibemis BL-1561: see Q_PROPERTY comment above; forces client-side HDR->SDR
+    // tone-mapping in the Vulkan renderer when set. Defaults to false (passthrough).
+    bool hdrTonemapping;
     bool enableYUV444;
     VideoDecoderSelection videoDecoderSelection;
     WindowMode windowMode;
@@ -380,6 +390,7 @@ signals:
     void uiAccentIndexChanged();
     void uiSoundsChanged();
     void displayHdrCapabilityChanged();
+    void hdrTonemappingChanged();
     void enableYUV444Changed();
     void videoDecoderSelectionChanged();
     void uiDisplayModeChanged();
