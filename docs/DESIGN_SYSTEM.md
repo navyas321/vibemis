@@ -64,11 +64,32 @@ default; everything else is designed against it.
 Reference the **semantic** name when one exists; reach for a base token only for frame-level
 primitives with no semantic role (screen padding, header height, radii, motion).
 
-> **Agent-derived semantic values to reconcile.** Four semantic values were derived from the current
-> app's SettingsView literals + WCAG, not from the handoff summary: `textTertiary #A9AFB6`,
-> `controlTrackOff #2A2F37`, `statusWarning #E0A030`, `statusInfo #80A0C0`. When the full
-> `tokens/vibemis-tokens.json` lands, confirm these against it; keep the WCAG-passing value and flag
-> any difference rather than silently changing.
+> **Agent-derived semantic values — RECONCILED** against the now-merged handoff
+> `docs/design/redesign/tokens/vibemis-tokens.{json,css}` (PR #237, BL-2108). Four values were derived
+> from the app's SettingsView literals + WCAG rather than the design summary; the reconciliation call
+> for each (contrast ratios independently recomputed on the four dark surfaces — see the Appendix):
+>
+> | Value | Handoff json counterpart | Call |
+> |-------|--------------------------|------|
+> | `textTertiary #A9AFB6` | none (json's nearest, `text.mute #B9C0C8`, is preserved verbatim as base `textMute`) | **Keep — additive.** `#A9AFB6` names a distinct *caption/helper* tier the handoff never defined; it does not override any json value. 8.04:1 on `#15181D` (AAA). See the naming note below. |
+> | `controlTrackOff #2A2F37` | none (json defines no toggle-track token) | **Keep — additive.** OFF-track vs ON-accent `#00CCCC` = 6.74:1, unmistakable state distinctness (WCAG 1.4.11 floor 3:1); the knob carries the boundary. |
+> | `statusWarning #E0A030` | none (json has online/offline/danger only, no amber) | **Keep — additive.** The single amber. 7.83:1 on `#15181D` (AAA). |
+> | `statusInfo #80A0C0` | none (json defines no info token) | **Keep — additive.** 6.53:1 on `#15181D` (AA). |
+> | `statusSuccess` (→ `statusOnline #3ED598`) | `status.online #3ED598` | **Confirmed faithful.** Alias matches the json value exactly; unifies the stray sage `#80C080` onto the brand green. 9.47:1 (AAA). |
+>
+> **No genuine value conflict exists:** all four new values are additive roles absent from the handoff
+> json, so the "handoff wins" rule never triggers for them. Every other base token in `VbTokens`
+> matches the json 1:1 (surfaces, `text`/`text.dim`/`text.mute`, `accent.hi`, status online/offline/
+> danger, radius, spacing, type-scale sizes, gamepad ergonomics, focus-ring recipe, motion). **The one
+> divergence from the json is the accent** (`#00CCCC` vs json `#2FC6D0`) — the BL-2077 user-signed-off
+> carve-out documented above; the handoff does **not** win there. All values keep their WCAG-AA(+)
+> passing form on the real surfaces, so no value was changed to satisfy the handoff.
+>
+> **Naming note (`textTertiary` vs `text.mute`).** The handoff labels `#B9C0C8` "tertiary / inactive
+> item labels"; in `VbTokens` that value is `textMute` (base, verbatim from the json) while the
+> role-named `textTertiary` is the cooler, ramp-aligned `#A9AFB6` used for captions/helper lines. Two
+> deliberately distinct tiers — inactive labels (`textMute #B9C0C8`) vs captions (`textTertiary
+> #A9AFB6`) — not a value the handoff was overridden on.
 
 ---
 
