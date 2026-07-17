@@ -1,0 +1,50 @@
+PASTE THIS INTO A CLAUDE CODE SESSION
+=====================================
+(run it from the root of your Vibemis repo, with this exported folder copied somewhere
+Claude Code can read it — e.g. into the repo as `design/`.)
+
+-------------------------------------------------------------------------------
+
+I'm redesigning Vibemis — a gamepad-first Linux/SteamOS game-streaming client (a Moonlight /
+Artemis Qt6 + QML fork) that pairs with Apollo / Vibepollo hosts and runs on handhelds
+(Legion Go S, Steam Deck) from Steam Game Mode. I have a finished design prototype in
+`./design/` (open `design/Vibemis Redesign.dc.html` in a browser to view it; read
+`design/HANDOFF.md` first). It is the source of truth for the visual system. Do NOT
+redesign — implement it faithfully in the app's own Qt6/QML environment. Do not add a web view.
+
+The canonical design tokens are in `design/tokens/vibemis-tokens.json` (with a CSS mirror).
+Treat the hex values, type scale, spacing, radius, focus-ring recipe, and motion there as exact.
+Theme is dark only. Design canvas is 1920x1200 (Legion Go S); it must also scale cleanly to
+1280x800 (Steam Deck) — use anchors/Layouts and relative units, never hard-coded coordinates.
+
+Please do the following, in order:
+
+1. Read `design/HANDOFF.md`, `design/tokens/vibemis-tokens.json`, open the prototype, and skim
+   the static renders in `design/previews/` (1a-1f) for a quick visual of each screen.
+   Summarize the design system back to me — colors, type, spacing, the focus-ring recipe,
+   the host/status model, and the six screens (Computers, App grid, Add-PC dialog, Host-options
+   side-sheet, Settings-with-sidebar, Help) — so I can confirm you've understood it before you
+   write any code.
+
+2. Generate a tokens layer in MY stack: <TELL CLAUDE: e.g. "a QML singleton `VbTokens`
+   + a reusable FocusRing/Card/HintBar component set" OR "a C++ Qt theme">. Map every token
+   1:1 from vibemis-tokens.json. Include the focus-ring recipe (2px accent border + 5px
+   accent@22% glow + elevation, focused fill = bg.elev-2) and the gamepad hint-bar as reusable
+   helpers. Wire the accent as a swappable value (4 options) and a showHints flag.
+
+3. Build the first screen: <TELL CLAUDE WHICH — e.g. "the Computers host list" or "Settings">.
+   Match the prototype's layout, component structure, and states (online / offline / focused /
+   paired / host-type badge / latency+transport). Reuse the icon slots and the logo from
+   `design/logo/app/`.
+
+4. Keep a running checklist of which prototype screens are implemented vs. pending. Don't invent
+   new screens, colors, or copy. Preserve all real functionality of the current app (pairing/OTP,
+   clipboard sync, server commands, virtual display, permissions viewer, Quick Menu) — this is a
+   visual/IA redesign, not a feature change; Apollo-only features light up only on capable hosts.
+   If something's ambiguous, ask me and point at the exact prototype screen id (1a-1f).
+
+Constraints: dark theme only; gamepad-first (one focused element per screen, ≥56px hit targets,
+persistent hint bar); swap the prototype's placeholder CSS-border icons for real SVG/icon assets.
+
+Start with step 1 and wait for my confirmation before writing implementation code.
+-------------------------------------------------------------------------------
