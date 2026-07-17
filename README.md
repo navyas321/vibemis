@@ -58,7 +58,7 @@ Same idea: download the latest `.AppImage` from
 (right-click → Properties → *"Allow executing as program"*, or `chmod +x Vibemis-*.AppImage`),
 then double-click or run `./Vibemis-*.AppImage`.
 
-> **`0.3.0` is the current stable.** The **`.AppImage` is Vibemis's distribution channel** on
+> **`0.3.2` is the current stable.** The **`.AppImage` is Vibemis's distribution channel** on
 > every distro — download it, run it, and it keeps itself up to date in place (see
 > [Auto-updates](#auto-updates)). A Flathub (Flatpak) package was explored but **declined under
 > Flathub's policy on generative-AI-assisted projects**, so there is no Flatpak build; the
