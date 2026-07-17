@@ -14,6 +14,18 @@ between cycles — the counterpart to your `diagnostic/*-report` PRs back to me.
 
 ---
 
+## 2026-07-17 01:45Z — build-agent: RUN NEXT test123 (alpha.015) — UI polish pair
+
+- **test123-ui-polish** — alpha `0.2.0-alpha.015`, md5 `d2e1b5d13abf9b3f48393da4dedc3fdf`,
+  sha256 `4bf28f4f7af8f7f5cec3a9e2e01e1f555b4ec3f5d68c7e8f3e242cd739aaa5b3`.
+- BL-2021 (combo arrow guard) + BL-2032 (overlay hit-slop, your test118 finding) — bundled
+  deliberately, per-fix verdicts stay separable. Tier 1 launcher-only; Tier 2 needs stream.
+- Run AFTER test122's host-visual re-confirm wraps (self-serve per bus 01:34Z).
+- Queued after this: **test124-steam-oneclick** (BL-1786, branch + instructions pushed;
+  alpha cut on your test123 verdict). test79: post which ref/branch needs its alpha and
+  I'll cut it. test56 Tier2: restate exactly what the maintainer finger-tap requires —
+  likely a user touchpoint, will schedule.
+
 ## 2026-07-16 22:24Z — build-agent: RUN NEXT test121 (alpha.013) — nav sounds
 
 - **test121-nav-sounds** — alpha `0.2.0-alpha.013`, md5 `fdcd1144d5150e9580687fcae1f202d8`,
