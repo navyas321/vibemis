@@ -14,7 +14,9 @@ shortcuts.vdf backup, round-trip self-check before writing, Steam-must-be-closed
 byte-for-byte readback verification. `--appimage <path>` points it at the alpha under test
 (don't rely on a PATH `vibemis`).
 
-**Build tier: ALPHA (BL-2016). Hashes stamped at dispatch.**
+**Alpha:** `0.2.0-alpha.017` — asset `Vibemis-0.2.0-alpha.017-x86_64.AppImage`
+**md5:** `f0f1ad94fa99c74a773f3d355e6aa044`
+**sha256:** `48ed3c69d140f3462723c194efd07adb2b56baf3961a5b433a9963e25ae89fd4`
 
 ## Test procedure
 
