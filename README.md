@@ -58,8 +58,11 @@ Same idea: download the latest `.AppImage` from
 (right-click → Properties → *"Allow executing as program"*, or `chmod +x Vibemis-*.AppImage`),
 then double-click or run `./Vibemis-*.AppImage`.
 
-> **0.2.0 is the current stable.** A Flathub (Flatpak) package is on the way; until then the
-> AppImage is the recommended install on any distro.
+> **`0.3.0` is the current stable.** The **`.AppImage` is Vibemis's distribution channel** on
+> every distro — download it, run it, and it keeps itself up to date in place (see
+> [Auto-updates](#auto-updates)). A Flathub (Flatpak) package was explored but **declined under
+> Flathub's policy on generative-AI-assisted projects**, so there is no Flatpak build; the
+> self-updating AppImage is the supported way to install and stay current.
 
 ### Add to Steam (SteamOS / Steam Deck)
 
@@ -133,12 +136,20 @@ AppImage to a stable path with a clean `Vibemis` desktop entry, ready to Add to 
   context menu; the profile applies automatically at launch without touching global settings
 - **Auto-reconnect** *(on by default)* — a dropped stream retries in place (3 attempts with
   backoff) instead of dumping you back to the game grid; toggleable in Settings
-- **Gamepad-first redesign** — a full controller-first UI on a unified dark design-token system
-  (one accent/surface/type language), across every screen: the Computers list (rich status cards
-  with a host-type badge — Vibepollo / Apollo / Sunshine — and a live host count), the app grid
-  (a live RESUME badge on the running game — **A** resumes it, **Y** quits it), Add-PC dialog,
-  Host-options side-sheet, Settings (a category sidebar), and in-stream Help — per-screen chrome,
-  a single header, the accent focus-ring, and line icons
+- **Gamepad-first redesign** — a full controller-first UI built on a unified dark **design-token**
+  system: a **single teal accent** (`#00CCCC`) plus one surface / spacing / type scale and
+  role-named *semantic* tokens (surface tiers, text hierarchy, status colors) applied consistently
+  everywhere — one visual language, one place to theme. Every screen is restyled to match: the
+  Computers list (rich status cards with a host-type badge — Vibepollo / Apollo / Sunshine — and a
+  live host count), the app grid (a live RESUME badge on the running game — **A** resumes it,
+  **Y** quits it), the Add-PC dialog, the Host-options side-sheet, **Settings** (a category sidebar
+  with token-styled controls), the in-stream **Quick Menu** and **Server Commands**, and in-stream
+  Help. A single header, per-screen chrome, line icons, a persistent gamepad hint bar, and the
+  accent **focus-ring** keep focus unmistakable at arm's length. See
+  [`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md) for the token language
+- **First-run welcome** — a token-styled welcome sheet greets you on first launch: the Quick Menu
+  chord, the Add-to-Steam tip, and a pointer to Settings, then it never shows again. Gamepad-first —
+  a single focused "Get started" action (**A**); **B** / Esc dismisses
 
 ### Known issues
 
@@ -152,7 +163,7 @@ off as fixes land.)
 | **Quick Menu items can't be tapped** — menu navigation is gamepad/keyboard only, so a touch-only user can open the menu but not operate it | Navigate with D-pad + A, or arrow keys + Enter | Confirmed; touch operability planned |
 | **Text-send has no on-screen keyboard** — on a keyboard-less handheld there's no way to type into it; the first character can also drop if you type immediately | Use a physical/USB keyboard, or Paste Clipboard (clipboard sync) instead | Confirmed; OSK planned |
 | **MENU / KBD touch buttons have small tap targets** | Aim carefully, or use the gamepad combo / keyboard shortcut | Confirmed; enlargement queued |
-| **Settings page doesn't drag-scroll** (touch or pointer drag) | Use the scroll wheel or D-pad/stick navigation | Confirmed on 0.2.0-beta.013 |
+| **Settings page doesn't drag-scroll** (touch or pointer drag) | Use the scroll wheel or D-pad/stick navigation | Confirmed |
 | **Host-type badge can mislabel** Apollo-lineage vs Sunshine hosts | Cosmetic only — streaming is unaffected | Fix in flight |
 
 ### Known limitations
@@ -244,14 +255,21 @@ All shortcuts require `Ctrl + Alt + Shift`:
 ## Downloads & updates
 
 Each release ships a single **`.AppImage`** — download and double-click; nothing to extract.
+The AppImage is Vibemis's distribution channel (there is no Flatpak/Flathub build — see
+[Any other Linux](#any-other-linux)).
 
-📲 **Already have a previous version installed? Update in-app — no download needed.**
-Open Settings → Advanced → **Software updates**, pick the channel that matches the build
-you want (see the table below — **Stable** for `0.x.y`, **Release candidate** for `-rc`,
-**Beta** for `-beta`, **Alpha** for `-alpha`), then *Check for updates* → *Update now*.
-The AppImage swaps itself in place (the previous build stays alongside as `.old` for
-rollback) and relaunches. The `scripts/vibemis-update.sh` helper does the same from a
-terminal or a Steam shortcut.
+### Auto-updates
+
+**Vibemis keeps itself current — no re-download, no reinstall.** Point it at a channel once and
+the app watches that channel's release feed and offers the new build in place when one appears:
+
+📲 **Already have a previous version installed? Update in-app.** Open Settings → Advanced →
+**Software updates**, pick the channel that matches the build you want (see the table below —
+**Stable** for `0.x.y`, **Release candidate** for `-rc`, **Beta** for `-beta`, **Alpha** for
+`-alpha`), then *Check for updates* → *Update now*. When you're on **Stable**, Vibemis detects
+a newer stable the moment one is published and offers to install it. The AppImage swaps itself
+in place (the previous build stays alongside as `.old` for rollback) and relaunches. The
+`scripts/vibemis-update.sh` helper does the same from a terminal or a Steam shortcut.
 
 Versions follow **[Semantic Versioning 2.0.0](https://semver.org)** — pre-releases are
 suffixed versions of the stable they precede (`0.5.0-beta.007` → `0.5.0`), with dense
