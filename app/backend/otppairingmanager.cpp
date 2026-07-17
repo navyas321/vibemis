@@ -128,7 +128,8 @@ QString OTPPairingManager::generateOTPHash(const QString &pin, const QString &sa
     // Convert to hex string (uppercase to match Android)
     QString hexString = result.toHex().toUpper();
     
-    qDebug() << "OTPPairingManager: Generated OTP hash for PIN:" << pin << "Salt:" << salt;
+    // Never log the PIN, salt, or resulting hash - together they are the OTP credential
+    qDebug() << "OTPPairingManager: Generated OTP hash for PIN: [redacted," << pin.length() << "digits] Salt: [redacted," << salt.length() << "hex chars]";
     
     return hexString;
 }
@@ -146,9 +147,11 @@ void OTPPairingManager::performOTPPairing(NvComputer *computer, const QString &p
     
     // Generate the OTP hash using the same salt that will be sent in the pairing request
     QString otpHash = generateOTPHash(pin, saltStr, passphrase);
-    
-    qDebug() << "OTPPairingManager: Generated OTP hash:" << otpHash;
-    qDebug() << "OTPPairingManager: Using salt:" << saltStr;
+
+    // The OTP hash is the bearer credential sent as otpauth and the salt allows
+    // offline brute-force of the 4-digit PIN - log presence only
+    qDebug() << "OTPPairingManager: Generated OTP hash: [redacted," << otpHash.length() << "hex chars]";
+    qDebug() << "OTPPairingManager: Using salt: [redacted," << saltStr.length() << "hex chars]";
     
     emit pairingProgress("Connecting to server...");
     
@@ -165,10 +168,11 @@ void OTPPairingManager::sendOTPPairingRequest(NvComputer *computer, const QStrin
         NvHTTP http(computer);
         
         qDebug() << "OTPPairingManager: Starting Apollo OTP pairing";
-        qDebug() << "OTPPairingManager: PIN from user (server-generated):" << m_currentPin;
-        qDebug() << "OTPPairingManager: Passphrase from user:" << m_currentPassphrase;
-        qDebug() << "OTPPairingManager: Generated OTP hash:" << otpHash;
-        qDebug() << "OTPPairingManager: Using salt:" << salt;
+        // Do not log the PIN, passphrase, OTP hash, or salt - they are pairing secrets
+        qDebug() << "OTPPairingManager: PIN from user (server-generated): [redacted," << m_currentPin.length() << "digits]";
+        qDebug() << "OTPPairingManager: Passphrase from user: [redacted," << m_currentPassphrase.length() << "chars]";
+        qDebug() << "OTPPairingManager: Generated OTP hash: [redacted," << otpHash.length() << "hex chars]";
+        qDebug() << "OTPPairingManager: Using salt: [redacted," << salt.length() << "hex chars]";
         qDebug() << "OTPPairingManager: Server HTTP URL:" << http.m_BaseUrlHttp.toString();
         qDebug() << "OTPPairingManager: Server HTTPS URL:" << http.m_BaseUrlHttps.toString();
         
@@ -181,7 +185,8 @@ void OTPPairingManager::sendOTPPairingRequest(NvComputer *computer, const QStrin
             .arg(QString(IdentityManager::get()->getCertificate().toHex()))
             .arg(otpHash);
         
-        qDebug() << "OTPPairingManager: Pairing parameters:" << pairingParams;
+        // pairingParams carries salt, client cert, and otpauth hash - never log the values
+        qDebug() << "OTPPairingManager: Pairing parameters built: [redacted," << pairingParams.length() << "chars]";
         
         QString pairingRequest;
         
@@ -198,7 +203,8 @@ void OTPPairingManager::sendOTPPairingRequest(NvComputer *computer, const QStrin
         qDebug() << "OTPPairingManager: HTTP request successful";
         
         qDebug() << "OTPPairingManager: Used HTTP protocol for OTP pairing";
-        qDebug() << "OTPPairingManager: Received response:" << pairingRequest;
+        // The response contains the server certificate (<plaincert>) - log size only
+        qDebug() << "OTPPairingManager: Received response: [redacted," << pairingRequest.length() << "chars]";
         
         // Parse the XML response
         if (pairingRequest.isEmpty()) {

@@ -1004,8 +1004,9 @@ qDebug() << "PendingOTPPairingTask: Generated AES key from salt+PIN";
             NvHTTP http(m_Computer);
             
             qDebug() << "PendingOTPPairingTask: Starting Apollo OTP pairing";
-            qDebug() << "PendingOTPPairingTask: PIN from user:" << m_Pin;
-            qDebug() << "PendingOTPPairingTask: Passphrase from user:" << m_Passphrase;
+            // Do not log the PIN or passphrase - they are pairing secrets
+            qDebug() << "PendingOTPPairingTask: PIN from user: [redacted," << m_Pin.length() << "digits]";
+            qDebug() << "PendingOTPPairingTask: Passphrase from user: [redacted," << m_Passphrase.length() << "chars]";
             
             // Generate a 16-byte salt
             // Generate a random 16-byte salt. This salt is sent to the server in
@@ -1060,7 +1061,9 @@ qDebug() << "PendingOTPPairingTask: Generated AES key from salt+PIN";
                 kPairRequestTimeoutMs
             );
             
-            qDebug() << "PendingOTPPairingTask: Received response:" << pairingRequest;
+            // The response contains the server certificate (<plaincert>) - log size only.
+            // The parsed status_code/paired/plaincert-present line below covers debugging.
+            qDebug() << "PendingOTPPairingTask: Received response: [redacted," << pairingRequest.length() << "chars]";
 
             if (pairingRequest.isEmpty()) {
                 qDebug() << "PendingOTPPairingTask: OTP pairing failed - no response";

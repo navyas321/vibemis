@@ -554,10 +554,15 @@ NvHTTP::openConnection(QUrl baseUrl,
                        int timeoutMs,
                        NvLogLevel logLevel)
 {
+    // Pairing requests carry secrets in their arguments (salt, client cert,
+    // otpauth hash, challenge/secret material) - never log those values
+    bool redactArguments = (command == "pair");
+
     // Suppress debug output for polling requests to reduce log noise
     bool suppressDebugOutput = (logLevel == NvLogLevel::NVLL_NONE);
     if (!suppressDebugOutput) {
-        qDebug() << "NvHTTP::openConnection - URL:" << baseUrl.toString() << "Command:" << command << "Arguments:" << arguments;
+        qDebug() << "NvHTTP::openConnection - URL:" << baseUrl.toString() << "Command:" << command << "Arguments:"
+                 << (redactArguments ? QStringLiteral("[redacted pairing parameters]") : arguments);
     }
 
     // Port must be set
@@ -603,8 +608,12 @@ NvHTTP::openConnection(QUrl baseUrl,
     if (timeoutMs) {
         QTimer::singleShot(timeoutMs, &loop, &QEventLoop::quit);
     }
+    // The full URL embeds the query string, so redact it for pairing requests
+    QString loggableUrl = redactArguments ?
+        url.adjusted(QUrl::RemoveQuery).toString() + "?[redacted pairing parameters]" :
+        url.toString();
     if (logLevel >= NvLogLevel::NVLL_VERBOSE) {
-        qInfo() << "Executing request:" << url.toString();
+        qInfo() << "Executing request:" << loggableUrl;
     }
     loop.exec(QEventLoop::ExcludeUserInputEvents);
 
@@ -612,7 +621,7 @@ NvHTTP::openConnection(QUrl baseUrl,
     if (!reply->isFinished())
     {
         if (logLevel >= NvLogLevel::NVLL_ERROR) {
-            qWarning() << "Aborting timed out request for" << url.toString();
+            qWarning() << "Aborting timed out request for" << loggableUrl;
         }
         reply->abort();
     }

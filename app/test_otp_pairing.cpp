@@ -58,8 +58,9 @@ int main(int argc, char *argv[])
     
     qInfo() << "Starting OTP pairing test with Apollo server...";
     qInfo() << "Server:" << serverAddress;
-    qInfo() << "PIN:" << pin;
-    qInfo() << "Passphrase:" << passphrase;
+    // Do not echo the PIN or passphrase - they are pairing secrets
+    qInfo() << "PIN: [redacted," << pin.length() << "digits]";
+    qInfo() << "Passphrase: [redacted," << passphrase.length() << "chars]";
     
     // Create OTP pairing manager
     OTPPairingManager otpManager;
