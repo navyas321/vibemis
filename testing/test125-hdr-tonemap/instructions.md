@@ -26,11 +26,9 @@ decision (log-observable), and does not regress SDR streaming or the existing HD
   `app/gui/SettingsView.qml` (toggle), `app/streaming/video/ffmpeg-renderers/plvk.cpp`
   (colorspace-hint decision + log). No host/protocol changes.
 
-**Alpha:** `0.2.0-alpha.NNN` — asset `Vibemis-0.2.0-alpha.NNN-x86_64.AppImage`
-(exact NNN + hashes: take the newest `test125-hdr-tonemap` alpha from the GitHub Releases page /
-the CI run's build summary — this file is committed before the build exists).
-**md5:** `<from release page>`
-**sha256:** `<from release page>`
+**Alpha:** `0.2.0-alpha.018` — asset `Vibemis-0.2.0-alpha.018-x86_64.AppImage`
+**md5:** `51f24d5ad60811d99d92de157fc05192`
+**sha256:** `e623017655c952e898c4e1f2fd6555b60d9869d15561603aabb5233378099b35`
 
 ## Test procedure
 
