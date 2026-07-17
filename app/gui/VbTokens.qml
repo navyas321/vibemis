@@ -89,4 +89,68 @@ QtObject {
 
     // ---- Global UI flags ----
     property bool showHints: StreamingPreferences.uiShowHints   // gamepad hint-bar visibility (Settings toggle)
+
+    // ========================================================================
+    //  SEMANTIC TOKEN LAYER  (BL-2107 / P3.17 design pass)
+    //  Role-named tokens layered OVER the base tokens above. New / restyled
+    //  surfaces reference these by ROLE ("what is this element?") instead of a
+    //  raw base token, so intent is explicit and a future theme swap re-points
+    //  roles rather than pages. Every entry either ALIASES a base token (zero
+    //  new pixels) or is a NEW value whose WCAG AA contrast on the app's actual
+    //  dark surfaces is computed and tabulated in docs/DESIGN_SYSTEM.md.
+    //  Purely additive — already-migrated pages that read base tokens directly
+    //  (PcView, AppView, Toast, ClipboardSettings, QuickMenu) are untouched.
+    // ========================================================================
+
+    // ---- Surface / background scale (sunken -> raised) ----
+    readonly property color surfaceSunken:  bgApp       // #08090B  behind the rounded window
+    readonly property color surfaceBase:    bgWindow    // #0E1013  screen background
+    readonly property color surfaceRaised:  bgElev      // #15181D  cards, panels, sidebar rows
+    readonly property color surfaceOverlay: bgElev2     // #1B1F26  focused/selected fill, chips
+    readonly property color surfaceFooter:  bgFooter    // #0B0D10  gamepad hint bar
+    readonly property color divider:        stroke      // 1px card border      (white @ 8%)
+    readonly property color dividerSoft:    strokeSoft  // header/footer divider (white @ 6%)
+
+    // ---- Text hierarchy (contrast tags are vs surfaceRaised #15181D) ----
+    readonly property color textPrimary:   text         // #ECEEF1  15.3:1  AAA  headings, values
+    readonly property color textSecondary: textDim       // #98A1AB   6.8:1  AA   labels, secondary
+    readonly property color textTertiary:  "#A9AFB6"     //           8.0:1  AAA  captions, hints, helper lines
+    readonly property color textDisabled:  "#5A626C"     //           2.9:1  large/decorative only (disabled)
+    // textOnAccent (#08090B) is defined in the base block above — text on an accent fill.
+
+    // ---- Interactive states: normal / hover / focus / pressed / disabled ----
+    readonly property color accentPressed:      "#00A3A3" // pressed accented control (matches legacy Theme.accentPressed)
+    readonly property color interactiveHover:   bgElev2    // row / list-item / icon-button hover fill
+    readonly property color interactiveFocus:   focusedFill// focused fill (= bgElev2) — pair with the focus ring
+    readonly property color interactivePressed: bgElev     // pressed neutral fill (recedes under the press)
+    readonly property color controlTrackOff:    "#2A2F37"  // toggle / switch OFF track (accent = ON)
+    readonly property color controlTrackOn:     accent     // toggle / switch ON  track
+    readonly property real  disabledOpacity:    0.38       // whole-control disabled dim (opacity multiplier)
+
+    // ---- Status / feedback (contrast tags vs surfaceRaised #15181D) ----
+    readonly property color statusSuccess: statusOnline // #3ED598  9.5:1  AAA  positive / recommended (✓)
+    readonly property color statusWarning: "#E0A030"    //          7.8:1  AAA  advisory / caution (⚠) — the single amber
+    readonly property color statusInfo:    "#80A0C0"    //          6.5:1  AA   neutral informational note
+    // statusDanger (#F26D6D) and statusOffline (#5A626C) are defined in the base block above.
+
+    // ---- Spacing scale (4px base, 6 steps) ----
+    // Small, named intra-component scale. Screen-frame constants (screenPadX/Y,
+    // headerH, cardGap, tileGap) stay as their own tuned base tokens above.
+    readonly property int space1:  4   // tight: icon->text, label->helper line
+    readonly property int space2:  8   // intra-component, list-row gaps
+    readonly property int space3: 12   // default control spacing, group inner padding
+    readonly property int space4: 16   // between form groups
+    readonly property int space5: 24   // section separation
+    readonly property int space6: 32   // major block separation (= cardGap)
+
+    // ---- Type scale (6 roles; aliases over the pixel size* base tokens) ----
+    // Redesign surfaces use these pixel roles with fontDisplay (titles/labels)
+    // or fontBody (copy). Legacy pointSize surfaces (SettingsView) are tracked
+    // for a later type pass — see docs/design/specs/.
+    readonly property int typeDisplay: sizeScreenTitle  // 34  screen titles, big empty states
+    readonly property int typeTitle:   sizeSectionTitle // 28  section titles
+    readonly property int typeHeading: sizeCardName     // 27  card / PC names
+    readonly property int typeBody:    sizeBody         // 16  body copy, control text
+    readonly property int typeLabel:   sizeLabel        // 14  field labels, menu items
+    readonly property int typeCaption: sizeBadge        // 13  captions, badges, hints
 }
