@@ -156,12 +156,12 @@ Item {
                 anchors.rightMargin: 14
                 anchors.verticalCenter: parent.verticalCenter
                 width: 60; height: 34; radius: 999
-                color: toggleRoot.checked ? VbTokens.accent : "#2A2F37"
+                color: toggleRoot.checked ? VbTokens.accent : VbTokens.controlTrackOff
                 Rectangle {
                     width: 26; height: 26; radius: 13
                     anchors.verticalCenter: parent.verticalCenter
                     x: toggleRoot.checked ? parent.width - width - 4 : 4
-                    color: toggleRoot.checked ? "#08090B" : VbTokens.textDim
+                    color: toggleRoot.checked ? VbTokens.textOnAccent : VbTokens.textDim
                     Behavior on x { NumberAnimation { duration: 120 } }
                 }
             }
@@ -722,7 +722,7 @@ Item {
                           .arg(nativeResW).arg(nativeResH)
                     font.pointSize: 9
                     wrapMode: Text.Wrap
-                    color: "#aaaaaa"
+                    color: VbTokens.textTertiary
                     bottomPadding: 4
                 }
 
@@ -1622,12 +1622,12 @@ Item {
                             anchors.right: parent.right
                             anchors.verticalCenter: parent.verticalCenter
                             width: 60; height: 34; radius: 999
-                            color: adaptiveBitrateCheck.checked ? VbTokens.accent : "#2A2F37"
+                            color: adaptiveBitrateCheck.checked ? VbTokens.accent : VbTokens.controlTrackOff
                             Rectangle {
                                 width: 26; height: 26; radius: 13
                                 anchors.verticalCenter: parent.verticalCenter
                                 x: adaptiveBitrateCheck.checked ? parent.width - width - 4 : 4
-                                color: adaptiveBitrateCheck.checked ? "#08090B" : VbTokens.textDim
+                                color: adaptiveBitrateCheck.checked ? VbTokens.textOnAccent : VbTokens.textDim
                                 Behavior on x { NumberAnimation { duration: 120 } }
                             }
                         }
@@ -1649,7 +1649,7 @@ Item {
                     text: "⚠ " + qsTr("This bitrate is much higher than recommended for the selected resolution. On Wi-Fi this often causes stutter or dropped frames — lower it if the stream isn't smooth.")
                     font.pointSize: 9
                     wrapMode: Text.Wrap
-                    color: "#E0A030"
+                    color: VbTokens.statusWarning
                     topPadding: 4
                 }
 
@@ -1830,12 +1830,12 @@ Item {
                             anchors.right: parent.right
                             anchors.verticalCenter: parent.verticalCenter
                             width: 60; height: 34; radius: 999
-                            color: vsyncCheck.checked ? VbTokens.accent : "#2A2F37"
+                            color: vsyncCheck.checked ? VbTokens.accent : VbTokens.controlTrackOff
                             Rectangle {
                                 width: 26; height: 26; radius: 13
                                 anchors.verticalCenter: parent.verticalCenter
                                 x: vsyncCheck.checked ? parent.width - width - 4 : 4
-                                color: vsyncCheck.checked ? "#08090B" : VbTokens.textDim
+                                color: vsyncCheck.checked ? VbTokens.textOnAccent : VbTokens.textDim
                                 Behavior on x { NumberAnimation { duration: 120 } }
                             }
                         }
@@ -1895,12 +1895,12 @@ Item {
                             anchors.right: parent.right
                             anchors.verticalCenter: parent.verticalCenter
                             width: 60; height: 34; radius: 999
-                            color: framePacingCheck.checked ? VbTokens.accent : "#2A2F37"
+                            color: framePacingCheck.checked ? VbTokens.accent : VbTokens.controlTrackOff
                             Rectangle {
                                 width: 26; height: 26; radius: 13
                                 anchors.verticalCenter: parent.verticalCenter
                                 x: framePacingCheck.checked ? parent.width - width - 4 : 4
-                                color: framePacingCheck.checked ? "#08090B" : VbTokens.textDim
+                                color: framePacingCheck.checked ? VbTokens.textOnAccent : VbTokens.textDim
                                 Behavior on x { NumberAnimation { duration: 120 } }
                             }
                         }
@@ -1993,7 +1993,7 @@ Item {
                     text: qsTr("✓ Your Apollo / Vibepollo host will create a virtual display matching your selected resolution and refresh rate — recommended on a handheld (the host's physical monitor is left untouched).")
                     font.pointSize: 9
                     wrapMode: Text.Wrap
-                    color: "#80C080"
+                    color: VbTokens.statusSuccess
                     leftPadding: 8
                 }
                 Label {
@@ -2002,7 +2002,7 @@ Item {
                     text: qsTr("Without a virtual display, the stream uses the host's current physical display resolution. Enable this with an Apollo / Vibepollo host to match this device's resolution automatically.")
                     font.pointSize: 9
                     wrapMode: Text.Wrap
-                    color: "#aaaaaa"
+                    color: VbTokens.textTertiary
                     leftPadding: 8
                 }
 
@@ -3026,7 +3026,7 @@ Item {
                     text: "⚠ " + qsTr("Software decoding adds latency (≈8 ms vs ≈2 ms for hardware) and raises CPU/battery use. Prefer \"Automatic\" unless hardware decoding is broken on this device.")
                     font.pointSize: 9
                     wrapMode: Text.Wrap
-                    color: "#E0A030"
+                    color: VbTokens.statusWarning
                     topPadding: 4
                 }
 
@@ -3096,7 +3096,7 @@ Item {
                     text: qsTr("AV1 offers better quality at the same bitrate, but requires an Apollo/Sunshine host with an AV1-capable GPU (e.g. NVIDIA RTX 40, AMD RX 7000, Intel Arc). If streaming fails or falls back, choose \"Automatic\".")
                     font.pointSize: 9
                     wrapMode: Text.Wrap
-                    color: "#80A0C0"
+                    color: VbTokens.statusInfo
                     topPadding: 4
                 }
 
@@ -3678,7 +3678,7 @@ Item {
                     text: qsTr("Tip: on SteamOS, run scripts/setup-tailscale.sh for a one-command, no-sudo setup.")
                     font.pointSize: 9
                     wrapMode: Text.Wrap
-                    color: "#aaaaaa"
+                    color: VbTokens.textTertiary
                 }
 
                 // Note about Server Commands
@@ -3687,7 +3687,7 @@ Item {
                     text: qsTr("Server Commands are available during streaming sessions via the game menu when connected to Apollo / Vibepollo hosts.")
                     font.pointSize: 9
                     wrapMode: Text.Wrap
-                    color: "#aaaaaa"
+                    color: VbTokens.textTertiary
                     topPadding: 10
                 }
             }
@@ -3736,7 +3736,7 @@ Item {
                         Label {
                             text: modelData.k
                             font.pointSize: 11
-                            color: "#aaaaaa"
+                            color: VbTokens.textTertiary
                             Layout.preferredWidth: 200
                         }
                         Label {
@@ -3754,7 +3754,7 @@ Item {
                     text: qsTr("Useful when filing a bug report. The headless 'vibemis selftest' command reports the same kind of information for automated checks.")
                     font.pointSize: 9
                     wrapMode: Text.Wrap
-                    color: "#aaaaaa"
+                    color: VbTokens.textTertiary
                     topPadding: 6
                 }
             }
@@ -3787,7 +3787,7 @@ Item {
                     text: qsTr("The actively maintained Apollo / Vibepollo game-streaming client for Linux and SteamOS.")
                     font.pointSize: 9
                     wrapMode: Text.Wrap
-                    color: "#aaaaaa"
+                    color: VbTokens.textTertiary
                 }
                 Label {
                     width: parent.width
@@ -3795,7 +3795,7 @@ Item {
                     onLinkActivated: SystemProperties.openUrl(link)
                     font.pointSize: 9
                     wrapMode: Text.Wrap
-                    color: "#aaaaaa"
+                    color: VbTokens.textTertiary
                 }
             }
         }
@@ -3823,7 +3823,7 @@ Item {
                     text: qsTr("Vibemis is the Linux/SteamOS client for Apollo & Sunshine hosts. These open in your browser.")
                     font.pointSize: 9
                     wrapMode: Text.Wrap
-                    color: "#aaaaaa"
+                    color: VbTokens.textTertiary
                 }
 
                 Button {
