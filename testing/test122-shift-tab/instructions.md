@@ -9,7 +9,9 @@ missing counterpart to the existing special keys.
 Same LiSendKeyboardEvent DOWN/UP pattern as Ctrl+Alt+Del/Alt+F4/Win/Esc (VK_TAB +
 MODIFIER_SHIFT); one new row in the special-keys section of the Quick Menu list.
 
-**Build tier: ALPHA (BL-2016). Hashes stamped at dispatch.**
+**Alpha:** `0.2.0-alpha.014` — asset `Vibemis-0.2.0-alpha.014-x86_64.AppImage`
+**md5:** `ea3af561d269e8a86c045537b319f035`
+**sha256:** `52b0f6e017748979b393d104638e8d5a476f14c9832b520172f9daaf6dfe8d05`
 
 ## Test procedure
 
