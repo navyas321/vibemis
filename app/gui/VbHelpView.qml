@@ -149,23 +149,24 @@ Item {
                                 { k: "X", v: qsTr("Toggle fullscreen") },
                                 { k: "V", v: qsTr("Paste clipboard") }
                             ]
+                            // Keycap FIRST, label immediately after. The previous
+                            // right-aligned keycap sat ~700px from its label at the card's
+                            // far border — under glare the card surface vanishes and the
+                            // keycaps read as floating outside the card (BL-2152). Uniform
+                            // 34px keycaps also auto-align every label at the same x.
                             delegate: RowLayout {
-                                Layout.fillWidth: true; spacing: 16
+                                Layout.fillWidth: true; spacing: 14
+                                Rectangle {
+                                    implicitWidth: 34; implicitHeight: 34; radius: 8; color: VbTokens.bgWindow
+                                    border.width: 1; border.color: Qt.rgba(1, 1, 1, 0.14)
+                                    Text { anchors.centerIn: parent; text: modelData.k; font.family: VbTokens.fontBody; font.pixelSize: 15; font.weight: Font.Bold; color: VbTokens.text }
+                                }
                                 Text {
                                     text: modelData.v
                                     font.family: VbTokens.fontBody; font.pixelSize: VbTokens.sizeBody; color: VbTokens.textMute
                                     Layout.fillWidth: true
-                                    // Elide + zero minimum so the label can't leak its full-text
-                                    // width up the layout chain — that leak pushed the keycap past
-                                    // the card border and stretched this card wider than the others.
                                     Layout.minimumWidth: 0
                                     elide: Text.ElideRight
-                                }
-                                Rectangle {
-                                    Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                    implicitWidth: 34; implicitHeight: 34; radius: 8; color: VbTokens.bgWindow
-                                    border.width: 1; border.color: Qt.rgba(1, 1, 1, 0.14)
-                                    Text { anchors.centerIn: parent; text: modelData.k; font.family: VbTokens.fontBody; font.pixelSize: 15; font.weight: Font.Bold; color: VbTokens.text }
                                 }
                             }
                         }
@@ -190,8 +191,13 @@ Item {
                         font.family: VbTokens.fontDisplay; font.weight: Font.Bold; font.pixelSize: 19; color: VbTokens.text
                     }
                     ColumnLayout {
+                        id: padRows
                         Layout.fillWidth: true
                         spacing: 14
+                        // Widest label so far — every label column sizes to it, putting
+                        // each chord immediately after its label instead of at the card's
+                        // far border (same perceived-escape fix as the keyboard card).
+                        property real labelW: 0
                         Repeater {
                             model: [
                                 { k: "Start + Select + L1 + R1", v: qsTr("Quit stream") },
@@ -203,15 +209,17 @@ Item {
                                 Text {
                                     text: modelData.v
                                     font.family: VbTokens.fontBody; font.pixelSize: VbTokens.sizeBody; color: VbTokens.textMute
-                                    Layout.fillWidth: true
-                                    Layout.minimumWidth: 0
+                                    Layout.preferredWidth: padRows.labelW
                                     elide: Text.ElideRight
+                                    onImplicitWidthChanged: padRows.labelW = Math.max(padRows.labelW, implicitWidth)
+                                    Component.onCompleted: padRows.labelW = Math.max(padRows.labelW, implicitWidth)
                                 }
                                 Text {
                                     text: modelData.k
                                     font.family: VbTokens.fontBody; font.pixelSize: VbTokens.sizeLabel; font.weight: Font.DemiBold; color: VbTokens.textDim
-                                    Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                                 }
+                                // absorb leftover width so rows stay left-packed
+                                Item { Layout.fillWidth: true }
                             }
                         }
                     }
