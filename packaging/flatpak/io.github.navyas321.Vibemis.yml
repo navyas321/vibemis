@@ -224,8 +224,8 @@ modules:
       # Currently pinned to the first stable, 0.1.0.
       - type: git
         url: https://github.com/navyas321/vibemis.git
-        tag: "0.1.0"
-        commit: 60736b023ca1a9be4af9543a2c7d80c38912dedb
+        tag: "0.2.0"
+        commit: 611b2ece494cc4d61e45472cc95b7fd5ec0828c6
         # Full clone so the submodules (ClassicOldSong moonlight-common-c,
         # qmdnsengine, h264bitstream, SDL_GameControllerDB) resolve.
         disable-shallow-clone: true

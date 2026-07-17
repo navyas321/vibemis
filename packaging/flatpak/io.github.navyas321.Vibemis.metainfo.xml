@@ -93,6 +93,12 @@
   <content_rating type="oars-1.1" />
 
   <releases>
+    <release version="0.2.0" date="2026-07-17" type="stable">
+      <url type="details">https://github.com/navyas321/vibemis/releases/tag/0.2.0</url>
+      <description>
+        <p>Second stable release. Adds touchscreen passthrough, a Send Shift+Tab quick key, navigation sounds, the redesigned Help page, one-click Steam library launch, and an HDR tone-map toggle, plus security hardening (OTP secrets redacted from logs, clipboard sync now pins the paired certificate).</p>
+      </description>
+    </release>
     <release version="0.1.0" date="2026-07-13" type="stable">
       <url type="details">https://github.com/navyas321/vibemis/releases/tag/0.1.0</url>
       <description>
