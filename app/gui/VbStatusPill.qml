@@ -8,7 +8,7 @@ Rectangle {
     implicitWidth: row.implicitWidth + 30
     implicitHeight: 32
     radius: VbTokens.radiusPill
-    // Handoff: tinted fill, no border — online = green@12%, offline = white@6% (matches VbHostCard's pill).
+    // Tinted fill, no border — online = green@12%, offline = white@6% (matches VbHostCard's pill).
     color: pill.online ? Qt.rgba(0.243, 0.835, 0.596, 0.12) : Qt.rgba(1, 1, 1, 0.06)
     border.width: 0
 
@@ -36,7 +36,7 @@ Rectangle {
             font.family: VbTokens.fontBody
             font.pixelSize: VbTokens.sizeBadge
             font.bold: true
-            font.letterSpacing: 0.7   // handoff pill spacing (badge uses 1.2)
+            font.letterSpacing: 0.7   // pill spacing (badge uses 1.2)
             color: pill.online ? VbTokens.statusOnline : VbTokens.textDim
         }
     }

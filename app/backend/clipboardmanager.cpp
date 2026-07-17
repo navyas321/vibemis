@@ -60,9 +60,8 @@ void ClipboardManager::loadSettings()
 
 ClipboardManager::~ClipboardManager()
 {
-    // test83 (review fix R1#13): don't emit connectionChanged/apolloSupportChanged from
-    // the destructor — QML bindings could re-enter a half-destroyed object. Just null the
-    // connection state directly.
+    // Don't emit connectionChanged/apolloSupportChanged from the destructor — QML bindings
+    // could re-enter a half-destroyed object. Just null the connection state directly.
     m_computer = nullptr;
     m_http = nullptr;
     m_syncInProgress = false;
@@ -90,8 +89,8 @@ ClipboardManager* ClipboardManager::create(QQmlEngine *qmlEngine, QJSEngine *jsE
 void ClipboardManager::setConnection(NvComputer *computer, NvHTTP *http)
 {
     m_computer = computer;
-    // test81 (review fix, same as ServerCommandManager): own the NvHTTP we're handed --
-    // the previous one (and its QNetworkAccessManager) leaked on every new session.
+    // Own the NvHTTP we're handed (same as ServerCommandManager): the previous one
+    // (and its QNetworkAccessManager) leaked on every new session.
     if (m_http && m_http != http && m_http->parent() == this) {
         delete m_http;
     }

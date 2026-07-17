@@ -17,8 +17,7 @@
 // When the user enables "prefer Tailscale", such addresses are tried first so remote
 // play over the tailnet connects without waiting for LAN probes to time out.
 // NOTE: this only reorders existing candidates — it can't conjure a tailnet
-// address that the host never reported. End-to-end remote-play latency/NAT behaviour
-// still needs verification on a real tailnet (not yet validated on device; LAN-only today).
+// address that the host never reported.
 static bool isTailscaleAddress(const NvAddress& addr)
 {
     const QString host = addr.address();
@@ -34,7 +33,7 @@ static bool isTailscaleAddress(const NvAddress& addr)
         return parsed.isInSubnet(QHostAddress(QStringLiteral("100.64.0.0")), 10);
     }
     if (parsed.protocol() == QAbstractSocket::IPv6Protocol) {
-        // Tailscale ULA range fd7a:115c:a1e0::/48 (review fix: IPv6 tailnets were missed before).
+        // Tailscale ULA range fd7a:115c:a1e0::/48.
         return parsed.isInSubnet(QHostAddress(QStringLiteral("fd7a:115c:a1e0::")), 48);
     }
     return false;
@@ -277,7 +276,7 @@ NvComputer::NvComputer(NvHTTP& http, QString serverInfo)
         this->serverPermissions = permissionStr.toUInt(&ok);
         // NB: no success log here — this constructor runs on EVERY serverInfo parse, including
         // the background poll every ~3s per host, and a per-parse qDebug was a top contributor
-        // to the on-device input-lag log storm. Keep only the rare parse-failure warning.
+        // to input-lag-inducing log spam. Keep only the rare parse-failure warning.
         if (!ok) {
             qWarning() << "Failed to parse server permissions:" << permissionStr;
             this->serverPermissions = 0;

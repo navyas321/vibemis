@@ -838,7 +838,7 @@ void FFmpegVideoDecoder::stringifyVideoStats(VIDEO_STATS& stats, char* output, i
     // Start with an empty string
     output[offset] = 0;
 
-    // Vibemis (test72): optional wall-clock line at the top of the performance
+    // Vibemis: optional wall-clock line at the top of the performance
     // overlay. Handy on a handheld in Game Mode, which hides the system clock.
     // Gated behind a setting; off by default so the overlay is unchanged for
     // existing users.

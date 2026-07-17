@@ -9,7 +9,7 @@ Moonlight Qt and Artemis (Apollo's extended protocol), tuned to pair with the **
 ## Highlights
 
 ### A complete gamepad-first redesign
-The whole UI was redesigned from a Claude Design prototype and implemented faithfully in Qt6/QML
+The whole UI was redesigned from a design prototype and implemented faithfully in Qt6/QML
 (dark theme, 1920×1200 canvas that scales cleanly to 1280×800), on a single design-token system, with
 a persistent **VIBEMIS** wordmark header and a controller hint bar on every screen:
 - **Computers** — rich host cards: online/offline pulse pill, host name, access line, a
@@ -35,8 +35,8 @@ Clipboard sync, server commands, OTP pairing, virtual display control, an in-str
 - Bounded **auto-reconnect** on stream drop, **per-game stream profiles**, **settings export/import**,
   battery-saver bitrate, a compact performance overlay, and `vibemis selftest` for CI/on-device tests.
 
-### Polished for 0.1.0.0 (three hands-on device passes)
-Every defect from the maintainer's on-device passes, fixed across three waves — including a
+### Polished for 0.1.0.0
+Every defect from hands-on device testing — including a
 **Quick Menu visual redesign** onto the app's design system (line-glyph icons, token colors,
 hint-bar footer — no more emoji), settings that survive a stream (a use-after-free of the shared
 preferences object after disconnects was found and fixed), and touch-overlay taps that land
@@ -61,7 +61,7 @@ correctly under Gamescope scaling:
   the real check→download→swap path (used as a release gate), and the update script now finds
   your install wherever it lives instead of assuming one folder.
 
-### Hardened (the launch-blocker wave, on-device validated)
+### Hardened (launch-blocker fixes, on-device validated)
 - **Input latency fixed** — three compounding launcher stalls removed (background-poll log flood,
   a software-blur repaint on card focus, and a focus hand-off gap).
 - **In-stream Quick Menu overhaul** — fills the stream window (was a tiny fixed box), no text

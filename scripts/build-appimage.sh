@@ -70,13 +70,13 @@ popd
 #     __vaDriverInit_1_22, returns VA_STATUS_ERROR_UNKNOWN, hardware decode
 #     dies. User sees "No functioning hardware accelerated video decoder".
 #
-# Diagnosis credit: in-repo diagnostic agent on the Legion Go S Z2:
-#   - DIAGNOSTIC_REPORT_test3.md (PR #6) §9 — identified __vaDriverInit_1_22
-#     ABI gap as root cause, recommended LD_LIBRARY_PATH/LD_PRELOAD fix.
-#   - testing/test4-libva-host-preference/report.md — confirmed the whole-dir
-#     LD_LIBRARY_PATH prepend was too broad (surfaced system Qt 6.9 over bundled
-#     6.4, fatal Qt version mismatch). Recommended surgical temp-dir approach.
-# The hook below uses the temp-dir approach from the test4 report §9 Option A.
+# The __vaDriverInit_1_22 ABI gap is the root cause, so the fix is to make the
+# loader resolve libva.so.2 from the host instead of from the bundle. A blanket
+# LD_LIBRARY_PATH prepend of the whole system lib dir is too broad: it also
+# surfaces the system Qt (e.g. 6.9) ahead of the AppImage-bundled Qt (6.4),
+# which is a fatal Qt version mismatch at startup. The surgical fix below
+# prepends only a temp dir of symlinks to the libva shared objects, so nothing
+# but libva is affected.
 #
 # linuxdeploy's AppRun sources every $APPDIR/apprun-hooks/*.sh before exec'ing
 # the binary, so env vars set here propagate to the binary.
@@ -118,7 +118,7 @@ fi
 # IMPORTANT — must be surgical. Prepending the whole system lib dir (e.g.
 # /usr/lib64) to LD_LIBRARY_PATH will also surface system Qt ahead of the
 # AppImage-bundled Qt, causing a fatal Qt version mismatch at startup
-# (test4 report: "Ignoring QPA plugin due to mismatching Qt versions").
+# (Qt logs "Ignoring QPA plugin due to mismatching Qt versions").
 #
 # Fix: create a throwaway tmpdir containing ONLY symlinks to the three libva
 # shared objects, then prepend just that tmpdir. Only libva gets overridden;

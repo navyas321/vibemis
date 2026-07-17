@@ -19,7 +19,7 @@ stable private `100.x.y.z` addresses that work across networks.
    rootfs), then runs `tailscale up` and prints a login URL — open it once and sign in. Re-runnable
    and idempotent. Check status anytime with `./scripts/setup-tailscale.sh --check`.
 2. **Tell Vibemis to prefer tailnet addresses.** In **Settings → enable "Prefer Tailscale addresses
-   for remote play"** (test51). Vibemis will then reach hosts by their `100.x` / MagicDNS address
+   for remote play"**. Vibemis will then reach hosts by their `100.x` / MagicDNS address
    first, so the same host entry works on LAN *and* remotely.
 3. **Add / stream your host** by its Tailscale IP (`100.x.y.z`) or MagicDNS name (`myhost.tailnet.ts.net`).
    Pair once (the PIN flow is the same as on LAN); after that it just connects.
@@ -30,7 +30,7 @@ You can do steps via the guided flow too: `./scripts/vibemis-setup.sh --host myh
 - **MagicDNS** (enable it in the Tailscale admin console) lets you use `myhost` instead of the IP.
 - **Quality on the go:** remote links are usually slower than LAN. Lower the bitrate (the data-usage
   estimate under the slider helps), and once it's available, the **Adaptive bitrate** setting
-  (experimental, test62) eases stutter on flaky links.
+  (experimental) eases stutter on flaky links.
 - **Latency:** Tailscale prefers a direct WireGuard path; if a connection falls back to a DERP relay
   it'll be higher latency. `tailscale status` shows `direct` vs `relay`.
 - **Battery:** userspace mode on SteamOS routes via a local proxy — fine for streaming, but for full

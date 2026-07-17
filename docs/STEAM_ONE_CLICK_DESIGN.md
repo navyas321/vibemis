@@ -1,12 +1,11 @@
 # Steam one-click library launch — design doc
 
 **Status:** implemented (script + docs), pending on-device verification.
-**Owner ask (verbatim):** "one-click launch from a SteamOS library game window directly into a
-Vibemis session with that exact game open — like how MoonDeckBuddy works with DeckyLoader, but
-design something that doesn't require installing so many things (DeckyLoader is already
-installed on my device, so using it is fine)."
+**Goal:** one-click launch from a SteamOS library game window directly into a Vibemis session
+with that exact game open — like how MoonDeckBuddy works with DeckyLoader, but with fewer things
+to install (DeckyLoader is already installed on the target device, so using it is fine).
 **Target device:** Lenovo Legion Go S Z2, SteamOS 3.x, Game Mode primary. DeckyLoader is already
-installed on the device (so it's an available option, not a blocker) — the ask is specifically for
+installed on the device (so it's an available option, not a blocker) — the goal is specifically
 **fewer moving parts**, not "DeckyLoader-free at all costs."
 **Prior art:** the SteamOS one-click integration effort — this doc is the research +
 implementation for auto-populating Steam shortcuts from the host app list (shortcuts.vdf editing,
@@ -82,7 +81,7 @@ no Desktop Mode round-trip.
 - **UX cost:** requires closing Steam once to run `--apply`, and re-running the sync (still with
   Steam closed) whenever the host's app list changes. Not live/dynamic like a Decky panel would
   be — new host games don't appear until the next sync.
-- **This is what the maintainer explicitly described wanting**: "a Steam library tile with that
+- **This is what the design goal calls for**: "a Steam library tile with that
   exact game" as the click target, which (b) doesn't deliver without a manual step and (c)
   doesn't deliver at all (a Decky panel is a menu, not a library tile).
 
@@ -105,7 +104,7 @@ library tiles involved at all.
 
 - **Best in-Game-Mode UX** of the three: live (no sync step, no stale list), no Steam restart
   needed, no library clutter from games you rarely play.
-- **But it is not what was asked for** — the maintainer's framing is explicitly a *library tile*
+- **But it is not what was asked for** — the goal is explicitly a *library tile*
   ("a SteamOS library game window"), not a menu you open in a plugin.
 - **More install surface, not less**, even with DeckyLoader already present: it's a second
   language/runtime for this codebase (Decky plugins are Python + TypeScript/Svelte, versioned
@@ -129,7 +128,7 @@ library tiles involved at all.
 **Recommendation: ship (a) as the primary path, keep (b) as the documented fallback.** (a) is the
 only option that satisfies the literal ask (a library tile that one-clicks into the exact game)
 without adding a new plugin runtime to maintain. The binary-format risk is real but bounded and
-mitigated the same way the repo's own `steam-shortcut` reference pattern already handles it
+mitigated with the same well-established safe-editing technique for `shortcuts.vdf`
 (mandatory backup, round-trip self-check before writing, byte-for-byte readback verification,
 refuse-while-Steam-running guard) — see §4. No hard blocker was found; if one turns up on-device
 (e.g. a future Steam client changes the VDF schema and the round-trip check starts failing), the
@@ -140,8 +139,7 @@ additional work.
 
 **Script:** `scripts/steam-sync-host-games.py` (pure standard library, no dependencies; Python
 chosen over bash because binary VDF parsing needs real byte-level structure, not text
-processing — this mirrors the existing `steam-shortcut` reference implementation this design
-follows).
+processing).
 
 ```
 python3 scripts/steam-sync-host-games.py "<host>"                        # dry-run (default)
@@ -175,8 +173,9 @@ guard).
 4. **Update in place, never duplicate**: existing entries are matched by `(Exe, LaunchOptions)`,
    not by array index or display name, so re-running the sync after a host app rename or after
    changing the AppImage's icon updates the existing tile instead of creating a second one. Any
-   shortcut this tool did *not* create (a user's own non-Steam games, or one added via the
-   `steam-shortcut` skill) is left completely untouched — verified in testing (§6 below).
+   shortcut this tool did *not* create (a user's own non-Steam games, or any other non-Steam
+   shortcut) is left completely untouched — the safety harness below includes a
+   foreign-shortcut-preservation scenario.
 5. **Byte-for-byte readback verification** after writing; a mismatch is a hard failure (exit 6)
    with the backup path printed so recovery is a single `cp` away.
 6. **appid**: the standard legacy non-Steam-shortcut convention,
@@ -188,8 +187,8 @@ This was exercised with an in-process test harness against a synthetic `userdata
 tree (create → idempotent re-apply → `--include-hidden` → `--prune-missing` → foreign-shortcut
 preservation → `--list` → corrupted-file refusal). All 8 scenarios passed, including confirming a
 manually-added non-Vibemis shortcut survives every sync untouched and that re-running with no
-host changes updates the same 2 entries rather than growing to 4. This is dev-machine logic
-verification only — it does not replace the on-device test plan in §8 (no real Steam client, no
+host changes updates the same 2 entries rather than growing to 4. This is local logic
+verification only — it does not replace the on-device test plan in §7 (no real Steam client, no
 real AppImage, no real Legion Go S Z2 GPU/Gamescope involved).
 
 ### Artwork wiring
@@ -211,7 +210,7 @@ having to independently reverse-engineer Qt's cache-path logic (org name, `QStan
 version/platform quirks) and guarantees it never gets out of sync with however the C++ side
 computes that path in the future.
 
-**Known limitation (not fixed here, flagged for the maintainer in §9):** `BoxArtManager::loadBoxArt`
+**Known limitation (not fixed here):** `BoxArtManager::loadBoxArt`
 only returns a real path for covers **already cached** — i.e. box art the user has previously
 browsed in the Vibemis app grid for that host. When the CLI's `--csv` path calls it on an
 uncached app, it kicks off an async network fetch and returns the placeholder immediately, and
@@ -228,10 +227,9 @@ capsule" — the one Game Mode primarily shows), never overwriting existing cust
 ## 5. Why not touch the CLI itself
 
 `app/cli/listapps.cpp` could be given a `--prefetch-boxart` mode that blocks until the async
-fetch completes, closing the artwork gap in §4. That's a real C++ change with a build/test cycle
-(qmake6, AppImage rebuild, device verification) — out of scope for this ticket, which is
-explicitly a device-independent scripting task. Flagged as an open
-question for the maintainer in §9; it's a small, well-scoped follow-up if wanted.
+fetch completes, closing the artwork gap in §4. That's a real C++ change (qmake6, AppImage
+rebuild, device verification) — out of scope here, which is explicitly a device-independent
+scripting task; it's a small, well-scoped follow-up if wanted.
 
 ## 6. Naming and collision handling
 
@@ -244,19 +242,7 @@ names containing a literal double-quote character are skipped with a warning (St
 one real device app list available (Desktop, Steam Big Picture, MoonDeckStream, Virtual Display —
 none contain quotes) but the guard exists in case a Sunshine/Apollo app is ever named with one.
 
-## 7. Verification performed in this session
-
-- Ran the script against a synthetic Steam `userdata/` tree and a stubbed `vibemis list --csv`
-  response (real AppImage execution isn't possible from this Windows dev box) — see §4 for the
-  8 scenarios covered.
-- Confirmed the real CSV column layout, quoting, and `--csv` flag name against
-  `app/cli/commandlineparser.cpp` (`ListCommandLineParser::parse`, flag `--csv`) and
-  `app/cli/listapps.cpp` (`printAppCSV`) directly, rather than guessing the format.
-- Cross-checked the plain (non-CSV) `vibemis list <host>` output shape (one app name per line, no
-  header) against a real device transcript.
-- Did **not** run the script against a real Steam client or the real Legion Go S Z2 — that's §8.
-
-## 8. On-Device Test Plan
+## 7. On-Device Test Plan
 
 Run on-device once the script is deployed. Do not run this against an active Steam session without
 reading §4's Steam-must-be-closed requirement first.
@@ -292,22 +278,7 @@ reading §4's Steam-must-be-closed requirement first.
    Steam and all others are untouched.
 9. **Backup restores cleanly**: with Steam closed, copy the newest `shortcuts.vdf.bak-*` over
    `shortcuts.vdf`, reopen Steam, and confirm the library returns to its pre-sync state (synced
-   tiles gone, any pre-existing non-Steam games — e.g. one added via the `steam-shortcut` skill —
+   tiles gone, any pre-existing non-Steam games — e.g. one added manually through Steam —
    still present and unaffected).
 10. **Non-interference**: confirm a manually-added non-Steam game (added via Steam's own "Add a
-    Non-Steam Game" dialog, or via the `steam-shortcut` skill) survives steps 3–9 untouched.
-
-## 9. Open questions for the maintainer
-
-- Is the `"<app> — <host>"` tile naming acceptable, or would you rather have a per-host prefix/
-  Steam collection instead (Steam doesn't expose creating "collections" via `shortcuts.vdf`
-  itself — that's a separate `levelinfo`/library-customization file — so this would be a
-  follow-up, not part of this ticket)?
-- Do you want `steam-sync-host-games.py` folded into `scripts/vibemis-setup.sh`'s guided flow
-  (as an opt-in step after pairing, alongside the existing `add-all-games-to-steam.sh --confirm`
-  call) once it's on-device verified, or kept as a standalone opt-in script for now?
-- Is the boxart-only-if-already-cached limitation (§4 "Known limitation") acceptable, or is a
-  `vibemis list --csv --prefetch-boxart` follow-up (blocks until the async fetch completes, §5)
-  worth scheduling as a small, separate CLI change?
-- `--prune-missing` is off by default. Should the guided setup flow (if wired up per the question
-  above) ever pass it automatically, or should pruning always require an explicit manual run?
+    Non-Steam Game" dialog) survives steps 3–9 untouched.

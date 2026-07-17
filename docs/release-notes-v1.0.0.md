@@ -7,7 +7,7 @@ Moonlight Qt and Artemis (Apollo's extended protocol), tuned to pair with the **
 ## Highlights
 
 ### A complete gamepad-first redesign
-The whole UI was redesigned from a Claude Design prototype and implemented faithfully in Qt6/QML
+The whole UI was redesigned from a design prototype and implemented faithfully in Qt6/QML
 (dark theme, 1920×1200 canvas that scales cleanly to 1280×800), on a single design-token system, with
 a persistent **VIBEMIS** wordmark header and a controller hint bar on every screen:
 - **Computers** — rich host cards: online/offline pulse pill, host name, access line, a

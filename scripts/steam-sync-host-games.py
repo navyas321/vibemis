@@ -150,7 +150,8 @@ def roundtrip_ok(original: bytes) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Steam discovery (same conventions as the steam-shortcut skill's add_shortcut.py)
+# Steam discovery: find the install root, then each per-user userdata/<id>/config
+# directory (where shortcuts.vdf and the grid/ artwork folder live).
 # ---------------------------------------------------------------------------
 
 

@@ -36,8 +36,6 @@ The script:
 2. Writes `apprun-hooks/01-libva-driver-paths.sh` (LIBVA_DRIVERS_PATH + surgical libva symlink fix)
 3. Runs `linuxdeploy --plugin qt --output appimage`
 
-For test-specific AppImage builds (different hook or version tag), use the per-test build scripts in `/root/build-test<N>.sh`.
-
 ### Disabled build options for AppImage
 
 | Option | Why disabled |

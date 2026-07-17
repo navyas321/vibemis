@@ -73,7 +73,7 @@ QVariant ComputerModel::data(const QModelIndex& index, int role) const
         }
     }
     case HostTypeRole: {
-        // Redesign 1a host-type badge. Vibepollo deliberately mimics
+        // Host-type badge. Vibepollo deliberately mimics
         // Sunshine's serverinfo (no ApolloVersion, state=SUNSHINE_SERVER_FREE), but it DOES emit
         // the Apollo-lineage <Permission> tag — current builds even on unpaired probes (verified
         // against a live Vibepollo host: <Permission>0</Permission> with PairStatus 0). So key on

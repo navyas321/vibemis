@@ -19,8 +19,8 @@
 SystemProperties::SystemProperties()
 {
     versionString = QString(VERSION_STR);
-    // These MEMBER-backed Q_PROPERTYs were declared but never assigned (the assignment
-    // lived in reverted HDR WIP), leaving them uninitialized — QML read garbage. Initialize both.
+    // These MEMBER-backed Q_PROPERTYs were declared but never assigned, leaving them
+    // uninitialized — QML read garbage. Initialize both.
     isSteamDeck = isSteamDeckOrGamescope();
     hasVulkanHdr = false;
     hasDesktopEnvironment = WMUtils::isRunningDesktopEnvironment();
@@ -155,7 +155,7 @@ QString SystemProperties::checkTailscaleStatus()
 
 bool SystemProperties::openUrl(const QString& url)
 {
-    // Links "did nothing" on device. Root cause: the
+    // Links "did nothing" in the packaged AppImage build. Root cause: the
     // AppImage runtime exports LD_LIBRARY_PATH / Qt plugin paths pointing into the bundle;
     // QDesktopServices/xdg-open spawn the host browser WITH that environment, so it loads
     // the bundled libraries and crashes on startup — silently, from the user's seat.

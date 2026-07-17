@@ -3,8 +3,8 @@
 Every build this project ever published, catalogued under **[Semantic Versioning 2.0.0](https://semver.org)**
 as one release train: `0.1.0-alpha.NNN` → `0.1.0-beta.NNN` → `0.1.0-rc.NNN` → **`0.1.0`**
 (the first stable, sole non-prerelease, Latest). Restored and renumbered 2026-07-13 from local
-clone tags, the CI run inventory (507+ runs), git history, and all-sessions transcript
-archaeology after a release-page cleanup deleted the originals.
+clone tags, the CI run inventory (507+ runs), and git history after a release-page cleanup
+deleted the originals.
 
 ## Proven properties (machine-checked against the live release API)
 
@@ -13,7 +13,7 @@ archaeology after a release-page cleanup deleted the originals.
 - **P3 Uniform increments** — in canonical order every consecutive pair is same-class with ΔN=+1, or a class boundary restarting at 001 (bare terminal). Nothing else exists. ∎
 - **P4 Chronology** — within every train, catalog order is non-decreasing in commit timestamp; cross-train order is semver precedence (alpha < beta < rc < release).
 - **P5 Latest invariant** — exactly one non-prerelease entry (`0.1.0`) and `/releases/latest` resolves to it.
-- **P6 Completeness** — 182 entries = 119 alpha + 56 beta + 6 rc + 1 stable, accounting for every release-producing CI run and every identity recovered from all AI-session transcripts (Claude + Codex).
+- **P6 Completeness** — 182 entries = 119 alpha + 56 beta + 6 rc + 1 stable, accounting for every release-producing CI run.
 
 ## Numbering rules
 

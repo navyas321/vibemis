@@ -70,8 +70,8 @@ vibemis/
 
 | # | Issue | Status | Branch / PR |
 |---|-------|--------|-------------|
-| #11 | VAAPI — "No functioning hardware accelerated video decoder" on SteamOS | In progress (test5 pending) | `fix/appimage-vaapi-driver-paths` (PR #4) |
-| #12 | Controller input not working over stream | Pending — likely Vibepollo permissions; need user to verify in Vibepollo UI | — |
+| #11 | VAAPI — "No functioning hardware accelerated video decoder" on SteamOS | Open | `fix/appimage-vaapi-driver-paths` (PR #4) |
+| #12 | Controller input not working over stream | Open — likely a Vibepollo host permissions setting | — |
 | #13 | HDR applied on SDR display | Fixed | `fix/hdr-display-capability-gate` (PR #5) |
 
 ## Vibemis vs upstream diff highlights
