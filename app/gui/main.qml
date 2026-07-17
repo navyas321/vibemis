@@ -552,6 +552,8 @@ ApplicationWindow {
 
             NavigableToolButton {
                 property string browserUrl: ""
+                property string assetUrl: ""
+                property bool installing: false
 
                 id: updateButton
 
@@ -566,7 +568,21 @@ ApplicationWindow {
                 visible: false
 
                 onClicked: {
-                    if (SystemProperties.hasBrowser) {
+                    if (installing) {
+                        return;
+                    }
+                    // Vibemis: prefer the in-app auto-updater — download the new AppImage,
+                    // swap it over the running one ($APPIMAGE), and relaunch. Only fall back
+                    // to opening the release page in a browser when an in-place install isn't
+                    // possible (not running from an AppImage, or the release has no .AppImage
+                    // asset). Previously this button only ever opened the release page.
+                    if (AutoUpdateChecker.canInstallUpdates() && assetUrl !== "") {
+                        installing = true;
+                        ToolTip.text = qsTr("Downloading update…");
+                        ToolTip.visible = true;
+                        AutoUpdateChecker.installUpdate(assetUrl);
+                    }
+                    else if (SystemProperties.hasBrowser && browserUrl !== "") {
                         SystemProperties.openUrl(browserUrl);
                     }
                 }
@@ -578,8 +594,33 @@ ApplicationWindow {
                     updateButton.visible = true
                 }
 
+                // Capture the .AppImage asset URL from the update check so a click can
+                // install in place rather than only opening the release page.
+                function captureAssetUrl(available, version, htmlUrl, assetUrl, message)
+                {
+                    updateButton.assetUrl = available ? assetUrl : ""
+                    if (htmlUrl !== "") {
+                        updateButton.browserUrl = htmlUrl
+                    }
+                }
+
+                // If an in-place install fails, drop back to the browser path so the
+                // next tap opens the release page, and surface the error.
+                function handleInstallFailed(error, htmlUrl)
+                {
+                    updateButton.installing = false
+                    updateButton.assetUrl = ""
+                    if (htmlUrl !== "") {
+                        updateButton.browserUrl = htmlUrl
+                    }
+                    ToolTip.text = qsTr("Update failed — tap to open the release page")
+                    ToolTip.visible = true
+                }
+
                 Component.onCompleted: {
                     AutoUpdateChecker.onUpdateAvailable.connect(updateAvailable)
+                    AutoUpdateChecker.updateCheckFinished.connect(captureAssetUrl)
+                    AutoUpdateChecker.installFailed.connect(handleInstallFailed)
                     AutoUpdateChecker.start()
                 }
 
