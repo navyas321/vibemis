@@ -17,7 +17,7 @@ CenteredGridView {
     property bool showHiddenGames
     property bool showGames
     // Redesign 1b header status line — passed from PcView when this view is pushed so the header
-    // can show "● <hostType> · <transport>" (matching previews/1b-app-grid.png) without re-querying
+    // can show "● <hostType> · <transport>" without re-querying
     // the ComputerModel here.
     property bool hostOnline: true
     property string hostType: ""
@@ -102,7 +102,7 @@ CenteredGridView {
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        // Redesign 1b header (previews/1b-app-grid.png, lines 111-178): row 1 is a fixed 84px band
+        // Redesign 1b header: row 1 is a fixed 84px band
         // (padding 0 40, bottom divider) = Back + host name + "● <hostType> · <transport>" status,
         // Refresh + Settings on the right; row 2 = "Apps" + "N available", offset by the body's own
         // top padding (screenPadY = 52) below the divider. The global toolbar is collapsed on all
@@ -254,7 +254,7 @@ CenteredGridView {
         // Dim the app if it's hidden
         opacity: model.hidden ? 0.4 : 1.0
 
-        // Redesign 1b tile card (previews/1b-app-grid.png): 320x430, radius 20, bg elev / focused
+        // Redesign 1b tile card: 320x430, radius 20, bg elev / focused
         // fill + accent ring via VbCard's built-in VbFocusRing recipe (see VbCard.qml — "used by
         // ... app tiles (1b)"). Box art fills the card with a small inset so the rounded frame and
         // border remain visible, matching the HTML tile chrome.

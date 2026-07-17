@@ -747,7 +747,7 @@ NvHTTP::sendClipboardContent(const QString& content)
         request.setHeader(QNetworkRequest::ContentTypeHeader, "text/plain; charset=utf-8");
 
         // Clipboard connects by IP address, but Vibepollo/Apollo's self-signed cert
-        // is issued to the hostname (e.g. "Navid-PC"). The IP is not in the cert's
+        // is issued to the hostname (e.g. "Gaming-PC"). The IP is not in the cert's
         // SAN, so strict hostname verification always fails with:
         //   "SSL handshake failed: The host name did not match any of the valid hosts"
         // Mirror openConnection(): keep full peer verification and let

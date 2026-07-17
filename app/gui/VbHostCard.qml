@@ -2,8 +2,8 @@ import QtQuick 2.9
 import QtQuick.Layouts 1.3
 import Vibemis.Redesign 1.0
 
-// Redesign 1a host card — an EXACT port of the design spec "Vibemis Redesign.dc.html" #1a card
-// (lines 58-91) / previews/1a-computers.png. Pure-visual: PcView's delegate binds model roles to these
+// Redesign 1a host card — an EXACT port of the #1a host-card design spec. Pure-visual:
+// PcView's delegate binds model roles to these
 // properties and handles input/activation. 430px wide, radius 20, bg elev, padding 32, three stacked
 // blocks (gap 20): [monitor-outline rect  ·  ONLINE/OFFLINE pill] / [name + access] / [badge + meta].
 // Focused = 2px accent border + accent glow (VbFocusRing). Offline = whole card opacity .75, grey monitor.

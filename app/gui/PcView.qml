@@ -378,7 +378,7 @@ CenteredGridView {
         }
         // The manual clicked() calls are REQUIRED (ItemDelegate has no
         // native Return/Enter activation — removing these bricked A on-device in
-        // an early alpha). The double-push symptom is fixed by the stackView.busy guard in
+        // 0.2.0-alpha.001). The double-push symptom is fixed by the stackView.busy guard in
         // onClicked below, which turns any duplicate activation into a no-op.
         Keys.onReturnPressed: {
             if (pcGrid.ghostSelected) {

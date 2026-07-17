@@ -38,17 +38,17 @@ target is SteamOS (Linux) -- see docs/STEAM_ONE_CLICK_DESIGN.md.
 Usage
 -----
     # Dry run: see what would change (safe to run anytime, including while Steam is open)
-    python3 steam-sync-host-games.py "Navid-PC"
+    python3 steam-sync-host-games.py "Gaming-PC"
 
     # Apply (Steam must be closed first)
-    python3 steam-sync-host-games.py "Navid-PC" --apply
+    python3 steam-sync-host-games.py "Gaming-PC" --apply
 
     # List the Vibemis-managed shortcuts already in shortcuts.vdf (any host, or filter with a host arg)
     python3 steam-sync-host-games.py --list
-    python3 steam-sync-host-games.py "Navid-PC" --list
+    python3 steam-sync-host-games.py "Gaming-PC" --list
 
     # Remove shortcuts for apps no longer on the host (off by default -- opt in explicitly)
-    python3 steam-sync-host-games.py "Navid-PC" --apply --prune-missing
+    python3 steam-sync-host-games.py "Gaming-PC" --apply --prune-missing
 
 Override the AppImage path with --appimage or $VIBEMIS_APPIMAGE (default:
 ~/Applications/Vibemis.AppImage, matching install-vibemis-desktop.sh).

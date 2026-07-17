@@ -36,12 +36,12 @@ Two pieces have already shipped, both real-device-tested on this exact Legion Go
   (`~/Applications/Vibemis.AppImage`) with a clean `Name=Vibemis` desktop entry.
 - `scripts/add-game-to-steam.sh <host> <app>` / `scripts/add-all-games-to-steam.sh <host>
   [--confirm]` — generate one `.desktop` launcher per host game
-  (`Exec="$APPIMAGE" stream "<host>" "<app>"`), device-verified on 2026-05-30 (4/4 apps parsed
-  and launched correctly on the real host "Navid-PC").
+  (`Exec="$APPIMAGE" stream "<host>" "<app>"`), device-tested on the Legion Go S Z2 (all listed
+  apps parsed and launched correctly).
 
 The gap those don't close: a `.desktop` file is **not** a Steam library tile. The user still has
 to open Desktop Mode, run "Add a Non-Steam Game to My Library," and tick each one by hand. That's
-the friction this ticket is about closing.
+the friction this design closes.
 
 ## 2. What MoonDeckBuddy does (and why we don't need its shape)
 
@@ -233,7 +233,7 @@ scripting task; it's a small, well-scoped follow-up if wanted.
 
 ## 6. Naming and collision handling
 
-Synced `AppName` is `"<app> — <host>"` (e.g. `"Portal 2 — Navid-PC"`) so the same app name on two
+Synced `AppName` is `"<app> — <host>"` (e.g. `"Portal 2 — Gaming-PC"`) so the same app name on two
 different hosts never collides in Steam's library, and so it's obvious in the library which
 host a tile streams from. `LaunchOptions` (`stream "<host>" "<app>"`) is the actual identity key
 used for update-vs-create matching (§4.4), not the display name, so renaming is safe. Host or app

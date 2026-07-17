@@ -2,7 +2,7 @@ import QtQuick 2.9
 import Vibemis.Redesign 1.0
 
 // Small all-caps outline badge (host-type: VIBEPOLLO / APOLLO accent outline, SUNSHINE neutral).
-// docs/design/redesign status.badge. `neutral` = use text.dim outline instead of accent.
+// Status badge component. `neutral` = use text.dim outline instead of accent.
 Rectangle {
     id: badge
     property alias text: label.text

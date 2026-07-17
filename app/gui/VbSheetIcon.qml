@@ -3,7 +3,7 @@ import Vibemis.Redesign 1.0
 
 // Monochrome 2px line icons for the Host-options side-sheet (1d). A square Canvas that
 // recolors via `color` (danger rows pass statusDanger, focused rows pass accent, otherwise
-// textMute). Drawn in-app so no icon font is needed. docs/design/redesign preview 1d.
+// textMute). Drawn in-app so no icon font is needed.
 Canvas {
     id: g
     property string kind: "apps"

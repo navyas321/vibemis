@@ -1,7 +1,7 @@
 import QtQuick 2.9
 import Vibemis.Redesign 1.0
 
-// The Vibemis focus-ring recipe (docs/design/redesign): 2px accent border + a 5px accent@22%
+// The Vibemis focus-ring recipe: 2px accent border + a 5px accent@22%
 // glow + a drop shadow. Place as a sibling/overlay of a focusable surface and bind `active` to
 // its activeFocus. The parent surface should switch its own fill to VbTokens.focusedFill when
 // active. Non-interactive; purely visual.

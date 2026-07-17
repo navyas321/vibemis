@@ -399,7 +399,7 @@ ApplicationWindow {
             }
 
             // App grid (1b) header: host name + online-dot + "Vibepollo · LAN" (host-type · transport),
-            // left-aligned — the design's "‹ Navid-PC / ● Vibepollo · 4 ms". Reads the current AppView's
+            // left-aligned — the design's "‹ Gaming-PC / ● Vibepollo · 4 ms". Reads the current AppView's
             // hostOnline/hostType/hostTransport properties (passed in by PcView when the view is pushed).
             ColumnLayout {
                 visible: toolBar.onAppView

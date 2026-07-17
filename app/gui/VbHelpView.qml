@@ -3,7 +3,7 @@ import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.2
 import Vibemis.Redesign 1.0
 
-// Redesign screen 1f — Help. docs/design/redesign, preview 1f. Pure presentation (no host/
+// Redesign screen 1f — Help. Pure presentation (no host/
 // streaming wiring): four reference cards — Quick Menu, Keyboard shortcuts, Gamepad shortcuts,
 // Remote play — on the token system. Pushed onto the StackView by the Help button; Ⓑ / Esc /
 // Back pops it.
@@ -26,7 +26,7 @@ Item {
     // Full-bleed window background.
     Rectangle { anchors.fill: parent; color: VbTokens.bgWindow }
 
-    // this screen has no actionable/focusable element, so on entry focus would
+    // This screen has no actionable/focusable element, so on entry focus would
     // otherwise stick on the global toolbar and gamepad Ⓑ/Back would do nothing ("frozen" screen).
     // Grab focus on the (invisible) root Item — an Item draws no highlight — purely so Ⓑ/Esc/Back
     // are handled here and pop the screen. No arrow-key navigation: the page does not scroll.

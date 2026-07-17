@@ -1,7 +1,7 @@
 import QtQuick 2.9
 import Vibemis.Redesign 1.0
 
-// Online/offline status pill: a dot (online pulses 2.4s) + label. docs/design/redesign.
+// Online/offline status pill: a dot (online pulses 2.4s) + label.
 Rectangle {
     id: pill
     property bool online: true

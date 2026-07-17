@@ -2,7 +2,7 @@ pragma Singleton
 import QtQuick 2.9
 import StreamingPreferences 1.0
 
-// Vibemis redesign design tokens — mapped 1:1 from docs/design/redesign/tokens/vibemis-tokens.json.
+// Vibemis redesign design tokens.
 // Dark theme only. Canvas 1920x1200 (Legion Go S),
 // scales to 1280x800 (Steam Deck) via anchors/Layouts — never hard-code coordinates against these.
 // Registered as a QML singleton in app/main.cpp: qmlRegisterSingletonType(qrc:/gui/VbTokens.qml).

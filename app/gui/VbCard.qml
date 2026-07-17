@@ -4,7 +4,7 @@ import Vibemis.Redesign 1.0
 // Elevated card surface with the redesign focus-ring recipe built in. Bind `focused` to the
 // owning delegate's focus/selection state — the fill switches to VbTokens.focusedFill and the
 // focus ring appears. Put content inside as children (they layer above the surface).
-// docs/design/redesign — used by host cards (1a), app tiles (1b), sidebar rows, action rows.
+// Used by host cards, app tiles, sidebar rows, and action rows.
 Item {
     id: card
     property bool focused: false

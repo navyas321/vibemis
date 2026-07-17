@@ -10,7 +10,7 @@ import Vibemis.Redesign 1.0
 
 // Redesign screen 1d — Host options side-sheet. Replaces PcView's old right-click
 // NavigableMenu: a 560px full-height sheet that slides in from the right over a 60% scrim.
-// docs/design/redesign preview 1d. Opened via pcContextMenu.open() (Ⓧ / long-press / offline
+// The host-options sheet. Opened via pcContextMenu.open() (Ⓧ / long-press / offline
 // tap on a card). Gamepad-first: D-pad moves the focused row, Ⓐ/Enter selects, Ⓑ/Esc closes.
 //
 // `actions` is an array of { label, icon, danger, visible, trigger } — the caller (PcView)

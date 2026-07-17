@@ -41,7 +41,7 @@ Rectangle {
         }
 
         model: ListModel {
-            ListElement { name: "Navid-PC" }
+            ListElement { name: "Gaming-PC" }
         }
 
         delegate: NavigableItemDelegate {

@@ -2,8 +2,8 @@ import QtQuick 2.9
 import QtQuick.Layouts 1.2
 import Vibemis.Redesign 1.0
 
-// Persistent gamepad button-hint bar shown at the bottom of every redesigned screen
-// (docs/design/redesign). Feed `hints` as an array of { glyph, label } objects. Glyphs are
+// Persistent gamepad button-hint bar shown at the bottom of every redesigned screen.
+// Feed `hints` as an array of { glyph, label } objects. Glyphs are
 // the controller face buttons (Ⓐ Ⓑ Ⓧ Ⓨ), shoulders (LB/RB rounded key-caps), or ☰. Toggle
 // via VbTokens.showHints. Right-aligned hints can be passed via `hintsRight`.
 Rectangle {

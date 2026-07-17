@@ -261,9 +261,8 @@ static bool releaseMatchesChannel(const QJsonObject& release,
 
     const QStringList parts = tag.split('.');
     if (parts.count() == 4) {
-        // W.X.Y.Z structural channels. Amended for stable PATCHES: a stable is Y==0
-        // with Z free (Z = hotfix
-        // patch counter), gated on !prerelease; an alpha is Z>0 AND prerelease-flagged
+        // W.X.Y.Z structural channels. Amended for stable PATCHES: a stable is Y==0 with Z
+        // free (Z = hotfix patch counter), gated on !prerelease; an alpha is Z>0 AND prerelease-flagged
         // (CI always marks alphas prerelease), so patches and alphas can't collide.
         qlonglong y = parts[2].toLongLong();
         qlonglong z = parts[3].toLongLong();
