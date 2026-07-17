@@ -151,8 +151,18 @@ Item {
                             ]
                             delegate: RowLayout {
                                 Layout.fillWidth: true; spacing: 16
-                                Text { text: modelData.v; font.family: VbTokens.fontBody; font.pixelSize: VbTokens.sizeBody; color: VbTokens.textMute; Layout.fillWidth: true }
+                                Text {
+                                    text: modelData.v
+                                    font.family: VbTokens.fontBody; font.pixelSize: VbTokens.sizeBody; color: VbTokens.textMute
+                                    Layout.fillWidth: true
+                                    // Elide + zero minimum so the label can't leak its full-text
+                                    // width up the layout chain — that leak pushed the keycap past
+                                    // the card border and stretched this card wider than the others.
+                                    Layout.minimumWidth: 0
+                                    elide: Text.ElideRight
+                                }
                                 Rectangle {
+                                    Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                                     implicitWidth: 34; implicitHeight: 34; radius: 8; color: VbTokens.bgWindow
                                     border.width: 1; border.color: Qt.rgba(1, 1, 1, 0.14)
                                     Text { anchors.centerIn: parent; text: modelData.k; font.family: VbTokens.fontBody; font.pixelSize: 15; font.weight: Font.Bold; color: VbTokens.text }
@@ -190,8 +200,18 @@ Item {
                             ]
                             delegate: RowLayout {
                                 Layout.fillWidth: true; spacing: 16
-                                Text { text: modelData.v; font.family: VbTokens.fontBody; font.pixelSize: VbTokens.sizeBody; color: VbTokens.textMute; Layout.fillWidth: true }
-                                Text { text: modelData.k; font.family: VbTokens.fontBody; font.pixelSize: VbTokens.sizeLabel; font.weight: Font.DemiBold; color: VbTokens.textDim }
+                                Text {
+                                    text: modelData.v
+                                    font.family: VbTokens.fontBody; font.pixelSize: VbTokens.sizeBody; color: VbTokens.textMute
+                                    Layout.fillWidth: true
+                                    Layout.minimumWidth: 0
+                                    elide: Text.ElideRight
+                                }
+                                Text {
+                                    text: modelData.k
+                                    font.family: VbTokens.fontBody; font.pixelSize: VbTokens.sizeLabel; font.weight: Font.DemiBold; color: VbTokens.textDim
+                                    Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                                }
                             }
                         }
                     }
