@@ -246,12 +246,21 @@ jobs:
               TARGET="$(echo "$TARGET" | cut -d. -f1).$(( $(echo "$TARGET" | cut -d. -f2) + 1 )).0"
             fi
           fi
+          # Hotfix/patch exemption (maintainer 2026-07-17): a PATCH release (X.Y.Z with Z>0) is a
+          # hotfix and may go straight to stable WITHOUT an rc — hotfixes are urgent and skip the
+          # candidate stage. Only minor/major stables (Z==0, i.e. X.Y.0) must be promoted from a
+          # preceding rc. (SemVer-aligned: patches are fixes; minors/majors are feature/breaking cuts.)
+          PATCH=$(echo "$TARGET" | cut -d. -f3)
+          if [ -n "$PATCH" ] && [ "$PATCH" != "0" ]; then
+            echo "Patch/hotfix ${TARGET} (patch=${PATCH}) — rc-before-stable not required; proceeding."
+            exit 0
+          fi
           # Match both the clean (<base>-rc.NNN) and legacy ordinal-first (<base>-nXXXXX-rc.NNN) shapes.
           RC_COUNT=$(git ls-remote --tags origin "refs/tags/${TARGET}-*" 2>/dev/null \
                      | grep -Ec "refs/tags/${TARGET}(-n[0-9]+)?-rc\.[0-9]+\$" || true)
           if [ "${RC_COUNT:-0}" -eq 0 ]; then
-            echo "::error::Stable cut REFUSED: no release candidate exists for ${TARGET}."
-            echo "::error::Policy (rc-before-stable): a stable release must be promoted from a green rc."
+            echo "::error::Stable cut REFUSED: no release candidate exists for the minor/major ${TARGET}."
+            echo "::error::Policy (rc-before-stable): a minor/major stable must be promoted from a green rc (patches/hotfixes are exempt)."
             echo "::error::Cut one first — dispatch release_type=rc (builds ${TARGET}-rc.NNN), verify it, THEN re-dispatch stable."
             exit 1
           fi

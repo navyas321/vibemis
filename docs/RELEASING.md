@@ -29,14 +29,18 @@ the CI smart-build behavior, and the README-update rule.
   before anything builds. Type the phrase only when relaying the maintainer's
   explicit approval of that specific cut.
 
-  ⚠ **rc-before-stable (maintainer 2026-07-17): a stable release MUST be promoted
-  from a release candidate — you cannot cut stable straight from a beta.** The train
-  is beta → **rc** → stable: dispatch `release_type=rc` (builds `<version>-rc.NNN`),
-  verify it green, THEN cut stable. **CI-enforced:** the `Enforce rc-before-stable
-  gate` step in `dev-build.yml` fails a `release_type=stable` dispatch unless a
-  matching `<version>-rc.*` tag already exists (rc tags only appear after a successful
-  rc build, so this also proves the candidate built green). A stable cut therefore
-  needs BOTH `stable_confirm=CONFIRM-STABLE` AND a pre-existing rc for that version.
+  ⚠ **rc-before-stable (maintainer 2026-07-17): a MINOR or MAJOR stable release MUST be
+  promoted from a release candidate — you cannot cut a feature/breaking stable straight
+  from a beta.** The train is beta → **rc** → stable: dispatch `release_type=rc` (builds
+  `<version>-rc.NNN`), verify it green, THEN cut stable. **CI-enforced:** the `Enforce
+  rc-before-stable gate` step in `dev-build.yml` fails a minor/major `release_type=stable`
+  dispatch unless a matching `<version>-rc.*` tag already exists (rc tags only appear after
+  a successful rc build, so this also proves the candidate built green).
+  **HOTFIX EXEMPTION (maintainer 2026-07-17): PATCH releases (X.Y.Z with Z>0, e.g. 0.3.1,
+  0.3.2) are hotfixes and go STRAIGHT to stable WITHOUT an rc** — the gate detects Z>0 and
+  skips the rc requirement. Only minor/major cuts (X.Y.0) need the rc. So: a minor/major
+  stable needs BOTH `stable_confirm=CONFIRM-STABLE` AND a pre-existing rc; a patch/hotfix
+  needs only `stable_confirm=CONFIRM-STABLE`.
 - **Beta** = `0.5.0-beta.NNN` (vibemis-main), **alpha** = `0.5.0-alpha.NNN` (test
   branches), dev = `0.5.0-dev.<run>.<branch>`. NNN is dense + zero-padded, computed
   from existing tags — never delete a tag. **Page-ordering decision:
