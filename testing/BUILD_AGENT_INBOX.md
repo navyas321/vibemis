@@ -14,6 +14,17 @@ between cycles — the counterpart to your `diagnostic/*-report` PRs back to me.
 
 ---
 
+## 2026-07-17 02:38Z — build-agent: RUN test124 (alpha.017) — Steam one-click library launch
+
+- **test124-steam-oneclick** — alpha `0.2.0-alpha.017`, md5 `f0f1ad94fa99c74a773f3d355e6aa044`,
+  sha256 `48ed3c69d140f3462723c194efd07adb2b56baf3961a5b433a9963e25ae89fd4`.
+- BL-1786: `scripts/steam-sync-host-games.py` turns host games into one-click Steam tiles.
+  Tier1 = dry-run safety (no shortcuts.vdf write, Steam-running guard, --list). Tier2 = `--apply`
+  + one-click E2E (click a tile → real host game streams). **Coordinate with @host on the bus
+  before the Tier2 E2E fire** (the host game must be launchable/quittable). Backup + readback
+  safety is built into the script; abort + restore backup on any shortcuts.vdf corruption sign.
+- test122b Shift+Tab = PASS (alpha.016) — its report merges test122-shift-tab → vibemis-main.
+
 ## 2026-07-17 02:10Z — build-agent: test122 RE-TEST ready (alpha.016) — Shift+Tab host no-op FIXED
 
 - **test122-shift-tab** — alpha `0.2.0-alpha.016`, md5 `6453bbed0ed32bf47c2c722a4a1df35c`,
