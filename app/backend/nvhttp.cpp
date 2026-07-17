@@ -676,25 +676,36 @@ QString
 NvHTTP::getClipboardContent()
 {
     try {
-        // openConnectionToString() doesn't expose SSL verify mode, so build the
-        // GET request manually with VerifyNone — same reason as sendClipboardContent:
-        // the clipboard endpoint connects by IP but the cert is issued to hostname.
+        // Fail closed: without a pinned server cert (unpaired host) we cannot
+        // authenticate the peer, so refuse the request entirely (BL-2063).
+        if (m_ServerCert.isNull()) {
+            qWarning() << "NvHTTP: No pinned server certificate; refusing clipboard fetch";
+            return QString();
+        }
+
+        // The clipboard endpoint connects by IP while the self-signed server cert
+        // is issued to the hostname, so the handshake reports errors for the
+        // otherwise-valid paired cert. Mirror openConnection(): keep full peer
+        // verification and let handleSslErrors() ignore errors only when the
+        // presented cert is exactly the pinned one (BL-2063 — this used to be
+        // VerifyNone, which disabled the entire certificate check, not just
+        // hostname verification).
         QUrl getUrl(m_BaseUrlHttps);
         getUrl.setPath("/actions/clipboard");
         getUrl.setQuery(getAuthParams() + "&type=text");
         QNetworkRequest getRequest(getUrl);
-        QSslConfiguration getSslConfig = IdentityManager::get()->getSslConfig();
-        getSslConfig.setPeerVerifyMode(QSslSocket::VerifyNone);
-        getRequest.setSslConfiguration(getSslConfig);
+        getRequest.setSslConfiguration(IdentityManager::get()->getSslConfig());
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
         getRequest.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);
 #endif
+        auto sslErrorsConnection = connect(m_Nam, &QNetworkAccessManager::sslErrors, this, &NvHTTP::handleSslErrors);
         QNetworkReply* getReply = m_Nam->get(getRequest);
         QEventLoop getLoop;
         connect(getReply, &QNetworkReply::finished, &getLoop, &QEventLoop::quit);
         connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, &getLoop, &QEventLoop::quit);
         QTimer::singleShot(REQUEST_TIMEOUT_MS, &getLoop, &QEventLoop::quit);
         getLoop.exec(QEventLoop::ExcludeUserInputEvents);
+        disconnect(sslErrorsConnection);
         QString response;
         if (!getReply->isFinished()) {
             getReply->abort();
@@ -720,6 +731,13 @@ bool
 NvHTTP::sendClipboardContent(const QString& content)
 {
     try {
+        // Fail closed: without a pinned server cert (unpaired host) we cannot
+        // authenticate the peer, so refuse the request entirely (BL-2063).
+        if (m_ServerCert.isNull()) {
+            qWarning() << "NvHTTP: No pinned server certificate; refusing clipboard send";
+            return false;
+        }
+
         // Build a URL for the POST request
         QUrl url(m_BaseUrlHttps);
         url.setPath("/actions/clipboard");
@@ -732,16 +750,17 @@ NvHTTP::sendClipboardContent(const QString& content)
         // is issued to the hostname (e.g. "Navid-PC"). The IP is not in the cert's
         // SAN, so strict hostname verification always fails with:
         //   "SSL handshake failed: The host name did not match any of the valid hosts"
-        // The peer identity is already verified during pairing (we hold the cert in
-        // our trust store), so it is safe to skip hostname verification here.
-        QSslConfiguration sslConfig = IdentityManager::get()->getSslConfig();
-        sslConfig.setPeerVerifyMode(QSslSocket::VerifyNone);
-        request.setSslConfiguration(sslConfig);
+        // Mirror openConnection(): keep full peer verification and let
+        // handleSslErrors() ignore errors only when the presented cert is exactly
+        // the pinned one (BL-2063 — this used to be VerifyNone, which disabled the
+        // entire certificate check, not just hostname verification).
+        request.setSslConfiguration(IdentityManager::get()->getSslConfig());
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
         request.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);
 #endif
 
+        auto sslErrorsConnection = connect(m_Nam, &QNetworkAccessManager::sslErrors, this, &NvHTTP::handleSslErrors);
         QNetworkReply* reply = m_Nam->post(request, content.toUtf8());
 
         // Wait for response with timeout
@@ -749,9 +768,10 @@ NvHTTP::sendClipboardContent(const QString& content)
         connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
         connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, &loop, &QEventLoop::quit);
         QTimer::singleShot(REQUEST_TIMEOUT_MS, &loop, &QEventLoop::quit);
-        
+
         qDebug() << "NvHTTP: Sending clipboard content to server:" << url.toString();
         loop.exec(QEventLoop::ExcludeUserInputEvents);
+        disconnect(sslErrorsConnection);
 
         // Check for timeout
         if (!reply->isFinished()) {
