@@ -1,7 +1,6 @@
 # Vibemis — Development Notes
 
 > Contributing conventions (commit format, PR test scorecard) are in [CONTRIBUTING.md](../CONTRIBUTING.md).
-> The project phase roadmap and user decisions are in `C:\Users\navya\.claude\plans\pure-purring-pillow.md` (build host local).
 
 ## Project structure
 
@@ -22,14 +21,12 @@ vibemis/
 │   ├── RELEASING.md        # Versioning, CI release tiers, AppImage pipeline
 │   ├── SELFTEST.md         # Scriptable self-test / verification surfaces
 │   └── DEVELOPMENT.md      # This file — project structure, key files
-├── CLAUDE.md               # Session orientation for Claude agents
 ├── CONTRIBUTING.md         # Commit format, PR test scorecard
 └── README.md               # User-facing project README
 ```
 
-> The agent-to-agent test-cycle handoff (per-cycle instructions, reports, the test checklist,
-> and the build/test agent channels) that used to live in `testing/` moved to the private
-> `navyas321/vibemis-agent-meta` repo as part of the P4.0 two-repo split — see `CLAUDE.md`.
+> Versioning and release policy are documented in [RELEASING.md](RELEASING.md); contribution
+> conventions (commit format, PR test scorecard) are in [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 ## Key source files
 

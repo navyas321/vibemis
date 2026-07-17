@@ -1,9 +1,8 @@
 # Self-test and scriptable verification surfaces
 
 Vibemis ships a few CLI surfaces specifically so a build can be sanity-checked from a script,
-with no host, stream, or GUI window required. This doc covers those surfaces; it was extracted
-from the (now-private) test-agent SOP as part of the P4.0 two-repo split (BL-1565/BL-2035) since
-it documents real, public product behavior. Referenced from `app/main.cpp` and
+with no host, stream, or GUI window required. This doc covers those surfaces, which document
+real, public product behavior. Referenced from `app/main.cpp` and
 `app/cli/commandlineparser.cpp`.
 
 ## 1. Headless self-test — `vibemis selftest`

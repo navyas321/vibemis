@@ -143,10 +143,8 @@ docs(readme): update installation instructions
 
 ## Vibemis commit format and PR scorecard
 
-These conventions apply to `vibemis-main` work (the repo's actual integration branch — see
-`docs/DEVELOPMENT.md`) and to any human contributor, not just the project's Claude agent
-sessions. Extracted here as part of the P4.0 two-repo split (BL-1565/BL-2035) so this policy
-stays public even though the day-to-day agent SOP that references it moved to a private repo.
+These conventions apply to all `vibemis-main` work (the repo's actual integration branch — see
+`docs/DEVELOPMENT.md`) and to every contributor.
 
 ### Commit message format
 

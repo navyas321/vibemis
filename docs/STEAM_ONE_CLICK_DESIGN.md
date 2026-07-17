@@ -1,4 +1,4 @@
-# Steam one-click library launch — design doc (BL-1786)
+# Steam one-click library launch — design doc
 
 **Status:** implemented (script + docs), pending on-device verification.
 **Owner ask (verbatim):** "one-click launch from a SteamOS library game window directly into a
@@ -8,9 +8,9 @@ installed on my device, so using it is fine)."
 **Target device:** Lenovo Legion Go S Z2, SteamOS 3.x, Game Mode primary. DeckyLoader is already
 installed on the device (so it's an available option, not a blocker) — the ask is specifically for
 **fewer moving parts**, not "DeckyLoader-free at all costs."
-**Prior art:** `docs/PHASE_STATUS.md` P3.10 ("SteamOS one-click integration") — this doc is the
-research + implementation for backlog item #4 there ("Auto-populate Steam shortcuts from host app
-list... shortcuts.vdf editing — research safety first").
+**Prior art:** the SteamOS one-click integration effort — this doc is the research +
+implementation for auto-populating Steam shortcuts from the host app list (shortcuts.vdf editing,
+with safety researched first).
 
 ---
 
@@ -31,9 +31,7 @@ below reduces to "get Steam to run `vibemis stream "<host>" "<app>"`, with one c
 Mode" — there is no need to invent a control protocol between the SteamOS client and the host;
 Moonlight/Apollo already is that protocol, and the Vibemis CLI already wraps it.
 
-P3.10 has already shipped two pieces (`docs/PHASE_STATUS.md`, both real-device-tested on this
-exact Legion Go S Z2 — see `testing/test48-steamos-helper-scripts/report.md` and
-`testing/test45-batch-add-games/report.md`):
+Two pieces have already shipped, both real-device-tested on this exact Legion Go S Z2:
 
 - `scripts/install-vibemis-desktop.sh` — installs the AppImage to a stable path
   (`~/Applications/Vibemis.AppImage`) with a clean `Name=Vibemis` desktop entry.
@@ -49,7 +47,7 @@ the friction this ticket is about closing.
 ## 2. What MoonDeckBuddy does (and why we don't need its shape)
 
 Going from what's documented about MoonDeck's architecture (no new research performed for this
-doc, per the task brief — this is from existing knowledge): MoonDeck is a **Decky Loader plugin**
+doc — this is from existing knowledge): MoonDeck is a **Decky Loader plugin**
 (runs on the Deck, in Game Mode, as a Quick-Access-Menu panel) paired with **MoonDeckBuddy**, a
 **second, separate service that has to be installed and kept running on the host PC**. The Buddy
 service exposes a small HTTP API the Decky plugin talks to: resolve Steam app IDs on the host,
@@ -90,7 +88,7 @@ no Desktop Mode round-trip.
 
 ### (b) One `.desktop` per game + manual "Add to Steam" — fallback, already shipped
 
-`scripts/add-game-to-steam.sh` / `add-all-games-to-steam.sh` (P3.10, done, device-tested). Zero
+`scripts/add-game-to-steam.sh` / `add-all-games-to-steam.sh` (already shipped, device-tested). Zero
 binary-format risk — only writes `.desktop` files under `~/.local/share/applications/`. The
 remaining step, ticking each one in Steam's "Add a Non-Steam Game" dialog, is manual and one-time
 per game, but 100% safe and requires no new research or code.
@@ -142,8 +140,8 @@ additional work.
 
 **Script:** `scripts/steam-sync-host-games.py` (pure standard library, no dependencies; Python
 chosen over bash because binary VDF parsing needs real byte-level structure, not text
-processing — bash/python split matches the task brief and mirrors the existing
-`~/.claude/skills/steam-shortcut` reference implementation this design follows).
+processing — this mirrors the existing `steam-shortcut` reference implementation this design
+follows).
 
 ```
 python3 scripts/steam-sync-host-games.py "<host>"                        # dry-run (default)
@@ -201,10 +199,9 @@ real AppImage, no real Legion Go S Z2 GPU/Gamescope involved).
 `QStandardPaths::CacheLocation` under the org/app name Vibemis registers —
 `QCoreApplication::setOrganizationName("Vibemis Project")` /
 `setApplicationName("Vibemis")` in `app/main.cpp`; the equivalent `~/.config/Vibemis
-Project/Vibemis.conf` settings path was independently confirmed on this exact device in
-`testing/test48-steamos-helper-scripts/report.md`, giving high confidence the cache directory
-follows `~/.cache/Vibemis Project/Vibemis/boxart/...` on Linux, though this was not directly
-re-verified).
+Project/Vibemis.conf` settings path was independently confirmed on this exact device, giving high
+confidence the cache directory follows `~/.cache/Vibemis Project/Vibemis/boxart/...` on Linux,
+though this was not directly re-verified).
 
 **The sync script deliberately does not reconstruct that path itself.** Instead it reads the
 `Boxart URL` column from `vibemis list <host> --csv` (`app/cli/listapps.cpp` `printAppCSV`),
@@ -233,7 +230,7 @@ capsule" — the one Game Mode primarily shows), never overwriting existing cust
 `app/cli/listapps.cpp` could be given a `--prefetch-boxart` mode that blocks until the async
 fetch completes, closing the artwork gap in §4. That's a real C++ change with a build/test cycle
 (qmake6, AppImage rebuild, device verification) — out of scope for this ticket, which is
-explicitly a device-independent scripting task per the assignment brief. Flagged as an open
+explicitly a device-independent scripting task. Flagged as an open
 question for the maintainer in §9; it's a small, well-scoped follow-up if wanted.
 
 ## 6. Naming and collision handling
@@ -244,9 +241,8 @@ host a tile streams from. `LaunchOptions` (`stream "<host>" "<app>"`) is the act
 used for update-vs-create matching (§4.4), not the display name, so renaming is safe. Host or app
 names containing a literal double-quote character are skipped with a warning (Steam's
 `LaunchOptions` parsing doesn't give a script a way to safely embed one) — this was not hit on the
-one real device app list available (`testing/test45-batch-add-games/report.md`: Desktop, Steam
-Big Picture, MoonDeckStream, Virtual Display — none contain quotes) but the guard exists in case
-a Sunshine/Apollo app is ever named with one.
+one real device app list available (Desktop, Steam Big Picture, MoonDeckStream, Virtual Display —
+none contain quotes) but the guard exists in case a Sunshine/Apollo app is ever named with one.
 
 ## 7. Verification performed in this session
 
@@ -257,13 +253,13 @@ a Sunshine/Apollo app is ever named with one.
   `app/cli/commandlineparser.cpp` (`ListCommandLineParser::parse`, flag `--csv`) and
   `app/cli/listapps.cpp` (`printAppCSV`) directly, rather than guessing the format.
 - Cross-checked the plain (non-CSV) `vibemis list <host>` output shape (one app name per line, no
-  header) against `testing/test45-batch-add-games/report.md`'s real device transcript.
+  header) against a real device transcript.
 - Did **not** run the script against a real Steam client or the real Legion Go S Z2 — that's §8.
 
 ## 8. On-Device Test Plan
 
-For a future test cycle (test agent — do not run this during an active Steam session without
-reading §4's Steam-must-be-closed requirement first).
+Run on-device once the script is deployed. Do not run this against an active Steam session without
+reading §4's Steam-must-be-closed requirement first.
 
 1. **Preflight**: confirm `~/Applications/Vibemis.AppImage` exists (run
    `scripts/install-vibemis-desktop.sh` first if not) and a host is already paired

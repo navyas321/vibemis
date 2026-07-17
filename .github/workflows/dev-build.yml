@@ -1,14 +1,14 @@
 name: Development Build
 
 # This workflow handles development builds with intelligent build skipping:
-# - test** branches: build a 🔬 alpha pre-release (for the test agent)
+# - test** branches: build a 🔬 alpha pre-release (for test-cycle validation)
 # - vibemis-main: publish a 🧪 beta ONLY when a PR is MERGED in (HEAD is a merge commit) and the
 #   merge touched non-docs files. Direct/regular pushes to vibemis-main (docs, CI tweaks, hotfix
 #   commits) do NOT build a beta — this is what keeps the Releases page quiet.
 # - release/** / main / master / workflow_dispatch: ALWAYS build + create production releases
 #
 # Beta policy = "beta tracks PR merges into vibemis-main, nothing else." Releases are PERMANENT
-# (maintainer 2026-07-13, BL-1736): every cut stays on the Releases page forever, like tags —
+# (maintainer directive): every cut stays on the Releases page forever, like tags —
 # SemVer §3 released-version immutability. Superseded releases are never deleted.
 
 on:
@@ -16,7 +16,7 @@ on:
     branches:
       # Keep this list TIGHT to avoid noisy builds/releases. Only:
       #  - vibemis-main : integration branch → 🧪 beta (latest)
-      #  - test**       : test cycle branches → 🔬 alpha (pre-release, for the test agent)
+      #  - test**       : test cycle branches → 🔬 alpha (pre-release, for test-cycle validation)
       #  - release/**   : explicit stable ship → ✅ release
       #  - main/master  : stable
       # fix/**, feat/**, hotfix/**, chore/**, develop, etc. intentionally do NOT build
@@ -40,12 +40,12 @@ on:
         type: string
         default: ''
       stable_confirm:
-        description: 'Stable cuts only: type CONFIRM-STABLE to approve this production release. Maintainer approval gate (BL-1741) — a stable dispatch without it FAILS before anything builds.'
+        description: 'Stable cuts only: type CONFIRM-STABLE to approve this production release. Maintainer approval gate — a stable dispatch without it FAILS before anything builds.'
         required: false
         type: string
         default: ''
       dry_run:
-        description: 'Validate-only (BL-1754): build + verify the full pipeline but create NO release and NO tag. Use this to test CI/workflow changes — a version is minted only when a release is actually intended.'
+        description: 'Validate-only: build + verify the full pipeline but create NO release and NO tag. Use this to test CI/workflow changes — a version is minted only when a release is actually intended.'
         required: false
         type: boolean
         default: false
@@ -53,7 +53,7 @@ on:
 env:
   QT_VERSION: '6.8.3'
 
-# BL-1701 (CI-minutes hygiene): one active run per ref+event — a newer push/dispatch
+# CI-minutes hygiene: one active run per ref+event — a newer push/dispatch
 # cancels the older superseded build instead of finishing a release that the newer
 # run's prune would delete minutes later.
 concurrency:
@@ -76,28 +76,24 @@ jobs:
         with:
           fetch-depth: 0  # Need full history for proper versioning
 
-      # BL-2035 (P4.0 post-split guard, docs/REPO_SPLIT_PLAN.md section 5 step 10): agent-meta
-      # content (testing/ cycle handoff, docs/personas/, the pre-split fat CLAUDE.md) must not
-      # drift back into this repo now that it lives in the private navyas321/vibemis-agent-meta
-      # repo. Runs on vibemis-main pushes (PR merges) so a reintroduction fails fast.
-      - name: Post-split meta-leak guard
+      # Post-split content guard: internal-only content (the testing/ cycle
+      # directory beyond its stub README, and docs/personas/) must not drift back
+      # into this public repository. Runs on vibemis-main pushes (PR merges) so a
+      # reintroduction fails fast.
+      - name: Post-split content guard
         if: github.ref_name == 'vibemis-main'
         run: |
           fail=0
           if [ -d testing ] && [ -n "$(find testing -type f ! -name README.md)" ]; then
-            echo "::error::testing/ contains files other than the stub README.md — agent-meta content belongs in navyas321/vibemis-agent-meta, not here."
+            echo "::error::testing/ contains files other than the stub README.md — this content is not part of the public source tree."
             fail=1
           fi
           if [ -d docs/personas ]; then
-            echo "::error::docs/personas/ has reappeared — agent personas belong in navyas321/vibemis-agent-meta."
-            fail=1
-          fi
-          if [ -f CLAUDE.md ] && ! grep -q "vibemis-agent-meta" CLAUDE.md; then
-            echo "::error::CLAUDE.md no longer points at the private agent-meta repo — looks like the pre-split fat CLAUDE.md came back."
+            echo "::error::docs/personas/ has reappeared — this content is not part of the public source tree."
             fail=1
           fi
           if [ "$fail" -eq 1 ]; then
-            echo "::error::Post-split guard failed (BL-2035). See docs/REPO_SPLIT_PLAN.md."
+            echo "::error::Post-split content guard failed — remove the flagged paths and try again."
             exit 1
           fi
           echo "Post-split guard: OK"
@@ -155,11 +151,11 @@ jobs:
             exit 0
           fi
 
-          # BL-1701 (maintainer directive: alpha = AUTOMATED-testing artifacts only, and
-          # CI-minutes hygiene): a test** push builds an alpha ONLY when the HEAD commit
-          # message carries an explicit [alpha] request tag (the test agent adds it when
-          # it actually needs an artifact). Branch-sync/WIP pushes no longer burn a full
-          # pipeline per push. Betas (vibemis-main) are the MANUAL-testing channel.
+          # Alpha = automated-testing artifacts only (CI-minutes hygiene): a test**
+          # push builds an alpha ONLY when the HEAD commit message carries an explicit
+          # [alpha] request tag (added when an artifact is actually needed). Branch-sync/
+          # WIP pushes no longer burn a full pipeline per push. Betas (vibemis-main) are
+          # the MANUAL-testing channel.
           if [[ "${{ github.ref_name }}" =~ ^test ]]; then
             if ! echo "$HEAD_COMMIT_MSG" | grep -F "[alpha]" > /dev/null; then
               echo "should_build=false" >> $GITHUB_OUTPUT
@@ -218,7 +214,7 @@ jobs:
           echo "should_build=true" >> $GITHUB_OUTPUT
           echo "Build will proceed - meaningful changes detected (including code and/or workflow changes)"
       
-      # BL-1741: the stable-approval rule (docs/RELEASING.md tier matrix) enforced at the CI layer,
+      # The stable-approval rule (docs/RELEASING.md tier matrix) enforced at the CI layer,
       # not just in prose — a release_type=stable dispatch without the literal confirmation
       # phrase fails HERE, before any version is computed or artifact built. Downstream
       # jobs all `need` this job, so nothing runs. release/**/main/master pushes are the
@@ -227,9 +223,9 @@ jobs:
         if: github.event.inputs.release_type == 'stable'
         run: |
           if [ "${{ github.event.inputs.stable_confirm }}" != "CONFIRM-STABLE" ]; then
-            echo "::error::Stable cut REFUSED: maintainer approval gate (BL-1741)."
+            echo "::error::Stable cut REFUSED: maintainer approval gate."
             echo "::error::A production release requires the dispatch input stable_confirm=CONFIRM-STABLE."
-            echo "::error::Agents: stables are maintainer-approval-only — never dispatch release_type=stable yourself."
+            echo "::error::Stable releases are maintainer-approval-only."
             exit 1
           fi
           echo "Stable approval confirmed (stable_confirm=CONFIRM-STABLE)."
@@ -237,7 +233,7 @@ jobs:
       - name: Generate semantic version
         id: version
         run: |
-          # ── Semantic Versioning 2.0.0 (maintainer /goal 2026-07-13, supersedes W.X.Y.Z) ──
+          # ── Semantic Versioning 2.0.0 (supersedes the legacy W.X.Y.Z scheme) ──
           # app/version.txt holds the NEXT stable version, e.g. "0.5.0".
           #   stable  → the bare version itself (0.5.0); bump version.txt right after the cut.
           #             A hotfix patch ships via version_override (e.g. 0.5.1).
@@ -256,27 +252,26 @@ jobs:
           fi
           next_counter() {  # $1 = suffix class (beta|alpha|rc)
             local max
-            # BL-1770: match BOTH tag shapes — legacy "<base>-beta.NNN" and ordinal-first
+            # Match BOTH tag shapes — legacy "<base>-beta.NNN" and ordinal-first
             # "<base>-nXXXXX-beta.NNN" — so counters stay dense across the scheme change
             # and a number is never reused.
             max=$(git ls-remote --tags origin "refs/tags/${BASE_VERSION}-*" 2>/dev/null \
                   | sed -n -E "s#.*refs/tags/${BASE_VERSION}-(n[0-9]+-)?$1\.([0-9]+)\$#\2#p" \
                   | sort -n | tail -1)
-            # BL-1744: 10# forces base-10 — zero-padded suffixes are OCTAL to bash arithmetic,
+            # 10# forces base-10 — zero-padded suffixes are OCTAL to bash arithmetic,
             # so 008 crashed ("value too great for base") and 010+ would silently compute
             # WRONG (lower!) numbers, risking tag reuse. First tripped the day beta.008 existed.
             printf '%03d' $(( 10#${max:-0} + 1 ))
           }
           RUN_N=${GITHUB_RUN_NUMBER}
-          # BL-1772 (maintainer final call on release-page ordering): tags stay CLEAN
-          # (<base>-<tier>.<CCC>). The ordinal-first experiment (<base>-nNNNNN-<tier>.<CCC>,
-          # BL-1770) DID make the GitHub Releases page chronological, but the maintainer
-          # judged the names too ugly and accepted the SemVer-precedence page order
-          # (alphas list after betas of the same base — spec §11.4; GitHub offers no page
-          # sort setting). Chronological views that remain: RELEASES.md (auto-refreshed),
-          # the releases Atom feed, the API, and the in-app channels — all date-ordered.
-          # next_counter still scans BOTH tag shapes so history with the one ordinal-era
-          # cut can never cause a counter reuse.
+          # Maintainer decision on release-page ordering: tags stay CLEAN
+          # (<base>-<tier>.<CCC>). The ordinal-first experiment (<base>-nNNNNN-<tier>.<CCC>)
+          # DID make the GitHub Releases page chronological, but the names were judged too
+          # ugly, so we accept the SemVer-precedence page order (alphas list after betas of
+          # the same base — spec §11.4; GitHub offers no page sort setting). Chronological
+          # views that remain: RELEASES.md (auto-refreshed), the releases Atom feed, the API,
+          # and the in-app channels — all date-ordered. next_counter still scans BOTH tag
+          # shapes so history with the one ordinal-era cut can never cause a counter reuse.
 
           # Get branch info
           BRANCH_NAME="${{ github.ref_name }}"
@@ -285,8 +280,8 @@ jobs:
           # ── Release tier determination (strict semver; <next> = app/version.txt) ──
           # Tier     Trigger                                              Version            Prerelease
           # release  dispatch release_type=stable / release/** / main     <next> (bare)      false (Latest)
-          #          ⚠ MAINTAINER-APPROVAL GATE: only the maintainer decides a stable cut.
-          #            Agents must NEVER dispatch release_type=stable autonomously.
+          #          ⚠ MAINTAINER-APPROVAL GATE: only the maintainer decides a stable cut;
+          #            a stable dispatch requires the CONFIRM-STABLE approval input.
           # rc       dispatch release_type=rc                             <next>-rc.NNN      true
           # beta     vibemis-main PR merge / plain dispatch on main       <next>-beta.NNN    true
           # alpha    test** push tagged [alpha]                           <next>-alpha.NNN   true
@@ -327,9 +322,9 @@ jobs:
 
           elif [[ "$BRANCH_NAME" =~ ^test ]]; then
             # 🔬 Alpha — pre-release; the branch is shown in the release body.
-            # BL-1998: test** only. fix/feat/hotfix refs (reachable only via manual
-            # dispatch) version as dev — the test agent consumes test<N> branches
-            # exclusively, so a fix-branch "alpha" could never be picked up anyway.
+            # test** only. fix/feat/hotfix refs (reachable only via manual dispatch)
+            # version as dev — the alpha channel consumes test<N> branches exclusively,
+            # so a fix-branch "alpha" could never be picked up anyway.
             VERSION="${BASE_VERSION}-alpha.$(next_counter alpha)"
             RELEASE_TIER="alpha"
 
@@ -362,7 +357,7 @@ jobs:
   compile-sanity:
     name: Compile Sanity (Linux)
     needs: setup-version
-    # BL-1701: push-feedback only — dispatch releases already compile everything in the
+    # Push-feedback only — dispatch releases already compile everything in the
     # AppImage job, so running sanity there doubled ~10 min of build for zero signal.
     if: needs.setup-version.outputs.should_build == 'true' && github.event_name == 'push'
     runs-on: ubuntu-22.04
@@ -374,7 +369,7 @@ jobs:
           submodules: 'recursive'
           fetch-depth: 0
 
-      # BL-1730: azure.archive.ubuntu.com stalls (20-140s per package) once turned a 9-min
+      # azure.archive.ubuntu.com stalls (20-140s per package) once turned a 9-min
       # build into 37. A 30s inactivity timeout + retries makes apt fail over to the
       # mirrorlist fallback instead of trickling. Must run before Setup Qt 6 — the Qt
       # action apt-installs its own system deps.
@@ -413,7 +408,7 @@ jobs:
     name: Linux Development Build
     needs: setup-version
     runs-on: ubuntu-22.04
-    # BL-1701: releases ship ONLY the AppImage, so this tarball build ran ~15 min per
+    # Releases ship ONLY the AppImage, so this tarball build ran ~15 min per
     # beta/alpha for an artifact nobody downloads. Stable cuts keep the full matrix.
     if: needs.setup-version.outputs.should_build == 'true' && needs.setup-version.outputs.release_tier == 'release'
     timeout-minutes: 45
@@ -425,7 +420,7 @@ jobs:
         submodules: 'recursive'
         fetch-depth: 0
 
-    # BL-1730: fail over from stalled apt mirrors instead of trickling (see compile-sanity).
+    # Fail over from stalled apt mirrors instead of trickling (see compile-sanity).
     - name: Harden apt against flaky mirrors
       run: |
         printf 'Acquire::Retries "3";\nAcquire::http::Timeout "30";\nAcquire::https::Timeout "30";\n' \
@@ -657,7 +652,7 @@ jobs:
         submodules: 'recursive'
         fetch-depth: 0
 
-    # BL-1730: fail over from stalled apt mirrors instead of trickling (see compile-sanity).
+    # Fail over from stalled apt mirrors instead of trickling (see compile-sanity).
     - name: Harden apt against flaky mirrors
       run: |
         printf 'Acquire::Retries "3";\nAcquire::http::Timeout "30";\nAcquire::https::Timeout "30";\n' \
@@ -705,7 +700,7 @@ jobs:
         find . -name "Makefile*" -not -path "./.git/*" -delete 2>/dev/null || true
         rm -f .qmake.stash .qmake.cache app/.qmake.stash
 
-        # BL-1665: stamp the full semantic version (channel + timestamp + commit) into
+        # Stamp the full semantic version (channel + timestamp + commit) into
         # version.txt so the compiled VERSION_STR identifies the exact build. Without
         # this every build reports only the base version ("1.0.1") and the in-app
         # channel-aware update checker can't tell one beta from another. CI-local only —
@@ -764,7 +759,7 @@ jobs:
 
     - name: Verify branded app icon is installed
       run: |
-        # The branded app icon (redesign brand mark) is installed into the
+        # The branded app icon (brand mark) is installed into the
         # hicolor theme by `make install` (app/app.pro INSTALLS icon128/256/512).
         # linuxdeploy consumes the 256px PNG as the AppImage .DirIcon via the
         # --icon-file flag below, so fail loudly here if it is missing rather
@@ -811,15 +806,15 @@ jobs:
 
   create-dev-release:
     name: Create Development Release
-    # BL-1701: build-linux-dev dropped from needs — the release attaches only the
+    # build-linux-dev dropped from needs — the release attaches only the
     # AppImage, and on beta/alpha tiers that job is skipped entirely now.
     needs: [setup-version, build-appimage-dev]
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    # BL-1754 (maintainer audit of the 0.2.0 beta train): dry_run=true skips this job
-    # entirely — the pipeline builds and verifies but mints no release/tag. Use it for
-    # validating CI changes; cut a real version only when a release is intended.
+    # dry_run=true skips this job entirely — the pipeline builds and verifies but
+    # mints no release/tag. Use it for validating CI changes; cut a real version
+    # only when a release is intended.
     if: >-
       github.event.inputs.dry_run != 'true' &&
       needs.setup-version.outputs.should_build == 'true' && (
@@ -856,7 +851,7 @@ jobs:
       id: changelog
       run: |
         CURRENT_VERSION="${{ needs.setup-version.outputs.version }}"
-        # BL-1871: a promoted release must NOT drop the changelist of the pre-releases it
+        # A promoted release must NOT drop the changelist of the pre-releases it
         # was cut from. The old logic anchored to the most-recent tag by date regardless of
         # tier, so a beta cut right after an alpha only spanned alpha..beta and lost every
         # commit the alpha itself had introduced (and the same for the rc/stable chain).
@@ -914,7 +909,7 @@ jobs:
         [ ! -z "$BUGFIXES" ] && CHANGELOG="${CHANGELOG}### 🐛 Bug Fixes\n${BUGFIXES}\n"
         [ ! -z "$IMPROVEMENTS" ] && CHANGELOG="${CHANGELOG}### 🔧 Improvements\n${IMPROVEMENTS}\n"
         [ ! -z "$OTHER" ] && CHANGELOG="${CHANGELOG}### 📝 Other Changes\n${OTHER}\n"
-        # BL-1739: never render a bare header — a cut with no commits since the previous
+        # Never render a bare header — a cut with no commits since the previous
         # tag (e.g. a re-dispatch on the same HEAD) says so instead of looking broken.
         if [ -z "${FEATURES}${BUGFIXES}${IMPROVEMENTS}${OTHER}" ]; then
           CHANGELOG="${CHANGELOG}_No code changes since the previous release — this build was cut from the same source (CI re-run or infrastructure-only update)._\n"
@@ -1010,7 +1005,7 @@ jobs:
       uses: softprops/action-gh-release@v3
       with:
         tag_name: ${{ needs.setup-version.outputs.version }}
-        # Uniform titles (maintainer 2026-07-13): the tag alone carries tier + version;
+        # Uniform titles (maintainer directive): the tag alone carries tier + version;
         # the body's first line states the tier.
         name: Vibemis release ${{ needs.setup-version.outputs.version }}
         body: |
@@ -1039,8 +1034,8 @@ jobs:
           *Update now* to install this build.' ||
             needs.setup-version.outputs.release_tier == 'alpha' && '🔬 **Alpha Build**
 
-          Test-cycle build from a test** branch, for targeted validation by the test
-          agent only. **Do not use as a daily driver.**
+          Test-cycle build from a test** branch, for targeted testing only.
+          **Do not use as a daily driver.**
 
           📲 **Updating from a previous install:** Settings → Advanced → **Software
           updates**, channel **Alpha**, then *Check for updates* → *Update now*.' ||
@@ -1079,18 +1074,18 @@ jobs:
           </details>
 
           > Any modern Linux desktop works the same way — download the `.AppImage`, make it executable, double-click.' || 'No installation files are available for this release. Please check recent releases or feature branches for builds.' }}
-        # Ship ONLY the AppImage (maintainer directive 2026-07-11): one double-clickable
+        # Ship ONLY the AppImage (maintainer directive): one double-clickable
         # artifact per release — no tarballs/zips/raw binaries cluttering the assets list.
         files: |
           artifacts/**/*.AppImage
-        # BL-1746: pin the release tag to the EXACT commit this run built. Without this,
+        # Pin the release tag to the EXACT commit this run built. Without this,
         # gh-release creates new tags on the repo DEFAULT branch — so every alpha cut from
         # a test** branch got a tag pointing at vibemis-main HEAD instead of the built
         # commit (0.2.0-alpha.001 tagged 8842ace1 while its AppImage was built from
         # f698b569). Tag provenance must identify the build's true source.
         target_commitish: ${{ github.sha }}
         prerelease: ${{ needs.setup-version.outputs.is_prerelease }}
-        # BL-1713 (maintainer): the GitHub "Latest" badge points at the STABLE release only.
+        # Maintainer directive: the GitHub "Latest" badge points at the STABLE release only.
         # Betas stay non-prerelease (visible, not hidden) but no longer claim Latest. The
         # in-app updater and vibemis-update.sh select channels STRUCTURALLY from the full
         # release list (never /releases/latest), so update flows are unaffected.
@@ -1099,7 +1094,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    # BL-1768: refresh the chronological build timeline (RELEASES.md) on vibemis-main
+    # Refresh the chronological build timeline (RELEASES.md) on vibemis-main
     # after every cut. GitHub's Releases page sorts by SemVer precedence (alphas sink
     # below betas of the same base version), so RELEASES.md is the newest-first-by-date
     # view for humans. Fail-soft: a timeline refresh failure never fails a release.
@@ -1127,7 +1122,7 @@ jobs:
         fi
         echo "RELEASES.md timeline refreshed"
 
-    # ── Releases are PERMANENT, like tags (maintainer directive 2026-07-13, BL-1736) ──
+    # ── Releases are PERMANENT, like tags (maintainer directive) ──
     # SemVer 2.0.0 §3: "Once a versioned package has been released, the contents of that
     # version MUST NOT be modified." The Releases list preserves the complete build
     # history — same behavior as the Tags page — matching the README's "complete build

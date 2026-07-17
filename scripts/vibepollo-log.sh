@@ -1,5 +1,5 @@
 #!/bin/bash
-# vibepollo-log.sh — tail the Vibepollo host log from the WSL2 build agent (P3.5)
+# vibepollo-log.sh — tail the Vibepollo host log from a WSL2 dev shell
 #
 # Vibepollo runs on the Windows host; WSL2 can read its logs through /mnt/c once the
 # Windows drive is mounted. This script auto-detects the newest Vibepollo log under the
@@ -50,7 +50,7 @@ if [ "${#CANDIDATES[@]}" -eq 0 ]; then
     echo "[vibepollo-log] Could not auto-detect a Vibepollo log under /mnt/c." >&2
     echo "  - Confirm the C: drive is mounted:  ls /mnt/c/Users" >&2
     echo "  - Or set the path explicitly:       VIBEPOLLO_LOG=/mnt/c/.../sunshine.log $0" >&2
-    echo "  - Then note that path in the agent-meta repo (P3.5) so future sessions can tail it." >&2
+    echo "  - Then set VIBEPOLLO_LOG=<path> (or add it to CANDIDATES above) so re-runs find it." >&2
     exit 1
 fi
 
