@@ -117,6 +117,13 @@ public:
     bool isNvidiaServerSoftware;
     QStringList serverCommands;
     quint32 serverPermissions;
+    // True once any serverinfo response carried a <Permission> tag, regardless of its value.
+    // Current Vibepollo emits the tag even for unpaired probes (verified against a live host:
+    // <Permission>0</Permission> with PairStatus 0), so tag PRESENCE — not a nonzero value —
+    // is the structural marker separating Vibepollo from vanilla Sunshine before pairing.
+    // Sticky across polls (see update()) because older Vibepollo builds omitted the tag for
+    // unpaired clients (see isApolloServer() note below).
+    bool hasPermissionModel;
     // Remember to update isEqualSerialized() when adding fields here!
     QString apolloVersion;
 
