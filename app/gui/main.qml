@@ -707,29 +707,14 @@ ApplicationWindow {
         onAccepted: Qt.quit()
     }
 
-    // Vibemis: one-time welcome hint with key SteamOS / handheld onboarding tips.
-    // Self-contained: opens from its own onCompleted and persists a "seen" flag, so it
-    // shows exactly once and does not affect the main startup logic.
-    NavigableMessageDialog {
+    // Vibemis: one-time welcome sheet with key SteamOS / handheld onboarding tips.
+    // Redesign (test132): the former stock NavigableMessageDialog is now a token-styled
+    // first-run sheet (VbWelcomeSheet.qml) on the redesign visual language. Self-contained:
+    // it opens from its own Component.onCompleted and persists StreamingPreferences.seenWelcomeHint
+    // via markSeen(), so it shows exactly once and does not affect the main startup logic. This
+    // component is hosted here (a scope that is never destroyed) so the dialog stays valid.
+    VbWelcomeSheet {
         id: welcomeDialog
-        standardButtons: Dialog.Ok
-        text: qsTr("Welcome to Vibemis!") + "\n\n" +
-              qsTr("• In-stream Quick Menu: Select + L1 + R1 + Y (gamepad), or Ctrl+Alt+Shift+\\ (keyboard).") + "\n" +
-              qsTr("• On Steam Deck / SteamOS, add Vibemis to Steam from Desktop Mode so it appears in Game Mode.") + "\n" +
-              qsTr("• Set resolution, FPS, video scaling and more in Settings.")
-
-        function markSeen() {
-            StreamingPreferences.seenWelcomeHint = true
-            StreamingPreferences.save()
-        }
-        onAccepted: markSeen()
-        onRejected: markSeen()
-
-        Component.onCompleted: {
-            if (!StreamingPreferences.seenWelcomeHint) {
-                welcomeDialog.open()
-            }
-        }
     }
 
     // HACK: This belongs in StreamSegue but keeping a dialog around after the parent

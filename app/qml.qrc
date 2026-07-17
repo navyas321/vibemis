@@ -12,6 +12,7 @@
         <file>gui/VbSheetIcon.qml</file>
         <file>gui/VbHostSheet.qml</file>
         <file>gui/VbHostCard.qml</file>
+        <file>gui/VbWelcomeSheet.qml</file>
         <file>gui/main.qml</file>
         <file>gui/PcView.qml</file>
         <file>gui/AppView.qml</file>
