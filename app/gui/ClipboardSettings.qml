@@ -3,6 +3,10 @@ import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.2
 
 import ClipboardManager 1.0
+import Vibemis.Redesign 1.0
+
+// P3.19 wave 2 (BL-2107): secondary/tertiary label colors unified onto VbTokens
+// (was #cccccc / #aaaaaa). No layout change; full redesign of this panel lands in P3.17.
 
 GroupBox {
     id: clipboardSettingsGroupBox
@@ -37,7 +41,7 @@ GroupBox {
             text: qsTr("Synchronize clipboard content between your device and the streaming server. Requires Apollo server.")
             font.pointSize: 9
             wrapMode: Text.Wrap
-            color: "#cccccc"
+            color: VbTokens.textMute
         }
 
         // Content filtering section
@@ -67,7 +71,7 @@ GroupBox {
                     text: qsTr("Only sync text content, ignore images and files")
                     font.pointSize: 8
                     wrapMode: Text.Wrap
-                    color: "#aaaaaa"
+                    color: VbTokens.textDim
                 }
 
                 Row {
@@ -130,7 +134,7 @@ GroupBox {
                     text: qsTr("Display toast notifications when clipboard content is synchronized")
                     font.pointSize: 8
                     wrapMode: Text.Wrap
-                    color: "#aaaaaa"
+                    color: VbTokens.textDim
                 }
             }
         }
@@ -141,7 +145,7 @@ GroupBox {
             text: qsTr("Note: Clipboard sync will be active during game streaming sessions when connected to Apollo servers.")
             font.pointSize: 9
             wrapMode: Text.Wrap
-            color: "#aaaaaa"
+            color: VbTokens.textDim
             visible: enableClipboardSync.checked
         }
     }
