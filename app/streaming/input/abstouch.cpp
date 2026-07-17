@@ -99,7 +99,7 @@ bool SdlInputHandler::handleTouchOverlayFingerEvent(SDL_TouchFingerEvent* event)
         int windowWidth, windowHeight;
         SDL_GetWindowSize(m_Window, &windowWidth, &windowHeight);
 
-        // Maintainer-caught (2026-07-13): the buttons are COMPOSITED INTO THE VIDEO
+        // The buttons are COMPOSITED INTO THE VIDEO
         // FRAME in STREAM pixels, but this hit-test measured raw WINDOW pixels from
         // the window origin. Under gamescope scaling / letterboxing the two spaces
         // diverge, so taps on the visible button fell outside the hit rect and were

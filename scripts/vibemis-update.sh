@@ -77,7 +77,7 @@ else
 fi
 DEST_DIR=$(dirname "$DEST")
 
-# Semantic Versioning (2026-07-13): stable = bare X.Y.Z (or the frozen four-part
+# Semantic Versioning: stable = bare X.Y.Z (or the frozen four-part
 # 0.4.0.0); beta/alpha/rc/dev are -suffixed and never stable. Historical catalog
 # markers are prerelease-flagged and assetless (see docs/RELEASE_HISTORY.md) — the
 # prerelease check below skips them, so structural filtering stays correct.
