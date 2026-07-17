@@ -1,13 +1,16 @@
 pragma Singleton
 import QtQuick 2.9
+import Vibemis.Redesign 1.0
 
-// Vibemis design tokens. Single source of truth for color/type/spacing — see
-// docs/DESIGN_SYSTEM.md. Import as `import Theme 1.0` and reference e.g. Theme.accent,
-// Theme.spacingM, Theme.fontSection. Registered as a QML singleton in app/main.cpp via
-// qmlRegisterSingletonType(QUrl("qrc:/gui/Theme.qml"), "Theme", 1, 0, "Theme").
+// Vibemis design tokens (legacy alias). Import as `import Theme 1.0` and reference e.g.
+// Theme.accent, Theme.spacingM, Theme.fontSection. Registered as a QML singleton in
+// app/main.cpp via qmlRegisterSingletonType(QUrl("qrc:/gui/Theme.qml"), "Theme", 1, 0, "Theme").
+// BL-2077: the accent is no longer a hardcoded literal here — it resolves through the
+// VbTokens design-token system so there is ONE source of truth for the brand accent
+// (default #00CCCC) and it follows the user's accent selection.
 QtObject {
     // ---- Color ----
-    readonly property color accent:        "#00CCCC"  // Vibemis teal — interactive emphasis
+    readonly property color accent:        VbTokens.accent  // BL-2077: single source of truth (VbTokens brand accent, default #00CCCC)
     readonly property color accentPressed: "#00A3A3"
     readonly property color background:    "#303030"  // app root
     readonly property color surface:       "#2D2D2D"  // raised surfaces / overlays
