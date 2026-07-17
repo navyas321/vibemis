@@ -13,9 +13,13 @@ launcher checks; one (host badge) wants an on-device confirm.
 - **BL-2072** (bug) — auto-reconnect now has a Settings toggle and **defaults ON** (Android parity,
   per docs/PHASE_STATUS.md); it was shipped unreachable (no toggle, default off).
 
-**Alpha:** `0.2.0-alpha.NNN` — asset `Vibemis-0.2.0-alpha.NNN-x86_64.AppImage`
-**md5:** `<stamp at dispatch>`
-**sha256:** `<stamp at dispatch>`
+**Alpha:** `0.2.0-alpha.019` — asset `Vibemis-0.2.0-alpha.019-x86_64.AppImage`
+**md5:** `9cc19220156b677c53d5eb7b6f22caef`
+**sha256:** `a36602b6e863b6b4c074d0e59c6aec1835e856872a16c81d95f65ad905cd0a07`
+
+> **NOTE:** this batch is ALREADY MERGED to vibemis-main (d7b99677) and is in the **0.2.0-rc**.
+> Run this as a **post-merge regression gate** — a PASS confirms the RC's auto-reconnect toggle
+> (BL-2072) + Vibepollo host-badge (BL-2008) + the security redactions behave on-device.
 
 ## Test procedure
 
