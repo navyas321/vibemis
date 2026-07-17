@@ -34,6 +34,15 @@
 // users who already had enableHdr=true on a working HDR display. Users whose
 // display is SDR (e.g. Legion Go S Z2 LCD) can uncheck "My display supports HDR"
 // in Settings to avoid washed-out picture without disabling HDR streaming entirely.
+//
+// BL-2076 (design review, user-delegated 2026-07-17): the two-gate model is the
+// APPROVED, permanent design. A manual checkbox — rather than auto-detecting panel
+// HDR capability — is deliberate: there is no reliable client-side panel-capability
+// query in the SDL2/Qt6 stack this app uses (Qt6 QScreen exposes none; SDL2 exposes
+// none; SDL3's SDL_PROP_DISPLAY_HDR_ENABLED_BOOLEAN is documented informational/
+// diagnostic-only and reports compositor HDR-enabled state, not panel capability —
+// unreliable exactly on the SteamOS/gamescope + SDR-LCD case above). See
+// docs/DECISIONS-PENDING.md.
 #define SER_DISPLAY_HDR_CAPABILITY "displayHdrCapability"
 // Vibemis: client-side HDR->SDR tone-map toggle. Defaults to false
 // (passthrough) so HDR-display users are not regressed.
