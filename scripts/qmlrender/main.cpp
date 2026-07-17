@@ -1,4 +1,4 @@
-// Vibemis QML render harness (BL-1688/BL-1699): renders a QML file offscreen with the
+// Vibemis QML render harness: renders a QML file offscreen with the
 // app's real fonts + VbTokens singleton and saves a PNG. Used to validate in-stream
 // overlay layouts (Quick Menu) that can't be render-tested by launching the full app
 // off-device. Usage: qmlrender <scene.qml> <out.png> [holdMs]
@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
 
     int holdMs = argc > 3 ? atoi(argv[3]) : 900;
 
-    // BL-1709: optional key simulation — 4th arg like "Up,Up,Down" posts real key
+    // Optional key simulation — 4th arg like "Up,Up,Down" posts real key
     // events to the window between render settle and grab, printing the active focus
     // item's objectName after each press so nav flows can be validated headlessly.
     QString keyScript = argc > 4 ? QString::fromLocal8Bit(argv[4]) : QString();

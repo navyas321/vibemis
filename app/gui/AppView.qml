@@ -32,23 +32,22 @@ CenteredGridView {
     // Gap between the "Apps" title row and the tile row is 30 (HTML body flex gap), and the
     // bottom clearance matches the body's own bottom padding (screenPadY = 52).
     topMargin: appChromeHeader.height + 30
-    // BL-1653: same partial-row minMargin fix as PcView — align with the 56px screen padding.
+    // Same partial-row minMargin fix as PcView — align with the 56px screen padding.
     minMargin: VbTokens.screenPadX
     bottomMargin: (appHintBar.visible ? appHintBar.height : 0) + VbTokens.screenPadY
     // Redesign 1b: 320x430 app tiles (HTML #1b), gap 36 horizontal; cellHeight adds room for the
     // 16px-gap + "Ⓐ Launch" hint row (or app name) below the focused tile.
     // Cap the row height to the available viewport so tiles never clip their bottom border on
     // shorter render surfaces (e.g. 1280x800 in Game Mode) — the absolute 474 was tuned for
-    // 1920x1200 (BL-1622). At 1200p this stays 474; on shorter surfaces tiles shrink to fit.
+    // 1920x1200. At 1200p this stays 474; on shorter surfaces tiles shrink to fit.
     cellWidth: 356
     cellHeight: Math.max(300, Math.min(474, height - topMargin - bottomMargin))
 
-    // Maintainer feature 2026-07-13 (BL-1760): Ⓨ quits the in-progress session from
+    // Ⓨ quits the in-progress session from
     // anywhere in the app grid — the gamepad equivalent of the stop button on the
     // RESUME-badged card (A/B/X are taken: Launch/Back/App options). Key events bubble
     // up from the focused delegate to the grid, same mechanism as PcView's Ⓨ Add-PC.
     // Opens the same quit-confirmation dialog as the stop button — never quits silently.
-    // Maintainer-verified feature (no test-agent cycle; BL-1760/BL-1762).
     Keys.onPressed: {
         if (event.key === Qt.Key_Yellow) {
             if (appModel.getRunningAppId() !== 0) {
@@ -60,7 +59,7 @@ CenteredGridView {
         }
     }
 
-    // Live "session running" state for the Ⓨ hint below. BL-1771 round 2 RCA: the
+    // Live "session running" state for the Ⓨ hint below. RCA: the
     // first attempt made the hint binding depend on a rev counter via a BARE property
     // read (`appGrid.runningRev;` as a statement) — compiled QML optimizes away unused
     // pure reads, so the dependency was never registered and the binding NEVER
@@ -79,7 +78,7 @@ CenteredGridView {
         function onModelReset() { appGrid.refreshSessionRunning() }
     }
 
-    // BL-1769: the poll-delta path misses running-state changes the launch/quit flow
+    // The poll-delta path misses running-state changes the launch/quit flow
     // already wrote to NvComputer (no diff -> no computerStateChanged -> stale RESUME
     // badge + stale Ⓨ hint until the view was recreated). Resync explicitly while this
     // view is live — resyncRunningState() is a no-op when nothing changed, so this
@@ -151,7 +150,7 @@ CenteredGridView {
         anchors.bottom: parent.bottom
         anchors.left: parent.left
         anchors.right: parent.right
-        // BL-1760/BL-1771: the Ⓨ Quit-session hint appears only while a session is
+        // The Ⓨ Quit-session hint appears only while a session is
         // actually running. appGrid.sessionRunning is a real branched-on dependency —
         // NOT a bare rev read, which compiled QML eliminated, freezing this binding
         // at its first evaluation (alpha.004 regression: badge updated, hint didn't).
@@ -191,7 +190,7 @@ CenteredGridView {
         appModel.computerLost.connect(computerLost)
         activated = true
 
-        // BL-1769: returning from a stream segue re-activates this view — pull the live
+        // Returning from a stream segue re-activates this view — pull the live
         // running state immediately (don't wait for the 3s resync tick) so the RESUME
         // badge and the Ⓨ Quit-session hint are correct the moment the grid reappears.
         appModel.resyncRunningState()
@@ -237,14 +236,14 @@ CenteredGridView {
     delegate: NavigableItemDelegate {
         id: appDelegate
         // Shrink with the row height on short surfaces so the tile + its border stay on-screen
-        // (BL-1622). BL-1663: shrink WIDTH proportionally too — shrinking only height squished
+        // Shrink WIDTH proportionally too — shrinking only height squished
         // the portrait 320x430 tiles into landscape boxes on a short window. Keep the 320:430
         // aspect. At 1200p cellHeight is 474 -> tile 430x320; shorter surfaces scale down evenly.
         height: Math.min(430, appGrid.cellHeight - 44)
         width: height * (320.0 / 430.0)
         grid: appGrid
 
-        // Maintainer find 2026-07-13 (same as PcView): Material's ItemDelegate paints a
+        // Same as PcView: Material's ItemDelegate paints a
         // square always-visible surface behind the rounded tile — remove it; VbCard owns
         // all tile visuals.
         background: null
@@ -446,7 +445,7 @@ CenteredGridView {
 
         function launchOrResumeSelectedApp(quitExistingApp)
         {
-            // BL-1745 round 2: idempotent — a duplicate clicked() from the same A press
+            // Idempotent — a duplicate clicked() from the same A press
             // (or a double-tap) must not push a second StreamSegue.
             if (stackView.busy) {
                 return
@@ -474,7 +473,7 @@ CenteredGridView {
         }
 
         onClicked: {
-            // Maintainer directive 2026-07-13 (BL-1745 wave): activating an app ALWAYS
+            // Activating an app ALWAYS
             // launches — and for the app whose session is already running this resumes
             // the stream directly (gamepad A used to open the options sheet instead,
             // which X / press-and-hold already do). launchOrResumeSelectedApp() segues
@@ -502,9 +501,9 @@ CenteredGridView {
             }
         }
 
-        // Maintainer directive 2026-07-13: no INSTANCE Return/Enter handlers here — the
-        // NavigableItemDelegate base handlers fire clicked() (load-bearing on-device;
-        // see BL-1745 round 2), and onClicked above resumes a running session directly
+        // No INSTANCE Return/Enter handlers here — the
+        // NavigableItemDelegate base handlers fire clicked() (load-bearing on-device),
+        // and onClicked above resumes a running session directly
         // instead of opening the options sheet. The options sheet stays reachable via X
         // (Keys.onMenuPressed below), press-and-hold, and right-click.
 
@@ -526,7 +525,7 @@ CenteredGridView {
                 id: appContextMenu
                 initiator: appContextMenuLoader.parent
 
-                // P3.8 per-game profiles: bump to re-evaluate hasProfile() bindings after
+                // Per-game profiles: bump to re-evaluate hasProfile() bindings after
                 // a save/clear (QML can't observe QSettings directly).
                 property int profileRev: 0
                 readonly property bool hasGameProfile: {
@@ -556,7 +555,7 @@ CenteredGridView {
                     ToolTip.visible: hovered
                 }
                 NavigableMenuItem {
-                    // P3.8: snapshot the CURRENT global settings (resolution/FPS/bitrate/HDR)
+                    // Snapshot the CURRENT global settings (resolution/FPS/bitrate/HDR)
                     // as this game's stream profile, applied automatically at launch.
                     text: appContextMenu.hasGameProfile ? qsTr("Update Game Profile from Current Settings")
                                                         : qsTr("Save Current Settings as Game Profile")

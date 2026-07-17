@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Vibemis — one-command Tailscale setup for remote play (P3.7).
+# Vibemis — one-command Tailscale setup for remote play.
 #
 # Goal: get this device onto your Tailscale tailnet with the least possible fuss, so you can
 # stream to your PC from anywhere. The ONLY interactive step is logging in once via a URL this
 # script prints (that's the "minimal user input"). After that, in Vibemis enable
-# Settings -> "Prefer Tailscale addresses" (test51) and stream your host by its Tailscale IP.
+# Settings -> "Prefer Tailscale addresses" and stream your host by its Tailscale IP.
 #
 # Run it:   ./scripts/setup-tailscale.sh
 #

@@ -250,7 +250,7 @@ void EGLRenderer::renderOverlay(Overlay::OverlayType type, int viewportWidth, in
         }
         else if (type == Overlay::OverlayTouchButtonMenu || type == Overlay::OverlayTouchButtonKbd ||
                  type == Overlay::OverlayTouchButtonTouchMode) {
-            // Vibemis BL-1562/BL-2007: MENU top-left, KBD far top-right, TOUCH-MODE
+            // MENU top-left, KBD far top-right, TOUCH-MODE
             // immediately inward of KBD. NB: OpenGL origin is lower-left, so "top"
             // is the high-Y edge here.
             overlayRect.x = (type == Overlay::OverlayTouchButtonMenu)

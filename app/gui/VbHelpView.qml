@@ -8,10 +8,10 @@ import Vibemis.Redesign 1.0
 // Remote play — on the token system. Pushed onto the StackView by the Help button; Ⓑ / Esc /
 // Back pops it.
 //
-// BL-1684 (T6 redesign): the maintainer's manual pass wanted (a) UNIFORM card dimensions,
+// The redesign requires (a) UNIFORM card dimensions,
 // (b) everything on ONE screen with NO scrolling/movement, and (c) NO focus highlight — nothing
 // on this page is actionable (it is a static reference sheet), only Ⓑ/Back leaves it. So:
-//   * the BL-1669 Flickable + arrow-scroll handlers are GONE — the four cards live in a fixed
+//   * the Flickable + arrow-scroll handlers are GONE — the four cards live in a fixed
 //     2×2 GridLayout that fills the body, so every card is exactly the same size and the content
 //     always fits without scrolling at any window height.
 //   * the hero Quick Menu card's accent-gradient wash + accent border are GONE — that decorative
@@ -26,7 +26,7 @@ Item {
     // Full-bleed window background.
     Rectangle { anchors.fill: parent; color: VbTokens.bgWindow }
 
-    // BL-1669 / BL-1684: this screen has no actionable/focusable element, so on entry focus would
+    // this screen has no actionable/focusable element, so on entry focus would
     // otherwise stick on the global toolbar and gamepad Ⓑ/Back would do nothing ("frozen" screen).
     // Grab focus on the (invisible) root Item — an Item draws no highlight — purely so Ⓑ/Esc/Back
     // are handled here and pop the screen. No arrow-key navigation: the page does not scroll.

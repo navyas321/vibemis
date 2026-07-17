@@ -85,7 +85,7 @@ void SdlGamepadKeyNavigation::disable()
     updateTimerState();
     Q_ASSERT(!m_PollingTimer->isActive());
 
-    // BL-2013: pressed-state must not leak across enable cycles (a button held
+    // Pressed-state must not leak across enable cycles (a button held
     // through disable would otherwise eat its next legitimate DOWN).
     m_ButtonsDown.clear();
 
@@ -130,7 +130,7 @@ void SdlGamepadKeyNavigation::onPollingTimerFired()
         case SDL_CONTROLLERBUTTONDOWN:
         case SDL_CONTROLLERBUTTONUP:
         {
-            // BL-2013: edge-filter — some pads/drivers deliver DUPLICATE BUTTONDOWN
+            // Edge-filter — some pads/drivers deliver DUPLICATE BUTTONDOWN
             // events for one physical d-pad press (Legion Go: slider stepped +10 while
             // a keyboard arrow stepped +5 through the same handler). Track pressed
             // state per controller instance and pass only the first DOWN and the
@@ -213,7 +213,7 @@ void SdlGamepadKeyNavigation::onPollingTimerFired()
                 sendKey(type, Qt::Key_Menu);
                 break;
             case SDL_CONTROLLER_BUTTON_Y:
-                // Redesign 1a: Ⓨ is "Add computer" on the Computers screen (design handoff hint bar).
+                // Ⓨ is "Add computer" on the Computers screen (design hint bar).
                 // A distinct keycode from Start lets PcView bind it (Keys.onPressed Key_Yellow) without
                 // hijacking Settings; screens that don't handle it simply ignore it.
                 sendKey(type, Qt::Key_Yellow);
@@ -224,7 +224,7 @@ void SdlGamepadKeyNavigation::onPollingTimerFired()
                 sendKey(type, Qt::Key_Hangup);
                 break;
             case SDL_CONTROLLER_BUTTON_LEFTSHOULDER:
-                // Redesign 1e: LB/RB switch the Settings sidebar category (design handoff hint bar
+                // LB/RB switch the Settings sidebar category (design hint bar
                 // "LB RB Switch category"). Same trick as Ⓨ/Start above — distinct synthetic keycodes
                 // (Key_MediaPrevious/Key_MediaNext) let SettingsView bind them via Keys.onPressed
                 // without hijacking other screens, which simply ignore them.

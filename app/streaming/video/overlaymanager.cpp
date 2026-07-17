@@ -45,7 +45,7 @@ OverlayManager::OverlayManager() :
     // and published via updateOverlaySurface(). No font/colour is used here.
     m_Overlays[OverlayType::OverlayQuickMenu].fontSize = 0;
 
-    // Vibemis BL-1562/BL-2007: on-screen touch buttons. Icon-only — the glyph is
+    // Vibemis on-screen touch buttons. Icon-only — the glyph is
     // drawn from primitive shapes onto a semi-transparent button background in
     // renderTouchButtonSurface(); no TTF is involved, so fontSize stays 0. The
     // color is the glyph paint color.
@@ -157,14 +157,14 @@ SDL_Color OverlayManager::getOverlayColor(OverlayType type)
 void OverlayManager::setOverlayRenderer(IOverlayRenderer* renderer)
 {
     {
-        // test81 (review fix): the renderer is swapped on the exec/render thread during
+        // The renderer is swapped on the exec/render thread during
         // decoder recreation while the Quick Menu's main-thread render timer may be inside
         // notifyOverlayUpdated() — serialize access so we never call into a freed renderer.
         QMutexLocker locker(&m_RendererLock);
         m_Renderer = renderer;
     }
 
-    // Vibemis BL-1562: the touch buttons render their surface once when toggled on
+    // Vibemis touch buttons render their surface once when toggled on
     // (their glyphs never refresh, unlike the perf overlay), so a renderer created or
     // recreated after that point would never receive their surface and the buttons
     // would silently vanish. Regenerate them whenever a new renderer registers.
@@ -198,7 +198,7 @@ void OverlayManager::updateOverlaySurface(OverlayType type, SDL_Surface* surface
     }
 }
 
-// Vibemis BL-2007 — primitive-shape glyph painters for the icon-only touch buttons.
+// Vibemis primitive-shape glyph painters for the icon-only touch buttons.
 // SDL_Surface has no circle/line primitives and the buttons must not pull in new
 // font or image assets, so the glyphs are built from filled rects (SDL_FillRect)
 // plus a scanline-rasterized ring for the touch glyph's dot and arcs.
@@ -253,7 +253,7 @@ SDL_Surface* OverlayManager::renderTouchButtonSurface(OverlayType type)
         return nullptr;
     }
 
-    // Same semi-transparent box style the labeled BL-1562 buttons used.
+    // Same semi-transparent box style the labeled buttons used.
     Uint32 background = SDL_MapRGBA(button->format, 0x20, 0x20, 0x20, 0x90);
     SDL_Color glyphColor = m_Overlays[type].color;
     Uint32 glyph = SDL_MapRGBA(button->format, glyphColor.r, glyphColor.g, glyphColor.b, glyphColor.a);
@@ -317,7 +317,7 @@ void OverlayManager::notifyOverlayUpdated(OverlayType type)
         return;
     }
 
-    // Vibemis BL-2007: the touch buttons are icon-only — their glyph surfaces are
+    // Vibemis touch buttons are icon-only — their glyph surfaces are
     // drawn from primitive shapes, bypassing the TTF text path entirely (they have
     // no text, and TTF would render an empty string to nullptr anyway).
     if (type == OverlayTouchButtonMenu || type == OverlayTouchButtonKbd ||

@@ -35,7 +35,7 @@
 // display is SDR (e.g. Legion Go S Z2 LCD) can uncheck "My display supports HDR"
 // in Settings to avoid washed-out picture without disabling HDR streaming entirely.
 #define SER_DISPLAY_HDR_CAPABILITY "displayHdrCapability"
-// Vibemis BL-1561: client-side HDR->SDR tone-map toggle. Defaults to false
+// Vibemis: client-side HDR->SDR tone-map toggle. Defaults to false
 // (passthrough) so HDR-display users are not regressed.
 #define SER_HDR_TONEMAP "hdrTonemapping"
 #define SER_YUV444 "yuv444"
@@ -45,7 +45,7 @@
 #define SER_QUITAPPAFTER "quitAppAfter"
 #define SER_ABSMOUSEMODE "mouseacceleration"
 #define SER_ABSTOUCHMODE "abstouchmode"
-// Vibemis BL-1562: opt-in on-screen touch controls overlay (MENU / KBD buttons).
+// Vibemis: opt-in on-screen touch controls overlay (MENU / KBD buttons).
 #define SER_TOUCHOVERLAY "touchoverlay"
 #define SER_STARTWINDOWED "startwindowed"
 #define SER_FRAMEPACING "framepacing"
@@ -201,8 +201,7 @@ void StreamingPreferences::reload()
     swapFaceButtons = settings.value(SER_SWAPFACEBUTTONS, false).toBool();
     keepAwake = settings.value(SER_KEEPAWAKE, true).toBool();
     reduceBitrateOnBattery = settings.value(SER_REDUCEBITRATEONBATTERY, false).toBool();
-    // P3.21 (test80): default OFF for the first slice; flip after on-device verification.
-    // BL-2072: default ON (Android parity, per docs/PHASE_STATUS.md). Was shipped OFF with no
+    // Default ON (Android parity). Was previously shipped OFF with no
     // Settings toggle, making the feature unreachable; the toggle now lives in SettingsView.
     autoReconnect = settings.value(SER_AUTORECONNECT, true).toBool();
     seenWelcomeHint = settings.value(SER_SEENWELCOMEHINT, false).toBool();
@@ -513,7 +512,7 @@ void StreamingPreferences::applyPreset(int preset)
     emit autoAdjustBitrateChanged();
 }
 
-// test81 (review fix): the export/import round-trip must NEVER carry the device
+// The export/import round-trip must NEVER carry the device
 // identity — "key" is the client TLS PRIVATE KEY, "certificate"/"uniqueid" are the
 // pairing identity. Exporting them put the private key in a file users are told to
 // copy between devices; importing them clobbered THIS device's pairing with every

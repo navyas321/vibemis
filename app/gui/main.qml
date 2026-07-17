@@ -23,11 +23,11 @@ ApplicationWindow {
 
     id: window
     width: 1280
-    // BL-1668: 600 was an absurdly short default that squished the app grid on first paint even
+    // 600 was an absurdly short default that squished the app grid on first paint even
     // on a desktop; 720 is a saner minimum. Handhelds fill the screen (see Component.onCompleted).
     height: 720
 
-    // BL-1776: single launcher-wide choke point for the focus-move tick — every
+    // Single launcher-wide choke point for the focus-move tick — every
     // d-pad/stick/arrow/Tab move lands here as an activeFocusItem change
     // (SdlGamepadKeyNavigation already translates gamepad input to key events).
     // Null transitions are window activation / view teardown, not navigation,
@@ -49,7 +49,7 @@ ApplicationWindow {
             Material.background = Theme.background
         }
 
-        // P3.19 wave 1: bridge the Material style to the Vibemis design tokens so the
+        // Bridge the Material style to the Vibemis design tokens so the
         // Material-styled pages (Computers grid, App grid, dialogs) share the same
         // accent/background system as the token-native pages. See docs/DESIGN_SYSTEM.md.
         Material.theme = Material.Dark
@@ -67,7 +67,7 @@ ApplicationWindow {
             else if (StreamingPreferences.uiDisplayMode == StreamingPreferences.UI_FULLSCREEN) {
                 window.showFullScreen()
             }
-            // BL-1668: on a SteamOS handheld in Desktop Mode, the default "windowed" mode opened a
+            // On a SteamOS handheld in Desktop Mode, the default "windowed" mode opened a
             // tiny 1280x720 window on the 1920x1200 panel ("resolution never fills the screen", and
             // the app grid looked squished). Fill the screen there. Explicit Maximized/Fullscreen
             // above still win; only the windowed DEFAULT is upgraded, and only on handhelds.
@@ -269,9 +269,9 @@ ApplicationWindow {
 
     header: ToolBar {
         id: toolBar
-        // Redesign: EVERY redesigned launcher screen (1a Computers, 1b App grid, 1e Settings, 1f Help)
+        // Redesign: EVERY redesigned launcher screen (Computers, App grid, Settings, Help)
         // carries its OWN per-screen header (wordmark/back + title + icon buttons + hint bar), matching
-        // the design handoff previews. So the global toolbar is collapsed on all of them — the previews
+        // the design previews. So the global toolbar is collapsed on all of them — the previews
         // show only per-screen chrome, never a global bar.
         //
         // BLACK-SCREEN SAFETY (the 0.25.0 gamescope/WSI regression): collapsing the toolbar 60->0 on the
@@ -280,10 +280,10 @@ ApplicationWindow {
         // currentItem is still null (startup) AND on every redesign screen — so the toolbar is height 0
         // from the very first frame and NEVER transitions 60->0 at startup. It expands to 60 only for the
         // legacy fullscreen stream/quit segues, whose transitions happen after the window is stable and
-        // on a separate render path. Test agent: verify 1a renders (not black) under gamescope.
+        // on a separate render path. Verified on device: the Computers screen renders (not black) under gamescope.
         // Redesign header architecture (BLACK-SCREEN FIX): the global ApplicationWindow toolbar is
         // ALWAYS PRESENT at 84px and IS the per-screen header. It must never collapse to height 0 — a
-        // 0-height / hidden header black-screens under the gamescope WSI path (test-agent-verified:
+        // 0-height / hidden header black-screens under the gamescope WSI path (verified on device:
         // 0.25.1 with the toolbar PRESENT rendered clean; 0.25.0 + 0.26.0 with it collapsed went
         // black). So it stays visible on every screen and renders that screen's header content
         // (VIBEMIS wordmark on Computers; Back + title elsewhere). The redesign screens no longer draw
@@ -297,7 +297,7 @@ ApplicationWindow {
         anchors.topMargin: 0
         anchors.bottomMargin: 0
 
-        // BL-1709 (launch blocker #2, "back needs two presses"): the toolbar lives in the
+        // "Back needs two presses" fix: the toolbar lives in the
         // window HEADER — outside the StackView — so when focus sits on a toolbar button
         // (e.g. after d-pad Up from a grid), Ⓑ/Esc bubbled up the header chain and never
         // reached stackView's back handlers; the press was silently lost and only a second
@@ -336,7 +336,7 @@ ApplicationWindow {
         }
 
         // VIBEMIS wordmark (diamond + wordmark), shown on the Computers screen in place of a title,
-        // matching the handoff 1a header. Left-aligned at the HTML's 40px padding.
+        // matching the design header. Left-aligned at the HTML's 40px padding.
         Row {
             visible: toolBar.onPcView
             anchors.left: parent.left
@@ -465,14 +465,14 @@ ApplicationWindow {
                        : (stackView.currentItem ? stackView.currentItem.objectName : ""))
             }
 
-            // Redesign 1e: the Settings version indicator as a token-styled chip
+            // Redesign: the Settings version indicator as a token-styled chip
             // (matches the prototype's "Version 0.6.7" chip in the Settings header).
             Rectangle {
                 id: versionLabel
                 visible: qmltypeof(stackView.currentItem, "SettingsView")
                 implicitWidth: versionChipText.implicitWidth + 28
                 implicitHeight: versionChipText.implicitHeight + 12
-                // Handoff 1e: accent-tinted pill (12% accent bg, radius 8, no border).
+                // Accent-tinted pill (12% accent bg, radius 8, no border).
                 radius: 8
                 color: Qt.rgba(VbTokens.accent.r, VbTokens.accent.g, VbTokens.accent.b, 0.12)
                 Layout.alignment: Qt.AlignVCenter
@@ -605,7 +605,7 @@ ApplicationWindow {
                     onActivated: helpButton.clicked()
                 }
 
-                // Redesign 1f: push the in-app Help screen (falls back to the repo URL is no
+                // Redesign: push the in-app Help screen (falls back to the repo URL is no
                 // longer needed — the screen has the shortcuts + remote-play info inline).
                 onClicked: {
                     var comp = Qt.createComponent("qrc:/gui/VbHelpView.qml")
@@ -756,12 +756,12 @@ ApplicationWindow {
     }
 
     NavigableDialog {
-        // Redesign 1c: Add-PC dialog restyled on the VbTokens system (docs/design/redesign).
+        // Redesign: Add-PC dialog restyled on the VbTokens system.
         // Wiring unchanged — accept still calls ComputerManager.addNewHostManually().
         id: addPcDialog
         property string label: qsTr("Enter the IP address of your host PC:")
 
-        // Custom Ⓐ Connect / Ⓑ Cancel pill buttons live in the content (handoff 1c) — no stock
+        // Custom Ⓐ Connect / Ⓑ Cancel pill buttons live in the content (per the design) — no stock
         // DialogButtonBox. A = Return (accepted by the field / Connect button), B = Esc (closePolicy).
         standardButtons: Dialog.NoButton
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
@@ -791,14 +791,14 @@ ApplicationWindow {
         }
 
         ColumnLayout {
-            spacing: 28    // handoff 1c modal gap
+            spacing: 28    // design modal gap
             width: parent ? parent.width : 620
 
             Label {
                 text: qsTr("Add a computer")
                 font.family: VbTokens.fontDisplay
                 font.weight: Font.Bold
-                font.pixelSize: 30    // handoff 1c title
+                font.pixelSize: 30    // design title
                 color: VbTokens.text
             }
             Label {
@@ -828,9 +828,9 @@ ApplicationWindow {
                     anchors.rightMargin: 20
                     verticalAlignment: TextInput.AlignVCenter
                     focus: true
-                    // BL-1647 (test-agent find): Material's placeholderText renders as a FLOATING
+                    // Material's placeholderText renders as a FLOATING
                     // label that rises to the control's top edge on focus and clipped into the
-                    // custom 72px frame's border. Use a plain in-field hint instead (the handoff
+                    // custom 72px frame's border. Use a plain in-field hint instead (the design
                     // shows a static grey hint, not a floating label).
                     color: VbTokens.text
                     font.family: VbTokens.fontBody
@@ -863,7 +863,7 @@ ApplicationWindow {
                       .arg(VbTokens.accent).arg(VbTokens.textMute)
             }
 
-            // ---- Custom footer: Ⓑ Cancel + Ⓐ Connect pill buttons (handoff 1c, lines 198-201) ----
+            // ---- Custom footer: Ⓑ Cancel + Ⓐ Connect pill buttons (per the design) ----
             RowLayout {
                 Layout.fillWidth: true
                 Layout.topMargin: 4

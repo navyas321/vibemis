@@ -180,11 +180,11 @@ public:
     };
     Q_ENUM(PerfOverlayPosition);
 
-    // Vibemis BL-1665: which release channel the update checker follows.
+    // Vibemis: which release channel the update checker follows.
     // UC_STABLE preserves the pre-channel behavior (stable releases only);
     // Beta/Alpha follow the CI prerelease tiers (-beta.* / -alpha.* tags).
-    // UC_RC (BL-1722, semver era) follows "-rc.NNN" builds — the exact candidate
-    // proposed as the next stable, cut for on-device verification. Appended LAST
+    // UC_RC follows "-rc.NNN" builds — the exact candidate proposed as the next
+    // stable, cut for on-device verification. Appended LAST
     // so persisted integer settings keep their meaning.
     enum UpdateChannel
     {
@@ -209,7 +209,7 @@ public:
     Q_PROPERTY(bool quitAppAfter MEMBER quitAppAfter NOTIFY quitAppAfterChanged)
     Q_PROPERTY(bool absoluteMouseMode MEMBER absoluteMouseMode NOTIFY absoluteMouseModeChanged)
     Q_PROPERTY(bool absoluteTouchMode MEMBER absoluteTouchMode NOTIFY absoluteTouchModeChanged)
-    // Vibemis BL-1562/BL-2007: opt-in on-screen touch controls overlay for touch
+    // Vibemis: opt-in on-screen touch controls overlay for touch
     // handhelds. When enabled, three semi-transparent icon-only buttons are
     // composited into the stream: MENU (top-left, opens the Quick Menu), KBD (far
     // top-right, requests the SteamOS on-screen keyboard) and TOUCH-MODE (inward of
@@ -229,7 +229,7 @@ public:
     Q_PROPERTY(bool compactPerformanceOverlay MEMBER compactPerformanceOverlay NOTIFY compactPerformanceOverlayChanged)
     Q_PROPERTY(bool preferTailscale MEMBER preferTailscale NOTIFY preferTailscaleChanged)
     Q_PROPERTY(bool forwardMotionControls MEMBER forwardMotionControls NOTIFY forwardMotionControlsChanged)
-    // Vibemis (test72): optional wall-clock line at the top of the performance
+    // Vibemis: optional wall-clock line at the top of the performance
     // overlay. Off by default so the overlay is unchanged for existing users.
     Q_PROPERTY(bool perfOverlayShowClock MEMBER perfOverlayShowClock NOTIFY perfOverlayShowClockChanged)
     Q_PROPERTY(bool suppressControllerRumble MEMBER suppressControllerRumble NOTIFY suppressControllerRumbleChanged)
@@ -243,7 +243,7 @@ public:
     // Vibemis redesign UI prefs: gamepad hint-bar visibility + accent color (index into the 4 token accents).
     Q_PROPERTY(bool uiShowHints MEMBER uiShowHints NOTIFY uiShowHintsChanged)
     Q_PROPERTY(int uiAccentIndex MEMBER uiAccentIndex NOTIFY uiAccentIndexChanged)
-    // Vibemis BL-1776: short UI sounds on controller-nav focus moves and activations
+    // Vibemis: short UI sounds on controller-nav focus moves and activations
     // (launcher + in-stream Quick Menu). Played by UiSoundManager.
     Q_PROPERTY(bool uiSounds MEMBER uiSounds NOTIFY uiSoundsChanged)
     // Vibemis: companion gate to enableHdr. When the user enables HDR but their
@@ -252,7 +252,7 @@ public:
     // Defaults to true so existing HDR users aren't regressed; users who hit
     // the wash-out can uncheck it in Settings without disabling HDR entirely.
     Q_PROPERTY(bool displayHdrCapability MEMBER displayHdrCapability NOTIFY displayHdrCapabilityChanged)
-    // Vibemis BL-1561 (P3.8 parity): client-side HDR tone-mapping toggle. When on,
+    // Vibemis: client-side HDR tone-mapping toggle. When on,
     // the Vulkan (libplacebo) renderer forces an SDR output colorspace so HDR content
     // is tone-mapped down to SDR on this device instead of being passed through to the
     // display. Complements displayHdrCapability (that gate operates at codec negotiation;
@@ -271,7 +271,7 @@ public:
     Q_PROPERTY(bool swapFaceButtons MEMBER swapFaceButtons NOTIFY swapFaceButtonsChanged)
     Q_PROPERTY(bool keepAwake MEMBER keepAwake NOTIFY keepAwakeChanged)
     Q_PROPERTY(bool reduceBitrateOnBattery MEMBER reduceBitrateOnBattery NOTIFY reduceBitrateOnBatteryChanged)
-    // Vibemis P3.21 (test80): bounded auto-reconnect after an unexpected mid-stream drop.
+    // Vibemis: bounded auto-reconnect after an unexpected mid-stream drop.
     Q_PROPERTY(bool autoReconnect MEMBER autoReconnect NOTIFY autoReconnectChanged)
     Q_PROPERTY(bool seenWelcomeHint MEMBER seenWelcomeHint NOTIFY seenWelcomeHintChanged)
     Q_PROPERTY(CaptureSysKeysMode captureSysKeysMode MEMBER captureSysKeysMode NOTIFY captureSysKeysModeChanged)
@@ -305,7 +305,7 @@ public:
     bool quitAppAfter;
     bool absoluteMouseMode;
     bool absoluteTouchMode;
-    // Vibemis BL-1562: see Q_PROPERTY comment above; opt-in on-screen touch buttons.
+    // Vibemis: see Q_PROPERTY comment above; opt-in on-screen touch buttons.
     bool enableTouchOverlay;
     bool framePacing;
     bool connectionWarnings;
@@ -341,7 +341,7 @@ public:
     bool uiSounds;
     // Vibemis: see Q_PROPERTY comment above; gates HDR request on display capability.
     bool displayHdrCapability;
-    // Vibemis BL-1561: see Q_PROPERTY comment above; forces client-side HDR->SDR
+    // Vibemis: see Q_PROPERTY comment above; forces client-side HDR->SDR
     // tone-mapping in the Vulkan renderer when set. Defaults to false (passthrough).
     bool hdrTonemapping;
     bool enableYUV444;

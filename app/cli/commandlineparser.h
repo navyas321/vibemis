@@ -15,7 +15,7 @@ public:
         PairRequested,
         ListRequested,
         SelfTestRequested, // Vibemis: `vibemis selftest` — non-destructive launcher smoke test
-        UpdateSelfTestRequested, // Vibemis BL-1692: `vibemis update-selftest` — proves the in-app updater end-to-end
+        UpdateSelfTestRequested, // Vibemis: `vibemis update-selftest` — proves the in-app updater end-to-end
     };
 
     GlobalCommandLineParser();

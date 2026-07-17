@@ -768,7 +768,7 @@ void PlVkRenderer::renderFrame(AVFrame *frame)
         m_LastColorspace = mappedFrame.color;
         SDL_assert(pl_color_space_equal(&mappedFrame.color, &m_LastColorspace));
 
-        // Vibemis BL-1561 (P3.8 parity): client-side HDR tone-mapping toggle.
+        // Client-side HDR tone-mapping toggle.
         // When "Tone-map HDR to SDR on this device" is enabled, we hint an SDR output
         // colorspace to the swapchain regardless of the source. libplacebo's
         // pl_render_image() then tone-maps HDR content down to SDR on this client
@@ -851,7 +851,7 @@ void PlVkRenderer::renderFrame(AVFrame *frame)
             }
             else if (i == Overlay::OverlayTouchButtonMenu || i == Overlay::OverlayTouchButtonKbd ||
                      i == Overlay::OverlayTouchButtonTouchMode) {
-                // Vibemis BL-1562/BL-2007: MENU top-left, KBD far top-right,
+                // MENU top-left, KBD far top-right,
                 // TOUCH-MODE immediately inward of KBD.
                 overlayParts[i].dst.x0 = (i == Overlay::OverlayTouchButtonMenu)
                         ? Overlay::TouchButtonInset

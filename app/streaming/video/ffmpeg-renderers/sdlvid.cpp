@@ -260,7 +260,7 @@ void SdlRenderer::renderOverlay(Overlay::OverlayType type)
             }
             else if (type == Overlay::OverlayTouchButtonMenu || type == Overlay::OverlayTouchButtonKbd ||
                      type == Overlay::OverlayTouchButtonTouchMode) {
-                // Vibemis BL-1562/BL-2007: MENU top-left, KBD far top-right,
+                // MENU top-left, KBD far top-right,
                 // TOUCH-MODE immediately inward of KBD.
                 SDL_Rect viewportRect;
                 SDL_RenderGetViewport(m_Renderer, &viewportRect);

@@ -23,7 +23,7 @@
 #   -o     ALSO capture the mangoapp/FPS overlay plane to <F>.overlay.png (see note below)
 #   -F     --force-cleanup: BEFORE starting, broadly kill leftover headless gamescope/mangoapp
 #          and nested-Xwayland/locks from OTHER or crashed runs. OFF by default because it can
-#          kill processes THIS script never spawned (BL-1536). Normal teardown only ever kills
+#          kill processes THIS script never spawned. Normal teardown only ever kills
 #          this run's own process group.
 #
 # Exit: 0 = app opened & rendered inside gamescope (survived, no coredump, WSI surface made);
@@ -71,7 +71,7 @@ GSLOG="$(mktemp /tmp/gs-emulate.XXXXXX.log)"
 
 # OPT-IN ONLY (-F / --force-cleanup). This BROADLY kills every matching headless gamescope and
 # mangoapp on the machine plus any nested-Xwayland on :1/:2/:3 -- i.e. it can kill processes THIS
-# script never spawned (another headless test, or a real Game Mode mangoapp). BL-1536: it is no
+# script never spawned (another headless test, or a real Game Mode mangoapp). It is no
 # longer run by default; normal teardown kills only this run's own process group (see below).
 force_cleanup() {
     pkill -9 -f "gamescope --backend headless" >/dev/null 2>&1
@@ -97,7 +97,7 @@ dumps_before=$(coredumpctl list --no-pager 2>/dev/null | grep -ciE 'moonlight|vi
 # Launch. Force X11 onto the nested XWayland (env -u WAYLAND_DISPLAY) so the app uses the
 # WSI layer path — apps that grab the wayland surface trip "[Gamescope WSI] Failed to get Wayland objects".
 # `set -m` puts this background job in its OWN process group (PGID == $GS) so teardown can signal
-# exactly this run's tree (gamescope + its mangoapp/Xwayland/app children) and nothing else (BL-1536).
+# exactly this run's tree (gamescope + its mangoapp/Xwayland/app children) and nothing else.
 set -m
 SDL_VIDEODRIVER=x11 ENABLE_GAMESCOPE_WSI=1 MANGOHUD_CONFIGFILE="$CFG" \
 gamescope --backend headless --xwayland-count 1 -w "$W" -h "$H" -W "$W" -H "$H" --mangoapp -- \

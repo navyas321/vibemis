@@ -19,7 +19,7 @@
 SystemProperties::SystemProperties()
 {
     versionString = QString(VERSION_STR);
-    // BL-1668: these MEMBER-backed Q_PROPERTYs were declared but never assigned (the assignment
+    // These MEMBER-backed Q_PROPERTYs were declared but never assigned (the assignment
     // lived in reverted HDR WIP), leaving them uninitialized — QML read garbage. Initialize both.
     isSteamDeck = isSteamDeckOrGamescope();
     hasVulkanHdr = false;
@@ -92,7 +92,7 @@ QRect SystemProperties::getNativeResolution(int displayIndex)
     return monitorNativeResolutions.value(displayIndex);
 }
 
-// BL-1668: detect a SteamOS handheld / gamescope session. Covers the Steam Deck AND other
+// Detect a SteamOS handheld / gamescope session. Covers the Steam Deck AND other
 // SteamOS handhelds (Legion Go S, ROG Ally SteamOS, etc.) in BOTH Game Mode (gamescope env)
 // and Desktop Mode (os-release ID). Used to default the launcher to a screen-filling window on
 // handhelds — a fixed 1280-wide window is a tiny sliver of a 1920x1200 handheld panel.
@@ -155,7 +155,7 @@ QString SystemProperties::checkTailscaleStatus()
 
 bool SystemProperties::openUrl(const QString& url)
 {
-    // Maintainer-caught (2026-07-13): links "did nothing" on device. Root cause: the
+    // Links "did nothing" on device. Root cause: the
     // AppImage runtime exports LD_LIBRARY_PATH / Qt plugin paths pointing into the bundle;
     // QDesktopServices/xdg-open spawn the host browser WITH that environment, so it loads
     // the bundled libraries and crashes on startup — silently, from the user's seat.

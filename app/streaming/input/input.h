@@ -19,13 +19,13 @@ struct GamepadState {
     SDL_TimerID mouseEmulationTimer;
     uint32_t lastStartDownTime;
 
-    // test81 (review fix): buttons whose PRESS was consumed by the Quick Menu intercept.
+    // Buttons whose PRESS was consumed by the Quick Menu intercept.
     // Their RELEASE must be swallowed too, or it leaks into the normal handlers with
     // stale state (e.g. Start release toggling mouse emulation, stray mouse-button
     // releases in emulation mode).
     int buttonsConsumedByMenu;
 
-    // BL-1665: while the Quick Menu is open, the left stick drives navigation like the d-pad.
+    // While the Quick Menu is open, the left stick drives navigation like the d-pad.
     // Axis events fire continuously, so we remember the last stick-derived direction (a Qt::Key
     // value, or 0 for centered) and only emit on CHANGE (edges) — the menu handles auto-repeat.
     int menuStickDir;
@@ -102,9 +102,9 @@ public:
     void setWindow(SDL_Window* window);
 
     void handleKeyEvent(SDL_KeyboardEvent* event);
-    void handleTextInputEvent(SDL_TextInputEvent* event);   // P3.20 (test86)
+    void handleTextInputEvent(SDL_TextInputEvent* event);
 
-    // P3.20b (test87): thread-safe bridge so the Quick Menu (Qt main thread) can trigger
+    // Thread-safe bridge so the Quick Menu (Qt main thread) can trigger
     // input ops that MUST run on the SDL thread (fullscreen / mouse-mode / input-capture
     // toggles). QuickMenuManager pushes this SDL user event; the SDL event loop dispatches
     // it here. Returns the registered SDL user-event type (stable for the process).
@@ -204,7 +204,7 @@ private:
 
     void handleAbsoluteFingerEvent(SDL_TouchFingerEvent* event);
 
-    // BL-1748: mode-agnostic overlay hit-test; called before the absolute/relative
+    // Mode-agnostic overlay hit-test; called before the absolute/relative
     // split so the MENU/KBD/TOUCH-MODE buttons work in both touch modes. Returns
     // true if consumed.
     bool handleTouchOverlayFingerEvent(SDL_TouchFingerEvent* event);
@@ -247,7 +247,7 @@ private:
     int m_GamepadMask;
     GamepadState m_GamepadState[MAX_GAMEPADS];
     QSet<short> m_KeysDown;
-    // test81 (review fix): scancodes whose key-DOWN the Quick Menu consumed; their key-UP
+    // Scancodes whose key-DOWN the Quick Menu consumed; their key-UP
     // must be swallowed too — but a key held since BEFORE the menu opened must still get
     // its release sent to the host (stuck-key fix).
     QSet<int> m_MenuConsumedKeys;
@@ -274,11 +274,11 @@ private:
     bool m_AbsoluteTouchMode;
     bool m_DisabledTouchFeedback;
 
-    // Vibemis BL-1562: finger currently captured by the on-screen touch overlay
+    // Vibemis: finger currently captured by the on-screen touch overlay
     // buttons; its motion/up events are swallowed so the host never sees an
     // unbalanced touch sequence (see abstouch.cpp).
     SDL_FingerID m_TouchOverlayFinger;
-    // BL-2015: dense pointer-id slots for native touch passthrough (abstouch.cpp) —
+    // Dense pointer-id slots for native touch passthrough (abstouch.cpp) —
     // hosts reject injection ids >= their max contact count, so raw finger ids can't
     // be forwarded. 10 matches typical InitializeTouchInjection limits.
     SDL_FingerID m_TouchSlotFinger[10] = {};

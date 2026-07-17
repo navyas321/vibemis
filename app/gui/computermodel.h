@@ -21,10 +21,10 @@ public:
         ApolloVersionRole,
         IsApolloServerRole,
         PermissionSummaryRole,
-        // Redesign 1a: rich host-card fields (host-type badge + transport + last-seen).
+        // Rich host-card fields (host-type badge + transport + last-seen).
         HostTypeRole,       // "VIBEPOLLO" / "APOLLO" / "SUNSHINE"
         TransportRole,      // "LAN" / "Tailscale"
-        LatencyTextRole,    // e.g. "4 ms" (empty until RTT measurement lands — BL-1598)
+        LatencyTextRole,    // e.g. "4 ms" (empty until RTT measurement lands)
         LastSeenTextRole    // e.g. "2 h ago" (empty until a lastSeen timestamp is tracked)
     };
     // Expose the role enum to QML so ComputerModel.OnlineRole / NameRole resolve to their

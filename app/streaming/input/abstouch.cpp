@@ -67,13 +67,13 @@ void SdlInputHandler::disableTouchFeedback()
 #endif
 }
 
-// Vibemis BL-1748: mode-agnostic on-screen touch-overlay hit-test. The overlay
+// Vibemis: mode-agnostic on-screen touch-overlay hit-test. The overlay
 // buttons are drawn in BOTH absolute and relative touch modes, but the interception
 // used to live only in handleAbsoluteFingerEvent. In relative / virtual-trackpad
 // mode the tap fell through to handleRelativeFingerEvent and was forwarded to the
 // host as a click, so the buttons were inert. This method is now called from
 // handleTouchFingerEvent BEFORE the absolute/relative split, so a tap on a button
-// is consumed in either mode. BL-2002/BL-2007 button roster: MENU (top-left)
+// is consumed in either mode. Button roster: MENU (top-left)
 // toggles the Quick Menu, KBD (far top-right) requests the SteamOS on-screen
 // keyboard, TOUCH-MODE (inward of KBD) live-toggles touchpad-emulation vs direct
 // touch. The rest of the captured finger's gesture (motion/up) is swallowed too so
@@ -125,12 +125,12 @@ bool SdlInputHandler::handleTouchOverlayFingerEvent(SDL_TouchFingerEvent* event)
         int fingerX = (int)(event->x * windowWidth);
         int fingerY = (int)(event->y * windowHeight);
 
-        // BL-2032 (test118 finding): fingertips land ~10px off the 64px visuals, and the
+        // Fingertips land ~10px off the 64px visuals, and the
         // MENU button especially missed taps. Give every button hit-slop beyond its drawn
         // rect: 12 stream-px on open sides, and the KBD/TOUCH gap split at its midpoint so
         // the slop regions can never claim the same pixel. Visuals are unchanged — this is
         // hit-test-only, and consumed taps still never reach the host.
-        // 12px chosen from the test118 measurement (~10px typical miss) + margin.
+        // 12px chosen from the measured ~10px typical miss + margin.
         int slopPxX = (int)(12 * scaleX);
         int slopPxY = (int)(12 * scaleY);
         int halfGapPxX = spacingPxX / 2;
@@ -151,7 +151,7 @@ bool SdlInputHandler::handleTouchOverlayFingerEvent(SDL_TouchFingerEvent* event)
                 QuickMenuManager* qmm = Session::get()->getQuickMenuManager();
 
                 if (onTouchModeButton) {
-                    // BL-2007: flip touchpad-emulation vs direct touch LIVE.
+                    // Flip touchpad-emulation vs direct touch LIVE.
                     // m_AbsoluteTouchMode is only read on this thread, so flipping it
                     // here is race-free — but only flip while this is the sole finger
                     // down: fingers mid-gesture in the OLD mode would otherwise leave
@@ -176,7 +176,7 @@ bool SdlInputHandler::handleTouchOverlayFingerEvent(SDL_TouchFingerEvent* event)
                 else if (qmm != nullptr) {
                     // The Quick Menu lives on the Qt main thread — hop threads via a
                     // queued invocation like the gamepad/keyboard intercepts do.
-                    // BL-2002: KBD requests the SteamOS on-screen keyboard (the
+                    // KBD requests the SteamOS on-screen keyboard (the
                     // text-send view remains reachable as its own Quick Menu row).
                     QMetaObject::invokeMethod(qmm, onMenuButton ? "toggle" : "openSteamKeyboard",
                                               Qt::QueuedConnection);
@@ -224,7 +224,7 @@ void SdlInputHandler::handleAbsoluteFingerEvent(SDL_TouchFingerEvent* event)
         return;
     }
 
-    // BL-2015: Windows InjectTouchInput rejects pointer ids >= the host's initialized
+    // Windows InjectTouchInput rejects pointer ids >= the host's initialized
     // max contact count (ERROR_INVALID_PARAMETER), and Apollo-lineage hosts forward the
     // client's id into that API. Raw or CRC'd SDL finger ids are effectively always too
     // large, so every touch DOWN failed host-side (silently — the host logs nothing) and
@@ -285,7 +285,7 @@ void SdlInputHandler::handleAbsoluteFingerEvent(SDL_TouchFingerEvent* event)
         else
 #endif
         {
-            // BL-2015: many touchscreens (the Legion Go panel included) report SDL finger
+            // Many touchscreens (the Legion Go panel included) report SDL finger
             // pressure as 0.0, and Apollo-lineage hosts inject pressure<=0 DOWN/MOVE as
             // hover — the pointer relocates but never makes contact, so taps don't click
             // and drags don't draw. A capacitive finger can't hover: treat missing
@@ -298,9 +298,9 @@ void SdlInputHandler::handleAbsoluteFingerEvent(SDL_TouchFingerEvent* event)
             int err = LiSendTouchEvent(eventType, pointerId, vidrelx / dst.w, vidrely / dst.h, pressure,
                                        0.0f, 0.0f, LI_ROT_UNKNOWN);
 
-            // BL-2015 observability (test-agent ask): the send path was previously
-            // unloggable. DOWN/UP only — never per-MOVE (input-path logging caused the
-            // BL-1619 lag storm); moves are counted and summarized on UP. Single shared
+            // Observability: the send path was previously
+            // unloggable. DOWN/UP only — never per-MOVE (input-path logging caused a
+            // lag storm); moves are counted and summarized on UP. Single shared
             // counter: diagnostic-grade for the dominant single-finger case.
             static uint32_t s_MovesSinceDown = 0;
             if (eventType == LI_TOUCH_EVENT_DOWN) {

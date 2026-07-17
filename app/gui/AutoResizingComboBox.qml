@@ -15,8 +15,8 @@ ComboBox {
 
     implicitWidth: desiredWidth < maximumWidth ? desiredWidth : maximumWidth
 
-    // BL-1776: popup navigation tick + selection blip. Connections, not plain
-    // handlers, because instances override base handlers (BL-1664 above).
+    // Popup navigation tick + selection blip. Connections, not plain
+    // handlers, because instances override base handlers (see above).
     // highlightedIndex also syncs while the popup is closed (model/currentIndex
     // churn at init) — the popup.visible guard keeps those silent.
     Connections {
@@ -31,10 +31,10 @@ ComboBox {
         }
     }
 
-    // BL-2021: with the popup CLOSED, ComboBox's built-in key handling edits the value on
+    // With the popup CLOSED, ComboBox's built-in key handling edits the value on
     // arrow Up/Down — so KEYBOARD-arrow focus-walking through a settings combo silently
     // changed it. (Gamepad d-pad is unaffected in Settings: UiNavMode translates it to
-    // Tab/Shift+Tab; the on-device repro traced to the test rig's synthetic keyboard
+    // Tab/Shift+Tab; the on-device repro traced to synthetic keyboard
     // arrows.) Closed = arrows navigate focus, matching NavigableMessageDialog's idiom;
     // value editing requires opening the popup (A/Enter) first, where default arrow
     // behavior still applies.
@@ -73,7 +73,7 @@ ComboBox {
     // so we can adjust the combo box width here too
     onActivated: recalculateWidth()
 
-    // BL-1664 (CRITICAL text-clip RCA): recalculateWidth() used to run ONLY from onActivated —
+    // CRITICAL text-clip RCA: recalculateWidth() used to run ONLY from onActivated —
     // i.e. after a human opens the popup and picks an item. But MANY instances (accent / quick-menu /
     // capture-keys combos in SettingsView) declare their OWN onActivated, which in QML OVERRIDES this
     // base handler and drops the recalc entirely; and none of them recalc at init. So textWidth stayed

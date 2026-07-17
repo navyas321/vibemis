@@ -1,5 +1,5 @@
 #!/bin/bash
-# install-vibemis-desktop.sh — Vibemis desktop & Steam integration (P3.2)
+# install-vibemis-desktop.sh — Vibemis desktop & Steam integration
 #
 # Problem: when you right-click an AppImage and choose "Add to Steam", Steam names the
 # shortcut after the *filename* (e.g. "Vibemis-0.6.7-...-x86_64.AppImage"). This installs

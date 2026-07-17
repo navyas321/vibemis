@@ -193,7 +193,7 @@ Uint32 SdlInputHandler::mouseEmulationTimerCallback(Uint32 interval, void *param
 {
     auto gamepad = reinterpret_cast<GamepadState*>(param);
 
-    // test81 (review fix): freeze emulated mouse motion while the Quick Menu is open.
+    // Freeze emulated mouse motion while the Quick Menu is open.
     {
         Session* sess = Session::get();
         if (sess && sess->getQuickMenuManager() &&
@@ -241,10 +241,10 @@ void SdlInputHandler::handleControllerAxisEvent(SDL_ControllerAxisEvent* event)
         return;
     }
 
-    // test81 (review fix): while the Quick Menu is open, buttons are intercepted but
+    // While the Quick Menu is open, buttons are intercepted but
     // sticks/triggers used to keep streaming to the host — the game kept walking/aiming
     // under the menu. Swallow axis input so it never reaches the host.
-    // BL-1665: additionally translate the LEFT stick into menu navigation (like the d-pad),
+    // Additionally translate the LEFT stick into menu navigation (like the d-pad),
     // emitting only on direction change (edges) with auto-repeat handled by the menu — so the
     // stick actually moves the selection instead of doing nothing.
     {
@@ -395,7 +395,7 @@ void SdlInputHandler::handleControllerButtonEvent(SDL_ControllerButtonEvent* eve
             sess->getQuickMenuManager()->isVisible())
         {
             Qt::Key qtKey = Qt::Key_unknown;
-            // BL-1665: d-pad directions auto-repeat while held (injectNavKey); action buttons
+            // D-pad directions auto-repeat while held (injectNavKey); action buttons
             // fire once (injectKey). SDL emits no key-repeat for held gamepad buttons, so
             // without this a held d-pad moved the selection exactly once.
             bool isNav = false;
@@ -406,7 +406,7 @@ void SdlInputHandler::handleControllerButtonEvent(SDL_ControllerButtonEvent* eve
             case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: qtKey = Qt::Key_Right;  isNav = true; break;
             case SDL_CONTROLLER_BUTTON_A:          qtKey = Qt::Key_Return; break;
             case SDL_CONTROLLER_BUTTON_B:          qtKey = Qt::Key_Escape; break;
-            // test77: Back/Select(View) and Start also close the menu and return to the
+            // Back/Select(View) and Start also close the menu and return to the
             // game. Back was previously swallowed unmapped, which left gamepad-only users
             // (Game Mode) with no discoverable way out of the menu — it read as a freeze.
             case SDL_CONTROLLER_BUTTON_BACK:       qtKey = Qt::Key_Escape; break;
@@ -419,7 +419,7 @@ void SdlInputHandler::handleControllerButtonEvent(SDL_ControllerButtonEvent* eve
                 QMetaObject::invokeMethod(sess->getQuickMenuManager(),
                                           isNav ? "injectNavKey" : "injectKey",
                                           Qt::QueuedConnection, Q_ARG(int, (int)qtKey));
-                // test81 (review fix): remember the consumed press so its RELEASE is
+                // Remember the consumed press so its RELEASE is
                 // swallowed too (see below) — otherwise the release leaked into the
                 // normal handlers with stale state (Start release toggled mouse
                 // emulation; A/B releases sent stray mouse buttons in emulation mode).
@@ -431,10 +431,10 @@ void SdlInputHandler::handleControllerButtonEvent(SDL_ControllerButtonEvent* eve
         }
     }
 
-    // test81 (review fix): swallow the release of any press the Quick Menu consumed.
+    // Swallow the release of any press the Quick Menu consumed.
     if (event->state == SDL_RELEASED &&
         (state->buttonsConsumedByMenu & k_ButtonMap[event->button])) {
-        // BL-1665: releasing a d-pad direction ends its auto-repeat in the menu.
+        // Releasing a d-pad direction ends its auto-repeat in the menu.
         Qt::Key navKey = Qt::Key_unknown;
         switch (event->button) {
         case SDL_CONTROLLER_BUTTON_DPAD_UP:    navKey = Qt::Key_Up;    break;
@@ -545,7 +545,7 @@ void SdlInputHandler::handleControllerButtonEvent(SDL_ControllerButtonEvent* eve
         event.quit.timestamp = SDL_GetTicks();
         SDL_PushEvent(&event);
 
-        // Clear buttons down on this gamepad — locally too (test77), otherwise the
+        // Clear buttons down on this gamepad — locally too, otherwise the
         // held combo is re-sent to the host by the next axis/state update.
         LiSendMultiControllerEvent(state->index, m_GamepadMask,
                                    0, 0, 0, 0, 0, 0, 0);
@@ -562,7 +562,7 @@ void SdlInputHandler::handleControllerButtonEvent(SDL_ControllerButtonEvent* eve
         Session::get()->getOverlayManager().setOverlayState(Overlay::OverlayDebug,
                                                             !Session::get()->getOverlayManager().isOverlayEnabled(Overlay::OverlayDebug));
 
-        // Clear buttons down on this gamepad — locally too (test77), otherwise the
+        // Clear buttons down on this gamepad — locally too, otherwise the
         // held combo is re-sent to the host by the next axis/state update.
         LiSendMultiControllerEvent(state->index, m_GamepadMask,
                                    0, 0, 0, 0, 0, 0, 0);
@@ -572,7 +572,7 @@ void SdlInputHandler::handleControllerButtonEvent(SDL_ControllerButtonEvent* eve
 
     // Handle the configurable gamepad combo for the Quick Menu (default Select+L1+R1+Y)
     bool quickMenuComboHit = (state->buttons == quickMenuComboMask());
-    // Vibemis BL-1685 (maintainer directive): on paddle-equipped controllers (Legion Go,
+    // Vibemis: on paddle-equipped controllers (Legion Go,
     // Xbox Elite, …) the back paddle P1 opens the Quick Menu OUT OF THE BOX — no Settings
     // trip needed. Active only while the pref is still the default chord; explicitly
     // choosing ANY combo in Settings (including another paddle) takes full control.
@@ -594,7 +594,7 @@ void SdlInputHandler::handleControllerButtonEvent(SDL_ControllerButtonEvent* eve
         // Toggle the quick menu
         Session::get()->toggleQuickMenu();
 
-        // Clear buttons down on this gamepad — locally too (test77). Without the local
+        // Clear buttons down on this gamepad — locally too. Without the local
         // clear the held Select+L1+R1+Y was re-sent to the host on every axis update
         // (stuck buttons in-game) while the menu sat open.
         LiSendMultiControllerEvent(state->index, m_GamepadMask,
@@ -773,7 +773,7 @@ void SdlInputHandler::handleControllerDeviceEvent(SDL_ControllerDeviceEvent* eve
         state->controller = controller;
         state->jsId = SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(state->controller));
 
-        // Vibemis (P3.16/P3.22): when motion forwarding is enabled, report whether this
+        // Vibemis: when motion forwarding is enabled, report whether this
         // controller exposes gyro/accelerometer. Actual sensor enablement + forwarding is
         // now wired: the host requests a report rate via setMotionEventState(), which
         // enables the SDL sensors (gated on this same setting) and handleControllerSensorEvent()
@@ -1028,7 +1028,7 @@ void SdlInputHandler::rumble(unsigned short controllerNumber, unsigned short low
         return;
     }
 
-    // Vibemis (P3.13): client-side "suppress controller rumble" switch. When enabled, drop
+    // Vibemis: client-side "suppress controller rumble" switch. When enabled, drop
     // host-driven rumble entirely (some users dislike rumble or want to save handheld battery).
     // Apollo can also disable rumble host-side; this is the always-available client control.
     if (StreamingPreferences::get()->suppressControllerRumble) {
@@ -1093,7 +1093,7 @@ void SdlInputHandler::rumbleTriggers(uint16_t controllerNumber, uint16_t leftTri
         return;
     }
 
-    // Vibemis (P3.13): see rumble() — same client-side suppression switch for trigger rumble.
+    // Vibemis: see rumble() — same client-side suppression switch for trigger rumble.
     if (StreamingPreferences::get()->suppressControllerRumble) {
         return;
     }
@@ -1114,10 +1114,10 @@ void SdlInputHandler::setMotionEventState(uint16_t controllerNumber, uint8_t mot
 
 #if SDL_VERSION_ATLEAST(2, 0, 14)
     if (m_GamepadState[controllerNumber].controller != nullptr) {
-        // Vibemis P3.22 (test82): honor the user's motion-forwarding setting. When it's
+        // Vibemis: honor the user's motion-forwarding setting. When it's
         // off, ignore the host's request to enable sensors — no gyro/accel is captured or
-        // forwarded (privacy + avoids unwanted gyro-aim). This completes the test64 slice,
-        // where forwardMotionControls only affected a log line.
+        // forwarded (privacy + avoids unwanted gyro-aim). Previously forwardMotionControls
+        // only affected a log line.
         if (!StreamingPreferences::get()->forwardMotionControls) {
             reportRateHz = 0;
         }

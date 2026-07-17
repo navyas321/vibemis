@@ -348,8 +348,8 @@ QVector<NvApp>
 NvHTTP::getAppList(NvLogLevel logLevel)
 {
     // logLevel defaults to NVLL_ERROR for user-initiated fetches; the background poll
-    // passes NVLL_NONE so the periodic applist request doesn't spam the log (BL-1619:
-    // the per-poll "openConnection ... Command: applist" qDebug was starving input on-device).
+    // passes NVLL_NONE so the periodic applist request doesn't spam the log — the
+    // per-poll "openConnection ... Command: applist" qDebug was starving input on-device.
     QString appxml = openConnectionToString(m_BaseUrlHttps,
                                             "applist",
                                             nullptr,
@@ -677,7 +677,7 @@ NvHTTP::getClipboardContent()
 {
     try {
         // Fail closed: without a pinned server cert (unpaired host) we cannot
-        // authenticate the peer, so refuse the request entirely (BL-2063).
+        // authenticate the peer, so refuse the request entirely.
         if (m_ServerCert.isNull()) {
             qWarning() << "NvHTTP: No pinned server certificate; refusing clipboard fetch";
             return QString();
@@ -687,7 +687,7 @@ NvHTTP::getClipboardContent()
         // is issued to the hostname, so the handshake reports errors for the
         // otherwise-valid paired cert. Mirror openConnection(): keep full peer
         // verification and let handleSslErrors() ignore errors only when the
-        // presented cert is exactly the pinned one (BL-2063 — this used to be
+        // presented cert is exactly the pinned one (this used to be
         // VerifyNone, which disabled the entire certificate check, not just
         // hostname verification).
         QUrl getUrl(m_BaseUrlHttps);
@@ -732,7 +732,7 @@ NvHTTP::sendClipboardContent(const QString& content)
 {
     try {
         // Fail closed: without a pinned server cert (unpaired host) we cannot
-        // authenticate the peer, so refuse the request entirely (BL-2063).
+        // authenticate the peer, so refuse the request entirely.
         if (m_ServerCert.isNull()) {
             qWarning() << "NvHTTP: No pinned server certificate; refusing clipboard send";
             return false;
@@ -752,7 +752,7 @@ NvHTTP::sendClipboardContent(const QString& content)
         //   "SSL handshake failed: The host name did not match any of the valid hosts"
         // Mirror openConnection(): keep full peer verification and let
         // handleSslErrors() ignore errors only when the presented cert is exactly
-        // the pinned one (BL-2063 — this used to be VerifyNone, which disabled the
+        // the pinned one (this used to be VerifyNone, which disabled the
         // entire certificate check, not just hostname verification).
         request.setSslConfiguration(IdentityManager::get()->getSslConfig());
 

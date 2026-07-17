@@ -11,8 +11,8 @@ MenuItem {
     height: visible ? implicitHeight : 0
     focusPolicy: visible ? Qt.TabFocus : Qt.NoFocus
 
-    // BL-1776: activation blip — Connections so the instances' own onTriggered
-    // declarations (every menu item has one) can't override it (BL-1664).
+    // Activation blip — Connections so the instances' own onTriggered
+    // declarations (every menu item has one) can't override it.
     Connections {
         target: navMenuItem
         function onTriggered() {

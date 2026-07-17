@@ -5,9 +5,9 @@ import ServerCommandManager 1.0
 import UiSoundManager 1.0
 import Vibemis.Redesign 1.0
 
-// BL-1688: redesigned onto the Vibemis token system (dark elevated panel, Sora/Manrope
+// Redesigned onto the Vibemis token system (dark elevated panel, Sora/Manrope
 // type, VbSheetIcon line glyphs instead of emoji, sheet-style rows, hint-bar footer) —
-// matching the 1a/1d/1e screens. Input model unchanged (d-pad auto-repeat, left stick,
+// matching the redesigned screens. Input model unchanged (d-pad auto-repeat, left stick,
 // injected keys). Renders offscreen into the stream; VbTokens is a process-global
 // singleton and VbSheetIcon resolves from the same qrc:/gui directory, so the separate
 // offscreen QML engine sees both.
@@ -42,7 +42,7 @@ Rectangle {
     // Handle keyboard input for navigation
     Keys.onPressed: function(event) {
         if (event.key === Qt.Key_Escape) {
-            // test77: from a submenu, Esc/B/Back returns to the main menu (matching the
+            // From a submenu, Esc/B/Back returns to the main menu (matching the
             // on-screen "← Back" button); from the main menu it resumes the game.
             if (currentMenu === "text_send") {
                 if (typeof quickMenuManager !== 'undefined') quickMenuManager.setTextInputActive(false)
@@ -67,8 +67,8 @@ Rectangle {
         anchors.margins: 22
         spacing: 12
 
-        // BL-1688: screen-style title — Sora bold, left-aligned over a soft hairline,
-        // like the 1a/1e section headers (was a centered cyan pointSize title).
+        // Screen-style title — Sora bold, left-aligned over a soft hairline,
+        // like the redesigned section headers (was a centered cyan pointSize title).
         Text {
             text: currentMenu === "text_send" ? qsTr("Send text to host")
                   : (currentMenu === "main" ? qsTr("Quick Menu") : qsTr("Server commands"))
@@ -95,7 +95,7 @@ Rectangle {
             // so the ListView must not also claim focus (events are injected to the root).
             focus: false
             currentIndex: 0
-            // BL-1776: focus tick. The menu lives in an offscreen window (separate QML
+            // Focus tick. The menu lives in an offscreen window (separate QML
             // engine), so the launcher's activeFocusItem hook can't see it — currentIndex
             // is this menu's focus cursor (moved via injected Up/Down keys and hover).
             onCurrentIndexChanged: UiSoundManager.focusMoved()
@@ -117,7 +117,7 @@ Rectangle {
             delegate: Button {
                 id: menuRow
                 width: menuListView.width
-                // BL-1666: taller row so the selection rectangle isn't cramped against the label
+                // Taller row so the selection rectangle isn't cramped against the label
                 // (was 60 with only 6px text margin — the teal border hugged the text). The list
                 // scrolls (d-pad repeat / left stick), so the extra height is fine.
                 height: 70
@@ -127,12 +127,12 @@ Rectangle {
                 // controller navigation is visible in Game Mode.
                 highlighted: ListView.isCurrentItem
 
-                // BL-1688: destructive rows (quit) take the danger treatment like the
+                // Destructive rows (quit) take the danger treatment like the
                 // host sheet's Delete row.
                 readonly property bool danger: model.action === "quit"
                 readonly property bool active: hovered || highlighted
 
-                // BL-1688: sheet-row recipe — focusedFill surface + accent border when
+                // Sheet-row recipe — focusedFill surface + accent border when
                 // current (flat variant: the outer glow would clip inside this scrolling
                 // clipped list, so the ring is border-only here).
                 background: Rectangle {
@@ -160,7 +160,7 @@ Rectangle {
                     anchors.bottomMargin: 6
                     spacing: 16
 
-                    // BL-1688: monochrome line glyph (VbSheetIcon) instead of an emoji —
+                    // Monochrome line glyph (VbSheetIcon) instead of an emoji —
                     // accent when selected, danger red for quit, dim otherwise.
                     VbSheetIcon {
                         kind: model.icon
@@ -199,7 +199,7 @@ Rectangle {
             }
         }
 
-        // P3.20 (test86): on-screen text-send view. A focused TextField receives typed
+        // On-screen text-send view. A focused TextField receives typed
         // characters routed from SDL_TEXTINPUT via QuickMenuManager::injectText; Send (or
         // Enter) ships the string to the host as a UTF-8 text event. Fills the OSK gap on
         // keyboard-less handhelds (works with a physical keyboard or the platform OSK).
@@ -218,13 +218,13 @@ Rectangle {
                 font.family: VbTokens.fontBody
                 font.pixelSize: 16
                 selectByMouse: true
-                // BL-2000: keep typed text inside the styled border — the field fills
+                // Keep typed text inside the styled border — the field fills
                 // width with a bordered background but had no clip and no horizontal
                 // padding, so long text ran to/past the border edge.
                 clip: true
                 leftPadding: 12
                 rightPadding: 12
-                // BL-1688: token field — window-dark well + accent focus border.
+                // Token field — window-dark well + accent focus border.
                 background: Rectangle {
                     color: VbTokens.bgWindow
                     border.color: sendTextField.activeFocus ? VbTokens.accent : VbTokens.stroke
@@ -272,9 +272,9 @@ Rectangle {
             color: VbTokens.strokeSoft
         }
 
-        // BL-1688: footer restyled as a hint bar (circled glyphs + labels, like every
-        // redesigned screen's VbHintBar) — still tappable to go back/resume (test77:
-        // controller users need the discoverable gamepad way back to the game).
+        // Footer restyled as a hint bar (circled glyphs + labels, like every
+        // redesigned screen's VbHintBar) — still tappable to go back/resume
+        // (controller users need the discoverable gamepad way back to the game).
         // Bug fix history: pinned full-width below the clipped list.
         Item {
             Layout.fillWidth: true
@@ -342,7 +342,7 @@ Rectangle {
         width: Math.min(parent.width - 44, toastText.implicitWidth + 32)
         height: 40
         radius: VbTokens.radiusPill
-        // BL-1688: token pill (elevated chip + accent edge) instead of grey-on-grey.
+        // Token pill (elevated chip + accent edge) instead of grey-on-grey.
         color: VbTokens.bgElev2
         border.color: VbTokens.accent
         border.width: 1
@@ -390,7 +390,7 @@ Rectangle {
             var commandIds = quickMenuManager.serverCommandManager.getAvailableCommands();
             for (var i = 0; i < commandIds.length; i++) {
                 var commandId = commandIds[i];
-                // BL-1688: VbSheetIcon kinds (line glyphs), not emoji.
+                // VbSheetIcon kinds (line glyphs), not emoji.
                 var icon = "terminal"; // Default
                 if (commandId.toLowerCase() === "shutdown") {
                     icon = "power";
@@ -414,7 +414,7 @@ Rectangle {
     // Main menu model
     ListModel {
         id: mainMenuModel
-        // BL-1688: `icon` values are VbSheetIcon kinds (monochrome line glyphs), not emoji.
+        // `icon` values are VbSheetIcon kinds (monochrome line glyphs), not emoji.
         ListElement {
             text: qsTr("Disconnect")
             icon: "disconnect"
@@ -422,7 +422,7 @@ Rectangle {
             description: qsTr("End the stream — game keeps running on the host")
         }
         ListElement {
-            // BL-1686: quits the game on the HOST and returns to the Vibemis grid
+            // Quits the game on the HOST and returns to the Vibemis grid
             // (no longer exits the whole app — start another session right away).
             text: qsTr("Quit game")
             icon: "power"
@@ -448,7 +448,7 @@ Rectangle {
             description: qsTr("Fetch clipboard from server")
         }
         ListElement {
-            // BL-2002: same target as the overlay's KBD button — the SteamOS OSK
+            // Same target as the overlay's KBD button — the SteamOS OSK
             // types straight into the stream, unlike the buffered text-send view.
             text: qsTr("On-screen keyboard")
             icon: "keyboard"
@@ -535,7 +535,7 @@ Rectangle {
         }
     }
     
-    // P3.20 (test86): ship the field contents to the host and return to the main menu.
+    // Ship the field contents to the host and return to the main menu.
     function sendTypedText() {
         if (typeof quickMenuManager === 'undefined') return
         if (sendTextField.text.length > 0) {
@@ -560,7 +560,7 @@ Rectangle {
     function closeMenu() {
         // Only call backend hide - don't set QML invisible
             if (typeof quickMenuManager !== 'undefined') {
-                quickMenuManager.setTextInputActive(false)   // P3.20: leave text mode
+                quickMenuManager.setTextInputActive(false)   // leave text mode
                 showActionFeedback("Closing menu...")  // Feedback when closing
             quickMenuManager.hide();
         }
@@ -576,7 +576,7 @@ Rectangle {
     function executeAction(action) {
         console.log("Executing action:", action)
 
-        // BL-1776: activation blip — single funnel for injected A/Enter
+        // Activation blip — single funnel for injected A/Enter
         // (executeCurrentItem) and mouse/touch row clicks alike
         UiSoundManager.activated()
 

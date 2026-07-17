@@ -8,7 +8,7 @@
 
 class QQmlEngine;
 
-// BL-1776: tiny SDL player for the controller-nav UI sounds (focus tick +
+// Tiny SDL player for the controller-nav UI sounds (focus tick +
 // activation blip). Deliberately NOT Qt Multimedia — that module isn't linked
 // today and would add a new runtime Qt library plus a GStreamer/FFmpeg media
 // backend to the AppImage for two ~5 KB tones. SDL is already linked for

@@ -193,10 +193,10 @@ GlobalCommandLineParser::ParseResult GlobalCommandLineParser::parse(const QStrin
             } else if (action == "list") {
                 return ListRequested;
             } else if (action == "selftest") {
-                // Vibemis: scriptable smoke test for the test agent (see docs/SELFTEST.md)
+                // Vibemis: scriptable smoke test for automated on-device testing (see docs/SELFTEST.md)
                 return SelfTestRequested;
             } else if (action == "update-selftest") {
-                // Vibemis BL-1692: end-to-end proof of the in-app updater (real check +
+                // Vibemis: end-to-end proof of the in-app updater (real check +
                 // download + atomic swap of $APPIMAGE), harness-controlled exit.
                 return UpdateSelfTestRequested;
             }

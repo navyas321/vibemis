@@ -13,10 +13,10 @@ enum OverlayType {
     OverlayStatusUpdate,
     OverlayServerCommands,
     OverlayQuickMenu,
-    // Vibemis BL-1562/BL-2007: opt-in on-screen touch controls. Three small
+    // Vibemis opt-in on-screen touch controls. Three small
     // semi-transparent icon-only buttons composited into the stream: MENU
     // (top-left, opens the Quick Menu), KBD (far top-right, requests the SteamOS
-    // on-screen keyboard — BL-2002) and TOUCH-MODE (immediately inward of KBD,
+    // on-screen keyboard) and TOUCH-MODE (immediately inward of KBD,
     // live-toggles touchpad-emulation vs direct touch). Their glyphs are drawn
     // with primitive shapes in notifyOverlayUpdated() — no text, no assets.
     // Hit-testing lives in the touch handler (abstouch.cpp) using the constants
@@ -27,10 +27,10 @@ enum OverlayType {
     OverlayMax
 };
 
-// Vibemis BL-1562: geometry of the on-screen touch buttons — square side length and
+// Vibemis geometry of the on-screen touch buttons — square side length and
 // inset from the top corners, in pixels. Shared by the renderers (drawing) and the
 // touch input handler (hit-testing) so the visuals and the hit rects stay in sync.
-// BL-2007: TouchButtonSpacing is the gap between the two buttons of the top-right
+// TouchButtonSpacing is the gap between the two buttons of the top-right
 // cluster (KBD at the corner, TOUCH-MODE inward of it).
 const int TouchButtonSize = 64;
 const int TouchButtonInset = 24;
@@ -76,7 +76,7 @@ public:
 private:
     void notifyOverlayUpdated(OverlayType type);
 
-    // Vibemis BL-2007: build the icon-only surface for one of the on-screen touch
+    // Build the icon-only surface for one of the on-screen touch
     // buttons (TouchButtonSize square, semi-transparent background, glyph drawn
     // from primitive shapes). Returns nullptr on allocation failure.
     SDL_Surface* renderTouchButtonSurface(OverlayType type);
@@ -91,7 +91,7 @@ private:
         SDL_Surface* surface;
     } m_Overlays[OverlayMax];
     IOverlayRenderer* m_Renderer;
-    QMutex m_RendererLock;   // test81: guards m_Renderer swap vs cross-thread notify
+    QMutex m_RendererLock;   // guards m_Renderer swap vs cross-thread notify
     QByteArray m_FontData;
 };
 

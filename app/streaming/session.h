@@ -121,7 +121,7 @@ public:
             m_ServerCommandManager = nullptr;
         }
         if (m_ClipboardManager) {
-            // test81 (review fix): m_ClipboardManager is the ClipboardManager::instance()
+            // m_ClipboardManager is the ClipboardManager::instance()
             // SINGLETON, also owned by the QML engine (main.cpp registers it via
             // ClipboardManager::create). Deleting it here left QML holding a dangling
             // pointer (crash on the next Settings open) and caused a double-delete at
@@ -133,11 +133,11 @@ public:
 
     Q_INVOKABLE void exec(QWindow* qtWindow);
 
-    // P3.21 (test80): true when the stream was cut unexpectedly (connection loss),
+    // True when the stream was cut unexpectedly (connection loss),
     // as opposed to a user-initiated quit — used by the auto-reconnect logic in QML.
     Q_INVOKABLE bool wasUnexpectedTermination() const { return m_UnexpectedTermination; }
 
-    // P3.21 (test80): a fresh Session for the same host+app (per-game profiles and
+    // A fresh Session for the same host+app (per-game profiles and
     // preferences re-apply automatically). QML takes ownership of the returned object.
     Q_INVOKABLE Session* createResumeSession() { return new Session(m_Computer, m_App); }
 
@@ -165,7 +165,7 @@ public:
 
     void setShouldExitAfterQuit();
 
-    // Vibemis BL-1686: quit the RUNNING APP on the host when this session ends, but keep
+    // Vibemis: quit the RUNNING APP on the host when this session ends, but keep
     // Vibemis itself open (back to the grid) — a one-shot session-scoped quitAppAfter.
     void setShouldQuitAppAfter();
 
@@ -316,7 +316,7 @@ private:
     int m_FlushingWindowEventsRef;
     QList<QString> m_LaunchWarnings;
     bool m_ShouldExitAfterQuit;
-    // Vibemis BL-1686: see setShouldQuitAppAfter()
+    // Vibemis: see setShouldQuitAppAfter()
     bool m_ShouldQuitAppAfter;
 
     bool m_AsyncConnectionSuccess;

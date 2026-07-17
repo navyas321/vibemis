@@ -273,11 +273,11 @@ void OTPPairingManager::sendOTPPairingRequest(NvComputer *computer, const QStrin
                 qWarning() << "OTPPairingManager: No server certificate in OTP response";
             }
         } else {
-            // BL-2067: never surface the raw pairing response in a user-facing error.
+            // Never surface the raw pairing response in a user-facing error.
             // An anomalous partial-success response can carry the server certificate
             // (<plaincert>) or other pairing material. Show a generic failure plus a
             // redacted, non-secret summary: a safe numeric status code if present and the
-            // response length only (mirrors the BL-2062 presence/length log redaction).
+            // response length only (mirrors the presence/length log redaction).
             QRegularExpression statusCodeRegex(R"rx(status_code="(\d+)")rx");
             QRegularExpressionMatch statusCodeMatch = statusCodeRegex.match(pairingRequest);
             QString reason = statusCodeMatch.hasMatch()

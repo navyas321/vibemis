@@ -39,7 +39,7 @@ ServerCommandManager::~ServerCommandManager()
 void ServerCommandManager::setConnection(NvComputer *computer, NvHTTP *http)
 {
     m_computer = computer;
-    // test81 (review fix): take ownership of the NvHTTP handed to us — the previous one
+    // Take ownership of the NvHTTP handed to us — the previous one
     // (and its QNetworkAccessManager) leaked on every new streaming session.
     if (m_http && m_http != http && m_http->parent() == this) {
         delete m_http;
@@ -117,7 +117,7 @@ void ServerCommandManager::refreshCommands()
     } else {
         qDebug() << "ServerCommandManager::refreshCommands: No server commands in serverinfo XML, using builtins";
 
-        // test83 (review fix BL-1531): the old fetchAvailableCommands() here fired up to 6
+        // The old fetchAvailableCommands() here fired up to 6
         // SEQUENTIAL BLOCKING HTTP probes (5s timeout each = up to 30s) against speculative
         // endpoints ("servercommands", "commands", ...) that Apollo does NOT expose — commands
         // arrive via the serverinfo XML (m_computer->serverCommands, handled above). The probes
@@ -256,7 +256,7 @@ void ServerCommandManager::sendCommandExecution(const QString &commandId)
         return;
     }
 
-    // test81 (review fix): LiSendExecServerCmd() sends an INDEX into the HOST's command
+    // LiSendExecServerCmd() sends an INDEX into the HOST's command
     // list. The old builtin-list fallback sent an index into OUR local list, so on a
     // host whose list differs, "shutdown" could execute whatever the host had at that
     // slot. Only ever index into the host-provided list; without one, refuse.
@@ -313,7 +313,7 @@ void ServerCommandManager::sendCommandExecution(const QString &commandId)
     // sendMessageAndForget() (moonlight-common-c ControlStream.c): NONZERO/true means
     // the command was sent to the host OK, 0/false means the send failed. Treat nonzero
     // as success -- the old "result == 0" check was inverted and logged a successful
-    // send (result 1) as "execution failed with result: 1" (BL-1990).
+    // send (result 1) as "execution failed with result: 1".
     m_isExecuting = false;
     m_currentExecutingCommand.clear();
     emit executionStateChanged();

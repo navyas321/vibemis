@@ -1,5 +1,5 @@
 #!/bin/bash
-# uninstall-vibemis-desktop.sh — remove Vibemis desktop integration (P3.10)
+# uninstall-vibemis-desktop.sh — remove Vibemis desktop integration
 #
 # Cleanly undoes what install-vibemis-desktop.sh and add-game-to-steam.sh created:
 #   ~/Applications/Vibemis.AppImage

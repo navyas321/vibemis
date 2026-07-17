@@ -84,7 +84,7 @@ public:
                     m_TimeoutTimer->start(APP_SEEK_TIMEOUT);
                     emit q->searchingApp();
 
-                    // test78: the app list is often already cached for a known host, and no
+                    // The app list is often already cached for a known host, and no
                     // further computerStateChanged may arrive within the seek window — which
                     // used to time out with "Failed to find application" even though the app
                     // was present. Try the cached list immediately instead of waiting for
@@ -129,7 +129,7 @@ public:
             }
             if (m_State == StateSeekApp) {
                 m_State = StateFailure;
-                // test78: name the apps that ARE available so a typo'd/renamed app is
+                // Name the apps that ARE available so a typo'd/renamed app is
                 // self-diagnosing from the CLI output.
                 QStringList available;
                 for (const NvApp &a : m_Computer->appList) {
@@ -144,7 +144,7 @@ public:
         }
     }
 
-    // test78: run one seek attempt against the computer's current app list. Called on
+    // Run one seek attempt against the computer's current app list. Called on
     // entry to StateSeekApp (cached list) and on every ComputerUpdated. Starts the
     // session / requests a quit exactly like the old inline ComputerUpdated handler.
     void trySeekApp(Launcher *q)
@@ -163,7 +163,7 @@ public:
         }
     }
 
-    // test81 (test-agent finding on test78): host app names can carry zero-width /
+    // Host app names can carry zero-width /
     // format Unicode characters that break both matching and readable error output.
     // Strip format-category chars and trim before comparing or displaying.
     static QString sanitizeAppName(const QString& name)

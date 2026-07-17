@@ -18,11 +18,11 @@ Item {
     id: settingsPage
     objectName: qsTr("Settings")
 
-    // BL-1776: LB/RB category flips change `category` without moving item focus,
+    // LB/RB category flips change `category` without moving item focus,
     // so the launcher-wide focus tick (main.qml) never fires for them — tick here.
     onCategoryChanged: UiSoundManager.focusMoved()
 
-    // Redesign 1e (sidebar categories). The root was a Flickable; it is now an Item hosting a
+    // Redesign (sidebar categories). The root was a Flickable; it is now an Item hosting a
     // fixed header + a 340px category sidebar + a right-hand Flickable panel (settingsFlick)
     // that shows one category's GroupBoxes at a time, gated by `category`. Every GroupBox and
     // its StreamingPreferences/ComputerManager/SystemProperties bindings are unchanged — only
@@ -31,9 +31,9 @@ Item {
 
     signal languageChanged()
 
-    // ---- BL-1627: sidebar -> content focus handoff. D-pad RIGHT on a sidebar row moves
+    // ---- Sidebar -> content focus transfer. D-pad RIGHT on a sidebar row moves
     // active focus to the first focusable control of the visible category, mirroring the
-    // toolbar->grid handoff in main.qml (stackView.currentItem.forceActiveFocus(Qt.TabFocus)).
+    // toolbar->grid transfer in main.qml (stackView.currentItem.forceActiveFocus(Qt.TabFocus)).
     // Search order is declaration order inside the panel columns, and hidden categories'
     // GroupBoxes are skipped via the visible check, so this lands on the visible page.
     function focusContentPane() {
@@ -60,7 +60,7 @@ Item {
         return null
     }
 
-    // ---- BL-1628: shared restyle components, factored from the redesigned Video subpage so
+    // ---- Shared restyle components, factored from the redesigned Video subpage so
     // the other categories reuse the exact same visual pattern (no new design language). ----
 
     // Card-style settings group — same recipe as the Video page's Vibepollo Presets card
@@ -99,9 +99,9 @@ Item {
         hoverEnabled: true
         opacity: enabled ? 1.0 : 0.5
 
-        // BL-1776: activation blip on user toggles only — toggled() never fires
+        // Activation blip on user toggles only — toggled() never fires
         // for programmatic checked changes (the pref-binding churn at load).
-        // Connections so a future instance-level onToggled can't override it (BL-1664).
+        // Connections so a future instance-level onToggled can't override it.
         Connections {
             target: toggleRoot
             function onToggled() {
@@ -111,7 +111,7 @@ Item {
 
         indicator: Item {}
         background: Item {
-            // BL-1655 (test-agent: "no visible pane focus"): the toggle rows had no focus
+            // No visible pane focus: the toggle rows had no focus
             // affordance at all, so gamepad focus in the content pane was invisible. Paint
             // the standard focused fill + accent border when the row holds active focus.
             Rectangle {
@@ -136,7 +136,7 @@ Item {
             Text {
                 id: toggleTitle
                 anchors.left: parent.left
-                // BL-1683: constant inset so the focused ring's left border never overlaps
+                // Constant inset so the focused ring's left border never overlaps
                 // the first letters (padding is permanent — text must not shift on focus).
                 anchors.leftMargin: 14
                 anchors.right: togglePill.left
@@ -152,7 +152,7 @@ Item {
             Rectangle {
                 id: togglePill
                 anchors.right: parent.right
-                // BL-1683: mirror inset on the right so the ring clears the pill too.
+                // Mirror inset on the right so the ring clears the pill too.
                 anchors.rightMargin: 14
                 anchors.verticalCenter: parent.verticalCenter
                 width: 60; height: 34; radius: 999
@@ -199,14 +199,14 @@ Item {
         StreamingPreferences.save()
     }
 
-    // ---- Redesign 1e: LB/RB switch category (matches the hint bar below) ----
+    // ---- Redesign: LB/RB switch category (matches the hint bar below) ----
     // SdlGamepadKeyNavigation forwards the shoulder buttons as Key_MediaPrevious (LB) /
     // Key_MediaNext (RB) — see sdlgamepadkeynavigation.cpp. The handler lives on the page root, so
     // a shoulder press from any focused sidebar row or control bubbles up here (unhandled key
     // events propagate to ancestors — the same path main.qml uses for ☰/Start). The category is
     // clamped to the sidebar's range with no wrap. Other screens don't bind these keys, so the
     // shoulder buttons are a harmless no-op there.
-    // BL-1667: switching category must ALSO move keyboard/gamepad focus onto the newly
+    // Switching category must ALSO move keyboard/gamepad focus onto the newly
     // selected sidebar row. Selection (`category`) and focus (`activeFocus`) were two
     // independent states, so LB/RB moved the selected-row ring while the focus ring stayed
     // on the old row (or the d-pad/stick moved focus while selection stayed) — you could see
@@ -281,7 +281,7 @@ Item {
                 Layout.fillWidth: true
             }
 
-            // Version chip (e.g. "Version 0.24.0"). Redesign 1e: accent-tinted pill —
+            // Version chip (e.g. "Version 0.24.0"). Redesign: accent-tinted pill —
             // accent text on a 12%-accent background, 8px radius (not a full pill).
             Rectangle {
                 implicitHeight: versionChipText.implicitHeight + 12
@@ -309,7 +309,7 @@ Item {
         }
     }
 
-    // ---- Sidebar: 5 focusable category rows (redesign 1e) ----
+    // ---- Sidebar: 5 focusable category rows (redesign) ----
     Rectangle {
         id: sidebar
         anchors.top: header.bottom
@@ -357,7 +357,7 @@ Item {
                     readonly property bool selected: settingsPage.category === index
 
                     background: Item {
-                        // Selection/focus glow (accent @ 22%), just outside the row. The HTML spec
+                        // Selection/focus glow (accent @ 22%), just outside the row. The design spec
                         // keeps this glow on the selected row persistently (not just while focused).
                         Rectangle {
                             anchors.fill: parent
@@ -405,8 +405,8 @@ Item {
                     // onClicked fires on mouse/touch, Return/Space, and gamepad Ⓐ (UI nav mode).
                     onClicked: settingsPage.category = index
 
-                    // BL-1689 (v2 — the v1 stale-flag redirect proved unreliable on device; the
-                    // maintainer hit the Advanced-jump from EVERY category): only the CURRENT
+                    // v2 — the v1 stale-flag redirect proved unreliable on device (the
+                    // Advanced-jump reproduced from EVERY category): only the CURRENT
                     // category's row participates in the Tab focus chain. A BackTab escaping the
                     // content pane (d-pad UP at a pane-section top in UI-nav mode) can therefore
                     // only ever land on THIS category's row — never "Advanced" — so the surprise
@@ -414,7 +414,7 @@ Item {
                     // below use forceActiveFocus/clicks, which ignore activeFocusOnTab.
                     activeFocusOnTab: index === settingsPage.category
 
-                    // BL-1667: selection follows focus. When the d-pad/left-stick or a mouse
+                    // Selection follows focus. When the d-pad/left-stick or a mouse
                     // moves focus onto this row, make it the selected category — so the selected
                     // ring and the focus ring are always the SAME row (no two-rings-at-once).
                     onActiveFocusChanged: {
@@ -423,18 +423,18 @@ Item {
                         }
                     }
 
-                    // BL-1667/BL-1689: explicit vertical nav. Keyboard arrows AND the gamepad's
+                    // Explicit vertical nav. Keyboard arrows AND the gamepad's
                     // UI-nav Tab/Shift+Tab are stepped here (Keys handlers run before default
                     // tab handling), since non-current rows are no longer in the tab chain.
                     //
-                    // REGRESSION LESSON (maintainer-caught, "Up completely broken"): UiNav
+                    // REGRESSION LESSON ("Up completely broken"): UiNav
                     // d-pad UP arrives as Key_Tab WITH ShiftModifier (sdlgamepadkeynavigation
                     // sendKey(Key_Tab, ShiftModifier)) — NOT Key_Backtab. Keys.onTabPressed
                     // matches Key_Tab regardless of modifiers, so a naive onTab/onBacktab pair
                     // made Up step DOWN. Direction must come from the modifier.
-                    // BL-1709: Up at the TOP row (Video) escapes to the toolbar instead of
+                    // Up at the TOP row (Video) escapes to the toolbar instead of
                     // self-focusing (focusCategoryRow(0) on row 0 consumed the press and made
-                    // the toolbar unreachable by d-pad — maintainer launch blocker). Leaving
+                    // the toolbar unreachable by d-pad — a launch blocker). Leaving
                     // the event unaccepted lets the default BackTab chain walk out of the
                     // sidebar (this row is the only tab-focusable one, so chain-previous is
                     // the toolbar).
@@ -452,7 +452,7 @@ Item {
                             var backwards = (event.key === Qt.Key_Backtab)
                                             || (event.modifiers & Qt.ShiftModifier)
                             if (backwards && index === 0) {
-                                event.accepted = false   // BL-1709: escape to the toolbar
+                                event.accepted = false   // escape to the toolbar
                                 return
                             }
                             settingsPage.focusCategoryRow(backwards
@@ -462,7 +462,7 @@ Item {
                         }
                     }
 
-                    // BL-1627: d-pad RIGHT (sent as Key_Right by SdlGamepadKeyNavigation even in
+                    // D-pad RIGHT (sent as Key_Right by SdlGamepadKeyNavigation even in
                     // UI nav mode) enters the content pane: select this row's category, then move
                     // focus to its first control. Without this, RIGHT was a dead key on the sidebar.
                     Keys.onRightPressed: {
@@ -474,7 +474,7 @@ Item {
         }
     }
 
-    // ---- Panel: the two settings columns, scrollable (redesign 1e). The flickable-specific
+    // ---- Panel: the two settings columns, scrollable (redesign). The flickable-specific
     // logic (bounds, content sizing, autoscroll-to-focus, scrollbar) lives here so bare
     // contentY / contentItem / contentHeight / height resolve to settingsFlick. ----
     Flickable {
@@ -486,7 +486,7 @@ Item {
 
         boundsBehavior: Flickable.OvershootBounds
 
-        // BL-1627 (symmetric return path): unhandled d-pad LEFT from any focused content
+        // Symmetric return path: unhandled d-pad LEFT from any focused content
         // control bubbles up here and returns focus to the selected sidebar row. Controls
         // that consume Left themselves (e.g. Slider value adjustment, text fields in
         // dialogs) are unaffected because they accept the event before it propagates.
@@ -559,7 +559,7 @@ Item {
         width: settingsFlick.width - 20
         spacing: 20
 
-        // ---- Category title (redesign 1e). "Video" / "Audio" / etc, Sora 28px bold, matching
+        // ---- Category title (redesign). "Video" / "Audio" / etc, Sora 28px bold, matching
         // the currently-selected sidebar row's label. ----
         Text {
             width: parent.width - (parent.leftPadding + parent.rightPadding)
@@ -570,8 +570,8 @@ Item {
             color: VbTokens.text
         }
 
-        // ---- Live stream summary line (redesign 1e), relocated here (was inside Basic
-        // Settings) so it sits directly under the "Video" title like the HTML handoff.
+        // ---- Live stream summary line (redesign), relocated here (was inside Basic
+        // Settings) so it sits directly under the "Video" title like the design.
         // Numbers render in accent; the rest stays dim. Content/bindings unchanged.
         Text {
             id: streamSummaryLabel
@@ -643,7 +643,7 @@ Item {
 
                 Text {
                     width: parent.width
-                    // Maintainer 2026-07-13: generic wording — no host/device product names.
+                    // Generic wording — no host/device product names.
                     text: qsTr("Presets")
                     font.family: VbTokens.fontBody
                     font.weight: Font.DemiBold
@@ -706,7 +706,7 @@ Item {
 
                 // Vibemis: recommend this device's native resolution so users pick the sharpest
                 // option without guesswork.
-                // NOTE(test68): SystemProperties.maximumResolution is the *decoder* ceiling, which
+                // NOTE: SystemProperties.maximumResolution is the *decoder* ceiling, which
                 // is (0,0) on devices whose decoder can exceed 1080p (e.g. Legion Go S Z2), so it
                 // can't be the native-resolution source on capable hardware. Prefer the actual panel
                 // size from QML's Screen attached property; fall back to the decoder max only if
@@ -727,7 +727,7 @@ Item {
                 }
 
                 // Vibemis: extra detail beyond the live summary line (which now lives at the top
-                // of the panel, redesign 1e). Kept as contextual copy above the resolution/FPS cards.
+                // of the panel, redesign). Kept as contextual copy above the resolution/FPS cards.
                 Label {
                     width: parent.width
                     id: resFPSdesc
@@ -737,17 +737,17 @@ Item {
                     color: VbTokens.textDim
                 }
 
-                // ---- Resolution / Frame rate cards (redesign 1e) ----
+                // ---- Resolution / Frame rate cards (redesign) ----
                 Row {
                     spacing: 20
                     width: parent.width
 
                     AutoResizingComboBox {
-                        // Redesign 1e: card look (bgElev, radius16, accent focus ring) — visual only.
+                        // Redesign: card look (bgElev, radius16, accent focus ring) — visual only.
                         // Model/functions/dialog below are unchanged.
                         width: (parent.width - parent.spacing) / 2
                         padding: 0
-                        // BL-1629: the content Column is inset by 24px margins that don't count
+                        // The content Column is inset by 24px margins that don't count
                         // toward the control's implicit height, so the value text used to render
                         // past the card's bottom edge. Size the card to content + both margins.
                         implicitHeight: resolutionCardContent.implicitHeight + 48
@@ -790,7 +790,7 @@ Item {
                                 }
                             }
                         }
-                        // BL-1629: unlike the auto-sizing combos elsewhere, this combo's width is
+                        // Unlike the auto-sizing combos elsewhere, this combo's width is
                         // fixed by the card, so long entries (e.g. "Native (Excluding Notch)
                         // (1920x1200)") could overflow the default popup delegate. Elide instead.
                         delegate: ItemDelegate {
@@ -1114,10 +1114,10 @@ Item {
                     }
 
                     AutoResizingComboBox {
-                        // Redesign 1e: card look, matching the Resolution card. Visual only.
+                        // Redesign: card look, matching the Resolution card. Visual only.
                         width: (parent.width - parent.spacing) / 2
                         padding: 0
-                        // BL-1629: same content-margin sizing fix as the Resolution card — keeps
+                        // Same content-margin sizing fix as the Resolution card — keeps
                         // the frame-rate value text inside the card bounds.
                         implicitHeight: fpsCardContent.implicitHeight + 48
                         background: Rectangle {
@@ -1159,7 +1159,7 @@ Item {
                                 }
                             }
                         }
-                        // BL-1629: fixed-width card combo — elide long popup entries (e.g.
+                        // Fixed-width card combo — elide long popup entries (e.g.
                         // "Custom (119.88 Hz)") instead of letting them overflow the delegate.
                         delegate: ItemDelegate {
                             width: fpsComboBox.width
@@ -1469,7 +1469,7 @@ Item {
                     color: VbTokens.textDim
                 }
 
-                // ---- Video bitrate card (redesign 1e) ----
+                // ---- Video bitrate card (redesign) ----
                 Rectangle {
                     width: parent.width
                     height: bitrateCardColumn.implicitHeight + 52
@@ -1575,7 +1575,7 @@ Item {
                         // Vibemis: rough data-usage estimate for the chosen bitrate. Helps users on
                         // metered connections or marginal Wi-Fi gauge cost/feasibility. Video only
                         // (audio/overhead excluded). GB/hour = kbps * 3600 / 8 / 1e6 = kbps * 0.00045.
-                        // This is the HTML handoff's "≈ N GB/hour..." card description line.
+                        // This is the design's "≈ N GB/hour..." card description line.
                         Text {
                             width: parent.width
                             text: "≈ " + qsTr("%1 GB/hour at this bitrate (video only). Lower on slower connections.")
@@ -1588,9 +1588,9 @@ Item {
                     }
                 }
 
-                // Vibemis (P3.12): adaptive bitrate (experimental). Currently logs a recommendation
+                // Vibemis: adaptive bitrate (experimental). Currently logs a recommendation
                 // when the host reports a poor connection; runtime auto-adjust is pending protocol
-                // support (see TODO(P3.12) in session.cpp). Redesign 1e toggle-row visual.
+                // support (see the adaptive-bitrate TODO in session.cpp). Redesign toggle-row visual.
                 CheckBox {
                     id: adaptiveBitrateCheck
                     width: parent.width
@@ -1784,8 +1784,8 @@ Item {
                     ToolTip.text: qsTr("Fit shows the whole image with black bars if needed. Fill crops the image to fill the screen with no bars. Stretch fills the screen ignoring the aspect ratio.")
                 }
 
-                // Redesign 1e toggle-row (title + sublabel + pill switch). Matches the HTML
-                // handoff's "V-Sync" row text exactly; the fuller explanation moves to the tooltip.
+                // Redesign toggle-row (title + sublabel + pill switch). Matches the design's
+                // "V-Sync" row text exactly; the fuller explanation moves to the tooltip.
                 CheckBox {
                     id: vsyncCheck
                     width: parent.width
@@ -1847,7 +1847,7 @@ Item {
                     ToolTip.text: qsTr("Disabling V-Sync allows sub-frame rendering latency, but it can display visible tearing")
                 }
 
-                // Redesign 1e toggle-row. Extra setting beyond the HTML mock — same visual
+                // Redesign toggle-row. Extra setting beyond the mock — same visual
                 // language as V-Sync above for consistency.
                 CheckBox {
                     id: framePacingCheck
@@ -1912,7 +1912,7 @@ Item {
                     ToolTip.text: qsTr("Frame pacing reduces micro-stutter by delaying frames that come in too early")
                 }
 
-                // Vibemis (P3.8): one-tap low-latency / "competitive" preset. Frame pacing delays
+                // Vibemis: one-tap low-latency / "competitive" preset. Frame pacing delays
                 // early frames (smoother but higher latency) and V-Sync adds a frame of latency;
                 // turning both off minimises input-to-photon latency for fast/competitive games.
                 Button {
@@ -1937,7 +1937,7 @@ Item {
             }
         }
 
-        // BL-1628: restyled to the Video-page card pattern (VbSettingsCard + Sora header +
+        // Restyled to the Video-page card pattern (VbSettingsCard + Sora header +
         // VbToggleRow rows). Bindings, visibility logic and tooltips are unchanged.
         VbSettingsCard {
             id: artemisStreamingGroupBox
@@ -1983,7 +1983,7 @@ Item {
                     ToolTip.text: qsTr("Creates a virtual display on the host for streaming. Requires an Apollo / Vibepollo host - not available with plain Sunshine/GeForce Experience.")
                 }
 
-                // Vibemis (P3.13): clarify the virtual-display behavior, which commonly confuses
+                // Vibemis: clarify the virtual-display behavior, which commonly confuses
                 // new users. Apollo auto-creates a per-client virtual display matching the
                 // resolution/refresh you select above — ideal on a handheld so you don't have to
                 // change the host's physical display. Shown contextually based on the toggle.
@@ -2040,14 +2040,14 @@ Item {
                         stepSize: 5
                         value: StreamingPreferences.resolutionScaleFactor
 
-                        // BL-1747: this Slider sits in a plain Row and its background derives
+                        // This Slider sits in a plain Row and its background derives
                         // width from availableWidth (contributing no implicitWidth), so without
                         // an explicit width it collapsed to ~0px and the handle was undraggable.
                         // Mirror the Video-page bitrate slider: fill the row between the labels.
                         anchors.verticalCenter: parent.verticalCenter
                         width: parent.width - scaleFactorLabel.width - scaleValueLabel.width - (2 * parent.spacing)
 
-                        // BL-1747: guarantee one arrow / d-pad press moves exactly one stepSize
+                        // Guarantee one arrow / d-pad press moves exactly one stepSize
                         // (5). The default handling was observed stepping twice (+10); overriding
                         // Left/Right with a single accepted increase()/decrease() forces one step
                         // per press and stops Left from bubbling to the Flickable's focus-return
@@ -2055,7 +2055,7 @@ Item {
                         Keys.onLeftPressed: { resolutionScaleSlider.decrease(); event.accepted = true }
                         Keys.onRightPressed: { resolutionScaleSlider.increase(); event.accepted = true }
 
-                        // BL-1628: same track/handle recipe as the Video page's bitrate slider.
+                        // Same track/handle recipe as the Video page's bitrate slider.
                         background: Rectangle {
                             x: resolutionScaleSlider.leftPadding
                             y: resolutionScaleSlider.topPadding + resolutionScaleSlider.availableHeight / 2 - height / 2
@@ -2095,7 +2095,7 @@ Item {
             }
         }
 
-        // BL-1628: restyled to the Video-page card pattern. Bindings unchanged.
+        // Restyled to the Video-page card pattern. Bindings unchanged.
         VbSettingsCard {
             id: audioSettingsGroupBox
             visible: settingsPage.category === 1
@@ -2188,7 +2188,7 @@ Item {
             }
         }
 
-        // BL-1628: restyled to the Video-page card pattern. Bindings unchanged.
+        // Restyled to the Video-page card pattern. Bindings unchanged.
         VbSettingsCard {
             id: hostSettingsGroupBox
             visible: settingsPage.category === 3
@@ -2242,7 +2242,7 @@ Item {
             }
         }
 
-        // BL-1628: restyled to the Video-page card pattern. Bindings unchanged.
+        // Restyled to the Video-page card pattern. Bindings unchanged.
         VbSettingsCard {
             id: uiSettingsGroupBox
             visible: settingsPage.category === 4
@@ -2507,7 +2507,7 @@ Item {
                     }
                 }
 
-                // BL-1776: gate for the controller-nav UI sounds (UiSoundManager)
+                // Gate for the controller-nav UI sounds (UiSoundManager)
                 VbToggleRow {
                     id: uiSoundsCheck
                     text: qsTr("Play navigation sounds")
@@ -2622,7 +2622,7 @@ Item {
         width: settingsFlick.width - 20
         spacing: 15
 
-        // BL-1628: restyled to the Video-page card pattern. Bindings unchanged. The
+        // Restyled to the Video-page card pattern. Bindings unchanged. The
         // capture-shortcuts checkbox + mode combo were a side-by-side Row; the toggle row is
         // full-width now, so the combo moved directly below it (layout only — same ids,
         // same enabled/checked logic).
@@ -2758,7 +2758,7 @@ Item {
             }
         }
 
-        // BL-1628: restyled to the Video-page card pattern. Bindings unchanged.
+        // Restyled to the Video-page card pattern. Bindings unchanged.
         VbSettingsCard {
             id: gamepadSettingsGroupBox
             visible: settingsPage.category === 2
@@ -2773,10 +2773,10 @@ Item {
                     text: qsTr("Gamepad Settings")
                 }
 
-                // Redesign 1e / BL-1562: expose the (previously hidden) gamepad remapping screen.
+                // Expose the (previously hidden) gamepad remapping screen.
                 Button {
                     id: gamepadMapButton
-                    // BL-1687: no trailing ellipsis — it read as clipped text on device.
+                    // No trailing ellipsis — it read as clipped text on device.
                     text: qsTr("Configure gamepad mapping")
                     onClicked: navigateTo("qrc:/gui/GamepadMapper.qml", "GamepadMapper")
                     ToolTip.text: qsTr("Remap or calibrate connected controllers (paddles, face buttons, sticks).")
@@ -2784,7 +2784,7 @@ Item {
                     ToolTip.visible: hovered
                 }
 
-                // Redesign handoff live tweaks (State model: showHints + accent). Persisted via prefs.
+                // Redesign live tweaks (State model: showHints + accent). Persisted via prefs.
                 VbToggleRow {
                     id: showHintsCheck
                     text: qsTr("Show the gamepad hint bar")
@@ -2953,7 +2953,7 @@ Item {
             }
         }
 
-        // BL-1628: restyled to the Video-page card pattern. Bindings unchanged.
+        // Restyled to the Video-page card pattern. Bindings unchanged.
         VbSettingsCard {
             id: advancedSettingsGroupBox
             visible: settingsPage.category === 4
@@ -3087,7 +3087,7 @@ Item {
                     }
                 }
 
-                // Vibemis (P3.6 codec): contextual guidance when AV1 is forced. AV1 gives better
+                // Vibemis (codec guidance): contextual guidance when AV1 is forced. AV1 gives better
                 // quality-per-bit (great on a bandwidth-limited handheld) but needs a host + GPU that
                 // can encode it; otherwise the stream falls back or fails. Shown only for AV1.
                 Label {
@@ -3189,7 +3189,7 @@ Item {
                                        "Unchecking keeps the HDR codec path off; re-check it later if you connect an HDR display.")
                 }
 
-                // Vibemis BL-1561 (P3.8 parity): client-side HDR tone-mapping toggle.
+                // Vibemis: client-side HDR tone-mapping toggle.
                 // When on, the Vulkan renderer tone-maps HDR content down to SDR on this
                 // device (rather than passing HDR through to the display). Effective only
                 // on the Vulkan/libplacebo renderer, which is the HDR-capable one on Linux.
@@ -3435,7 +3435,7 @@ Item {
                     ToolTip.text: qsTr("Choose which corner of the screen the performance overlay appears in.")
                 }
 
-                // Vibemis BL-1665: in-app update channel + manual check + one-tap install.
+                // Vibemis: in-app update channel + manual check + one-tap install.
                 // The checker follows StreamingPreferences.updateChannel; installUpdate()
                 // swaps the running AppImage in place (falls back to the release page).
                 Label {
@@ -3502,7 +3502,7 @@ Item {
                     Button {
                         id: checkUpdatesButton
                         text: qsTr("Check for updates")
-                        // BL-1690: do NOT toggle `enabled` here — disabling the focused button
+                        // Do NOT toggle `enabled` here — disabling the focused button
                         // drops activeFocus and the pane auto-scrolls to the next focus item at
                         // the top of the page. Re-entry is already guarded in C++ (one check in
                         // flight at a time), so the button can stay enabled and keep focus.
@@ -3517,7 +3517,7 @@ Item {
                     Button {
                         id: updateNowButton
                         property string assetUrl: ""
-                        // BL-1690: QML-side re-entry guard instead of `enabled = false` (which
+                        // QML-side re-entry guard instead of `enabled = false` (which
                         // would drop focus and scroll the pane to the top — same class as the
                         // Check button). Reset on installFailed; a successful install relaunches.
                         property bool installing: false
@@ -3583,7 +3583,7 @@ Item {
             }
         }
 
-        // BL-1628: restyled to the Video-page card pattern. Bindings unchanged.
+        // Restyled to the Video-page card pattern. Bindings unchanged.
         VbSettingsCard {
             id: artemisSettingsGroupBox
             visible: settingsPage.category === 3
@@ -3603,7 +3603,7 @@ Item {
                     width: parent.width
                 }
 
-                // Maintainer find 2026-07-13: the BL-1562 touch-overlay PREF shipped with a
+                // The touch-overlay PREF shipped with a
                 // Quick-Menu toggle but never got its Settings row — unfindable outside a
                 // stream. Same opt-in default (off).
                 VbToggleRow {
@@ -3636,7 +3636,7 @@ Item {
                                   qsTr("Useful for remote play over your tailnet. Has no effect if the host has no Tailscale address.")
                 }
 
-                // Vibemis (P3.7): in-app entry point to set up Tailscale for remote play. One click
+                // Vibemis: in-app entry point to set up Tailscale for remote play. One click
                 // opens the setup guide; the one-command script scripts/setup-tailscale.sh does the
                 // install + login. Pair with Settings -> "Prefer Tailscale addresses".
                 Label {
@@ -3658,7 +3658,7 @@ Item {
                         onClicked: SystemProperties.openUrl("https://github.com/navyas321/vibemis/blob/vibemis-main/scripts/setup-tailscale.sh")
                         visible: SystemProperties.hasBrowser
                     }
-                    // Vibemis P3.7 (test93): check the tailnet status in-app (no terminal needed).
+                    // Vibemis: check the tailnet status in-app (no terminal needed).
                     Button {
                         text: qsTr("Check status")
                         onClicked: tailscaleStatusLabel.text = SystemProperties.checkTailscaleStatus()
@@ -3696,7 +3696,7 @@ Item {
         // Vibemis: read-only System Information panel. Surfaces the same environment facts the
         // headless `vibemis selftest` reports, so a human (or a bug report) can see version,
         // platform, and capability at a glance. Pure QML over the already-exposed SystemProperties.
-        // BL-1628: restyled to the Video-page card pattern. Bindings unchanged.
+        // Restyled to the Video-page card pattern. Bindings unchanged.
         VbSettingsCard {
             id: systemInfoGroupBox
             visible: settingsPage.category === 4
@@ -3719,11 +3719,11 @@ Item {
                         { k: qsTr("SteamOS / gamescope"), v: SystemProperties.isSteamDeck ? qsTr("Yes") : qsTr("No") },
                         { k: qsTr("Display server"),  v: SystemProperties.isRunningWayland ? (SystemProperties.isRunningXWayland ? "XWayland" : "Wayland") : "X11" },
                         { k: qsTr("Hardware decode"), v: SystemProperties.hasHardwareAcceleration ? qsTr("Available") : qsTr("Not available") },
-                        // Maintainer 2026-07-13: these two report the DECODER, not the panel —
+                        // These two report the DECODER, not the panel —
                         // 'HDR support: Yes' on an SDR device and 'Max resolution: 0×0' were
                         // both technically-true sentinels rendered misleadingly. supportsHdr =
                         // the decoder can decode HDR streams; maximumResolution 0×0 = the probe
-                        // found no ceiling above 1080p (see the Video page NOTE(test68)).
+                        // found no ceiling above 1080p (see the Video page NOTE).
                         { k: qsTr("Display resolution"), v: Screen.width + "×" + Screen.height },
                         { k: qsTr("HDR decode"),      v: SystemProperties.supportsHdr ? qsTr("Supported (stream decode)") : qsTr("No") },
                         { k: qsTr("Max decode resolution"),  v: (SystemProperties.maximumResolution.width > 0 && SystemProperties.maximumResolution.height > 0)
@@ -3760,7 +3760,7 @@ Item {
             }
         }
 
-        // BL-1628: restyled to the Video-page card pattern. Bindings unchanged.
+        // Restyled to the Video-page card pattern. Bindings unchanged.
         VbSettingsCard {
             id: aboutGroupBox
             visible: settingsPage.category === 4
@@ -3803,7 +3803,7 @@ Item {
         // Vibemis: Help & Links — quick access to docs/support. Only shown when a browser is
         // available (SystemProperties.hasBrowser). Uses Qt.openUrlExternally so it works in
         // Desktop Mode; in Game Mode the buttons simply do nothing if no browser is present.
-        // BL-1628: restyled to the Video-page card pattern. Bindings unchanged.
+        // Restyled to the Video-page card pattern. Bindings unchanged.
         VbSettingsCard {
             id: helpLinksGroupBox
             visible: SystemProperties.hasBrowser && settingsPage.category === 4
@@ -3843,7 +3843,7 @@ Item {
     }
     }
 
-    // ---- Gamepad hint bar (redesign 1e) ----
+    // ---- Gamepad hint bar (redesign) ----
     // The LB/RB hint matches real behavior: SdlGamepadKeyNavigation now forwards the shoulder
     // buttons as Key_MediaPrevious/Key_MediaNext, handled by the page-root Keys.onPressed above to
     // switch category (LB = previous, RB = next). The sidebar rows also stay focusable (D-pad/Tab

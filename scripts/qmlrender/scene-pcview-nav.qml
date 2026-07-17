@@ -2,7 +2,7 @@ import QtQuick 2.9
 import QtQuick.Controls 2.2
 import "../../app/gui"
 
-// BL-1709 repro: minimal PcView-shaped nav — mock toolbar (chain-before-grid), a 1-item
+// Minimal PcView-shaped nav repro — mock toolbar (chain-before-grid), a 1-item
 // GridView using the REAL NavigableItemDelegate with PcView's exact instance overrides
 // (ghost-selection branches included). Drive with keys: Up must land focus on "toolbtn2".
 Rectangle {

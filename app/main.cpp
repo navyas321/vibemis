@@ -659,7 +659,7 @@ int main(int argc, char *argv[])
     }
 
     // Vibemis: `vibemis selftest [--json]` — a scriptable, non-destructive launcher smoke test for
-    // the Legion Go test agent. Runs sanity checks on the preferences subsystem (no host, stream,
+    // on-device testing. Runs sanity checks on the preferences subsystem (no host, stream,
     // GUI window, or SDL video required) and exits 0 (all PASS) / 1 (any FAIL). Runs before SDL/GUI
     // init so it works headlessly in any session. See docs/SELFTEST.md.
     //   default : one "SELFTEST <name>: PASS|FAIL" line per check + a "SELFTEST RESULT: …" summary
@@ -730,7 +730,7 @@ int main(int argc, char *argv[])
         return failures == 0 ? 0 : 1;
     }
 
-    // Vibemis BL-1692: `vibemis update-selftest [--channel stable|beta|alpha]` — end-to-end
+    // Vibemis: `vibemis update-selftest [--channel stable|beta|alpha]` — end-to-end
     // proof of the in-app updater's REAL code path: AutoUpdateChecker::checkNow() against the
     // live GitHub release feed, then installUpdate() downloading the .AppImage asset and
     // atomically swapping $APPIMAGE (previous build kept as "<file>.old"). Run off-device with
@@ -854,7 +854,7 @@ int main(int argc, char *argv[])
         qputenv("SDL_VIDEODRIVER", "wayland");
     }
 
-    // Vibemis redesign (P3.17/P3.18): bundle the design typefaces (Sora for titles/labels,
+    // Vibemis redesign: bundle the design typefaces (Sora for titles/labels,
     // Manrope for body) so the token system renders in the intended type. Loaded here — after
     // the QGuiApplication exists and past the selftest early-return — never in the headless path.
     // OFL-licensed; sources in app/fonts/*-OFL.txt (variable fonts cover all weights).
@@ -891,7 +891,7 @@ int main(int argc, char *argv[])
 #ifndef Q_OS_DARWIN
     // Set the window icon except on macOS where we want to keep the
     // modified macOS 11 style rounded corner icon.
-    // Vibemis redesign (P3.18): the new brand mark (diamond cradling a play triangle).
+    // Vibemis redesign: the new brand mark (diamond cradling a play triangle).
     // Multi-resolution QIcon so window managers pick the right size.
     {
         QIcon vbIcon;
@@ -965,18 +965,18 @@ int main(int argc, char *argv[])
     qmlRegisterSingletonType<UiSoundManager>("UiSoundManager", 1, 0,
                                              "UiSoundManager",
                                              [](QQmlEngine*, QJSEngine*) -> QObject* {
-                                                 // BL-1776: shared with the Quick Menu's offscreen engine,
+                                                 // Shared with the Quick Menu's offscreen engine,
                                                  // so C++ must own it — same rule as StreamingPreferences above.
                                                  UiSoundManager* sounds = UiSoundManager::get();
                                                  QQmlEngine::setObjectOwnership(sounds, QQmlEngine::CppOwnership);
                                                  return sounds;
                                              });
 
-    // Vibemis design-token singleton (P3.17) — a QML-only singleton (pragma Singleton in
+    // Vibemis design-token singleton — a QML-only singleton (pragma Singleton in
     // gui/Theme.qml). Lets QML reference Theme.accent / Theme.spacingM / etc. See docs/DESIGN_SYSTEM.md.
     qmlRegisterSingletonType(QUrl(QStringLiteral("qrc:/gui/Theme.qml")), "Theme", 1, 0, "Theme");
 
-    // Vibemis redesign design tokens (P3.17/P3.18) — QML singleton mapping
+    // Vibemis redesign design tokens — QML singleton mapping
     // docs/design/redesign/tokens/vibemis-tokens.json. Referenced as VbTokens.accent etc.
     // The Vb* reusable components (VbFocusRing/VbHintBar/VbBadge/VbStatusPill/VbCard) live
     // in gui/ and are used via `import "."` from the redesigned screens.

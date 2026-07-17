@@ -245,7 +245,7 @@ void SdlInputHandler::handleKeyEvent(SDL_KeyboardEvent* event)
             m_MenuConsumedKeys.clear();
         }
         if (menuOpen && sess->getQuickMenuManager()->isTextInputActive() && noComboMods) {
-            // P3.20 (test86): the menu's text field is focused. Make sure SDL emits
+            // The menu's text field is focused. Make sure SDL emits
             // SDL_TEXTINPUT (idempotent; we're on the SDL thread) so typed characters flow
             // to handleTextInputEvent -> injectText. Handle editing keys here; swallow the
             // rest so the host never sees them while the user is typing into the menu.
@@ -289,7 +289,7 @@ void SdlInputHandler::handleKeyEvent(SDL_KeyboardEvent* event)
                     m_MenuConsumedKeys.insert(event->keysym.scancode);
                     return;
                 }
-                // test81 (review fix): only swallow a RELEASE whose press we consumed.
+                // Only swallow a RELEASE whose press we consumed.
                 // A nav key held since before the menu opened was sent DOWN to the host —
                 // eating its release left the key stuck down host-side.
                 if (m_MenuConsumedKeys.remove(event->keysym.scancode)) {
@@ -597,7 +597,7 @@ void SdlInputHandler::handleKeyEvent(SDL_KeyboardEvent* event)
 
 void SdlInputHandler::handleTextInputEvent(SDL_TextInputEvent* event)
 {
-    // P3.20 (test86): forward typed text to the Quick Menu's focused text field. When the
+    // Forward typed text to the Quick Menu's focused text field. When the
     // field isn't active the host still receives keystrokes via SDL_KEYDOWN scancodes, so
     // we only consume text input while the menu field has focus.
     Session* sess = Session::get();

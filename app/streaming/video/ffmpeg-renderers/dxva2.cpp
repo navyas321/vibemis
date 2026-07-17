@@ -869,7 +869,7 @@ void DXVA2Renderer::notifyOverlayUpdated(Overlay::OverlayType type)
     }
     else if (type == Overlay::OverlayTouchButtonMenu || type == Overlay::OverlayTouchButtonKbd ||
              type == Overlay::OverlayTouchButtonTouchMode) {
-        // Vibemis BL-1562/BL-2007: MENU top-left, KBD far top-right, TOUCH-MODE
+        // Vibemis: MENU top-left, KBD far top-right, TOUCH-MODE
         // immediately inward of KBD (upper-left origin).
         renderRect.x = (type == Overlay::OverlayTouchButtonMenu)
                 ? Overlay::TouchButtonInset

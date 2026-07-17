@@ -607,7 +607,7 @@ public:
                 }
                 else if (i == Overlay::OverlayTouchButtonMenu || i == Overlay::OverlayTouchButtonKbd ||
                          i == Overlay::OverlayTouchButtonTouchMode) {
-                    // Vibemis BL-1562/BL-2007: MENU top-left, KBD far top-right,
+                    // MENU top-left, KBD far top-right,
                     // TOUCH-MODE immediately inward of KBD. NB: this renderer's origin
                     // is lower-left (see OverlayDebug above), so "top" is the high-Y
                     // edge here.

@@ -44,7 +44,7 @@ private:
     bool m_FirstPoll;
     bool m_HasFocus;
     Uint32 m_LastAxisNavigationEventTime;
-    // BL-2013: per-controller pressed-state bitmask (bit = SDL_GameControllerButton).
+    // Per-controller pressed-state bitmask (bit = SDL_GameControllerButton).
     // Some pads/drivers emit DUPLICATE BUTTONDOWN events for one physical d-pad press
     // (observed on the Legion Go: every slider arrow stepped twice, kbd stepped once).
     // Edge-filter: only the first DOWN and the matching UP pass through.

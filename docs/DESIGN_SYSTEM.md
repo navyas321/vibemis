@@ -1,4 +1,4 @@
-# Vibemis design system (P3.17)
+# Vibemis design system
 
 The single source of truth for Vibemis's visual language. Every new/restyled QML surface should
 pull from these tokens instead of hardcoding values. Tokens are implemented as the `Theme` QML
@@ -25,7 +25,7 @@ here propagates everywhere.
 
 | Token | Value | Use |
 |-------|-------|-----|
-| `accent` | `#00CCCC` | Interactive emphasis, section titles, focus borders, key values. The Vibemis teal (from test27). **Replaces the HTML `skyblue` used in GroupBox titles.** |
+| `accent` | `#00CCCC` | Interactive emphasis, section titles, focus borders, key values. The Vibemis teal. **Replaces the HTML `skyblue` used in GroupBox titles.** |
 | `accentPressed` | `#00A3A3` | Pressed/active state of accented controls. |
 | `background` | `#303030` | App root background (Material.background). |
 | `surface` | `#2D2D2D` | Raised surfaces: overlays, Quick Menu, cards. |
@@ -62,7 +62,7 @@ System font (no bundled family). A 6-step scale by **role**, not by pixel guessw
 **Rules**
 - PC-grid name was **36pt** — cap at `fontTitle` (20) and elide; 36 breaks narrow layouts.
 - Use `pointSize` everywhere (retire the lone `pixelSize` in PcView).
-- `font.capitalization` stays **MixedCase** globally (test71) — no ALL-CAPS Material buttons.
+- `font.capitalization` stays **MixedCase** globally — no ALL-CAPS Material buttons.
 - One weight axis: Normal or Bold. No per-instance ad-hoc sizes outside the scale.
 
 ## 3. Spacing
@@ -98,10 +98,10 @@ System font (no bundled family). A 6-step scale by **role**, not by pixel guessw
 - Focus order must be controller-navigable (D-pad/stick) on every screen — preserve the existing
   `Navigable*` component behavior when restyling.
 
-## 6. Rollout order (P3.17 step 3 — one launcher-only `test<N>` PR each)
-0. **Theme singleton** (`Theme.qml` + registration) — infrastructure, no visual change. *(test73)*
+## 6. Rollout order (one launcher-only PR each)
+0. **Theme singleton** (`Theme.qml` + registration) — infrastructure, no visual change.
 1. **Settings** — largest surface: SectionTitle + token colors/spacing/type. *(do after the current
-   SettingsView test backlog drains, to avoid merge churn.)*
+   SettingsView work settles, to avoid merge churn.)*
 2. **Computers / Add-PC home** — grid card, name elide, empty state.
 3. **Onboarding / first-run** — welcome + hint hierarchy.
 4. **Quick Menu overlay** — token colors, reuse `Toast.qml`.

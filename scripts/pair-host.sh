@@ -1,5 +1,5 @@
 #!/bin/bash
-# pair-host.sh — pair Vibemis with a host from the command line (P3.10)
+# pair-host.sh — pair Vibemis with a host from the command line
 #
 # Thin wrapper around the Vibemis CLI `pair` verb. Prints the PIN Vibemis generates so you
 # can enter it in the Vibepollo/Apollo/Sunshine "Pair" web UI. Handy for scripted setup or

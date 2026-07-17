@@ -6,7 +6,7 @@ SdlAudioRenderer::SdlAudioRenderer()
     : m_AudioDevice(0),
       m_AudioBuffer(nullptr)
 {
-    // BL-1776: upstream asserted sole ownership of SDL_INIT_AUDIO here, but
+    // Upstream asserted sole ownership of SDL_INIT_AUDIO here, but
     // UiSoundManager may hold a transient refcounted reference (UI nav sounds,
     // incl. the Quick Menu mid-stream). SDL_InitSubSystem/SDL_QuitSubSystem
     // refcounting keeps both owners correct, so the assert had to go.
@@ -93,7 +93,7 @@ SdlAudioRenderer::~SdlAudioRenderer()
         SDL_free(m_AudioBuffer);
     }
 
-    // BL-1776: no !SDL_WasInit(SDL_INIT_AUDIO) assert after this — see ctor;
+    // No !SDL_WasInit(SDL_INIT_AUDIO) assert after this — see ctor;
     // UiSoundManager's refcounted reference may legitimately keep the
     // subsystem alive past our teardown.
     SDL_QuitSubSystem(SDL_INIT_AUDIO);

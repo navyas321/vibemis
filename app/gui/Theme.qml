@@ -1,13 +1,13 @@
 pragma Singleton
 import QtQuick 2.9
 
-// Vibemis design tokens (P3.17). Single source of truth for color/type/spacing — see
+// Vibemis design tokens. Single source of truth for color/type/spacing — see
 // docs/DESIGN_SYSTEM.md. Import as `import Theme 1.0` and reference e.g. Theme.accent,
 // Theme.spacingM, Theme.fontSection. Registered as a QML singleton in app/main.cpp via
 // qmlRegisterSingletonType(QUrl("qrc:/gui/Theme.qml"), "Theme", 1, 0, "Theme").
 QtObject {
     // ---- Color ----
-    readonly property color accent:        "#00CCCC"  // Vibemis teal (test27) — interactive emphasis
+    readonly property color accent:        "#00CCCC"  // Vibemis teal — interactive emphasis
     readonly property color accentPressed: "#00A3A3"
     readonly property color background:    "#303030"  // app root
     readonly property color surface:       "#2D2D2D"  // raised surfaces / overlays

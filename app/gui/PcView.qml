@@ -18,13 +18,13 @@ CenteredGridView {
     focus: true
     activeFocusOnTab: true
 
-    // BL-1662 (freeze repro hardening): when focus enters the grid from the global toolbar
+    // Freeze repro hardening: when focus enters the grid from the global toolbar
     // (touch the Refresh icon, then press Down), land on a REAL host delegate so the d-pad
-    // drives the cards immediately. The maintainer's repro was "toolbar d-pad works, but the
+    // drives the cards immediately. The repro was "toolbar d-pad works, but the
     // moment focus reaches the cards d-pad stops" — with currentIndex still -1 the GridView had
     // no current item to move from. count>0 excludes the ghost "Add a computer" cell.
     //
-    // BL-1681 lives here too (QML forbids a second onActiveFocusChanged — a duplicate handler
+    // The ghost-selection reset lives here too (QML forbids a second onActiveFocusChanged — a duplicate handler
     // fails the WHOLE component at runtime, which shipped one beta as a blank home page):
     // losing focus also clears the ghost d-pad selection.
     onActiveFocusChanged: {
@@ -35,11 +35,11 @@ CenteredGridView {
             ghostSelected = false
         }
     }
-    // Redesign 1a: the grid content is inset so it clears the fixed per-screen header
+    // Redesign: the grid content is inset so it clears the fixed per-screen header
     // (title + host count + icon buttons) and the bottom gamepad hint bar. See the chrome
     // block below. The global toolbar is collapsed for PcView in main.qml (redesignScreen).
     topMargin: pcChromeHeader.height + 12
-    // BL-1653: when hosts don't fill a full row, CenteredGridView skips centering and falls
+    // When hosts don't fill a full row, CenteredGridView skips centering and falls
     // back to minMargin (default 10px) — cards hugged the screen edge, misaligned with the
     // 56px header and visually clipping the focus ring's outer glow. Align partial rows with
     // the redesign's screen padding instead.
@@ -51,12 +51,12 @@ CenteredGridView {
     // that case so it's always reachable. (Code-review MED finding.)
     bottomMargin: (pcHintBar.visible ? pcHintBar.height : 0) + 12
                   + ((count > 0 && (count % Math.max(1, Math.floor(itemsPerRow))) === 0) ? cellHeight : 0)
-    // Redesign 1a: 430px rich host cards (gap 32) in a centered wrapping row.
+    // Redesign: 430px rich host cards (gap 32) in a centered wrapping row.
     cellWidth: 462; cellHeight: 274;
     objectName: qsTr("Computers")
 
-    // BL-1681: d-pad selection state for the Add-a-computer ghost — WITHOUT focus. The
-    // BL-1662 freeze RCA forbids focusing a non-delegate inside the GridView's focus scope,
+    // D-pad selection state for the Add-a-computer ghost — WITHOUT focus. The
+    // freeze RCA forbids focusing a non-delegate inside the GridView's focus scope,
     // so the grid keeps activeFocus + currentIndex and the ghost merely PAINTS selected;
     // Ⓐ/Return on the current delegate opens Add-PC while this is set. Cleared by any
     // Left/Up, index move, or focus loss.
@@ -73,7 +73,7 @@ CenteredGridView {
     }
     onCurrentIndexChanged: ghostSelected = false
 
-    // ---- Redesign 1a chrome: per-screen header + persistent gamepad hint bar ----
+    // ---- Redesign chrome: per-screen header + persistent gamepad hint bar ----
     // Live "N hosts · M online" count. QML can't bind an aggregate over model rows, so
     // onlineRev bumps on any model change to force the count to re-compute.
     property int onlineRev: 0
@@ -94,7 +94,7 @@ CenteredGridView {
         function onModelReset() { pcGrid.onlineRev++ }
     }
 
-    // Redesign 1a body section title: "Computers · N hosts · M online". The VIBEMIS wordmark +
+    // Redesign body section title: "Computers · N hosts · M online". The VIBEMIS wordmark +
     // Add/Refresh/Help/Settings buttons live in the ALWAYS-PRESENT global toolbar (main.qml) — kept
     // present at 84px so it renders under gamescope (a collapsed header black-screens on the WSI path).
     // So this is just the body section title below the toolbar; there is no double header.
@@ -141,7 +141,7 @@ CenteredGridView {
         anchors.bottom: parent.bottom
         anchors.left: parent.left
         anchors.right: parent.right
-        // Matches the design handoff 1a hint bar exactly (dc.html lines 100-104):
+        // Matches the design's hint bar exactly:
         // Ⓐ Connect · Ⓧ Host options · Ⓨ Add computer · (right) ☰ Settings. Ⓨ is wired to the
         // Add-PC dialog via Keys.onYPressed on the grid below; ☰/Start opens Settings.
         hints: [
@@ -152,14 +152,14 @@ CenteredGridView {
         hintsRight: [ { glyph: "☰", label: qsTr("Settings") } ]
     }
 
-    // Redesign 1a: Ⓨ (mapped to Key_Yellow in sdlgamepadkeynavigation.cpp) opens the Add-PC dialog,
+    // Redesign: Ⓨ (mapped to Key_Yellow in sdlgamepadkeynavigation.cpp) opens the Add-PC dialog,
     // matching the "Ⓨ Add computer" hint. Keyboard 'A' also adds a computer as a convenience.
     Keys.onPressed: {
         if (event.key === Qt.Key_Yellow) {
             addPcDialog.open()
             event.accepted = true
         }
-        // BL-1662 (CRITICAL freeze RCA): the earlier "d-pad Right/Down jumps to the ghost card"
+        // CRITICAL freeze RCA: the earlier "d-pad Right/Down jumps to the ghost card"
         // branch is GONE deliberately. Giving a non-delegate item focus inside the GridView's
         // focus scope started a focus war with the view's own focus management (170% CPU spin,
         // every input hijacked to Add-a-computer with a 1-host grid where currentIndex is always
@@ -304,17 +304,17 @@ CenteredGridView {
         width: 430; height: 242;
         grid: pcGrid
 
-        // Maintainer find 2026-07-13: the Material style paints an always-visible
+        // The Material style paints an always-visible
         // SQUARE-cornered surface behind every ItemDelegate — visible as a grey box
         // poking past the rounded card corners. The card supplies all visuals.
         background: null
 
         property alias pcContextMenu : pcContextMenuLoader.item
 
-        // BL-1681: instance-level nav overrides (these replace NavigableItemDelegate's
+        // Instance-level nav overrides (these replace NavigableItemDelegate's
         // handlers) route the "can't move further" edge to the ghost card as a pure
         // SELECTION (pcGrid.ghostSelected) — focus and currentIndex never leave this
-        // delegate, so the BL-1662 focus-war freeze class is impossible by construction.
+        // delegate, so the focus-war freeze class is impossible by construction.
         Keys.onRightPressed: {
             if (index === pcGrid.count - 1 && !pcGrid.ghostSelected) {
                 pcGrid.selectGhost()
@@ -350,7 +350,7 @@ CenteredGridView {
             else {
                 grid.moveCurrentIndexUp()
 
-                // BL-1709 (launch blocker, harness-validated RCA): at the top of the grid,
+                // Launch blocker, on-device-validated RCA: at the top of the grid,
                 // hop focus to the toolbar. The upstream one-liner
                 // `nextItemInFocusChain(false).forceActiveFocus()` is structurally broken in
                 // the redesign nesting — the delegate's chain-previous is the GRID itself
@@ -376,9 +376,9 @@ CenteredGridView {
                 }
             }
         }
-        // BL-1745 round 2: the manual clicked() calls are REQUIRED (ItemDelegate has no
+        // The manual clicked() calls are REQUIRED (ItemDelegate has no
         // native Return/Enter activation — removing these bricked A on-device in
-        // alpha.001). The double-push symptom is fixed by the stackView.busy guard in
+        // an early alpha). The double-push symptom is fixed by the stackView.busy guard in
         // onClicked below, which turns any duplicate activation into a no-op.
         Keys.onReturnPressed: {
             if (pcGrid.ghostSelected) {
@@ -397,7 +397,7 @@ CenteredGridView {
             }
         }
 
-        // Redesign 1a: the rich host card (previews/1a-computers.png). Model roles feed the pure-visual
+        // Redesign: the rich host card. Model roles feed the pure-visual
         // VbHostCard; the pairing/wake/menu wiring below is unchanged. The CS_UNKNOWN state is shown by
         // the card's own neutral "CHECKING" pill (no separate teal spinner).
         VbHostCard {
@@ -407,7 +407,7 @@ CenteredGridView {
             online: model.online
             paired: model.paired
             statusUnknown: model.statusUnknown
-            // BL-1681: exactly ONE selection ring at a time — the card yields its ring
+            // Exactly ONE selection ring at a time — the card yields its ring
             // while the ghost is d-pad-selected (focus stays here invisibly).
             focused: highlighted && !pcGrid.ghostSelected
             // Access line: paired hosts show their permission summary (Apollo grants "Full access" to
@@ -428,7 +428,7 @@ CenteredGridView {
         Loader {
             id: pcContextMenuLoader
             asynchronous: true
-            // Redesign 1d: the old right-click NavigableMenu is now a right-side action sheet
+            // Redesign: the old right-click NavigableMenu is now a right-side action sheet
             // (VbHostSheet). Same actions + visibility rules, presented gamepad-first.
             sourceComponent: VbHostSheet {
                 id: pcContextMenu
@@ -512,7 +512,7 @@ CenteredGridView {
         }
 
         onClicked: {
-            // BL-1745 round 2: idempotent activation — if the stack is already mid-push
+            // Idempotent activation — if the stack is already mid-push
             // (a duplicate clicked() from the same A press, or a double-tap), drop it.
             // THIS is the actual double-Back fix: one activation, one AppView, one Back.
             if (stackView.busy) {
@@ -565,7 +565,7 @@ CenteredGridView {
         }
 
         onPressAndHold: {
-            // Redesign 1d: the host-options sheet always slides in from the right edge
+            // Redesign: the host-options sheet always slides in from the right edge
             // (not positioned under the cursor like the old context menu).
             pcContextMenu.open()
         }
@@ -591,11 +591,11 @@ CenteredGridView {
         }
     }
 
-    // Redesign 1a: "Add a computer" ghost card (dc.html #1a, 3rd card slot / previews/1a-computers.png).
+    // Redesign: "Add a computer" ghost card (3rd card slot).
     // NOTE on approach: GridView.footer was tried first but doesn't fit here — Qt always positions the
     // footer at lastPosition() (the last row's y plus one full row height), i.e. it starts a brand-new
     // row even when the last row still has empty cell slots, so it can never sit inline as "the next
-    // card" the way the handoff shows. Instead this Item is parented straight into the grid's own
+    // card" the way the design shows. Instead this Item is parented straight into the grid's own
     // contentItem and manually placed at the "next" cell slot (index === pcGrid.count), using the same
     // col/row × cellWidth/cellHeight math GridView uses internally for its delegates. That makes it
     // render as a real trailing grid cell — inline right after the last host card, top-left aligned
@@ -605,7 +605,7 @@ CenteredGridView {
         id: addPcCardSlot
         parent: pcGrid.contentItem
         property int columns: Math.max(1, pcGrid.itemsPerRow)
-        // Hover highlight (BL-1625) + d-pad selection (BL-1681). BL-1662: this item stays
+        // Hover highlight + d-pad selection. This item stays
         // deliberately NON-FOCUSABLE — giving a non-delegate item focus inside the GridView's
         // focus scope caused a focus war with the view (CPU spin, every input hijacked,
         // gamepad dead). The d-pad path is a grid-owned SELECTION state instead: the ghost
@@ -635,7 +635,7 @@ CenteredGridView {
             onPaint: {
                 var ctx = getContext("2d")
                 ctx.reset()
-                // BL-1681: accent stroke while d-pad-selected, white-ish on hover, faint idle.
+                // Accent stroke while d-pad-selected, white-ish on hover, faint idle.
                 ctx.strokeStyle = addPcCardSlot.selected ? String(VbTokens.accent)
                                 : (addPcCardSlot.highlighted ? Qt.rgba(1, 1, 1, 0.30) : Qt.rgba(1, 1, 1, 0.14))
                 ctx.lineWidth = addPcCardSlot.selected ? 3 : 2

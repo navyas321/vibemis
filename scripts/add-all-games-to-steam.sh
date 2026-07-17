@@ -1,5 +1,5 @@
 #!/bin/bash
-# add-all-games-to-steam.sh — make direct-launch shortcuts for every app on a host (P3.10 #5)
+# add-all-games-to-steam.sh — make direct-launch shortcuts for every app on a host
 #
 # Lists the host's apps via the Vibemis CLI (`vibemis list <host>`) and creates a per-game
 # .desktop launcher for each (delegating to add-game-to-steam.sh). Dry-run by default — it

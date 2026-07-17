@@ -1,6 +1,6 @@
 # Vibemis distribution / publishing plan
 
-Decision-ready research (BL-1552). **Recommendation: publish on Flathub as a Flatpak.** Keep the
+Decision-ready research. **Recommendation: publish on Flathub as a Flatpak.** Keep the
 AppImage (GitHub Releases) as the beta / "any distro" fallback; keep "Add as Non-Steam Game" as the
 launch mechanism. Skip the Steam store (poor fit for a free GPL streaming client; competes with
 Valve's own Steam Link; no Moonlight-lineage client has ever been on the store).
@@ -50,7 +50,7 @@ Valve's own Steam Link; no Moonlight-lineage client has ever been on the store).
 Sources: Moonlight Flathub manifest repo; Flathub submission + requirements docs; Steam Deck install
 guides (XDA / Pi My Life Up); MoonDeck/Decky for Game-Mode launching.
 
-## 2026-07-13 research refresh (BL-1552 second pass — confirms the plan, adds specifics)
+## 2026-07-13 research refresh (confirms the plan, adds specifics)
 
 Ranked by real one-click-ness for a Game-Mode user vs maintainer effort:
 

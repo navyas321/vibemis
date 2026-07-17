@@ -52,7 +52,7 @@ QVariant ComputerModel::data(const QModelIndex& index, int role) const
     case IsApolloServerRole:
         return computer->isApolloServer();
     case PermissionSummaryRole: {
-        // Vibemis (P3.13): a concise at-a-glance access level for Apollo hosts, which grant the
+        // Vibemis: a concise at-a-glance access level for Apollo hosts, which grant the
         // first paired client full permissions and later clients view/input-only. Empty for hosts
         // that don't report permissions (e.g. plain Sunshine / not yet connected).
         quint32 p = computer->serverPermissions;
@@ -73,7 +73,7 @@ QVariant ComputerModel::data(const QModelIndex& index, int role) const
         }
     }
     case HostTypeRole: {
-        // Redesign 1a host-type badge (accuracy fixed in BL-2008). Vibepollo deliberately mimics
+        // Redesign 1a host-type badge. Vibepollo deliberately mimics
         // Sunshine's serverinfo (no ApolloVersion, state=SUNSHINE_SERVER_FREE), but it DOES emit
         // the Apollo-lineage <Permission> tag — current builds even on unpaired probes (verified
         // against a live Vibepollo host: <Permission>0</Permission> with PairStatus 0). So key on
@@ -104,7 +104,7 @@ QVariant ComputerModel::data(const QModelIndex& index, int role) const
         return QStringLiteral("LAN");
     }
     case LatencyTextRole:
-        // BL-1598: the measured serverinfo-probe RTT stamped by the poller (never fabricated).
+        // The measured serverinfo-probe RTT stamped by the poller (never fabricated).
         // Empty until the first successful probe or while offline — the card then shows transport only.
         if (computer->state != NvComputer::CS_ONLINE || computer->latencyMs <= 0) {
             return QString();
@@ -216,7 +216,7 @@ QVariant ComputerModel::data(const QModelIndex& index, int role) const
             details += tr("Available Commands: %1").arg(computer->serverCommands.join(", "));
         }
 
-        // Vibemis P3.13: Apollo-only save-sync awareness. Apollo hosts can sync per-app
+        // Vibemis: Apollo-only save-sync awareness. Apollo hosts can sync per-app
         // save data across clients; note the capability (host-side feature, configured on
         // the Apollo host, not in Vibemis).
         if (computer->isApolloServer()) {

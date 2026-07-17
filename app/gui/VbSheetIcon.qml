@@ -108,17 +108,17 @@ Canvas {
                 ctx.beginPath(); ctx.arc(kx[vi], ys[vi], 2, 0, 2 * Math.PI); ctx.stroke()
             }
         } else if (kind === "power") {
-            // BL-1688: power symbol — arc + vertical stem
+            // power symbol — arc + vertical stem
             var rq = (w - 10) / 2
             ctx.beginPath(); ctx.arc(cx, cy + 1, rq, -Math.PI / 2 + 0.5, -Math.PI / 2 - 0.5 + 2 * Math.PI); ctx.stroke()
             ctx.beginPath(); ctx.moveTo(cx, 3); ctx.lineTo(cx, cy); ctx.stroke()
         } else if (kind === "terminal") {
-            // BL-1688: terminal window — frame + '>' prompt + cursor line
+            // terminal window — frame + '>' prompt + cursor line
             rr(ctx, 3, 4, w - 6, h - 8, 3); ctx.stroke()
             ctx.beginPath(); ctx.moveTo(7, cy - 3); ctx.lineTo(11, cy); ctx.lineTo(7, cy + 3); ctx.stroke()
             ctx.beginPath(); ctx.moveTo(13, cy + 3); ctx.lineTo(18, cy + 3); ctx.stroke()
         } else if (kind === "clipboard" || kind === "clipboard-up" || kind === "clipboard-down") {
-            // BL-1688: clipboard board + clip; up/down variants add an arrow on the board
+            // clipboard board + clip; up/down variants add an arrow on the board
             rr(ctx, 5, 5, w - 10, h - 8, 3); ctx.stroke()
             rr(ctx, cx - 4, 2, 8, 5, 2); ctx.stroke()
             if (kind === "clipboard-up") {
@@ -132,7 +132,7 @@ Canvas {
                 ctx.beginPath(); ctx.moveTo(9, 16); ctx.lineTo(w - 11, 16); ctx.stroke()
             }
         } else if (kind === "keyboard") {
-            // BL-1688: keyboard — frame + key dots + space bar
+            // keyboard — frame + key dots + space bar
             rr(ctx, 3, 7, w - 6, h - 14, 3); ctx.stroke()
             var kxs = [7, 11, 15, 19]
             for (var ki = 0; ki < kxs.length; ki++) {
@@ -140,32 +140,32 @@ Canvas {
             }
             ctx.beginPath(); ctx.moveTo(9, h - 11); ctx.lineTo(w - 9, h - 11); ctx.stroke()
         } else if (kind === "stats") {
-            // BL-1688: three rising bars on a baseline
+            // three rising bars on a baseline
             ctx.beginPath(); ctx.moveTo(4, h - 5); ctx.lineTo(w - 4, h - 5); ctx.stroke()
             ctx.beginPath(); ctx.moveTo(8, h - 8); ctx.lineTo(8, h - 12); ctx.stroke()
             ctx.beginPath(); ctx.moveTo(cx, h - 8); ctx.lineTo(cx, h - 16); ctx.stroke()
             ctx.beginPath(); ctx.moveTo(w - 8, h - 8); ctx.lineTo(w - 8, h - 20); ctx.stroke()
         } else if (kind === "mouse") {
-            // BL-1688: mouse body + center scroll line
+            // mouse body + center scroll line
             rr(ctx, cx - 6, 4, 12, h - 8, 6); ctx.stroke()
             ctx.beginPath(); ctx.moveTo(cx, 7); ctx.lineTo(cx, 11); ctx.stroke()
         } else if (kind === "fullscreen") {
-            // BL-1688: four outward corners
+            // four outward corners
             ctx.beginPath(); ctx.moveTo(4, 9); ctx.lineTo(4, 4); ctx.lineTo(9, 4); ctx.stroke()
             ctx.beginPath(); ctx.moveTo(w - 9, 4); ctx.lineTo(w - 4, 4); ctx.lineTo(w - 4, 9); ctx.stroke()
             ctx.beginPath(); ctx.moveTo(w - 4, h - 9); ctx.lineTo(w - 4, h - 4); ctx.lineTo(w - 9, h - 4); ctx.stroke()
             ctx.beginPath(); ctx.moveTo(9, h - 4); ctx.lineTo(4, h - 4); ctx.lineTo(4, h - 9); ctx.stroke()
         } else if (kind === "touch") {
-            // BL-1688: pointing finger dot + two tap arcs
+            // pointing finger dot + two tap arcs
             ctx.beginPath(); ctx.arc(cx, cy + 2, 2, 0, 2 * Math.PI); ctx.fill()
             ctx.beginPath(); ctx.arc(cx, cy + 2, 6, -Math.PI * 0.8, -Math.PI * 0.2); ctx.stroke()
             ctx.beginPath(); ctx.arc(cx, cy + 2, 9, -Math.PI * 0.75, -Math.PI * 0.25); ctx.stroke()
         } else if (kind === "key") {
-            // BL-1688: single keycap with a centered dash (for send-key actions)
+            // single keycap with a centered dash (for send-key actions)
             rr(ctx, 5, 6, w - 10, h - 12, 4); ctx.stroke()
             ctx.beginPath(); ctx.moveTo(cx - 3, cy); ctx.lineTo(cx + 3, cy); ctx.stroke()
         } else if (kind === "restart") {
-            // BL-1688: circular arrow with head
+            // circular arrow with head
             var rr2 = (w - 10) / 2
             ctx.beginPath(); ctx.arc(cx, cy, rr2, -Math.PI * 0.35, Math.PI * 1.25); ctx.stroke()
             ctx.beginPath()
@@ -174,7 +174,7 @@ Canvas {
             ctx.lineTo(cx + rr2 * Math.cos(-Math.PI * 0.35) - 1, cy + rr2 * Math.sin(-Math.PI * 0.35) + 4)
             ctx.stroke()
         } else if (kind === "disconnect") {
-            // BL-1688: broken link — two offset chain halves
+            // broken link — two offset chain halves
             rr(ctx, 3, cy - 4, 9, 8, 4); ctx.stroke()
             rr(ctx, w - 12, cy - 4, 9, 8, 4); ctx.stroke()
             ctx.beginPath(); ctx.moveTo(cx - 1, cy - 6); ctx.lineTo(cx + 1, cy - 9); ctx.stroke()

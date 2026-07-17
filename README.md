@@ -58,6 +58,9 @@ Same idea: download the latest `.AppImage` from
 (right-click → Properties → *"Allow executing as program"*, or `chmod +x Vibemis-*.AppImage`),
 then double-click or run `./Vibemis-*.AppImage`.
 
+> **0.2.0 is the current stable.** A Flathub (Flatpak) package is on the way; until then the
+> AppImage is the recommended install on any distro.
+
 ### Add to Steam (SteamOS / Steam Deck)
 
 To launch Vibemis from Game Mode:
@@ -103,9 +106,9 @@ AppImage to a stable path with a clean `Vibemis` desktop entry, ready to Add to 
   video (works under Gamescope, not just the desktop), with full gamepad navigation and a
   discoverable "Resume Game" exit (B / Back / Start). From it you can upload / fetch the host
   clipboard, paste clipboard text as keystrokes, type text to the host (on-screen text-send),
-  run server commands, send special keys (Ctrl+Alt+Del, Alt+F4, Win/Super, Esc), view stream
-  info, toggle performance stats / mouse & keyboard capture / fullscreen / the touch overlay,
-  and disconnect or quit the game
+  run server commands, send special keys (Ctrl+Alt+Del, Alt+F4, Win/Super, Esc, Shift+Tab),
+  view stream info, toggle performance stats / mouse & keyboard capture / fullscreen / the
+  touch overlay, and disconnect or quit the game. Navigation feedback sounds are optional
 - **Touchscreen passthrough & touch modes** — the handheld's touchscreen forwards native
   taps and drags to Apollo-lineage hosts, or acts as a virtual trackpad instead (switchable
   via "Use touchscreen as a virtual trackpad" in Input settings)
@@ -124,12 +127,12 @@ AppImage to a stable path with a clean `Vibemis` desktop entry, ready to Add to 
   data-usage estimate next to the bitrate slider
 - **Handheld quality-of-life** — battery-saver bitrate, controller-rumble suppression, motion
   (gyro) capability detection, host software version & per-client permission surfacing, AV1 and
-  native-resolution guidance, HDR display-capability gate
-- **`vibemis selftest`** — headless smoke test used by CI and the on-device test harness
+  native-resolution guidance, an HDR display-capability gate, and an HDR-to-SDR tone-map toggle
+- **`vibemis selftest`** — headless smoke test used by CI and on-device testing
 - **Per-game stream profiles** — save resolution/FPS/bitrate/HDR per game from the app tile's
   context menu; the profile applies automatically at launch without touching global settings
-- **Auto-reconnect** *(opt-in)* — a dropped stream retries in place (3 attempts with backoff)
-  instead of dumping you back to the game grid
+- **Auto-reconnect** *(on by default)* — a dropped stream retries in place (3 attempts with
+  backoff) instead of dumping you back to the game grid; toggleable in Settings
 - **Gamepad-first redesign** — a full controller-first UI on a unified dark design-token system
   (one accent/surface/type language), across every screen: the Computers list (rich status cards
   with a host-type badge — Vibepollo / Apollo / Sunshine — and a live host count), the app grid

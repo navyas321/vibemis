@@ -190,10 +190,10 @@ void Session::clConnectionStatusUpdate(int connectionStatus)
                 "Connection status update: %d",
                 connectionStatus);
 
-    // Vibemis (P3.12): adaptive-bitrate observation slice. When the user enables adaptive bitrate
+    // Vibemis: adaptive-bitrate observation slice. When the user enables adaptive bitrate
     // and the host reports a POOR connection, emit a structured recommendation to the log. This is
     // intentionally observation-only for now.
-    // TODO(P3.12): once moonlight-common-c exposes a runtime bitrate API, step
+    // TODO: once moonlight-common-c exposes a runtime bitrate API, step
     // m_StreamConfig.bitrate down here on sustained CONN_STATUS_POOR and recover slowly on
     // sustained CONN_STATUS_OKAY, instead of only logging the recommendation.
     if (s_ActiveSession->m_Preferences->adaptiveBitrate && connectionStatus == CONN_STATUS_POOR) {
@@ -641,7 +641,7 @@ Session::Session(NvComputer* computer, NvApp& app, StreamingPreferences *prefere
     m_ServerCommandManager(new ServerCommandManager()),
     m_ClipboardManager(ClipboardManager::instance())
 {
-    // P3.8 per-game stream profiles: when the user saved a profile for this app, run
+    // Per-game stream profiles: when the user saved a profile for this app, run
     // the session on a private preferences copy with the profile applied, so the
     // global preferences object (shared with the Settings UI) is never mutated.
     // An explicitly-passed preferences object (e.g. the CLI's) always wins.
@@ -988,8 +988,8 @@ bool Session::initialize()
     //   1. enableHdr (user wants HDR-capable streaming codec)
     //   2. displayHdrCapability (user confirms their display can actually show HDR)
     // Without (2), asking the host for HDR results in PQ-encoded pixels rendered
-    // on an SDR panel, which looks washed out (the Phase 2 #13 bug reported on
-    // the Legion Go S Z2 LCD). When the user explicitly unchecks "My display
+    // on an SDR panel, which looks washed out (as seen on the Legion Go S Z2
+    // LCD's SDR panel). When the user explicitly unchecks "My display
     // supports HDR" in Settings, we keep the codec path 8-bit even though
     // enableHdr is true.
     bool effectiveHdr = m_Preferences->enableHdr && m_Preferences->displayHdrCapability;
@@ -1456,7 +1456,7 @@ private:
                 !m_Session->m_UnexpectedTermination &&
                 (m_Session->m_Preferences->quitAppAfter ||
                  m_Session->m_ShouldExitAfterQuit ||
-                 // Vibemis BL-1686: Quick Menu "Quit game" — quit on the host, stay in Vibemis
+                 // Vibemis: Quick Menu "Quit game" — quit on the host, stay in Vibemis
                  m_Session->m_ShouldQuitAppAfter);
 
         // Notify the UI
@@ -1464,11 +1464,11 @@ private:
             emit m_Session->quitStarting();
         }
         else {
-            // BL-1756: a stream that ends without quitting leaves the app running
+            // A stream that ends without quitting leaves the app running
             // host-side, but currentGameId is only ever written by the serverinfo
             // poll — and polling is suspended the whole time the stream window is
             // up. Record the running app before sessionFinished re-shows the UI so
-            // AppView's re-entry resync (BL-1769) sees it and re-activating this
+            // AppView's re-entry resync sees it and re-activating this
             // app resumes instead of relaunching. Gated on connection success: a
             // failed launch taught us nothing the poll doesn't know. The next
             // successful poll stays authoritative via ASSIGN_IF_CHANGED (e.g. if
@@ -1476,7 +1476,7 @@ private:
             if (m_Session->m_AsyncConnectionSuccess) {
                 QWriteLocker lock(&m_Session->m_Computer->lock);
                 m_Session->m_Computer->currentGameId = m_Session->m_App.id;
-                // Greppable evidence for the resume-vs-launch validation (test117).
+                // Greppable evidence for the resume-vs-launch validation.
                 qInfo() << "Session ended without quit; app" << m_Session->m_App.id
                         << "stays current for AppView resume";
             }
@@ -1503,7 +1503,7 @@ private:
             } catch (const QtNetworkReplyException&) {
             }
 
-            // Session is finished now. BL-1630: emit BEFORE quit() — emitting after meant
+            // Session is finished now. Emit BEFORE quit() — emitting after meant
             // the queued sessionFinished handler (StreamSegue re-show, gamepad re-init)
             // could run mid-shutdown on a dying event loop, or never run at all.
             emit m_Session->sessionFinished(m_Session->m_PortTestResults);
@@ -2293,7 +2293,7 @@ void Session::execInternal()
     // Toggle the stats overlay if requested by the user
     m_OverlayManager.setOverlayState(Overlay::OverlayDebug, m_Preferences->showPerformanceOverlay);
 
-    // Vibemis BL-1562/BL-2002/BL-2007: opt-in on-screen touch controls overlay —
+    // Vibemis: opt-in on-screen touch controls overlay —
     // three icon-only buttons (MENU opens the Quick Menu, KBD requests the SteamOS
     // keyboard, TOUCH-MODE live-toggles touchpad-emulation vs direct touch). The
     // glyph surfaces regenerate inside setOverlayState(); no label text involved.
@@ -2307,7 +2307,7 @@ void Session::execInternal()
     // because we want to suspend all Qt processing until the stream is over.
     SDL_Event event;
     for (;;) {
-        // test84 (review fix BL-1533): on the NON-threaded exec path (Windows/macOS/EGLFS)
+        // On the NON-threaded exec path (Windows/macOS/EGLFS)
         // this loop runs on the main thread, so nothing else pumps Qt — the queued
         // QuickMenuManager::toggle() posted from the SDL input handler and the offscreen
         // render timer would never run, making the Quick Menu completely dead there. Pump
@@ -2328,7 +2328,7 @@ void Session::execInternal()
         // NB: This behavior was introduced in SDL 2.0.16, but had a few critical
         // issues that could cause indefinite timeouts, delayed joystick detection,
         // and other problems.
-        // test84: shorter wait when we're also responsible for pumping Qt, so queued
+        // Shorter wait when we're also responsible for pumping Qt, so queued
         // events (Quick Menu toggle) aren't delayed up to a full second between inputs.
         if (!SDL_WaitEventTimeout(&event, m_ThreadedExec ? 1000 : 16)) {
             presence.runCallbacks();
@@ -2407,7 +2407,7 @@ void Session::execInternal()
                 m_InputHandler->notifyFocusLost();
                 
                 // Trigger clipboard sync from server when focus is lost.
-                // test81 (review fix): this runs on the SDL exec thread on Linux, but
+                // This runs on the SDL exec thread on Linux, but
                 // onFocusLost() uses QNetworkAccessManager + QClipboard, which are
                 // main-thread-affine — invoke queued on the manager's (main) thread.
                 if (m_ClipboardManager) {
@@ -2616,12 +2616,12 @@ void Session::execInternal()
             m_InputHandler->handleKeyEvent(&event.key);
             break;
         case SDL_TEXTINPUT:
-            // P3.20 (test86): routed to the Quick Menu's text field when it's focused;
+            // Routed to the Quick Menu's text field when it's focused;
             // ignored otherwise (the host receives scancodes from SDL_KEYDOWN as before).
             m_InputHandler->handleTextInputEvent(&event.text);
             break;
         default:
-            // P3.20b (test87): the Quick Menu (Qt thread) pushes a registered SDL user
+            // The Quick Menu (Qt thread) pushes a registered SDL user
             // event to run fullscreen/mouse-mode/capture toggles on THIS (SDL) thread.
             if (m_InputHandler != nullptr &&
                 event.type == SdlInputHandler::quickMenuComboEventType()) {

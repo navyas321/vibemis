@@ -37,7 +37,7 @@ Rectangle {
         }
     }
 
-    // Inline component: one glyph + label pair. Matches the design handoff exactly (dc.html
+    // Inline component: one glyph + label pair. Matches the design exactly (dc.html
     // lines 100-104): face buttons + ☰ render as a 30px circular OUTLINE badge (2px textDim
     // border) with the bare letter inside (ExtraBold, primary text); LB/RB render as rounded
     // key-caps. Callers pass the circled-letter unicode (Ⓐ/Ⓑ/Ⓧ/Ⓨ) which is mapped to the bare

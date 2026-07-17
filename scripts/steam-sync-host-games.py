@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""steam-sync-host-games.py -- one-click Steam library tiles for a Vibemis host (BL-1786, P3.10 #4)
+"""steam-sync-host-games.py -- one-click Steam library tiles for a Vibemis host
 
 Turns every app on a paired Vibemis host into its own non-Steam Steam shortcut whose target is
 the Vibemis AppImage launched straight into that game (`vibemis stream "<host>" "<app>"`). Once
 synced, each host game IS a tile in the Steam library -- one click in Game Mode streams it
-directly, no menus. This is the "MoonDeckBuddy-style" one-click flow the maintainer asked for,
+directly, no menus. This is the "MoonDeckBuddy-style" one-click flow users asked for,
 but with fewer moving parts: no host-side companion service, no Decky plugin -- just this script
 talking to the Vibemis CLI and Steam's own shortcuts.vdf.
 
@@ -538,7 +538,7 @@ def cmd_sync(args) -> int:
 
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(
-        description="Sync a Vibemis host's app list into Steam library shortcuts (BL-1786).",
+        description="Sync a Vibemis host's app list into Steam library shortcuts.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     ap.add_argument("host", nargs="?",

@@ -49,7 +49,7 @@ private:
         NvHTTP http(address, 0, m_Computer->serverCert, nam);
 
         // Time the serverinfo probe — this measured round-trip feeds the host card's
-        // "N ms · LAN" latency line (BL-1598). A real HTTP RTT, never a fabricated number.
+        // "N ms · LAN" latency line. A real HTTP RTT, never a fabricated number.
         QElapsedTimer rttTimer;
         rttTimer.start();
 
@@ -83,7 +83,7 @@ private:
 
         try {
             // Quiet: this is the background poll's periodic applist fetch — don't spam the log
-            // on every cycle (BL-1619 input-lag flood). User-initiated fetches keep NVLL_ERROR.
+            // on every cycle (input-lag flood). User-initiated fetches keep NVLL_ERROR.
             appList = http.getAppList(NvHTTP::NVLL_NONE);
             if (appList.isEmpty()) {
                 return false;

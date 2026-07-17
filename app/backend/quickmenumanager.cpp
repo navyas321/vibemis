@@ -53,7 +53,7 @@ enum KeyCombo {
 // animations/selection highlights smooth at negligible cost.
 static const int kRenderIntervalMs = 33;
 
-// BL-1665: gamepad nav auto-repeat. Hold ~380ms before repeating, then advance the selection
+// Gamepad nav auto-repeat. Hold ~380ms before repeating, then advance the selection
 // every ~90ms — the same "delay then fast repeat" cadence keyboards use, so holding the d-pad
 // or pushing the left stick scrolls the menu continuously instead of moving exactly once.
 static const int kNavRepeatInitialMs = 380;
@@ -77,7 +77,7 @@ QuickMenuManager::QuickMenuManager(QObject *parent)
     , m_rootItem(nullptr)
     , m_fbo(nullptr)
     , m_renderTimer(nullptr)
-    // BL-1622: the menu renders into this FBO and the renderers blit it 1:1, centered. 500x400 was
+    // The menu renders into this FBO and the renderers blit it 1:1, centered. 500x400 was
     // only ~26% of a 1920-wide stream — physically tiny + cramped. Bumped to a readable default that
     // still fits an 800px-tall surface. (A viewport-relative size is a follow-up.)
     , m_overlaySize(720, 600)
@@ -87,7 +87,7 @@ QuickMenuManager::QuickMenuManager(QObject *parent)
     m_renderTimer->setInterval(kRenderIntervalMs);
     connect(m_renderTimer, &QTimer::timeout, this, &QuickMenuManager::renderToSurface);
 
-    // BL-1665: gamepad nav auto-repeat timer.
+    // Gamepad nav auto-repeat timer.
     m_navRepeatKey = 0;
     m_navRepeatTimer = new QTimer(this);
     connect(m_navRepeatTimer, &QTimer::timeout, this, &QuickMenuManager::onNavRepeat);
@@ -104,7 +104,7 @@ bool QuickMenuManager::hasServerCommands() const
         return false;
     }
 
-    // test81 (review fix): hasPermission() is a plain accessor, not Q_INVOKABLE — the
+    // hasPermission() is a plain accessor, not Q_INVOKABLE — the
     // old QMetaObject::invokeMethod-by-name silently failed and always returned false,
     // which made "Server Commands" permanently read as unavailable. Both objects live
     // on the main thread, so a direct call is correct.
@@ -157,7 +157,7 @@ void QuickMenuManager::setVisible(bool visible)
         }
 
         // Enable the overlay slot, render the first frame, and start the refresh loop.
-        // BL-1630: fetch the Session ONCE — s_ActiveSession is cleared from a pool thread,
+        // Fetch the Session ONCE — s_ActiveSession is cleared from a pool thread,
         // so a second Session::get() between check and use can return null mid-teardown.
         Session* session = Session::get();
         if (session) {
@@ -167,7 +167,7 @@ void QuickMenuManager::setVisible(bool visible)
         m_renderTimer->start();
     } else {
         m_renderTimer->stop();
-        // BL-1665: cancel any in-flight nav auto-repeat so a held direction doesn't keep
+        // Cancel any in-flight nav auto-repeat so a held direction doesn't keep
         // firing into a hidden menu (and doesn't resume on the next open).
         m_navRepeatTimer->stop();
         m_navRepeatKey = 0;
@@ -340,7 +340,7 @@ void QuickMenuManager::renderToSurface()
                rowBytes);
     }
 
-    Session* session = Session::get();   // BL-1630: single fetch (TOCTOU vs pool-thread clear)
+    Session* session = Session::get();   // single fetch (TOCTOU vs pool-thread clear)
     if (session) {
         session->getOverlayManager().updateOverlaySurface(Overlay::OverlayQuickMenu, surface);
     } else {
@@ -359,7 +359,7 @@ void QuickMenuManager::teardownOverlayRenderer()
         m_glContext->makeCurrent(m_offscreenSurface);
     }
 
-    // BL-1630: destruction ORDER matters, and deleteLater() is a trap here — on the quit
+    // Destruction ORDER matters, and deleteLater() is a trap here — on the quit
     // path the event loop is already dead, so a queued deletion never runs and the live QML
     // scene would outlive its engine (crash inside the outer QQmlApplicationEngine dtor).
     // The root item is C++-owned (QQmlComponent::create()), so delete it directly, and keep
@@ -370,13 +370,13 @@ void QuickMenuManager::teardownOverlayRenderer()
     m_qmlComponent = nullptr;
     delete m_fbo;
     m_fbo = nullptr;
-    // test81 (review fix): the QQuickWindow was constructed WITH this render control and
+    // The QQuickWindow was constructed WITH this render control and
     // references it during its own destruction — the window must be destroyed first.
     delete m_quickWindow;
     m_quickWindow = nullptr;
     delete m_renderControl;
     m_renderControl = nullptr;
-    // Engine last (BL-1630): scene objects above may call back into it while dying.
+    // Engine last: scene objects above may call back into it while dying.
     delete m_qmlEngine;
     m_qmlEngine = nullptr;
 
@@ -520,10 +520,10 @@ void QuickMenuManager::executeAction(const QString &action)
 
 void QuickMenuManager::openTextSend()
 {
-    // BL-1562: show the menu (lazily initializing the offscreen renderer if needed),
+    // Show the menu (lazily initializing the offscreen renderer if needed),
     // then jump straight to the text-send view — the same path as picking "Type Text"
     // from the main menu, so field focus and text-input routing behave identically.
-    // (BL-2002: no longer the overlay KBD button's target — that requests the SteamOS
+    // (No longer the overlay KBD button's target — that requests the SteamOS
     // keyboard via openSteamKeyboard(); this stays as the programmatic text-send entry.)
     show();
     if (m_rootItem) {
@@ -534,7 +534,7 @@ void QuickMenuManager::openTextSend()
 
 void QuickMenuManager::openSteamKeyboard()
 {
-    // BL-2002: raise the SteamOS on-screen keyboard over the stream. Gamescope pops
+    // Raise the SteamOS on-screen keyboard over the stream. Gamescope pops
     // the OSK for the steam://open/keyboard URL and the typed keys arrive as normal
     // key events, flowing to the host through the standard keyboard path. SDL_OpenURL
     // (SDL >= 2.0.14) needs no Qt platform URL handler, so try it first; fall back to
@@ -556,7 +556,7 @@ void QuickMenuManager::openSteamKeyboard()
 
 void QuickMenuManager::commitTouchMode(bool absoluteTouchMode)
 {
-    // BL-2007: the SDL input thread already flipped its live m_AbsoluteTouchMode —
+    // The SDL input thread already flipped its live m_AbsoluteTouchMode —
     // mirror the new mode into the persisted preference (the Settings toggle stays
     // in sync through the NOTIFY signal) and announce it.
     auto prefs = StreamingPreferences::get();
@@ -570,15 +570,15 @@ void QuickMenuManager::commitTouchMode(bool absoluteTouchMode)
 
 void QuickMenuManager::toggleTouchOverlay()
 {
-    // BL-1562: flip + persist the preference, then apply it to the live session.
+    // Flip + persist the preference, then apply it to the live session.
     auto prefs = StreamingPreferences::get();
     prefs->enableTouchOverlay = !prefs->enableTouchOverlay;
     prefs->save();
     emit prefs->enableTouchOverlayChanged();
 
-    Session* session = Session::get();   // BL-1630: single fetch (TOCTOU vs pool-thread clear)
+    Session* session = Session::get();   // single fetch (TOCTOU vs pool-thread clear)
     if (session) {
-        // BL-2007: icon-only buttons — the glyph surfaces regenerate inside
+        // Icon-only buttons — the glyph surfaces regenerate inside
         // setOverlayState(), no label text involved.
         auto& overlayManager = session->getOverlayManager();
         overlayManager.setOverlayState(Overlay::OverlayTouchButtonMenu, prefs->enableTouchOverlay);
@@ -645,7 +645,7 @@ void QuickMenuManager::sendSpecialKey(const QString &action)
     // must send a REAL modifier key DOWN/UP around the target key, exactly like the
     // physical keyboard path does (keyboard.cpp sends keyCode 0xA0 for a Shift press).
     if (action == "key_shift_tab") {
-        // BL-1788: Shift+Tab (reverse focus traversal) was a host NO-OP. The old code
+        // Shift+Tab (reverse focus traversal) was a host NO-OP. The old code
         // set MODIFIER_SHIFT only as a bitfield on the VK_TAB event and never pressed
         // Shift, so the host had no Shift held and the modified Tab did nothing — not
         // even a forward Tab. (A bare "Send Esc" from this same menu DOES close host
@@ -693,22 +693,22 @@ void QuickMenuManager::showToast(const QString &message) {
                                   Q_ARG(QVariant, message));
     }
     else {
-        // BL-2002/BL-2007: the overlay KBD / TOUCH-MODE buttons act with the menu
+        // The overlay KBD / TOUCH-MODE buttons act with the menu
         // CLOSED, where the QML toast never composites. Surface the message through
         // the transient centered text overlay instead — the same mechanism (and 2s
         // auto-hide) executeServerCommand() uses for its out-of-menu error.
-        Session* session = Session::get();   // BL-1630: single fetch (TOCTOU)
+        Session* session = Session::get();   // single fetch (TOCTOU)
         if (session) {
             auto& overlayManager = session->getOverlayManager();
             overlayManager.setOverlayState(Overlay::OverlayServerCommands, true);
             overlayManager.updateOverlayText(Overlay::OverlayServerCommands,
                                              message.toUtf8().constData());
 
-            // test81 (review fix): don't capture the session-owned OverlayManager by
+            // Don't capture the session-owned OverlayManager by
             // reference — the session can be torn down inside the 2s window (UAF).
             // Re-fetch the live session (if any) when the timer fires.
             QTimer::singleShot(2000, []() {
-                Session* s = Session::get();   // BL-1630: single fetch (TOCTOU)
+                Session* s = Session::get();   // single fetch (TOCTOU)
                 if (s) {
                     s->getOverlayManager().setOverlayState(Overlay::OverlayServerCommands, false);
                 }
@@ -723,7 +723,7 @@ void QuickMenuManager::disconnect()
     qDebug() << "QuickMenuManager: Disconnect requested";
     emit disconnectRequested();
 
-    // BL-1630: hide NOW (stops the 33ms render timer + releases the overlay slot while the
+    // Hide NOW (stops the 33ms render timer + releases the overlay slot while the
     // session is intact) and queue the offscreen-renderer teardown for the next main-loop
     // tick — we are currently INSIDE a JS frame of the engine teardown would destroy.
     setVisible(false);
@@ -742,7 +742,7 @@ void QuickMenuManager::quit()
     qDebug() << "QuickMenuManager: Quit requested";
     emit quitRequested();
 
-    // BL-1630 (the quit-from-Quick-Menu crash): quitting tears the Qt event loop down while
+    // The quit-from-Quick-Menu crash: quitting tears the Qt event loop down while
     // the offscreen menu renderer is still live (visible menu, armed 33ms timer, live GL
     // context + second QQmlEngine), leaving it to be destroyed in a broken order inside the
     // outer QQmlApplicationEngine destructor. Hide synchronously and queue the teardown for
@@ -752,7 +752,7 @@ void QuickMenuManager::quit()
     QMetaObject::invokeMethod(this, &QuickMenuManager::teardownOverlayRenderer,
                               Qt::QueuedConnection);
 
-    // Vibemis BL-1686 (maintainer directive): "Quit" from the Quick Menu terminates the
+    // "Quit" from the Quick Menu terminates the
     // running app on the HOST but keeps Vibemis open at the grid, so another session can
     // be started without relaunching. (The whole-app exit remains available via the
     // Ctrl+Alt+Shift+Q quitAndExit keyboard combo and plain window close.)
@@ -772,8 +772,8 @@ void QuickMenuManager::executeServerCommand(const QString &command)
     qDebug() << "QuickMenuManager: Server command requested:" << command;
     emit serverCommandsRequested();
 
-    // Map our simplified command names to the actual ServerCommandManager command IDs
-    // test81 (review fix): ServerCommandManager::executeCommand matches against the
+    // Map our simplified command names to the actual ServerCommandManager command IDs.
+    // ServerCommandManager::executeCommand matches against the
     // host-provided / builtin command list ("restart", "shutdown", "sleep", ...) — the
     // old "restart_server"/"shutdown_server"/"suspend_computer" ids matched nothing and
     // every server command failed with "Command not found".
@@ -793,7 +793,7 @@ void QuickMenuManager::executeServerCommand(const QString &command)
     // This ensures thread safety when accessing ServerCommandManager from QML
     if (m_serverCommandManager) {
         // First check if the server command manager has permission (thread-safe property access)
-        // test81 (review fix): direct call — invokeMethod-by-name on a non-invokable
+        // Direct call — invokeMethod-by-name on a non-invokable
         // accessor always failed and left hasPermission false (see hasServerCommands()).
         bool hasPermission = m_serverCommandManager->hasPermission();
 
@@ -807,17 +807,17 @@ void QuickMenuManager::executeServerCommand(const QString &command)
             qDebug() << "QuickMenuManager: Server commands not available or no permission";
 
             // Show error message briefly
-            Session* session = Session::get();   // BL-1630: single fetch (TOCTOU)
+            Session* session = Session::get();   // single fetch (TOCTOU)
             if (session) {
                 auto& overlayManager = session->getOverlayManager();
                 overlayManager.setOverlayState(Overlay::OverlayServerCommands, true);
                 overlayManager.updateOverlayText(Overlay::OverlayServerCommands, "Server commands not available");
 
-                // test81 (review fix): don't capture the session-owned OverlayManager by
+                // Don't capture the session-owned OverlayManager by
                 // reference — the session can be torn down inside the 2s window (UAF).
                 // Re-fetch the live session (if any) when the timer fires.
                 QTimer::singleShot(2000, []() {
-                    Session* s = Session::get();   // BL-1630: single fetch (TOCTOU)
+                    Session* s = Session::get();   // single fetch (TOCTOU)
                     if (s) {
                         s->getOverlayManager().setOverlayState(Overlay::OverlayServerCommands, false);
                     }
@@ -855,7 +855,7 @@ void QuickMenuManager::toggleStats()
     emit statsToggleRequested();
 
     // Toggle debug overlay (performance stats)
-    Session* session = Session::get();   // BL-1630: single fetch (TOCTOU vs pool-thread clear)
+    Session* session = Session::get();   // single fetch (TOCTOU vs pool-thread clear)
     if (session) {
         auto& overlayManager = session->getOverlayManager();
         bool currentState = overlayManager.isOverlayEnabled(Overlay::OverlayDebug);
@@ -880,7 +880,7 @@ void QuickMenuManager::toggleKeyboardCapture()
     qDebug() << "QuickMenuManager: Keyboard capture toggle requested";
     emit keyboardCaptureToggleRequested();
 
-    // test87: toggle input capture (grab/ungrab) on the SDL thread. Mirrors the
+    // Toggle input capture (grab/ungrab) on the SDL thread. Mirrors the
     // Ctrl+Alt+Shift+Z keyboard combo (KeyComboUngrabInput).
     sendKeyCombo(KeyComboUngrabInput);
     m_isKeyboardCaptured = !m_isKeyboardCaptured;
@@ -928,8 +928,8 @@ void QuickMenuManager::setWindowGeometry(int x, int y, int width, int height)
 {
     // Positioning is handled by the renderer (centered); x/y are unused. But the SIZE matters:
     // the menu renders into an offscreen FBO the renderers blit 1:1, so a fixed FBO on a large
-    // stream surface reads tiny (test-agent device data: a 720x600 FBO covered only ~29% of the
-    // 1536x960 overlay area on a 1920x1200 stream — BL-1622). Size the FBO to 80% of the stream
+    // stream surface reads tiny (on-device data: a 720x600 FBO covered only ~29% of the
+    // 1536x960 overlay area on a 1920x1200 stream). Size the FBO to 80% of the stream
     // window (10% margins), clamped to a sane floor, so the menu scales with the display and the
     // QML lays out in the same coord space the user sees.
     Q_UNUSED(x); Q_UNUSED(y);
@@ -978,7 +978,7 @@ void QuickMenuManager::onStatsVisibilityChanged()
 
 void QuickMenuManager::sendKeyCombo(int keyCombo)
 {
-    // test87: push a registered SDL user event so the combo runs on the SDL thread (the
+    // Push a registered SDL user event so the combo runs on the SDL thread (the
     // only thread that may touch the window / mouse-capture state). SDL_PushEvent is
     // thread-safe. The KeyCombo enum values here mirror SdlInputHandler::KeyCombo.
     qDebug() << "QuickMenuManager: Requesting key combo on SDL thread:" << keyCombo;

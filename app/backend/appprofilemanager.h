@@ -6,7 +6,7 @@
 class StreamingPreferences;
 
 /**
- * @brief Per-game stream profiles (P3.8 Android-parity headline feature)
+ * @brief Per-game stream profiles (Android-parity headline feature)
  *
  * Persists a small set of stream settings (resolution, FPS, bitrate, HDR) per
  * host+app in QSettings under `appprofiles/<computerUuid>/<appId>/...`. When a

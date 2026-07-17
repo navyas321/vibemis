@@ -2,7 +2,7 @@ import QtQuick 2.9
 import QtQuick.Layouts 1.3
 import Vibemis.Redesign 1.0
 
-// Redesign 1a host card — an EXACT port of design_handoff "Vibemis Redesign.dc.html" #1a card
+// Redesign 1a host card — an EXACT port of the design spec "Vibemis Redesign.dc.html" #1a card
 // (lines 58-91) / previews/1a-computers.png. Pure-visual: PcView's delegate binds model roles to these
 // properties and handles input/activation. 430px wide, radius 20, bg elev, padding 32, three stacked
 // blocks (gap 20): [monitor-outline rect  ·  ONLINE/OFFLINE pill] / [name + access] / [badge + meta].
@@ -46,7 +46,7 @@ Item {
         ColumnLayout {
             anchors.fill: parent
             anchors.margins: 32
-            // BL-1661: reserve the bottom strip for the anchored badge/meta row below. The old
+            // Reserve the bottom strip for the anchored badge/meta row below. The old
             // single-column flow overflowed the fixed 242px card by ~11px with real device fonts
             // (32+58+20+name+6+access+20+badge+32 > 242), shoving the badge row onto the border.
             anchors.bottomMargin: 64
@@ -132,7 +132,7 @@ Item {
             Item { Layout.fillHeight: true }
         }
 
-        // ---- Badge + meta — PINNED 22px above the card bottom (BL-1661) ----
+        // ---- Badge + meta — PINNED 22px above the card bottom ----
         // Anchored outside the column flow so it can never be pushed onto the card border,
         // regardless of how tall the name/access text renders with the device's real fonts.
         RowLayout {

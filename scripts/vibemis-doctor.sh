@@ -1,5 +1,5 @@
 #!/bin/bash
-# vibemis-doctor.sh — quick environment diagnostics for Vibemis (P3.10)
+# vibemis-doctor.sh — quick environment diagnostics for Vibemis
 #
 # Read-only checks that help diagnose the most common Vibemis problems on SteamOS / Linux
 # (VAAPI/Mesa, FUSE, GPU, install state, host reachability). Paste the output into a bug

@@ -74,14 +74,14 @@ public:
     // (it is simply ignored).
     Q_INVOKABLE void injectKey(int qtKey);
 
-    // BL-1665: inject a navigation key AND start auto-repeat (SDL sends no key-repeat for
+    // Inject a navigation key AND start auto-repeat (SDL sends no key-repeat for
     // held gamepad buttons/sticks, so holding a direction would otherwise move the selection
     // exactly once). Repeats the key until stopNavRepeat(qtKey) is called or the menu hides.
     // Called from the SDL input thread (d-pad press / left-stick edge) via QueuedConnection.
     Q_INVOKABLE void injectNavKey(int qtKey);
     Q_INVOKABLE void stopNavRepeat(int qtKey);
 
-    // P3.20 (test86): deliver typed text into the offscreen menu's focused TextField
+    // Deliver typed text into the offscreen menu's focused TextField
     // (called from the SDL keyboard handler when text input is active), and send an
     // assembled string to the host as UTF-8 text via LiSendUtf8TextEvent.
     Q_INVOKABLE void injectText(const QString& text);
@@ -93,23 +93,23 @@ public:
     bool isTextInputActive() const { return m_textInputActive; }
     Q_INVOKABLE void setTextInputActive(bool active) { m_textInputActive = active; }
 
-    // Vibemis BL-1562: open the Quick Menu directly into its text-send view.
-    // (BL-2002 repointed the overlay KBD button at openSteamKeyboard(); the
+    // Open the Quick Menu directly into its text-send view.
+    // (The overlay KBD button now points at openSteamKeyboard(); the
     // text-send view stays reachable via the Quick Menu's "Type text" row.)
     Q_INVOKABLE void openTextSend();
 
-    // Vibemis BL-2002: request the SteamOS on-screen keyboard over the stream via
+    // Request the SteamOS on-screen keyboard over the stream via
     // the steam://open/keyboard URL (SDL_OpenURL first, QDesktopServices fallback).
     // Toasts the outcome; degrades to "Steam not available" when neither works.
     Q_INVOKABLE void openSteamKeyboard();
 
-    // Vibemis BL-2007: mirror a touch-mode flip made live by the SDL input thread
+    // Mirror a touch-mode flip made live by the SDL input thread
     // (the overlay's TOUCH-MODE button) into the persisted preference and toast the
     // new mode name. The input thread owns the live m_AbsoluteTouchMode flip; this
     // only handles the pref + UI side, on the Qt main thread.
     Q_INVOKABLE void commitTouchMode(bool absoluteTouchMode);
 
-    // Vibemis BL-1562: live-toggle the on-screen touch controls overlay. Flips and
+    // Live-toggle the on-screen touch controls overlay. Flips and
     // persists StreamingPreferences::enableTouchOverlay and applies the new state to
     // the current session's overlays immediately.
     Q_INVOKABLE void toggleTouchOverlay();
@@ -167,14 +167,14 @@ private slots:
     void onKeyboardCaptureChanged();
     void onStatsVisibilityChanged();
     void renderToSurface();
-    void onNavRepeat();   // BL-1665: fires the held nav key on the auto-repeat cadence
+    void onNavRepeat();   // fires the held nav key on the auto-repeat cadence
 
 private:
     bool initOverlayRenderer();
     void teardownOverlayRenderer();
     void sendKeyCombo(int keyCombo);
 
-    // test81 (review fix): read from the SDL input thread (gamepad/keyboard intercepts)
+    // Read from the SDL input thread (gamepad/keyboard intercepts)
     // while written on the Qt main thread — must be atomic.
     std::atomic<bool> m_isVisible;
     std::atomic<bool> m_textInputActive{false};
@@ -201,7 +201,7 @@ private:
     QSize m_overlaySize;
     bool m_overlayReady;
 
-    // BL-1665: gamepad nav auto-repeat. m_navRepeatKey is the Qt::Key currently held (0 = none);
+    // Gamepad nav auto-repeat. m_navRepeatKey is the Qt::Key currently held (0 = none);
     // all access is on the Qt main thread (queued from the SDL thread), so no atomic is needed.
     QTimer *m_navRepeatTimer;
     int m_navRepeatKey;

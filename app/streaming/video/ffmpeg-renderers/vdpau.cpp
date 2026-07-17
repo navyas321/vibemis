@@ -446,7 +446,7 @@ void VDPAURenderer::notifyOverlayUpdated(Overlay::OverlayType type)
         }
         else if (type == Overlay::OverlayTouchButtonMenu || type == Overlay::OverlayTouchButtonKbd ||
                  type == Overlay::OverlayTouchButtonTouchMode) {
-            // Vibemis BL-1562/BL-2007: MENU top-left, KBD far top-right, TOUCH-MODE
+            // MENU top-left, KBD far top-right, TOUCH-MODE
             // immediately inward of KBD (upper-left origin).
             overlayRect.x0 = (type == Overlay::OverlayTouchButtonMenu)
                     ? Overlay::TouchButtonInset

@@ -1,5 +1,5 @@
 #!/bin/bash
-# add-game-to-steam.sh — make a direct-launch shortcut for one host game (P3.10)
+# add-game-to-steam.sh — make a direct-launch shortcut for one host game
 #
 # Creates a .desktop entry that launches Vibemis straight into a specific game's stream via
 # the CLI (`vibemis stream "<host>" "<app>"`). Add that entry to Steam and the Steam Deck

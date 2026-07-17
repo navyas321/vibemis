@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# BL-1768: generate RELEASES.md — the CHRONOLOGICAL build timeline (newest first).
+# generate RELEASES.md — the CHRONOLOGICAL build timeline (newest first).
 # GitHub's own Releases/Tags pages sort by SemVer PRECEDENCE (alpha < beta < rc < stable
 # for the same base version, spec §11), which is spec-correct but buries the newest
 # alpha below every beta. This index is the date-ordered view for humans.

@@ -32,7 +32,7 @@ void AutoUpdateChecker::start()
 
 void AutoUpdateChecker::checkNow()
 {
-    // Vibemis BL-1665: user-initiated — no platform gate; a dev/desktop build can
+    // Vibemis: user-initiated — no platform gate; a dev/desktop build can
     // still check the feed even though it can't self-install ($APPIMAGE unset).
     requestReleaseFeed(true);
 }
@@ -146,7 +146,7 @@ int AutoUpdateChecker::compareVersion(QVector<int>& version1, QVector<int>& vers
     }
 }
 
-// Vibemis BL-1665: strip "+<build-metadata>" (e.g. "+b6198e4") — semver says build
+// Vibemis: strip "+<build-metadata>" (e.g. "+b6198e4") — semver says build
 // metadata never participates in ordering, and our CI stamps the commit hash there.
 static QString stripBuildMetadata(const QString& version)
 {
@@ -154,9 +154,9 @@ static QString stripBuildMetadata(const QString& version)
     return plusIdx >= 0 ? version.left(plusIdx) : version;
 }
 
-// Vibemis BL-1665: numeric segments of a prerelease suffix, in order. For
+// Vibemis: numeric segments of a prerelease suffix, in order. For
 // "beta.20260713.0528" that's [20260713, 528]; branch-name segments in alpha tags
-// ("alpha.test109-gamescope-scaling.20260713.0528") are skipped, leaving the same
+// ("alpha.<branch>.20260713.0528") are skipped, leaving the same
 // comparable [date, build-number] key across channels.
 static QVector<qlonglong> prereleaseNumericSegments(const QString& prerelease)
 {
@@ -172,14 +172,14 @@ static QVector<qlonglong> prereleaseNumericSegments(const QString& prerelease)
     return segments;
 }
 
-// Vibemis BL-1665: ordering for our CI tags ("1.0.1", "1.0.1-beta.20260713.0528+sha",
-// "1.0.1-alpha.<branch>.20260713.0528+sha") and BL-1699 W.X.Y.Z tags ("0.0.131.0" —
+// Vibemis: ordering for our CI tags ("1.0.1", "1.0.1-beta.20260713.0528+sha",
+// "1.0.1-alpha.<branch>.20260713.0528+sha") and W.X.Y.Z tags ("0.0.131.0" —
 // pure numeric segments, higher Y/Z = newer within a channel). Rules:
 //   1. numeric base versions compare first (1.0.2-beta.* > 1.0.1);
 //   2. equal base: a release with no prerelease suffix outranks any prerelease
 //      (semver — and our continuous-beta model cuts stable X only after X's betas);
 //   3. two prereleases: their numeric segments (CI date + build number) decide.
-// CROSS-SCHEME NOTE (BL-1699): legacy 1.x tags compare numerically HIGHER than the
+// CROSS-SCHEME NOTE: legacy 1.x tags compare numerically HIGHER than the
 // re-baselined 0.x scheme, so the automatic newer-than banner stays quiet across the
 // boundary — by design the MANUAL check bridges it (it offers whatever the channel's
 // newest build is whenever it differs from the running one).
@@ -226,8 +226,8 @@ int AutoUpdateChecker::compareSemanticVersions(const QString& v1, const QString&
     return 0;
 }
 
-// Vibemis BL-1665/BL-1699: does this release belong on the given update channel?
-// Drafts never do. Primary scheme (BL-1699, maintainer 2026-07-13) is structural
+// Vibemis: does this release belong on the given update channel?
+// Drafts never do. Primary scheme is structural
 // W.X.Y.Z: Y>0 = beta, Z>0 = alpha, Y==Z==0 = stable. Legacy suffix tags from the
 // pre-W.X.Y.Z era ("…-beta.<ts>", "…-alpha.<branch>.<ts>") keep matching so the
 // feed history stays navigable; -dev tags never match any channel.
@@ -251,7 +251,7 @@ static bool releaseMatchesChannel(const QJsonObject& release,
         case StreamingPreferences::UC_ALPHA:
             return tag.contains(QLatin1String("-alpha"));
         case StreamingPreferences::UC_RC:
-            // BL-1722: release candidates — the build proposed as the next stable.
+            // Release candidates — the build proposed as the next stable.
             return tag.contains(QLatin1String("-rc."));
         case StreamingPreferences::UC_STABLE:
         default:
@@ -261,8 +261,8 @@ static bool releaseMatchesChannel(const QJsonObject& release,
 
     const QStringList parts = tag.split('.');
     if (parts.count() == 4) {
-        // BL-1699 W.X.Y.Z structural channels. Amended for stable PATCHES (maintainer
-        // 2026-07-13, first use 0.3.0.1): a stable is Y==0 with Z free (Z = hotfix
+        // W.X.Y.Z structural channels. Amended for stable PATCHES: a stable is Y==0
+        // with Z free (Z = hotfix
         // patch counter), gated on !prerelease; an alpha is Z>0 AND prerelease-flagged
         // (CI always marks alphas prerelease), so patches and alphas can't collide.
         qlonglong y = parts[2].toLongLong();
@@ -293,7 +293,7 @@ static bool releaseMatchesChannel(const QJsonObject& release,
     }
 }
 
-// Vibemis BL-1665: browser_download_url of the release's .AppImage asset ("" if none).
+// Vibemis: browser_download_url of the release's .AppImage asset ("" if none).
 static QString appImageAssetUrl(const QJsonObject& release)
 {
     const QJsonArray assets = release["assets"].toArray();
@@ -376,8 +376,8 @@ void AutoUpdateChecker::handleUpdateCheckRequestFinished(QNetworkReply* reply)
         // navyas321/vibemis releases). Upstream moonlight-qt switched to a server-hosted
         // manifest at this point — not applicable to a fork that publishes via GitHub.
         //
-        // BL-1646 established that releasesArray[0] (newest INCLUDING prereleases) must
-        // not be offered blindly to stable users. BL-1665 generalizes that stable-only
+        // We established earlier that releasesArray[0] (newest INCLUDING prereleases) must
+        // not be offered blindly to stable users. This code generalizes that stable-only
         // scan to the user's selected channel: take the newest release that belongs to
         // the channel (the feed is newest-first, so the first match wins).
         // Historical marker entries (the restored release catalog) are prerelease-flagged
@@ -431,7 +431,7 @@ void AutoUpdateChecker::handleUpdateCheckRequestFinished(QNetworkReply* reply)
             // A manual check treats ANY different build on the channel as available —
             // after switching channels, "newest on this channel" may be an older
             // version (e.g. Beta → Stable), and that's exactly what the user asked for.
-            // NOTE: pre-BL-1665 builds compile VERSION_STR as the bare base version
+            // NOTE: older builds compile VERSION_STR as the bare base version
             // ("1.0.1"), so equal-version detection only becomes exact from the first
             // CI-stamped build onward; those legacy builds just see the newest channel
             // build offered once.
@@ -548,7 +548,7 @@ void AutoUpdateChecker::installUpdate(QString assetUrl)
 
         qInfo() << "Update installed at" << appImagePath;
         emit installCompleted(appImagePath);
-        // BL-1692: under the update-selftest harness the swap is the end of the story —
+        // Under the update-selftest harness the swap is the end of the story —
         // the harness verifies the file and controls process exit (relaunching a scratch
         // AppImage would spawn a stray GUI). The production path relaunches and quits.
         if (!qEnvironmentVariableIsSet("VIBEMIS_UPDATE_SELFTEST")) {

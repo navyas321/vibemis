@@ -1,5 +1,5 @@
 #!/bin/bash
-# vibemis-setup.sh — guided one-command Vibemis setup for SteamOS / Linux (P3.10)
+# vibemis-setup.sh — guided one-command Vibemis setup for SteamOS / Linux
 #
 # The "single guided flow" that ties the individual helper scripts together so a new user can go
 # from nothing to streaming with one command. It runs, in order:

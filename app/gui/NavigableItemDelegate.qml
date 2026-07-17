@@ -10,9 +10,9 @@ ItemDelegate {
 
     highlighted: grid.activeFocus && grid.currentItem === this
 
-    // BL-1776: activation blip. Wired via Connections rather than an onClicked
+    // Activation blip. Wired via Connections rather than an onClicked
     // handler because instance-level onClicked declarations override base
-    // handlers (the BL-1664 lesson). clicked() is the single funnel for
+    // handlers (the text-clip lesson). clicked() is the single funnel for
     // A/Enter (the load-bearing Keys handlers below) and mouse/touch alike.
     Connections {
         target: navDelegate
@@ -38,7 +38,7 @@ ItemDelegate {
             nextItemInFocusChain(false).forceActiveFocus(Qt.TabFocus)
         }
     }
-    // BL-1745 round 2: these manual handlers are LOAD-BEARING — removing them on the
+    // These manual handlers are LOAD-BEARING — removing them on the
     // "Qt 6 AbstractButton activates on Return natively" theory bricked every A/Enter
     // activation on-device (0.2.0-alpha.001 critical regression): ItemDelegate only
     // accepts Space natively. The original double-push bug is fixed at the PUSH SITES

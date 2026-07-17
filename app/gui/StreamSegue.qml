@@ -16,7 +16,7 @@ Item {
     property bool isResume : false
     property bool quitAfter : false
 
-    // P3.21 (test80): bounded auto-reconnect after an unexpected mid-stream drop.
+    // Bounded auto-reconnect after an unexpected mid-stream drop.
     // Only armed once the stream actually started (launch failures keep the old
     // error-dialog behavior), and capped so a dead host can't loop forever.
     property bool streamStarted: false
@@ -76,7 +76,7 @@ Item {
 
     function sessionFinished(portTestResult)
     {
-        // P3.21 (test80): if the stream was up and dropped unexpectedly, retry in place
+        // If the stream was up and dropped unexpectedly, retry in place
         // instead of popping back to the grid. Guarded by the setting (default off).
         if (StreamingPreferences.autoReconnect && !quitAfter && streamStarted &&
                 session && session.wasUnexpectedTermination() &&
@@ -128,7 +128,7 @@ Item {
 
     function sessionReadyForDeletion()
     {
-        // P3.21 (test80): a reconnect is pending — swap in the replacement session and
+        // A reconnect is pending — swap in the replacement session and
         // relaunch after a short backoff instead of tearing down the segue.
         if (pendingReconnectSession) {
             session = pendingReconnectSession
@@ -180,7 +180,7 @@ Item {
         // Hide the toolbar before we start loading
         toolBar.visible = false
 
-        // BL-1776: release the UI-sound audio device now (well before Session
+        // Release the UI-sound audio device now (well before Session
         // constructs its audio renderer) so the renderer's device open never
         // contends with a lingering UI-sound device on exclusive-audio systems.
         UiSoundManager.streamStarting()

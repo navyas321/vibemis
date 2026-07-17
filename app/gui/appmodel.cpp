@@ -281,7 +281,7 @@ void AppModel::handleComputerStateChanged(NvComputer* computer)
     resyncRunningState();
 }
 
-// BL-1769: factored from handleComputerStateChanged so QML can force a resync. The
+// Factored from handleComputerStateChanged so QML can force a resync. The
 // poll-delta signal never fires when NvComputer.currentGameId was already current
 // before the poll's field diff ran (the launch/quit flow updated it first), which
 // left the RESUME badge and the Ⓨ Quit-session hint stale until the view was

@@ -1,9 +1,9 @@
 #!/bin/bash
-# vibemis-update.sh — fetch the latest Vibemis AppImage from GitHub Releases (P3.10)
+# vibemis-update.sh — fetch the latest Vibemis AppImage from GitHub Releases
 #
 # SteamOS has no package manager for this, so this script self-updates: it queries the
 # GitHub Releases API for the newest published AppImage and REPLACES YOUR EXISTING
-# INSTALL WHEREVER IT LIVES (BL-1692: no hardcoded install location — the previous
+# INSTALL WHEREVER IT LIVES (no hardcoded install location — the previous
 # version updated only ~/Applications, silently missing installs in ~/Downloads etc.).
 #
 # Install-path resolution order:
@@ -47,7 +47,7 @@ done
 
 command -v curl >/dev/null 2>&1 || { echo "ERROR: curl is required." >&2; exit 1; }
 
-# ---- Resolve where the install actually lives (BL-1692: never assume one folder) ----
+# ---- Resolve where the install actually lives (never assume one folder) ----
 DEST=""
 if [ -n "$DEST_OVERRIDE" ]; then
     DEST="$DEST_OVERRIDE"

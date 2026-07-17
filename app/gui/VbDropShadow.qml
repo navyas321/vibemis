@@ -4,7 +4,7 @@ import Vibemis.Redesign 1.0
 // Focus drop-shadow — the 3rd layer of the redesign focus-ring recipe
 // ("2px accent border + 5px accent@22% glow + drop shadow").
 //
-// PERF (BL-1619): the first implementation cast this with a Canvas + 48px shadowBlur.
+// PERF: the first implementation cast this with a Canvas + 48px shadowBlur.
 // On the Legion Go that software-Gaussian repainted on every focus move and STALLED the
 // launcher (home-page-only input lag — Settings, which uses no drop-shadow, stayed smooth).
 // This version fakes the depth with two stacked translucent rounded rects offset downward:

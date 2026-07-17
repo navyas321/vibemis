@@ -11,14 +11,14 @@
 
 #include <algorithm>
 
-// Vibemis (P3.7): a host address belongs to a Tailscale tailnet if it falls in the
+// Vibemis: a host address belongs to a Tailscale tailnet if it falls in the
 // IPv4 CGNAT range (100.64.0.0/10), the IPv6 ULA range (fd7a:115c:a1e0::/48), or is a
 // MagicDNS name (*.ts.net).
 // When the user enables "prefer Tailscale", such addresses are tried first so remote
 // play over the tailnet connects without waiting for LAN probes to time out.
-// NOTE(P3.7): this only reorders existing candidates — it can't conjure a tailnet
+// NOTE: this only reorders existing candidates — it can't conjure a tailnet
 // address that the host never reported. End-to-end remote-play latency/NAT behaviour
-// still needs verification on a real tailnet (deferred to the test agent; LAN-only today).
+// still needs verification on a real tailnet (not yet validated on device; LAN-only today).
 static bool isTailscaleAddress(const NvAddress& addr)
 {
     const QString host = addr.address();
@@ -277,7 +277,7 @@ NvComputer::NvComputer(NvHTTP& http, QString serverInfo)
         this->serverPermissions = permissionStr.toUInt(&ok);
         // NB: no success log here — this constructor runs on EVERY serverInfo parse, including
         // the background poll every ~3s per host, and a per-parse qDebug was a top contributor
-        // to the on-device input-lag log storm (BL-1619). Keep only the rare parse-failure warning.
+        // to the on-device input-lag log storm. Keep only the rare parse-failure warning.
         if (!ok) {
             qWarning() << "Failed to parse server permissions:" << permissionStr;
             this->serverPermissions = 0;
@@ -584,7 +584,7 @@ QVector<NvAddress> NvComputer::uniqueAddresses() const
         }
     }
 
-    // Vibemis (P3.7): if the user prefers Tailscale for remote play, stable-partition
+    // Vibemis: if the user prefers Tailscale for remote play, stable-partition
     // the candidate list so tailnet addresses (100.64.0.0/10 or *.ts.net) are probed
     // first. std::stable_partition preserves the existing local→remote→manual ordering
     // within each group, so LAN still wins among non-tailnet addresses.
