@@ -8,182 +8,31 @@
 #include <QCoreApplication>
 #include <QFile>
 #include <QProcess>
+#include <QSharedPointer>
 
-AutoUpdateChecker::AutoUpdateChecker(QObject *parent) :
-    QObject(parent),
-    m_Nam(nullptr),
-    m_ManualCheck(false),
-    m_CheckInFlight(false)
-{
-    QString currentVersion(VERSION_STR);
-    qDebug() << "Current Vibemis version:" << currentVersion;
-    parseStringToVersionQuad(currentVersion, m_CurrentVersionQuad);
+// ── Version comparison (SemVer 2.0.0 §11) ──────────────────────────────────
 
-    // Should at least have a 1.0-style version number
-    Q_ASSERT(m_CurrentVersionQuad.count() > 1);
-}
-
-void AutoUpdateChecker::start()
-{
-#if defined(Q_OS_WIN32) || defined(Q_OS_DARWIN) || defined(STEAM_LINK) || defined(APP_IMAGE) // Only run update checker on platforms without auto-update
-    requestReleaseFeed(false);
-#endif
-}
-
-void AutoUpdateChecker::checkNow()
-{
-    // Vibemis: user-initiated — no platform gate; a dev/desktop build can
-    // still check the feed even though it can't self-install ($APPIMAGE unset).
-    requestReleaseFeed(true);
-}
-
-bool AutoUpdateChecker::canInstallUpdates()
-{
-    return !qEnvironmentVariable("APPIMAGE").isEmpty();
-}
-
-QString AutoUpdateChecker::currentVersion()
-{
-    return QStringLiteral(VERSION_STR);
-}
-
-void AutoUpdateChecker::requestReleaseFeed(bool manualCheck)
-{
-    if (m_CheckInFlight) {
-        // One check at a time; a manual click during an in-flight auto check just
-        // upgrades that check to a reporting one.
-        if (manualCheck) {
-            m_ManualCheck = true;
-        }
-        return;
-    }
-
-    // The finished handler tears the QNetworkAccessManager down after each check
-    // (to stop bearer-plugin background polling), so recreate it on demand.
-    if (!m_Nam) {
-        m_Nam = new QNetworkAccessManager(this);
-
-        // Never communicate over HTTP
-        m_Nam->setStrictTransportSecurityEnabled(true);
-
-        // Allow HTTP redirects
-        m_Nam->setRedirectPolicy(QNetworkRequest::NoLessSafeRedirectPolicy);
-
-        connect(m_Nam, &QNetworkAccessManager::finished,
-                this, &AutoUpdateChecker::handleUpdateCheckRequestFinished);
-    }
-
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0) && QT_VERSION < QT_VERSION_CHECK(5, 15, 1) && !defined(QT_NO_BEARERMANAGEMENT)
-    // HACK: Set network accessibility to work around QTBUG-80947 (introduced in Qt 5.14.0 and fixed in Qt 5.15.1)
-    QT_WARNING_PUSH
-    QT_WARNING_DISABLE_DEPRECATED
-    m_Nam->setNetworkAccessible(QNetworkAccessManager::Accessible);
-    QT_WARNING_POP
-#endif
-
-    m_ManualCheck = manualCheck;
-    m_CheckInFlight = true;
-
-    // Point to Vibemis GitHub releases (all releases including prereleases)
-    // Using /releases instead of /releases/latest because /latest never returns
-    // prereleases, and the beta/alpha channels live entirely in prereleases.
-    QUrl url("https://api.github.com/repos/navyas321/vibemis/releases");
-    QNetworkRequest request(url);
-#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
-    request.setAttribute(QNetworkRequest::Http2AllowedAttribute, true);
-#else
-    request.setAttribute(QNetworkRequest::HTTP2AllowedAttribute, true);
-#endif
-    m_Nam->get(request);
-}
-
-void AutoUpdateChecker::parseStringToVersionQuad(QString& string, QVector<int>& version)
-{
-    QStringList list = string.split('.');
-    for (const QString& component : std::as_const(list)) {
-        version.append(component.toInt());
-    }
-}
-
-QString AutoUpdateChecker::getPlatform()
-{
-#if defined(STEAM_LINK)
-    return QStringLiteral("steamlink");
-#elif defined(APP_IMAGE)
-    return QStringLiteral("appimage");
-#elif defined(Q_OS_DARWIN) && QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-    // Qt 6 changed this from 'osx' to 'macos'. Use the old one
-    // to be consistent (and not require another entry in the manifest).
-    return QStringLiteral("osx");
-#else
-    return QSysInfo::productType();
-#endif
-}
-
-int AutoUpdateChecker::compareVersion(QVector<int>& version1, QVector<int>& version2) {
-    for (int i = 0;; i++) {
-        int v1Val = 0;
-        int v2Val = 0;
-
-        // Treat missing decimal places as 0
-        if (i < version1.count()) {
-            v1Val = version1[i];
-        }
-        if (i < version2.count()) {
-            v2Val = version2[i];
-        }
-        if (i >= version1.count() && i >= version2.count()) {
-            // Equal versions
-            return 0;
-        }
-
-        if (v1Val < v2Val) {
-            return -1;
-        }
-        else if (v1Val > v2Val) {
-            return 1;
-        }
-    }
-}
-
-// Vibemis: strip "+<build-metadata>" (e.g. "+b6198e4") — semver says build
-// metadata never participates in ordering, and our CI stamps the commit hash there.
+// Build metadata ("+<sha>") never participates in ordering — our CI stamps the
+// commit hash there on some historical tags.
 static QString stripBuildMetadata(const QString& version)
 {
     int plusIdx = version.indexOf('+');
     return plusIdx >= 0 ? version.left(plusIdx) : version;
 }
 
-// Vibemis: numeric segments of a prerelease suffix, in order. For
-// "beta.20260713.0528" that's [20260713, 528]; branch-name segments in alpha tags
-// ("alpha.<branch>.20260713.0528") are skipped, leaving the same
-// comparable [date, build-number] key across channels.
-static QVector<qlonglong> prereleaseNumericSegments(const QString& prerelease)
+static bool isNumericIdentifier(const QString& s)
 {
-    QVector<qlonglong> segments;
-    const QStringList parts = prerelease.split('.');
-    for (const QString& part : parts) {
-        bool ok = false;
-        qlonglong value = part.toLongLong(&ok);
-        if (ok) {
-            segments.append(value);
+    if (s.isEmpty()) {
+        return false;
+    }
+    for (const QChar& c : s) {
+        if (!c.isDigit()) {
+            return false;
         }
     }
-    return segments;
+    return true;
 }
 
-// Vibemis: ordering for our CI tags ("1.0.1", "1.0.1-beta.20260713.0528+sha",
-// "1.0.1-alpha.<branch>.20260713.0528+sha") and W.X.Y.Z tags ("0.0.131.0" —
-// pure numeric segments, higher Y/Z = newer within a channel). Rules:
-//   1. numeric base versions compare first (1.0.2-beta.* > 1.0.1);
-//   2. equal base: a release with no prerelease suffix outranks any prerelease
-//      (semver — and our continuous-beta model cuts stable X only after X's betas);
-//   3. two prereleases: their numeric segments (CI date + build number) decide.
-// CROSS-SCHEME NOTE: legacy 1.x tags compare numerically HIGHER than the
-// re-baselined 0.x scheme, so the automatic newer-than banner stays quiet across the
-// boundary — by design the MANUAL check bridges it (it offers whatever the channel's
-// newest build is whenever it differs from the running one).
-// Returns <0 / 0 / >0 like strcmp.
 int AutoUpdateChecker::compareSemanticVersions(const QString& v1, const QString& v2)
 {
     QString s1 = stripBuildMetadata(v1);
@@ -196,104 +45,135 @@ int AutoUpdateChecker::compareSemanticVersions(const QString& v1, const QString&
     QString pre1 = dash1 >= 0 ? s1.mid(dash1 + 1) : QString();
     QString pre2 = dash2 >= 0 ? s2.mid(dash2 + 1) : QString();
 
+    // Numeric base versions compare first (0.4.0-beta.001 > 0.3.0)
     const QStringList baseParts1 = base1.split('.');
     const QStringList baseParts2 = base2.split('.');
     for (int i = 0; i < qMax(baseParts1.count(), baseParts2.count()); i++) {
-        int b1 = i < baseParts1.count() ? baseParts1[i].toInt() : 0;
-        int b2 = i < baseParts2.count() ? baseParts2[i].toInt() : 0;
+        qlonglong b1 = i < baseParts1.count() ? baseParts1[i].toLongLong() : 0;
+        qlonglong b2 = i < baseParts2.count() ? baseParts2[i].toLongLong() : 0;
         if (b1 != b2) {
             return b1 < b2 ? -1 : 1;
         }
     }
 
+    // Equal base: a release with no prerelease suffix outranks any prerelease
     if (pre1.isEmpty() != pre2.isEmpty()) {
-        // Same base: the non-prerelease build is the newer one
         return pre1.isEmpty() ? 1 : -1;
     }
     if (pre1.isEmpty()) {
         return 0;
     }
 
-    QVector<qlonglong> segs1 = prereleaseNumericSegments(pre1);
-    QVector<qlonglong> segs2 = prereleaseNumericSegments(pre2);
-    for (int i = 0; i < qMax(segs1.count(), segs2.count()); i++) {
-        qlonglong p1 = i < segs1.count() ? segs1[i] : 0;
-        qlonglong p2 = i < segs2.count() ? segs2[i] : 0;
-        if (p1 != p2) {
-            return p1 < p2 ? -1 : 1;
+    // Two prereleases: compare dot-separated identifiers left to right.
+    // Numeric identifiers compare numerically (leading zeros tolerated — our
+    // CI zero-pads counters), alphanumeric ones lexically in ASCII order, and
+    // numeric always ranks below alphanumeric. This is what orders
+    // "alpha" < "beta" < "rc" at an equal base — the property the previous
+    // implementation lacked (it skipped the words and compared only numbers,
+    // so 0.3.0-beta.008 wrongly outranked 0.3.0-rc.002).
+    const QStringList ids1 = pre1.split('.');
+    const QStringList ids2 = pre2.split('.');
+    for (int i = 0; i < qMax(ids1.count(), ids2.count()); i++) {
+        if (i >= ids1.count()) {
+            // Equal prefix, fewer fields = lower precedence (§11.4.4)
+            return -1;
+        }
+        if (i >= ids2.count()) {
+            return 1;
+        }
+        bool num1 = isNumericIdentifier(ids1[i]);
+        bool num2 = isNumericIdentifier(ids2[i]);
+        if (num1 && num2) {
+            qlonglong p1 = ids1[i].toLongLong();
+            qlonglong p2 = ids2[i].toLongLong();
+            if (p1 != p2) {
+                return p1 < p2 ? -1 : 1;
+            }
+        }
+        else if (num1 != num2) {
+            // Numeric identifiers rank below alphanumeric ones (§11.4.3)
+            return num1 ? -1 : 1;
+        }
+        else {
+            int cmp = QString::compare(ids1[i], ids2[i]);
+            if (cmp != 0) {
+                return cmp < 0 ? -1 : 1;
+            }
         }
     }
     return 0;
 }
 
-// Vibemis: does this release belong on the given update channel?
-// Drafts never do. Primary scheme is structural
-// W.X.Y.Z: Y>0 = beta, Z>0 = alpha, Y==Z==0 = stable. Legacy suffix tags from the
-// pre-W.X.Y.Z era ("…-beta.<ts>", "…-alpha.<branch>.<ts>") keep matching so the
-// feed history stays navigable; -dev tags never match any channel.
-static bool releaseMatchesChannel(const QJsonObject& release,
-                                  StreamingPreferences::UpdateChannel channel)
+// ── Release feed interpretation ────────────────────────────────────────────
+
+int AutoUpdateChecker::releaseTier(const QJsonObject& release)
 {
     if (release["draft"].toBool()) {
-        return false;
-    }
-    QString tag = release["tag_name"].toString();
-    int plusIdx = tag.indexOf('+');
-    if (plusIdx >= 0) {
-        tag = tag.left(plusIdx);
+        return -1;
     }
 
-    if (tag.contains('-')) {
-        // Semver suffix tags (and legacy suffix era; -dev builds match no channel)
-        switch (channel) {
-        case StreamingPreferences::UC_BETA:
-            return tag.contains(QLatin1String("-beta"));
-        case StreamingPreferences::UC_ALPHA:
-            return tag.contains(QLatin1String("-alpha"));
-        case StreamingPreferences::UC_RC:
-            // Release candidates — the build proposed as the next stable.
-            return tag.contains(QLatin1String("-rc."));
-        case StreamingPreferences::UC_STABLE:
-        default:
-            return false;   // a suffixed tag is never a stable release
+    QString tag = stripBuildMetadata(release["tag_name"].toString());
+    if (tag.startsWith('v')) {
+        tag = tag.mid(1);
+    }
+
+    int dashIdx = tag.indexOf('-');
+    if (dashIdx >= 0) {
+        // Suffix tags: current scheme ("0.3.0-rc.002") and the legacy suffix
+        // era ("…-beta.<ts>", "…-alpha.<branch>.<ts>"). "-dev." builds and
+        // unrecognized suffixes are never served.
+        QString suffix = tag.mid(dashIdx + 1);
+        if (suffix.startsWith(QLatin1String("rc."))) {
+            return 2;
         }
+        if (suffix.startsWith(QLatin1String("beta"))) {
+            return 1;
+        }
+        if (suffix.startsWith(QLatin1String("alpha"))) {
+            return 0;
+        }
+        return -1;
     }
 
     const QStringList parts = tag.split('.');
     if (parts.count() == 4) {
-        // W.X.Y.Z structural channels. Amended for stable PATCHES: a stable is Y==0 with Z
-        // free (Z = hotfix patch counter), gated on !prerelease; an alpha is Z>0 AND prerelease-flagged
-        // (CI always marks alphas prerelease), so patches and alphas can't collide.
+        // Legacy W.X.Y.Z structural scheme: Y>0 = beta, Z>0 + prerelease-flag
+        // = alpha, Y==0 with a free Z (hotfix counter) = stable.
         qlonglong y = parts[2].toLongLong();
         qlonglong z = parts[3].toLongLong();
-        switch (channel) {
-        case StreamingPreferences::UC_BETA:
-            return y > 0 && z == 0;
-        case StreamingPreferences::UC_ALPHA:
-            return z > 0 && release["prerelease"].toBool();
-        case StreamingPreferences::UC_RC:
-            return false;   // rc builds are always suffix tags
-        case StreamingPreferences::UC_STABLE:
-        default:
-            return y == 0 && !release["prerelease"].toBool();
+        if (z > 0 && release["prerelease"].toBool()) {
+            return 0;
         }
+        if (y > 0 && z == 0) {
+            return 1;
+        }
+        if (y == 0 && !release["prerelease"].toBool()) {
+            return 3;
+        }
+        return -1;
     }
 
-    // Bare semver tags (e.g. "0.1.0") are stable-shaped; the prerelease flag
-    // still gates them (parked releases are flipped to prerelease and must not match).
-    switch (channel) {
-    case StreamingPreferences::UC_BETA:
+    // Bare semver tags ("0.2.0") are stable — unless the release was parked
+    // (flipped to prerelease after the fact), which pulls it from every channel.
+    return release["prerelease"].toBool() ? -1 : 3;
+}
+
+int AutoUpdateChecker::channelFloor(int updateChannel)
+{
+    switch (updateChannel) {
     case StreamingPreferences::UC_ALPHA:
+        return 0;
+    case StreamingPreferences::UC_BETA:
+        return 1;
     case StreamingPreferences::UC_RC:
-        return false;
+        return 2;
     case StreamingPreferences::UC_STABLE:
     default:
-        return !release["prerelease"].toBool();
+        return 3;
     }
 }
 
-// Vibemis: browser_download_url of the release's .AppImage asset ("" if none).
-static QString appImageAssetUrl(const QJsonObject& release)
+QString AutoUpdateChecker::appImageAssetUrl(const QJsonObject& release)
 {
     const QJsonArray assets = release["assets"].toArray();
     for (const QJsonValue& assetVal : assets) {
@@ -305,19 +185,135 @@ static QString appImageAssetUrl(const QJsonObject& release)
     return QString();
 }
 
-void AutoUpdateChecker::handleUpdateCheckRequestFinished(QNetworkReply* reply)
+// ── Lifecycle ──────────────────────────────────────────────────────────────
+
+AutoUpdateChecker::AutoUpdateChecker(QObject *parent) :
+    QObject(parent),
+    m_CheckInFlight(false),
+    m_CheckIsManual(false),
+    m_UpdateAvailable(false),
+    m_OfferAvailable(false),
+    m_Installing(false)
 {
-    Q_ASSERT(reply->isFinished());
+    // One persistent QNAM. (The old implementation tore its manager down after
+    // every check to silence the Qt 5 bearer plugin's background polling; Qt 6
+    // removed bearer management, so the churn bought nothing.)
+    m_Nam.setStrictTransportSecurityEnabled(true);
+    m_Nam.setRedirectPolicy(QNetworkRequest::NoLessSafeRedirectPolicy);
 
-    bool manualCheck = m_ManualCheck;
-    m_ManualCheck = false;
-    m_CheckInFlight = false;
+    m_RecheckTimer.setInterval(RECHECK_INTERVAL_MS);
+    connect(&m_RecheckTimer, &QTimer::timeout, this, [this]() {
+        performCheck(false);
+    });
 
-    // Delete the QNetworkAccessManager to free resources and
-    // prevent the bearer plugin from polling in the background.
-    // (requestReleaseFeed() recreates it for the next check.)
-    m_Nam->deleteLater();
-    m_Nam = nullptr;
+    m_StatusMessage = tr("Current version: %1").arg(currentVersion());
+
+    qDebug() << "Current Vibemis version:" << currentVersion();
+}
+
+void AutoUpdateChecker::start()
+{
+#if defined(Q_OS_WIN32) || defined(Q_OS_DARWIN) || defined(STEAM_LINK) || defined(APP_IMAGE)
+    // Only platforms without an external update mechanism self-check. A
+    // launch-only check left users blind to anything published while the app
+    // was running (the 0.3.3 incident), so re-check periodically too.
+    performCheck(false);
+    m_RecheckTimer.start();
+#endif
+}
+
+void AutoUpdateChecker::checkNow()
+{
+    // User-initiated — no platform gate; a dev/desktop build can still check
+    // the feed even though it can't self-install ($APPIMAGE unset).
+    performCheck(true);
+}
+
+bool AutoUpdateChecker::canInstallUpdates() const
+{
+    return !qEnvironmentVariable("APPIMAGE").isEmpty();
+}
+
+QString AutoUpdateChecker::currentVersion() const
+{
+    return QStringLiteral(VERSION_STR);
+}
+
+bool AutoUpdateChecker::canInstall() const
+{
+    return m_OfferAvailable && !m_AssetUrl.isEmpty()
+            && canInstallUpdates() && !m_Installing;
+}
+
+void AutoUpdateChecker::clearOffer()
+{
+    m_UpdateAvailable = false;
+    m_OfferAvailable = false;
+    m_OfferVersion.clear();
+    m_ReleaseUrl.clear();
+    m_AssetUrl.clear();
+}
+
+void AutoUpdateChecker::setStatus(const QString& message)
+{
+    if (m_StatusMessage != message) {
+        m_StatusMessage = message;
+        emit stateChanged();
+    }
+}
+
+void AutoUpdateChecker::channelChanged()
+{
+    clearOffer();
+    m_StatusMessage = tr("Channel changed — check for updates to see this channel's newest build.");
+    emit stateChanged();
+}
+
+// ── Checking ───────────────────────────────────────────────────────────────
+
+void AutoUpdateChecker::performCheck(bool manual)
+{
+    if (m_CheckInFlight) {
+        // One check at a time; a manual click during an in-flight auto check
+        // upgrades that check to a reporting one.
+        if (manual && !m_CheckIsManual) {
+            m_CheckIsManual = true;
+            setStatus(tr("Checking for updates…"));
+        }
+        return;
+    }
+
+    m_CheckInFlight = true;
+    m_CheckIsManual = manual;
+    if (manual) {
+        m_StatusMessage = tr("Checking for updates…");
+    }
+    emit stateChanged();
+
+    // All releases including prereleases, newest-first. Never /releases/latest
+    // — it can't see prereleases, and the beta/alpha/rc channels live there.
+    // per_page=100 (default 30): the newest build a channel serves — the
+    // stable, after a dense prerelease cycle — can sit dozens of entries deep.
+    QUrl url("https://api.github.com/repos/navyas321/vibemis/releases?per_page=100");
+    QNetworkRequest request(url);
+    request.setRawHeader("Accept", "application/vnd.github+json");
+    request.setRawHeader("User-Agent", "Vibemis-Updater/" VERSION_STR);
+    // A hung feed must not wedge the checker forever (m_CheckInFlight gates
+    // every future check).
+    request.setTransferTimeout(30000);
+
+    QNetworkReply* reply = m_Nam.get(request);
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        bool manualAtCompletion = m_CheckIsManual;
+        m_CheckInFlight = false;
+        m_CheckIsManual = false;
+        handleFeedReply(reply, manualAtCompletion);
+    });
+}
+
+void AutoUpdateChecker::handleFeedReply(QNetworkReply* reply, bool manual)
+{
+    reply->deleteLater();
 
     StreamingPreferences::UpdateChannel channel = StreamingPreferences::get()->updateChannel;
     QString channelName;
@@ -336,195 +332,201 @@ void AutoUpdateChecker::handleUpdateCheckRequestFinished(QNetworkReply* reply)
         break;
     }
 
-    if (reply->error() == QNetworkReply::NoError) {
-        QTextStream stream(reply);
-
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-        stream.setEncoding(QStringConverter::Utf8);
-#else
-        stream.setCodec("UTF-8");
-#endif
-
-        // Read all data and queue the reply for deletion
-        QString jsonString = stream.readAll();
-        reply->deleteLater();
-
-        QJsonParseError error;
-        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonString.toUtf8(), &error);
-        if (jsonDoc.isNull()) {
-            qWarning() << "Update manifest malformed:" << error.errorString();
-            if (manualCheck) {
-                emit updateCheckFinished(false, QString(), QString(), QString(),
-                                         tr("The update feed could not be parsed."));
-            }
-            return;
+    if (reply->error() != QNetworkReply::NoError) {
+        qWarning() << "Update check failed:" << reply->error() << reply->errorString();
+        if (manual) {
+            setStatus(tr("Update check failed: %1").arg(reply->errorString()));
         }
+        emit stateChanged();
+        emit checkCompleted(manual, false);
+        return;
+    }
 
-        // GitHub API returns an array of releases sorted newest-first
-        QJsonArray releasesArray = jsonDoc.array();
-        if (releasesArray.isEmpty()) {
-            qWarning() << "GitHub API response doesn't contain any releases";
-            if (manualCheck) {
-                emit updateCheckFinished(false, QString(), QString(), QString(),
-                                         tr("No releases were found in the update feed."));
-            }
-            return;
+    QJsonParseError parseError;
+    QJsonDocument jsonDoc = QJsonDocument::fromJson(reply->readAll(), &parseError);
+    if (!jsonDoc.isArray()) {
+        qWarning() << "Update feed malformed:" << parseError.errorString();
+        if (manual) {
+            setStatus(tr("The update feed could not be parsed."));
         }
+        emit stateChanged();
+        emit checkCompleted(manual, false);
+        return;
+    }
 
-        // Vibemis: keep wjbeckett's GitHub-Releases-based update path (checks our own
-        // navyas321/vibemis releases). Upstream moonlight-qt switched to a server-hosted
-        // manifest at this point — not applicable to a fork that publishes via GitHub.
-        //
-        // We established earlier that releasesArray[0] (newest INCLUDING prereleases) must
-        // not be offered blindly to stable users. This code generalizes that stable-only
-        // scan to the user's selected channel: take the newest release that belongs to
-        // the channel (the feed is newest-first, so the first match wins).
-        // Historical marker entries (the restored release catalog) are prerelease-flagged
-        // and carry NO AppImage asset — a channel match without an installable artifact
-        // must not shadow the newest real build, so keep scanning past assetless matches.
-        QJsonObject releaseObj;
-        for (const QJsonValue& relVal : std::as_const(releasesArray)) {
-            QJsonObject candidate = relVal.toObject();
-            if (releaseMatchesChannel(candidate, channel) && !appImageAssetUrl(candidate).isEmpty()) {
-                releaseObj = candidate;
-                break;
-            }
-        }
-        if (releaseObj.isEmpty()) {
-            qDebug() << "No release found on the selected update channel";
-            if (manualCheck) {
-                emit updateCheckFinished(false, QString(), QString(), QString(),
-                                         tr("No release has been published on the %1 channel yet.").arg(channelName));
-            }
-            return;
-        }
-
-        // Extract version from tag_name (remove 'v' prefix if present)
-        QString tagName = releaseObj["tag_name"].toString();
-        QString version = tagName.startsWith("v") ? tagName.mid(1) : tagName;
-
-        if (version.isEmpty()) {
-            qWarning() << "GitHub release missing tag_name";
-            if (manualCheck) {
-                emit updateCheckFinished(false, QString(), QString(), QString(),
-                                         tr("The update feed entry is missing its version tag."));
-            }
-            return;
-        }
-
-        qDebug() << "Newest release on channel" << channelName << ":" << version;
-
-        QString htmlUrl = releaseObj["html_url"].toString();
-        QString assetUrl = appImageAssetUrl(releaseObj);
-        m_LastHtmlUrl = htmlUrl;
-
-        QString current = QStringLiteral(VERSION_STR);
-        int res = compareSemanticVersions(current, version);
-        if (res < 0) {
-            // Strictly newer: light up the toolbar banner (auto + manual)
-            qDebug() << "Update available";
-            emit onUpdateAvailable(version, htmlUrl);
-            if (!manualCheck) {
-                // Auto-check: ALSO surface the asset URL so the TOOLBAR update button can
-                // install in place. The manualCheck branch below emits this for the Settings
-                // page; without it, an auto-check left the toolbar button with an empty
-                // assetUrl, so a click fell back to opening the release page in a browser
-                // instead of auto-updating (the 0.3.1/0.3.2 defect).
-                emit updateCheckFinished(true, version, htmlUrl, assetUrl, QString());
-            }
-        }
-
-        if (manualCheck) {
-            // A manual check treats ANY different build on the channel as available —
-            // after switching channels, "newest on this channel" may be an older
-            // version (e.g. Beta → Stable), and that's exactly what the user asked for.
-            // NOTE: older builds compile VERSION_STR as the bare base version
-            // ("1.0.1"), so equal-version detection only becomes exact from the first
-            // CI-stamped build onward; those legacy builds just see the newest channel
-            // build offered once.
-            bool available = QString::compare(stripBuildMetadata(current),
-                                              stripBuildMetadata(version),
-                                              Qt::CaseInsensitive) != 0;
-            QString message;
-            if (!available) {
-                message = tr("You're up to date — %1 is the newest %2 build.").arg(version, channelName);
-            }
-            else if (res < 0) {
-                message = tr("Update available on the %1 channel: %2").arg(channelName, version);
-            }
-            else {
-                message = tr("The newest %1 channel build is %2 (you are running %3).").arg(channelName, version, current);
-            }
-            emit updateCheckFinished(available, version, htmlUrl, assetUrl, message);
+    // The feed is newest-first: the first release at or above the channel's
+    // stability floor that actually ships an .AppImage wins. Assetless entries
+    // (historical catalog markers) must not shadow the newest real build.
+    const QJsonArray releasesArray = jsonDoc.array();
+    int floor = channelFloor(channel);
+    QJsonObject releaseObj;
+    for (const QJsonValue& relVal : releasesArray) {
+        QJsonObject candidate = relVal.toObject();
+        if (releaseTier(candidate) >= floor && !appImageAssetUrl(candidate).isEmpty()) {
+            releaseObj = candidate;
+            break;
         }
     }
-    else {
-        qWarning() << "Update checking failed with error:" << reply->error();
-        QString errorString = reply->errorString();
-        reply->deleteLater();
-        if (manualCheck) {
-            emit updateCheckFinished(false, QString(), QString(), QString(),
-                                     tr("Update check failed: %1").arg(errorString));
+
+    if (releaseObj.isEmpty()) {
+        qDebug() << "No installable release on channel" << channelName;
+        clearOffer();
+        if (manual) {
+            setStatus(tr("No release has been published on the %1 channel yet.").arg(channelName));
+        }
+        emit stateChanged();
+        emit checkCompleted(manual, false);
+        return;
+    }
+
+    QString tagName = releaseObj["tag_name"].toString();
+    QString version = tagName.startsWith('v') ? tagName.mid(1) : tagName;
+    QString current = currentVersion();
+
+    qDebug() << "Newest release on channel" << channelName << ":" << version;
+
+    // A manual check treats ANY different build on the channel as an offer —
+    // right after switching channels, "newest on this channel" may be an older
+    // version (e.g. Beta → Stable), and that's exactly what the user asked
+    // for. The toolbar banner (updateAvailable) stays strictly-newer only.
+    bool different = QString::compare(stripBuildMetadata(current),
+                                      stripBuildMetadata(version),
+                                      Qt::CaseInsensitive) != 0;
+    int cmp = compareSemanticVersions(current, version);
+
+    m_OfferAvailable = different;
+    m_UpdateAvailable = different && cmp < 0;
+    m_OfferVersion = different ? version : QString();
+    m_ReleaseUrl = releaseObj["html_url"].toString();
+    m_AssetUrl = different ? appImageAssetUrl(releaseObj) : QString();
+
+    if (manual) {
+        if (!different) {
+            m_StatusMessage = tr("You're up to date — %1 is the newest %2 build.").arg(version, channelName);
+        }
+        else if (cmp < 0) {
+            m_StatusMessage = tr("Update available on the %1 channel: %2").arg(channelName, version);
+        }
+        else {
+            m_StatusMessage = tr("The newest %1 channel build is %2 (you are running %3).").arg(channelName, version, current);
         }
     }
+    else if (m_UpdateAvailable) {
+        m_StatusMessage = tr("Update available on the %1 channel: %2").arg(channelName, version);
+    }
+
+    emit stateChanged();
+    emit checkCompleted(manual, m_OfferAvailable);
 }
 
-void AutoUpdateChecker::installUpdate(QString assetUrl)
-{
-    QString htmlUrl = m_LastHtmlUrl;
+// ── Installing ─────────────────────────────────────────────────────────────
 
-    if (assetUrl.isEmpty()) {
-        emit installFailed(tr("This release has no AppImage download."), htmlUrl);
+void AutoUpdateChecker::install()
+{
+    if (!canInstall()) {
         return;
     }
 
     QString appImagePath = qEnvironmentVariable("APPIMAGE");
-    if (appImagePath.isEmpty()) {
-        emit installFailed(tr("Not running as an AppImage — download the update from the release page instead."), htmlUrl);
-        return;
-    }
+    QString assetUrl = m_AssetUrl;
 
-    // Download side-by-side with the current binary, then swap atomically and keep
-    // the previous build as "<AppImage>.old" for manual rollback. Every failure path
-    // leaves a runnable AppImage on disk.
+    m_Installing = true;
+    m_StatusMessage = tr("Downloading update…");
+    emit stateChanged();
+
+    // Download side-by-side with the current binary, then swap atomically and
+    // keep the previous build as "<AppImage>.old" for manual rollback. Every
+    // failure path leaves a runnable AppImage on disk, drops the offer's asset
+    // (so the next click falls back to the release page) and emits installFailed.
+    auto fail = [this](const QString& error) {
+        m_Installing = false;
+        m_AssetUrl.clear();
+        m_StatusMessage = tr("Install failed: %1").arg(error);
+        emit stateChanged();
+        emit installFailed(error, m_ReleaseUrl);
+    };
+
     QString newPath = appImagePath + QStringLiteral(".new");
     QFile* newFile = new QFile(newPath, this);
     if (!newFile->open(QIODevice::WriteOnly | QIODevice::Truncate)) {
         QString error = newFile->errorString();
         newFile->deleteLater();
-        emit installFailed(tr("Could not write next to the current AppImage: %1").arg(error), htmlUrl);
+        fail(tr("Could not write next to the current AppImage: %1").arg(error));
         return;
     }
 
-    QNetworkAccessManager* nam = new QNetworkAccessManager(this);
-    nam->setStrictTransportSecurityEnabled(true);
-    // GitHub asset downloads redirect to a CDN host
-    nam->setRedirectPolicy(QNetworkRequest::NoLessSafeRedirectPolicy);
-
     QNetworkRequest request{QUrl(assetUrl)};
-    QNetworkReply* reply = nam->get(request);
+    request.setRawHeader("User-Agent", "Vibemis-Updater/" VERSION_STR);
+    // Inactivity timeout — resets whenever bytes flow, so it can never abort a
+    // slow-but-healthy download, only a black-holed one (which would otherwise
+    // wedge m_Installing forever).
+    request.setTransferTimeout(30000);
+    QNetworkReply* reply = m_Nam.get(request);
 
-    connect(reply, &QNetworkReply::downloadProgress,
-            this, &AutoUpdateChecker::installProgress);
-    // Stream to disk as bytes arrive — the AppImage is ~45 MB; don't buffer it in RAM
-    connect(reply, &QNetworkReply::readyRead, this, [reply, newFile]() {
-        newFile->write(reply->readAll());
+    connect(reply, &QNetworkReply::downloadProgress, this,
+            [this](qint64 bytesReceived, qint64 bytesTotal) {
+        emit installProgress(bytesReceived, bytesTotal);
+        if (bytesTotal > 0) {
+            setStatus(tr("Downloading update… %1%").arg((int)(bytesReceived * 100 / bytesTotal)));
+        }
+        else {
+            setStatus(tr("Downloading update… %1 MB").arg(QString::number(bytesReceived / 1048576.0, 'f', 1)));
+        }
+    });
+    // Stream to disk as bytes arrive — the AppImage is ~90 MB; don't buffer it
+    // in RAM. Track what actually hit the file so a short write (disk full)
+    // can never masquerade as a complete download.
+    auto bytesWritten = QSharedPointer<qint64>::create(0);
+    auto writeFailed = QSharedPointer<bool>::create(false);
+    connect(reply, &QNetworkReply::readyRead, this, [reply, newFile, bytesWritten, writeFailed]() {
+        QByteArray chunk = reply->readAll();
+        qint64 written = newFile->write(chunk);
+        if (written != chunk.size()) {
+            *writeFailed = true;
+            reply->abort();
+            return;
+        }
+        *bytesWritten += written;
     });
     connect(reply, &QNetworkReply::finished, this,
-            [this, reply, nam, newFile, appImagePath, newPath, htmlUrl]() {
-        newFile->write(reply->readAll());
+            [this, reply, newFile, appImagePath, newPath, fail, bytesWritten, writeFailed]() {
+        QByteArray tail = reply->readAll();
+        if (!tail.isEmpty() && !*writeFailed) {
+            qint64 written = newFile->write(tail);
+            if (written != tail.size()) {
+                *writeFailed = true;
+            }
+            else {
+                *bytesWritten += written;
+            }
+        }
         newFile->close();
         reply->deleteLater();
-        nam->deleteLater();
 
+        // A truncated body must never be swapped in: require the transport to
+        // have succeeded AND every byte to have reached the file AND the byte
+        // count to match the advertised Content-Length (when the server sent one).
+        qint64 expected = reply->header(QNetworkRequest::ContentLengthHeader).toLongLong();
         int httpStatus = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-        if (reply->error() != QNetworkReply::NoError || httpStatus != 200 || newFile->size() == 0) {
-            QString error = reply->error() != QNetworkReply::NoError
-                    ? reply->errorString()
-                    : tr("unexpected HTTP status %1").arg(httpStatus);
+        if (reply->error() != QNetworkReply::NoError || httpStatus != 200 || *writeFailed
+                || *bytesWritten == 0 || newFile->size() != *bytesWritten
+                || (expected > 0 && *bytesWritten != expected)) {
+            QString error;
+            if (*writeFailed) {
+                error = tr("could not write the full file (disk full?)");
+            }
+            else if (reply->error() != QNetworkReply::NoError) {
+                error = reply->errorString();
+            }
+            else if (httpStatus != 200) {
+                error = tr("unexpected HTTP status %1").arg(httpStatus);
+            }
+            else {
+                error = tr("incomplete download (%1 of %2 bytes)").arg(*bytesWritten).arg(expected);
+            }
             newFile->remove();
             newFile->deleteLater();
-            emit installFailed(tr("Download failed: %1").arg(error), htmlUrl);
+            fail(tr("Download failed: %1").arg(error));
             return;
         }
 
@@ -533,7 +535,7 @@ void AutoUpdateChecker::installUpdate(QString assetUrl)
                                      QFile::ReadOther | QFile::ExeOther)) {
             newFile->remove();
             newFile->deleteLater();
-            emit installFailed(tr("Could not mark the downloaded AppImage executable."), htmlUrl);
+            fail(tr("Could not mark the downloaded AppImage executable."));
             return;
         }
         newFile->deleteLater();
@@ -542,26 +544,30 @@ void AutoUpdateChecker::installUpdate(QString assetUrl)
         QFile::remove(oldPath);
         if (!QFile::rename(appImagePath, oldPath)) {
             QFile::remove(newPath);
-            emit installFailed(tr("Could not replace the current AppImage (read-only filesystem?)."), htmlUrl);
+            fail(tr("Could not replace the current AppImage (read-only filesystem?)."));
             return;
         }
         if (!QFile::rename(newPath, appImagePath)) {
             // Put the original back so the user still has a working install
             QFile::rename(oldPath, appImagePath);
             QFile::remove(newPath);
-            emit installFailed(tr("Swapping in the new AppImage failed; the previous version was restored."), htmlUrl);
+            fail(tr("Swapping in the new AppImage failed; the previous version was restored."));
             return;
         }
 
         qInfo() << "Update installed at" << appImagePath;
+        m_Installing = false;
+        m_StatusMessage = tr("Update installed — restarting…");
+        emit stateChanged();
         emit installCompleted(appImagePath);
         // Under the update-selftest harness the swap is the end of the story —
-        // the harness verifies the file and controls process exit (relaunching a scratch
-        // AppImage would spawn a stray GUI). The production path relaunches and quits.
+        // the harness verifies the file and controls process exit (relaunching
+        // a scratch AppImage would spawn a stray GUI). The production path
+        // relaunches and quits: the running process keeps its mounted (old)
+        // image alive; the relaunch picks up the new file. If the relaunch
+        // fails the install still succeeded, so quit either way rather than
+        // leaving two half-states.
         if (!qEnvironmentVariableIsSet("VIBEMIS_UPDATE_SELFTEST")) {
-            // The running process keeps its mounted (old) image alive; the relaunch
-            // picks up the new file. If the relaunch fails the install still succeeded,
-            // so quit either way rather than leaving two half-states.
             QProcess::startDetached(appImagePath, QStringList());
             QCoreApplication::quit();
         }

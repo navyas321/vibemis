@@ -180,11 +180,11 @@ public:
     };
     Q_ENUM(PerfOverlayPosition);
 
-    // Vibemis: which release channel the update checker follows.
-    // UC_STABLE preserves the pre-channel behavior (stable releases only);
-    // Beta/Alpha follow the CI prerelease tiers (-beta.* / -alpha.* tags).
-    // UC_RC follows "-rc.NNN" builds — the exact candidate proposed as the next
-    // stable, cut for on-device verification. Appended LAST
+    // Vibemis: which release channel the update checker follows. A channel is
+    // a MINIMUM stability floor — it serves its own tier and everything more
+    // stable (Alpha ⊇ Beta ⊇ RC ⊇ Stable), so e.g. an RC-channel install
+    // graduates to the stable that candidate became instead of going silent.
+    // UC_STABLE = stables only (pre-channel behavior). UC_RC appended LAST
     // so persisted integer settings keep their meaning.
     enum UpdateChannel
     {

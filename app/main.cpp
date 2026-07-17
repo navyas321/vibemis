@@ -772,22 +772,28 @@ int main(int argc, char *argv[])
         fflush(stdout);
 
         AutoUpdateChecker checker;
-        QObject::connect(&checker, &AutoUpdateChecker::updateCheckFinished, &app,
-                         [&](bool available, QString version, QString htmlUrl,
-                             QString assetUrl, QString message) {
-            Q_UNUSED(available);
-            Q_UNUSED(htmlUrl);
-            fprintf(stdout, "UPDATE-SELFTEST check: %s\n", message.toUtf8().constData());
-            if (assetUrl.isEmpty()) {
-                fprintf(stderr, "UPDATE-SELFTEST FAIL: no AppImage asset on this channel "
-                                "(newest version: '%s')\n", version.toUtf8().constData());
+        QObject::connect(&checker, &AutoUpdateChecker::checkCompleted, &app,
+                         [&](bool manual, bool offerAvailable) {
+            Q_UNUSED(manual);
+            fprintf(stdout, "UPDATE-SELFTEST check: %s\n",
+                    checker.statusMessage().toUtf8().constData());
+            // canInstall == an offer exists on the channel, it ships an
+            // .AppImage, and $APPIMAGE is set. NOTE: the checker only offers a
+            // build DIFFERENT from the running one, so run this harness from a
+            // build whose version differs from the channel's newest (true for
+            // any scratch/CI build stamped from version.txt).
+            if (!checker.canInstall()) {
+                fprintf(stderr, "UPDATE-SELFTEST FAIL: nothing installable on this channel "
+                                "(offer: %d, version: '%s')\n", offerAvailable ? 1 : 0,
+                        checker.availableVersion().toUtf8().constData());
                 fflush(stderr);
                 app.exit(1);
                 return;
             }
-            fprintf(stdout, "UPDATE-SELFTEST installing: %s\n", assetUrl.toUtf8().constData());
+            fprintf(stdout, "UPDATE-SELFTEST installing: %s\n",
+                    checker.availableVersion().toUtf8().constData());
             fflush(stdout);
-            checker.installUpdate(assetUrl);
+            checker.install();
         });
         QObject::connect(&checker, &AutoUpdateChecker::installFailed, &app,
                          [&](QString error, QString htmlUrl) {

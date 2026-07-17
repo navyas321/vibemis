@@ -287,11 +287,19 @@ jobs:
             BASE_VERSION="$(echo "$BASE_VERSION" | cut -d. -f1).$(( $(echo "$BASE_VERSION" | cut -d. -f2) + 1 )).0"
           fi
           next_counter() {  # $1 = suffix class (beta|alpha|rc)
-            local max
+            local tags max
+            # ls-remote failure must not silently yield counter 001 — a re-minted
+            # <base>-rc.001 would collide with (and effectively overwrite) an
+            # already-published release. Print a sentinel the caller can detect
+            # (exit here only leaves the $() subshell, so a bare exit is a trap).
+            if ! tags=$(git ls-remote --tags origin "refs/tags/${BASE_VERSION}-*" 2>/dev/null); then
+              echo "FAIL"
+              return
+            fi
             # Match BOTH tag shapes — legacy "<base>-beta.NNN" and ordinal-first
             # "<base>-nXXXXX-beta.NNN" — so counters stay dense across the scheme change
             # and a number is never reused.
-            max=$(git ls-remote --tags origin "refs/tags/${BASE_VERSION}-*" 2>/dev/null \
+            max=$(printf '%s\n' "$tags" \
                   | sed -n -E "s#.*refs/tags/${BASE_VERSION}-(n[0-9]+-)?$1\.([0-9]+)\$#\2#p" \
                   | sort -n | tail -1)
             # 10# forces base-10 — zero-padded suffixes are OCTAL to bash arithmetic,
@@ -371,6 +379,28 @@ jobs:
           fi
 
           echo "release_tier=$RELEASE_TIER" >> $GITHUB_OUTPUT
+
+          # ── Version-safety gates (audit 2026-07-17, BL-2145 wave) ──
+          # 1. A failed/sentinel counter must never mint "<base>-rc." or "-rc.FAIL".
+          if [[ "$VERSION" == *-rc. || "$VERSION" == *-beta. || "$VERSION" == *-alpha. || "$VERSION" == *FAIL* ]]; then
+            echo "::error::Version counter computation failed (got '$VERSION') — refusing to mint an unsafe tag."
+            exit 1
+          fi
+          # 2. A prerelease of an already-published stable base is always a mistake
+          # (semver: 0.3.0-rc.* PRECEDES 0.3.0) — it means app/version.txt wasn't
+          # bumped after the stable cut.
+          if [[ "$RELEASE_TIER" == "rc" || "$RELEASE_TIER" == "beta" || "$RELEASE_TIER" == "alpha" ]]; then
+            if git ls-remote --exit-code origin "refs/tags/${BASE_VERSION}" >/dev/null 2>&1; then
+              echo "::error::${BASE_VERSION} is already a published stable — bump app/version.txt to the next version before cutting ${RELEASE_TIER} builds."
+              exit 1
+            fi
+          fi
+          # 3. Never re-mint ANY existing tag (releases are immutable, and gh-release
+          # would silently attach this build to the old tag's commit).
+          if git ls-remote --exit-code origin "refs/tags/${VERSION}" >/dev/null 2>&1; then
+            echo "::error::Tag ${VERSION} already exists — refusing to re-mint a published version."
+            exit 1
+          fi
 
           # Numeric 4-part version for Windows RC files (strip suffix, append run number)
           NUMERIC_BASE=$(echo "$VERSION" | sed -E 's/-.*$//')

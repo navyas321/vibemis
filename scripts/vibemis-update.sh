@@ -19,6 +19,11 @@
 #   ./vibemis-update.sh --check          # just print the version that would be installed
 #   ./vibemis-update.sh --launch         # after updating, launch Vibemis (Steam-shortcut friendly)
 #   ./vibemis-update.sh --path <file>    # update a specific AppImage path
+#   ./vibemis-update.sh --force          # allow reinstalling the same version or DOWNGRADING
+#
+# Downgrade guard: after every successful update the installed tag is recorded in
+# "<install>.tag"; when the resolved target sorts OLDER than that (e.g. the channel's
+# newest release was pulled), the script refuses unless --force is given.
 #
 # The previous build is kept next to the install as Vibemis.AppImage.old (rollback).
 # Add this as a non-Steam shortcut ("Update Vibemis") to update from Game Mode in one tap.
@@ -32,6 +37,7 @@ CHANNEL_STABLE=0
 CHANNEL_RC=0
 CHECK_ONLY=0
 LAUNCH_AFTER=0
+FORCE=0
 DEST_OVERRIDE=""
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -39,6 +45,7 @@ while [ $# -gt 0 ]; do
         --rc)     CHANNEL_RC=1 ;;    # newest release candidate (-rc.NNN, the proposed next stable)
         --check)  CHECK_ONLY=1 ;;
         --launch) LAUNCH_AFTER=1 ;;
+        --force)  FORCE=1 ;;
         --path)   shift; DEST_OVERRIDE="${1:-}"; [ -n "$DEST_OVERRIDE" ] || { echo "ERROR: --path needs a file argument." >&2; exit 2; } ;;
         *) echo "Unknown option: $1" >&2; exit 2 ;;
     esac
@@ -124,9 +131,11 @@ if [ "$CHANNEL_STABLE" -eq 1 ]; then
             echo "  (skipping parked stable $t)"
             continue
         fi
-        TAG="$t"
-        URL=$(printf '%s' "$REL_JSON" | grep -oE '"browser_download_url": *"[^"]+\.AppImage"' \
+        U=$(printf '%s' "$REL_JSON" | grep -oE '"browser_download_url": *"[^"]+\.AppImage"' \
                 | head -1 | sed -E 's/.*"(https[^"]+)"/\1/')
+        [ -n "$U" ] || { echo "  (skipping artifact-less stable $t)"; continue; }
+        TAG="$t"
+        URL="$U"
         break
     done
     if [ -z "$TAG" ]; then
@@ -152,10 +161,23 @@ elif [ "$CHANNEL_RC" -eq 1 ]; then
         echo "ERROR: no release candidate with an AppImage found (channel: rc)." >&2; exit 1
     fi
 else
-    # First tag_name / first .AppImage asset = the newest release (list is newest-first).
-    TAG=$(printf '%s' "$JSON" | grep -m1 '"tag_name"' | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/')
-    URL=$(printf '%s' "$JSON" | grep -oE '"browser_download_url": *"[^"]+\.AppImage"' \
-            | head -1 | sed -E 's/.*"(https[^"]+)"/\1/')
+    # Newest release that actually carries an AppImage. TAG and URL must come
+    # from the SAME release object — grabbing the first tag and the first asset
+    # URL from the flat list independently silently paired the newest tag with
+    # an OLDER release's binary whenever the newest release was assetless.
+    URL=""
+    for t in $(printf '%s' "$JSON" | grep '"tag_name"' | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/'); do
+        REL_JSON=$(curl -fsSL -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$REPO/releases/tags/$t") || continue
+        U=$(printf '%s' "$REL_JSON" | grep -oE '"browser_download_url": *"[^"]+\.AppImage"' \
+                | head -1 | sed -E 's/.*"(https[^"]+)"/\1/')
+        [ -n "$U" ] || { echo "  (skipping artifact-less release $t)"; continue; }
+        TAG="$t"; URL="$U"
+        break
+    done
+    if [ -z "${TAG:-}" ]; then
+        echo "ERROR: no release with an AppImage asset found." >&2; exit 1
+    fi
 fi
 
 if [ -z "$URL" ]; then
@@ -170,6 +192,75 @@ if [ "$CHECK_ONLY" -eq 1 ]; then
     exit 0
 fi
 
+# ---- Downgrade guard ----
+# SemVer-ish compare, enough for our tag shapes (X.Y.Z, X.Y.Z-tier.NNN, legacy
+# W.X.Y.Z). Prints -1/0/1 like strcmp. Bare beats prerelease at equal base;
+# prerelease identifiers compare numerically when numeric, lexically otherwise
+# (so alpha < beta < rc, matching SemVer §11).
+semver_cmp() {
+    a=${1#v}; b=${2#v}; a=${a%%+*}; b=${b%%+*}
+    ab=${a%%-*}; bb=${b%%-*}
+    ap=""; bp=""
+    [ "$ab" != "$a" ] && ap=${a#*-}
+    [ "$bb" != "$b" ] && bp=${b#*-}
+    i=1
+    while [ "$i" -le 4 ]; do
+        x=$(printf '%s' "$ab" | awk -F. -v n="$i" '{print $n}')
+        y=$(printf '%s' "$bb" | awk -F. -v n="$i" '{print $n}')
+        case "$x" in ''|*[!0-9]*) x=0 ;; esac
+        case "$y" in ''|*[!0-9]*) y=0 ;; esac
+        [ "$((10#$x))" -lt "$((10#$y))" ] && { echo -1; return; }
+        [ "$((10#$x))" -gt "$((10#$y))" ] && { echo 1; return; }
+        i=$((i+1))
+    done
+    if [ -z "$ap" ] && [ -z "$bp" ]; then echo 0; return; fi
+    if [ -z "$ap" ]; then echo 1; return; fi
+    if [ -z "$bp" ]; then echo -1; return; fi
+    i=1
+    while :; do
+        x=$(printf '%s' "$ap" | awk -F. -v n="$i" '{print $n}')
+        y=$(printf '%s' "$bp" | awk -F. -v n="$i" '{print $n}')
+        if [ -z "$x" ] && [ -z "$y" ]; then echo 0; return; fi
+        if [ -z "$x" ]; then echo -1; return; fi
+        if [ -z "$y" ]; then echo 1; return; fi
+        xnum=1; ynum=1
+        case "$x" in *[!0-9]*) xnum=0 ;; esac
+        case "$y" in *[!0-9]*) ynum=0 ;; esac
+        if [ "$xnum" -eq 1 ] && [ "$ynum" -eq 1 ]; then
+            [ "$((10#$x))" -lt "$((10#$y))" ] && { echo -1; return; }
+            [ "$((10#$x))" -gt "$((10#$y))" ] && { echo 1; return; }
+        elif [ "$xnum" -ne "$ynum" ]; then
+            # numeric identifiers rank below alphanumeric ones
+            [ "$xnum" -eq 1 ] && echo -1 || echo 1
+            return
+        else
+            [ "$x" \< "$y" ] && { echo -1; return; }
+            [ "$x" \> "$y" ] && { echo 1; return; }
+        fi
+        i=$((i+1))
+    done
+}
+
+# The tag installed by the last run of this script rides in a sidecar file; if
+# the resolved target sorts OLDER (channel head was pulled/parked), refuse to
+# silently downgrade a working install unless the user explicitly forces it.
+SIDECAR="$DEST.tag"
+if [ -f "$SIDECAR" ] && [ -f "$DEST" ]; then
+    INSTALLED=$(head -1 "$SIDECAR" | tr -d ' \t\r\n')
+    if [ -n "$INSTALLED" ]; then
+        CMP=$(semver_cmp "$TAG" "$INSTALLED")
+        if [ "$CMP" = "-1" ] && [ "$FORCE" -ne 1 ]; then
+            echo "ERROR: refusing to DOWNGRADE $INSTALLED -> $TAG (the newer release may have been pulled)." >&2
+            echo "       Re-run with --force to downgrade anyway." >&2
+            exit 1
+        fi
+        if [ "$CMP" = "0" ] && [ "$FORCE" -ne 1 ]; then
+            echo "Already on $INSTALLED — nothing to do (use --force to reinstall)."
+            exit 0
+        fi
+    fi
+fi
+
 mkdir -p "$DEST_DIR"
 TMP=$(mktemp "$DEST_DIR/.vibemis-update.XXXXXX")
 echo "Downloading to $DEST ..."
@@ -180,6 +271,7 @@ if curl -fL --progress-bar -o "$TMP" "$URL"; then
         mv -f "$DEST" "$DEST.old"
     fi
     mv -f "$TMP" "$DEST"
+    printf '%s\n' "$TAG" > "$DEST.tag"
     echo "Done. Updated $DEST to $TAG (previous kept at $DEST.old)."
     echo "(Your Steam shortcut keeps working if it points at $DEST — the path didn't change.)"
 else

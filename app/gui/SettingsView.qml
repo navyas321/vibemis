@@ -3511,12 +3511,9 @@ Item {
                     // ::onActivated only fires on human-driven index changes
                     onActivated: {
                         StreamingPreferences.updateChannel = updateChannelListModel.get(currentIndex).val
-                        // A previous check's result doesn't apply to the new channel
-                        updateStatusLabel.text = qsTr("Channel changed — check for updates to see this channel's newest build.")
-                        updateNowButton.assetUrl = ""
-                        updateNowButton.visible = false
-                        viewReleaseButton.releaseUrl = ""
-                        viewReleaseButton.visible = false
+                        // A previous check's result doesn't apply to the new channel;
+                        // the checker drops its offer and updates statusMessage.
+                        AutoUpdateChecker.channelChanged()
                     }
 
                     ToolTip.delay: 1000
@@ -3528,87 +3525,52 @@ Item {
                 Row {
                     spacing: VbTokens.space2
 
+                    // All three buttons bind to AutoUpdateChecker's properties —
+                    // no local state. Do NOT toggle `enabled` on the focused
+                    // button — that drops activeFocus and the pane auto-scrolls
+                    // to the top. Re-entry is guarded in C++ (one check / one
+                    // install in flight at a time), so buttons stay enabled.
                     Button {
                         id: checkUpdatesButton
                         text: qsTr("Check for updates")
-                        // Do NOT toggle `enabled` here — disabling the focused button
-                        // drops activeFocus and the pane auto-scrolls to the next focus item at
-                        // the top of the page. Re-entry is already guarded in C++ (one check in
-                        // flight at a time), so the button can stay enabled and keep focus.
                         onClicked: {
-                            updateStatusLabel.text = qsTr("Checking for updates…")
-                            updateNowButton.visible = false
-                            viewReleaseButton.visible = false
                             AutoUpdateChecker.checkNow()
                         }
                     }
 
                     Button {
                         id: updateNowButton
-                        property string assetUrl: ""
-                        // QML-side re-entry guard instead of `enabled = false` (which
-                        // would drop focus and scroll the pane to the top — same class as the
-                        // Check button). Reset on installFailed; a successful install relaunches.
-                        property bool installing: false
                         text: qsTr("Update now")
-                        visible: false
+                        visible: AutoUpdateChecker.canInstall
                         onClicked: {
-                            if (installing) {
-                                return
-                            }
-                            installing = true
-                            updateStatusLabel.text = qsTr("Downloading update…")
-                            AutoUpdateChecker.installUpdate(assetUrl)
+                            AutoUpdateChecker.install()
                         }
                     }
 
                     Button {
                         id: viewReleaseButton
-                        property string releaseUrl: ""
                         text: qsTr("View release")
-                        visible: false
+                        visible: AutoUpdateChecker.offerAvailable
+                                 && AutoUpdateChecker.releaseUrl !== ""
+                                 && SystemProperties.hasBrowser
                         onClicked: {
-                            if (releaseUrl) {
-                                SystemProperties.openUrl(releaseUrl)
+                            if (AutoUpdateChecker.releaseUrl !== "") {
+                                SystemProperties.openUrl(AutoUpdateChecker.releaseUrl)
                             }
                         }
                     }
                 }
 
+                // The checker's statusMessage carries everything this label used
+                // to assemble by hand: current version at rest, check outcomes,
+                // download progress and install errors.
                 Label {
                     id: updateStatusLabel
                     width: parent.width
-                    text: qsTr("Current version: %1").arg(AutoUpdateChecker.currentVersion())
+                    text: AutoUpdateChecker.statusMessage
                     font.pixelSize: VbTokens.typeCaption
                     font.family: VbTokens.fontBody
                     wrapMode: Text.Wrap
-                }
-
-                Connections {
-                    target: AutoUpdateChecker
-                    function onUpdateCheckFinished(available, version, htmlUrl, assetUrl, message) {
-                        updateStatusLabel.text = message
-                        viewReleaseButton.releaseUrl = htmlUrl
-                        viewReleaseButton.visible = available && htmlUrl !== "" && SystemProperties.hasBrowser
-                        updateNowButton.assetUrl = assetUrl
-                        updateNowButton.visible = available && assetUrl !== "" && AutoUpdateChecker.canInstallUpdates()
-                    }
-                    function onInstallProgress(bytesReceived, bytesTotal) {
-                        if (bytesTotal > 0) {
-                            updateStatusLabel.text = qsTr("Downloading update… %1%").arg(Math.floor(bytesReceived * 100 / bytesTotal))
-                        }
-                        else {
-                            updateStatusLabel.text = qsTr("Downloading update… %1 MB").arg((bytesReceived / 1048576).toFixed(1))
-                        }
-                    }
-                    function onInstallFailed(error, htmlUrl) {
-                        updateNowButton.installing = false
-                        updateStatusLabel.text = qsTr("Install failed: %1").arg(error)
-                        if (htmlUrl !== "") {
-                            viewReleaseButton.releaseUrl = htmlUrl
-                            viewReleaseButton.visible = SystemProperties.hasBrowser
-                        }
-                    }
                 }
             }
         }
