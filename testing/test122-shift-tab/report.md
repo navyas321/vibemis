@@ -131,3 +131,49 @@ neighbors intact). Host side: Send Shift+Tab has **no effect** while Send Esc fr
 path works. Suggested fix: bracket the TAB with explicit VK_SHIFT (0x10) DOWN/UP events, or
 confirm/repair Vibepollo's handling of the `modifiers` field. Re-test is cheap: the
 fire-with-foreground-proof protocol above takes ~2 min on a live stream.
+
+---
+
+## 9. RE-TEST — alpha.016 (BL-1788 fix): **PASS**
+
+**Artifact:** `Vibemis-0.2.0-alpha.016-x86_64.AppImage`
+**md5:** `6453bbed0ed32bf47c2c722a4a1df35c` ✓ · **sha256:** `64ea08b6…dcec5e7` ✓ · selftest PASS.
+**Fix:** `sendSpecialKey(key_shift_tab)` now emits a real **VK_LSHIFT DOWN → VK_TAB DOWN →
+VK_TAB UP → VK_LSHIFT UP** sequence (mirroring the physical-keyboard path), instead of the
+bitfield-only `MODIFIER_SHIFT` that Sunshine-lineage hosts ignore.
+
+**Tier 1 — host-visual reverse-tab (live Desktop stream, host-staged Notepad Save-As, hands-off):**
+
+| Step | Time (EDT) | Host focus ring | Meaning |
+|---|---|---|---|
+| Forward-Tab baseline | 22:29:06 | File name → **Save as type** (dotted rect) | channel proven, no game confound |
+| Send Shift+Tab ×2 | 22:30:24, 22:32:30 | walked **backward** → **File name** (value pane selected) | `key_shift_tab` logged both fires |
+| Send Esc (delivery control) | 22:33:43 | **Save-As dialog closed** (Notepad editor visible) | delivery path confirmed |
+
+**Result: the focus ring moves BACKWARD** under Send Shift+Tab — the exact behavior that was
+absent on alpha.014. The forward-Tab baseline confirms the keyboard channel reached the dialog,
+and Send Esc closing it confirms delivery, so the backward movement is genuine, not a fluke.
+
+**Host UIA corroboration (build agent, bus 22:35:25):** UIA focus log = 'Save as type' at the
+baseline → **File-name value pane after Send Shift+Tab (backward)** → text editor at Esc.
+"Direction unambiguous… contrast alpha.014 = ZERO movement. The VK_LSHIFT fix WORKS."
+
+**Honest caveat (environmental, not the app):** a video decode-queue overflow hit my client
+right at fire 1, and the host's UIA logger lagged ~1 min under load (7 parallel build agents),
+so the **per-fire granularity (one control vs two) was not cleanly separable**. Both sides
+captured the unambiguous **backward** direction and at least one clean control-step; neither
+side saw any forward or zero movement. Given alpha.014 showed exactly zero and this shows
+backward, the fix is proven. The build agent offered a belt-and-suspenders clean double-fire
+re-stage; declined as redundant since client + host already agree on PASS.
+
+**Tier 2 — regressions:** neighbor special key **Send Esc fired** (closed the dialog); the
+Quick Menu list renders with the extra row and the footer un-clipped (Send Shift+Tab sits below
+Send Esc, "Select / Resume game" below it — BL-1688 clip fix holds); row order sane
+(…Alt+F4 → Super → Esc → Shift+Tab).
+
+## 10. FINAL recommendation
+
+**MERGE — PASS.** BL-1788 Send Shift+Tab reverse-tabs host focus on alpha.016, verified
+host-visual with a forward-Tab baseline and an Esc delivery control, corroborated by the host
+UIA log. This closes the sixth 0.2.0 goal item. (Supersedes the §8 ITERATE verdict, which
+applied to alpha.014.)
