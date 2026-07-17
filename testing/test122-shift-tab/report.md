@@ -65,8 +65,53 @@ rather than risk more accidental host actions.
 
 Stream quit, host session cancelled (`<cancel>1`), app closed, rig stopped. Config at baseline.
 
-## 6. Recommendation
+## 6. Recommendation (superseded — see §7)
 
-**MERGE — PASS-pending-host-visual.** Client transmit proven, row/order/clip all correct, neighbor
-special keys intact. One live host-focus eyeball on resume (wider dialog) converts this to a full
-PASS and closes the sixth goal item.
+~~MERGE — PASS-pending-host-visual.~~ Overturned by the re-confirm run below.
+
+---
+
+## 7. ADDENDUM — host-visual re-confirm (2026-07-16 21:35–21:48 EDT, self-serve): **FAIL host-side**
+
+Re-ran Tier 1 self-serve on the same alpha.014 stream (Navid-PC Desktop, 1920×1200 1:1),
+wide **Notepad Save-As** dialog, screenshots at every step.
+
+**Setup proof (forward chain via stream keyboard, xdotool → keyboard capture):**
+File name (text selected) → Tab → Save-as-type (dotted focus rect) → Tab → Hide Folders (ring).
+Stream-injected plain Tab demonstrably moves host dialog focus.
+
+**Fires (QM highlight screenshot-verified on "Send Shift+Tab" before each):**
+
+| Fire | Time (EDT) | Dialog foreground proof | Host focus result |
+|---|---|---|---|
+| 1 | 21:41:19 | stale (~4 min after last Tab) | no movement |
+| 2 | 21:43:12 | stale | no movement |
+| 3 | 21:46:03 | **proven** — dotted rect on Encoding set by stream Tab 5 s earlier | **no movement, not even forward** |
+
+Client log: `Executing action: key_shift_tab` ×3, "Executing action…" pill captured on fire 2.
+
+**Discriminating control (21:47:25):** `Send Esc` fired from the same menu, same highlight-verify
+protocol → **the Save-As dialog closed instantly on the host.** The QM →
+`LiSendKeyboardEvent` → host delivery path works; the defect is specific to Send Shift+Tab.
+
+**RCA hypothesis (for the build agent):** `quickmenumanager.cpp:650-660` sends
+`LiSendKeyboardEvent(VK_TAB, DOWN/UP, MODIFIER_SHIFT)` — the Shift rides only in the
+`modifiers` bitfield; **no VK_SHIFT down/up events are sent**. If Vibepollo/Apollo ignores the
+modifiers field for injection (relying on real modifier-key state), the event is dropped or
+mis-injected. Note focus did not move even *forward*, so the host appears to not inject the
+Tab at all. Host-side Vibepollo input log + the build agent's UIA focus log at
+21:41:19 / 21:43:12 / 21:46:03 are the corroborating artifacts (timestamps posted on the bus
+2026-07-16 21:44:57 and 21:48:03).
+
+**Also observed (minor):** activating a QM row closes the menu immediately; the "Sent key to
+host" toast was not visible in a +1.0 s screenshot after fire 1 (the in-menu toast has no
+surface once the menu closes — same class as the BL-2002/BL-2007 out-of-menu toast gap).
+The menu *does* remember the highlighted row across reopen, which makes repeat-fire safe.
+
+## 8. Revised recommendation
+
+**ITERATE.** Client side remains fully proven (row renders per spec, action dispatches,
+neighbors intact). Host side: Send Shift+Tab has **no effect** while Send Esc from the same
+path works. Suggested fix: bracket the TAB with explicit VK_SHIFT (0x10) DOWN/UP events, or
+confirm/repair Vibepollo's handling of the `modifiers` field. Re-test is cheap: the
+fire-with-foreground-proof protocol above takes ~2 min on a live stream.
