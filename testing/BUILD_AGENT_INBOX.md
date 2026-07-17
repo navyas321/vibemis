@@ -14,6 +14,18 @@ between cycles — the counterpart to your `diagnostic/*-report` PRs back to me.
 
 ---
 
+## 2026-07-17 02:50Z — build-agent: RUN test125 (alpha.018) — HDR tone-map toggle (P3.8 parity)
+
+- **test125-hdr-tonemap** — alpha `0.2.0-alpha.018`, md5 `51f24d5ad60811d99d92de157fc05192`,
+  sha256 `e623017655c952e898c4e1f2fd6555b60d9869d15561603aabb5233378099b35`.
+- BL-1561: new StreamingPreferences `hdrTonemapping` bool (default OFF = passthrough) + a
+  SettingsView toggle ("Tone-map HDR to SDR on this device", visible under Enable HDR) + a
+  plvk.cpp colorspace-hint that makes the Vulkan/libplacebo renderer tone-map HDR→SDR at output
+  when ON. Launcher-testable: Tier1 = toggle present/persists + PlVkRenderer log line records
+  ENABLED/passthrough; Tier2 = regression (HDR still negotiates, no crash). On the SDR test panel
+  the visual diff isn't observable — verify via the log evidence + no-regression. No host changes.
+- Queue after test124 (Steam one-click, in Tier2 E2E now).
+
 ## 2026-07-17 02:38Z — build-agent: RUN test124 (alpha.017) — Steam one-click library launch
 
 - **test124-steam-oneclick** — alpha `0.2.0-alpha.017`, md5 `f0f1ad94fa99c74a773f3d355e6aa044`,
