@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#08090B; --ac:#2FC6D0; }
+  a { color:#2FC6D0; text-decoration:none; }
+  a:hover { color:#6ADDE7; }
+  @keyframes vbPulse { 0%,100%{opacity:1} 50%{opacity:.45} }
+</style>
+</helmet>
+
+<section style="display:flex; flex-direction:column; gap:36px; padding:56px; font-family:'Manrope',sans-serif; color:#ECEEF1;">
+
+  <div style="display:flex; align-items:baseline; gap:18px;">
+    <div style="display:inline-flex; align-items:center; gap:11px;">
+      <div style="width:13px; height:13px; background:var(--ac); transform:rotate(45deg);"></div>
+      <div style="font-family:'Sora',sans-serif; font-weight:800; font-size:24px; letter-spacing:3px;">VIBEMIS</div>
+    </div>
+    <div style="font-size:16px; color:#98A1AB;">Redesign — gamepad-first · 1920×1200 (Legion Go S native, scales to Deck)</div>
+  </div>
+
+  <div style="display:flex; flex-wrap:wrap; gap:56px; align-items:flex-start;">
+
+    <!-- ============ 1a COMPUTERS ============ -->
+    <div id="1a" style="display:flex; flex-direction:column; gap:14px;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-family:'Sora',sans-serif; font-weight:700; font-size:14px; background:#1B1F26; border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:3px 10px;">1a</span>
+        <span style="font-size:15px; color:#98A1AB;">Computers</span>
+      </div>
+      <div style="width:1920px; height:1200px; background:#0E1013; border:1px solid rgba(255,255,255,0.08); border-radius:20px; overflow:hidden; display:flex; flex-direction:column;">
+        <div style="height:84px; flex:none; display:flex; align-items:center; gap:16px; padding:0 40px; border-bottom:1px solid rgba(255,255,255,0.06);">
+          <div style="width:13px; height:13px; background:var(--ac); transform:rotate(45deg);"></div>
+          <div style="font-family:'Sora',sans-serif; font-weight:800; font-size:21px; letter-spacing:3px;">VIBEMIS</div>
+          <div style="flex:1;"></div>
+          <div style="display:flex; gap:12px;">
+            <div style="width:52px; height:52px; border-radius:14px; background:#15181D; border:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; font-size:25px; color:#ECEEF1;">+</div>
+            <div style="width:52px; height:52px; border-radius:14px; background:#15181D; border:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; font-size:21px; color:#98A1AB;">⟳</div>
+            <div style="width:52px; height:52px; border-radius:14px; background:#15181D; border:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:700; color:#98A1AB;">?</div>
+            <div style="width:52px; height:52px; border-radius:14px; background:#15181D; border:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; font-size:21px; color:#98A1AB;">⚙</div>
+          </div>
+        </div>
+        <div data-screen-label="Computers" style="flex:1; padding:52px 56px; display:flex; flex-direction:column; gap:30px;">
+          <div style="display:flex; align-items:baseline; gap:14px;">
+            <div style="font-family:'Sora',sans-serif; font-weight:700; font-size:34px;">Computers</div>
+            <div style="font-size:18px; color:#98A1AB;">2 hosts · 1 online</div>
+          </div>
+          <div style="display:flex; gap:32px;">
+            <div style="width:430px; border-radius:20px; background:#15181D; border:2px solid var(--ac); box-shadow:0 0 0 5px color-mix(in srgb, var(--ac) 22%, transparent), 0 18px 48px rgba(0,0,0,0.45); padding:32px; display:flex; flex-direction:column; gap:20px;">
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="width:82px; height:58px; border:5px solid #ECEEF1; border-radius:10px;"></div>
+                <div style="display:flex; align-items:center; gap:8px; background:rgba(62,213,152,0.12); border-radius:999px; padding:7px 15px;">
+                  <div style="width:10px; height:10px; border-radius:50%; background:#3ED598; animation:vbPulse 2.4s infinite;"></div>
+                  <div style="font-size:14px; font-weight:700; color:#3ED598; letter-spacing:0.7px;">ONLINE</div>
+                </div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:6px;">
+                <div style="font-family:'Sora',sans-serif; font-weight:700; font-size:27px;">Navid-PC</div>
+                <div style="font-size:17px; color:#98A1AB;">Paired · Full access</div>
+              </div>
+              <div style="display:flex; gap:10px; align-items:center;">
+                <div style="font-size:13px; font-weight:800; letter-spacing:1.2px; color:var(--ac); border:1px solid color-mix(in srgb, var(--ac) 55%, transparent); border-radius:7px; padding:4px 10px;">VIBEPOLLO</div>
+                <div style="font-size:15.5px; color:#98A1AB;">4 ms · LAN</div>
+              </div>
+            </div>
+            <div style="width:430px; border-radius:20px; background:#15181D; border:1px solid rgba(255,255,255,0.08); padding:32px; display:flex; flex-direction:column; gap:20px; opacity:0.75;">
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="width:82px; height:58px; border:5px solid #5A626C; border-radius:10px;"></div>
+                <div style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.06); border-radius:999px; padding:7px 15px;">
+                  <div style="width:10px; height:10px; border-radius:50%; background:#5A626C;"></div>
+                  <div style="font-size:14px; font-weight:700; color:#98A1AB; letter-spacing:0.7px;">OFFLINE</div>
+                </div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:6px;">
+                <div style="font-family:'Sora',sans-serif; font-weight:700; font-size:27px; color:#B9C0C8;">Office-PC</div>
+                <div style="font-size:17px; color:#98A1AB;">Paired · Tailscale</div>
+              </div>
+              <div style="display:flex; gap:10px; align-items:center;">
+                <div style="font-size:13px; font-weight:800; letter-spacing:1.2px; color:#98A1AB; border:1px solid rgba(255,255,255,0.14); border-radius:7px; padding:4px 10px;">SUNSHINE</div>
+                <div style="font-size:15.5px; color:#98A1AB;">Last seen 2 h ago</div>
+              </div>
+            </div>
+            <div style="width:430px; border-radius:20px; border:2px dashed rgba(255,255,255,0.14); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; color:#98A1AB;">
+              <div style="width:64px; height:64px; border-radius:50%; background:#15181D; border:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; font-size:32px;">+</div>
+              <div style="font-size:18px; font-weight:600;">Add a computer</div>
+            </div>
+          </div>
+        </div>
+        <sc-if value="{{ showHints }}" hint-placeholder-val="{{ true }}">
+        <div style="height:72px; flex:none; display:flex; align-items:center; gap:36px; padding:0 44px; border-top:1px solid rgba(255,255,255,0.06); background:#0B0D10;">
+          <div style="display:flex; align-items:center; gap:11px;"><span style="display:inline-flex; width:30px; height:30px; border-radius:50%; border:2px solid #98A1AB; align-items:center; justify-content:center; font-size:14px; font-weight:800; color:#ECEEF1;">A</span><span style="font-size:16px; color:#98A1AB;">Connect</span></div>
+          <div style="display:flex; align-items:center; gap:11px;"><span style="display:inline-flex; width:30px; height:30px; border-radius:50%; border:2px solid #98A1AB; align-items:center; justify-content:center; font-size:14px; font-weight:800; color:#ECEEF1;">X</span><span style="font-size:16px; color:#98A1AB;">Host options</span></div>
+          <div style="display:flex; align-items:center; gap:11px;"><span style="display:inline-flex; width:30px; height:30px; border-radius:50%; border:2px solid #98A1AB; align-items:center; justify-content:center; font-size:14px; font-weight:800; color:#ECEEF1;">Y</span><span style="font-size:16px; color:#98A1AB;">Add computer</span></div>
+          <div style="flex:1;"></div>
+          <div style="display:flex; align-items:center; gap:11px;"><span style="display:inline-flex; width:30px; height:30px; border-radius:50%; border:2px solid #98A1AB; align-items:center; justify-content:center; font-size:13px; font-weight:800; color:#ECEEF1;">☰</span><span style="font-size:16px; color:#98A1AB;">Settings</span></div>
+        </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- ============ 1b APP GRID ============ -->
+    <div id="1b" style="display:flex; flex-direction:column; gap:14px;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-family:'Sora',sans-serif; font-weight:700; font-size:14px; background:#1B1F26; border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:3px 10px;">1b</span>
+        <span style="font-size:15px; color:#98A1AB;">App grid — Navid-PC</span>
+      </div>
+      <div style="width:1920px; height:1200px; background:#0E1013; border:1px solid rgba(255,255,255,0.08); border-radius:20px; overflow:hidden; display:flex; flex-direction:column;">
+        <div style="height:84px; flex:none; display:flex; align-items:center; gap:20px; padding:0 40px; border-bottom:1px solid rgba(255,255,255,0.06);">
+          <div style="width:52px; height:52px; border-radius:14px; background:#15181D; border:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; font-size:24px; color:#ECEEF1;">‹</div>
+          <div style="display:flex; flex-direction:column; gap:2px;">
+            <div style="font-family:'Sora',sans-serif; font-weight:700; font-size:20px;">Navid-PC</div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div style="width:9px; height:9px; border-radius:50%; background:#3ED598;"></div>
+              <div style="font-size:14.5px; color:#98A1AB;">Vibepollo · 4 ms</div>
+            </div>
+          </div>
+          <div style="flex:1;"></div>
+          <div style="display:flex; gap:12px;">
+            <div style="width:52px; height:52px; border-radius:14px; background:#15181D; border:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; font-size:21px; color:#98A1AB;">⟳</div>
+            <div style="width:52px; height:52px; border-radius:14px; background:#15181D; border:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; font-size:21px; color:#98A1AB;">⚙</div>
+          </div>
+        </div>
+        <div data-screen-label="App grid" style="flex:1; padding:52px 56px; display:flex; flex-direction:column; gap:30px;">
+          <div style="display:flex; align-items:baseline; gap:14px;">
+            <div style="font-family:'Sora',sans-serif; font-weight:700; font-size:34px;">Apps</div>
+            <div style="font-size:18px; color:#98A1AB;">3 available</div>
+          </div>
+          <div style="display:flex; gap:36px; align-items:flex-start;">
+            <div style="display:flex; flex-direction:column; gap:16px; align-items:center;">
+              <div style="width:320px; height:430px; border-radius:20px; background:#15181D; border:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center;">
+                <div style="display:flex; flex-direction:column; align-items:center; gap:18px;">
+                  <div style="width:98px; height:70px; border:6px solid #B9C0C8; border-radius:12px;"></div>
+                  <div style="width:44px; height:7px; background:#B9C0C8; border-radius:4px;"></div>
+                </div>
+              </div>
+              <div style="font-size:19px; font-weight:700; color:#B9C0C8;">Desktop</div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:16px; align-items:center;">
+              <div style="width:320px; height:430px; border-radius:20px; background:#1B1F26; border:2px solid var(--ac); box-shadow:0 0 0 5px color-mix(in srgb, var(--ac) 22%, transparent), 0 22px 52px rgba(0,0,0,0.5); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:24px; position:relative;">
+                <div style="position:absolute; top:18px; left:18px; font-size:13px; font-weight:800; letter-spacing:1.2px; color:#0E1013; background:#3ED598; border-radius:6px; padding:4px 10px;">RESUME</div>
+                <div style="width:110px; height:110px; border-radius:50%; border:8px solid var(--ac);"></div>
+                <div style="font-family:'Sora',sans-serif; font-weight:800; font-size:23px; letter-spacing:2.5px;">STEAM</div>
+              </div>
+              <div style="display:flex; align-items:center; gap:11px;">
+                <span style="display:inline-flex; width:28px; height:28px; border-radius:50%; border:2px solid var(--ac); align-items:center; justify-content:center; font-size:13px; font-weight:800; color:var(--ac);">A</span>
+                <span style="font-size:18px; font-weight:700;">Launch</span>
+              </div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:16px; align-items:center;">
+              <div style="width:320px; height:430px; border-radius:20px; background:#15181D; border:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px;">
+                <div style="width:98px; height:70px; border:6px dashed #B9C0C8; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:34px; color:#B9C0C8;">+</div>
+              </div>
+              <div style="font-size:19px; font-weight:700; color:#B9C0C8;">Virtual Desktop</div>
+            </div>
+          </div>
+        </div>
+        <sc-if value="{{ showHints }}" hint-placeholder-val="{{ true }}">
+        <div style="height:72px; flex:none; display:flex; align-items:center; gap:36px; padding:0 44px; border-top:1px solid rgba(255,255,255,0.06); background:#0B0D10;">
+          <div style="display:flex; align-items:center; gap:11px;"><span style="display:inline-flex; width:30px; height:30px; border-radius:50%; border:2px solid #98A1AB; align-items:center; justify-content:center; font-size:14px; font-weight:800; color:#ECEEF1;">A</span><span style="font-size:16px; color:#98A1AB;">Launch</span></div>
+          <div style="display:flex; align-items:center; gap:11px;"><span style="display:inline-flex; width:30px; height:30px; border-radius:50%; border:2px solid #98A1AB; align-items:center; justify-content:center; font-size:14px; font-weight:800; color:#ECEEF1;">B</span><span style="font-size:16px; color:#98A1AB;">Back</span></div>
+          <div style="display:flex; align-items:center; gap:11px;"><span style="display:inline-flex; width:30px; height:30px; border-radius:50%; border:2px solid #98A1AB; align-items:center; justify-content:center; font-size:14px; font-weight:800; color:#ECEEF1;">X</span><span style="font-size:16px; color:#98A1AB;">App options</span></div>
+          <div style="flex:1;"></div>
+          <div style="display:flex; align-items:center; gap:11px;"><span style="display:inline-flex; width:30px; height:30px; border-radius:50%; border:2px solid #98A1AB; align-items:center; justify-content:center; font-size:13px; font-weight:800; color:#ECEEF1;">☰</span><span style="font-size:16px; color:#98A1AB;">Settings</span></div>
+        </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- ============ 1c ADD PC DIALOG ============ -->
+    <div id="1c" style="display:flex; flex-direction:column; gap:14px;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-family:'Sora',sans-serif; font-weight:700; font-size:14px; background:#1B1F26; border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:3px 10px;">1c</span>
+        <span style="font-size:15px; color:#98A1AB;">Add PC dialog</span>
+      </div>
+      <div data-screen-label="Add PC dialog" style="width:1920px; height:1200px; background:#0E1013; border:1px solid rgba(255,255,255,0.08); border-radius:20px; overflow:hidden; position:relative; display:flex; align-items:center; justify-content:center;">
+        <div style="position:absolute; inset:0; background:rgba(4,5,7,0.72);"></div>
+        <div style="position:relative; width:720px; border-radius:24px; background:#15181D; border:1px solid rgba(255,255,255,0.1); box-shadow:0 40px 100px rgba(0,0,0,0.6); padding:48px; display:flex; flex-direction:column; gap:28px;">
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div style="font-family:'Sora',sans-serif; font-weight:700; font-size:30px;">Add a computer</div>
+            <div style="font-size:17px; color:#98A1AB; line-height:1.5;">Enter the IP address or hostname of your host PC.</div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:12px;">
+            <div style="height:72px; border-radius:16px; background:#0E1013; border:2px solid var(--ac); box-shadow:0 0 0 5px color-mix(in srgb, var(--ac) 18%, transparent); display:flex; align-items:center; padding:0 22px; gap:2px;">
+              <span style="font-size:22px; color:#ECEEF1;">192.168.1.42</span>
+              <span style="width:2px; height:30px; background:var(--ac); margin-left:2px; animation:vbPulse 1s steps(1) infinite;"></span>
+            </div>
+            <div style="font-size:14.5px; color:#98A1AB; line-height:1.6;">On the same network, use the host's local IP. To stream from a different network, put both devices on <span style="color:var(--ac); font-weight:600;">Tailscale</span> and enter its <span style="color:#B9C0C8;">100.x.x.x</span> IP or MagicDNS name.</div>
+          </div>
+          <div style="display:flex; gap:14px; justify-content:flex-end; margin-top:4px;">
+            <div style="height:56px; padding:0 28px; border-radius:14px; background:#1B1F26; border:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; gap:10px; font-size:17px; font-weight:600; color:#B9C0C8;"><span style="display:inline-flex; width:26px; height:26px; border-radius:50%; border:2px solid #98A1AB; align-items:center; justify-content:center; font-size:12px; font-weight:800;">B</span>Cancel</div>
+            <div style="height:56px; padding:0 32px; border-radius:14px; background:var(--ac); display:flex; align-items:center; gap:10px; font-size:17px; font-weight:800; color:#08090B;"><span style="display:inline-flex; width:26px; height:26px; border-radius:50%; border:2px solid #08090B; align-items:center; justify-content:center; font-size:12px; font-weight:800;">A</span>Connect</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 1d PC ACTION SHEET ============ -->
+    <div id="1d" style="display:flex; flex-direction:column; gap:14px;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-family:'Sora',sans-serif; font-weight:700; font-size:14px; background:#1B1F26; border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:3px 10px;">1d</span>
+        <span style="font-size:15px; color:#98A1AB;">Host options — action sheet (replaces context menu)</span>
+      </div>
+      <div data-screen-label="Host options" style="width:1920px; height:1200px; background:#0E1013; border:1px solid rgba(255,255,255,0.08); border-radius:20px; overflow:hidden; position:relative; display:flex; justify-content:flex-end;">
+        <div style="position:absolute; inset:0; background:rgba(4,5,7,0.6);"></div>
+        <div style="position:relative; width:560px; height:100%; background:#15181D; border-left:1px solid rgba(255,255,255,0.1); box-shadow:-30px 0 80px rgba(0,0,0,0.5); display:flex; flex-direction:column;">
+          <div style="padding:44px 44px 28px; display:flex; flex-direction:column; gap:18px; border-bottom:1px solid rgba(255,255,255,0.06);">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <div style="width:70px; height:50px; border:5px solid #ECEEF1; border-radius:9px;"></div>
+              <div style="display:flex; align-items:center; gap:8px; background:rgba(62,213,152,0.12); border-radius:999px; padding:7px 15px;">
+                <div style="width:10px; height:10px; border-radius:50%; background:#3ED598;"></div>
+                <div style="font-size:14px; font-weight:700; color:#3ED598; letter-spacing:0.7px;">ONLINE</div>
+              </div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:5px;">
+              <div style="font-family:'Sora',sans-serif; font-weight:700; font-size:28px;">Navid-PC</div>
+              <div style="display:flex; gap:10px; align-items:center;">
+                <div style="font-size:13px; font-weight:800; letter-spacing:1.2px; color:var(--ac); border:1px solid color-mix(in srgb, var(--ac) 55%, transparent); border-radius:7px; padding:4px 10px;">VIBEPOLLO</div>
+                <div style="font-size:15.5px; color:#98A1AB;">Full access · 4 ms · LAN</div>
+              </div>
+            </div>
+          </div>
+          <div style="flex:1; padding:22px; display:flex; flex-direction:column; gap:8px;">
+            <div style="height:66px; border-radius:14px; background:#1B1F26; border:2px solid var(--ac); box-shadow:0 0 0 4px color-mix(in srgb, var(--ac) 18%, transparent); display:flex; align-items:center; gap:16px; padding:0 22px;">
+              <div style="width:24px; height:18px; border:3px solid var(--ac); border-radius:4px;"></div>
+              <div style="font-size:18px; font-weight:700;">View all apps</div>
+            </div>
+            <div style="height:66px; border-radius:14px; display:flex; align-items:center; gap:16px; padding:0 22px; color:#ECEEF1;">
+              <div style="width:22px; height:22px; border-radius:50%; border:3px solid #98A1AB;"></div>
+              <div style="font-size:18px;">Test network</div>
+            </div>
+            <div style="height:66px; border-radius:14px; display:flex; align-items:center; gap:16px; padding:0 22px; color:#ECEEF1;">
+              <div style="width:22px; height:16px; border-bottom:3px solid #98A1AB; border-right:3px solid #98A1AB;"></div>
+              <div style="font-size:18px;">Rename</div>
+            </div>
+            <div style="height:66px; border-radius:14px; display:flex; align-items:center; gap:16px; padding:0 22px; color:#ECEEF1;">
+              <div style="width:20px; height:20px; border:3px solid #98A1AB; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; color:#98A1AB;">i</div>
+              <div style="font-size:18px;">View details &amp; permissions</div>
+            </div>
+            <div style="height:1px; background:rgba(255,255,255,0.07); margin:8px 22px;"></div>
+            <div style="height:66px; border-radius:14px; display:flex; align-items:center; gap:16px; padding:0 22px; color:#F26D6D;">
+              <div style="width:20px; height:22px; border:3px solid #F26D6D; border-radius:0 0 5px 5px; border-top:none; position:relative;"></div>
+              <div style="font-size:18px; font-weight:600;">Delete PC</div>
+            </div>
+          </div>
+          <div style="height:72px; flex:none; display:flex; align-items:center; gap:36px; padding:0 32px; border-top:1px solid rgba(255,255,255,0.06); background:#0B0D10;">
+            <div style="display:flex; align-items:center; gap:11px;"><span style="display:inline-flex; width:30px; height:30px; border-radius:50%; border:2px solid #98A1AB; align-items:center; justify-content:center; font-size:14px; font-weight:800; color:#ECEEF1;">A</span><span style="font-size:16px; color:#98A1AB;">Select</span></div>
+            <div style="display:flex; align-items:center; gap:11px;"><span style="display:inline-flex; width:30px; height:30px; border-radius:50%; border:2px solid #98A1AB; align-items:center; justify-content:center; font-size:14px; font-weight:800; color:#ECEEF1;">B</span><span style="font-size:16px; color:#98A1AB;">Close</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 1e SETTINGS ============ -->
+    <div id="1e" style="display:flex; flex-direction:column; gap:14px;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-family:'Sora',sans-serif; font-weight:700; font-size:14px; background:#1B1F26; border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:3px 10px;">1e</span>
+        <span style="font-size:15px; color:#98A1AB;">Settings — sidebar categories</span>
+      </div>
+      <div style="width:1920px; height:1200px; background:#0E1013; border:1px solid rgba(255,255,255,0.08); border-radius:20px; overflow:hidden; display:flex; flex-direction:column;">
+        <div style="height:84px; flex:none; display:flex; align-items:center; gap:20px; padding:0 40px; border-bottom:1px solid rgba(255,255,255,0.06);">
+          <div style="width:52px; height:52px; border-radius:14px; background:#15181D; border:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; font-size:24px; color:#ECEEF1;">‹</div>
+          <div style="font-family:'Sora',sans-serif; font-weight:700; font-size:22px;">Settings</div>
+          <div style="flex:1;"></div>
+          <div style="font-size:14px; color:var(--ac); font-weight:600; background:color-mix(in srgb, var(--ac) 12%, transparent); border-radius:8px; padding:6px 14px;">Version 0.6.7</div>
+        </div>
+        <div data-screen-label="Settings" style="flex:1; display:flex; overflow:hidden;">
+          <!-- sidebar -->
+          <div style="width:340px; flex:none; border-right:1px solid rgba(255,255,255,0.06); padding:28px 20px; display:flex; flex-direction:column; gap:6px;">
+            <div style="height:58px; border-radius:13px; background:#1B1F26; border:2px solid var(--ac); box-shadow:0 0 0 4px color-mix(in srgb, var(--ac) 16%, transparent); display:flex; align-items:center; gap:14px; padding:0 20px;"><div style="width:20px; height:15px; border:3px solid var(--ac); border-radius:3px;"></div><span style="font-size:17px; font-weight:700;">Video</span></div>
+            <div style="height:58px; border-radius:13px; display:flex; align-items:center; gap:14px; padding:0 20px; color:#B9C0C8;"><div style="width:18px; height:18px; border:3px solid #98A1AB; border-radius:50%;"></div><span style="font-size:17px;">Audio</span></div>
+            <div style="height:58px; border-radius:13px; display:flex; align-items:center; gap:14px; padding:0 20px; color:#B9C0C8;"><div style="width:20px; height:14px; border:3px solid #98A1AB; border-radius:4px;"></div><span style="font-size:17px;">Input &amp; gamepad</span></div>
+            <div style="height:58px; border-radius:13px; display:flex; align-items:center; gap:14px; padding:0 20px; color:#B9C0C8;"><div style="width:18px; height:18px; border:3px solid #98A1AB; transform:rotate(45deg);"></div><span style="font-size:17px;">Streaming (Apollo)</span></div>
+            <div style="height:58px; border-radius:13px; display:flex; align-items:center; gap:14px; padding:0 20px; color:#B9C0C8;"><div style="width:18px; height:18px; border:3px solid #98A1AB; border-radius:5px;"></div><span style="font-size:17px;">Advanced</span></div>
+          </div>
+          <!-- panel -->
+          <div style="flex:1; padding:44px 52px; display:flex; flex-direction:column; gap:30px; overflow:hidden;">
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <div style="font-family:'Sora',sans-serif; font-weight:700; font-size:28px;">Video</div>
+              <div style="display:flex; align-items:center; gap:10px; font-size:16px;"><span style="color:var(--ac); font-weight:700;">1920×1200</span><span style="color:#3A4048;">·</span><span style="color:var(--ac); font-weight:700;">120 fps</span><span style="color:#3A4048;">·</span><span style="color:var(--ac); font-weight:700;">64 Mbps</span><span style="color:#98A1AB;">— native resolution, sharpest image</span></div>
+            </div>
+            <div style="display:flex; gap:20px;">
+              <div style="flex:1; background:#15181D; border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:24px; display:flex; flex-direction:column; gap:10px;">
+                <div style="font-size:15px; color:#98A1AB; font-weight:600;">Resolution</div>
+                <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:20px; font-weight:700;">Native (1920×1200)</span><span style="color:#98A1AB; font-size:20px;">⌄</span></div>
+              </div>
+              <div style="flex:1; background:#15181D; border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:24px; display:flex; flex-direction:column; gap:10px;">
+                <div style="font-size:15px; color:#98A1AB; font-weight:600;">Frame rate</div>
+                <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:20px; font-weight:700;">120 FPS</span><span style="color:#98A1AB; font-size:20px;">⌄</span></div>
+              </div>
+            </div>
+            <div style="background:#15181D; border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:26px; display:flex; flex-direction:column; gap:16px;">
+              <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:17px; font-weight:600;">Video bitrate</span><span style="font-size:17px; font-weight:800; color:var(--ac);">64 Mbps</span></div>
+              <div style="height:10px; border-radius:6px; background:#0E1013; position:relative;"><div style="position:absolute; left:0; top:0; bottom:0; width:56%; background:var(--ac); border-radius:6px;"></div><div style="position:absolute; left:calc(56% - 12px); top:-8px; width:26px; height:26px; border-radius:50%; background:#ECEEF1; box-shadow:0 3px 10px rgba(0,0,0,0.5);"></div></div>
+              <div style="font-size:14px; color:#98A1AB;">≈ 28.8 GB/hour at this bitrate (video only). Lower on slower connections.</div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:2px;">
+              <!-- toggle rows -->
+              <div style="height:70px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.05);">
+                <div style="display:flex; flex-direction:column; gap:2px;"><span style="font-size:18px; font-weight:600;">Use virtual display</span><span style="font-size:14px; color:#98A1AB;">Apollo creates a display matching your resolution — recommended on handhelds</span></div>
+                <div style="width:60px; height:34px; border-radius:999px; background:var(--ac); position:relative; flex:none;"><div style="position:absolute; right:4px; top:4px; width:26px; height:26px; border-radius:50%; background:#08090B;"></div></div>
+              </div>
+              <div style="height:70px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.05);">
+                <div style="display:flex; flex-direction:column; gap:2px;"><span style="font-size:18px; font-weight:600;">HDR streaming</span><span style="font-size:14px; color:#98A1AB;">Experimental — requires HDR-capable host and display</span></div>
+                <div style="width:60px; height:34px; border-radius:999px; background:#2A2F37; position:relative; flex:none;"><div style="position:absolute; left:4px; top:4px; width:26px; height:26px; border-radius:50%; background:#98A1AB;"></div></div>
+              </div>
+              <div style="height:70px; display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; flex-direction:column; gap:2px;"><span style="font-size:18px; font-weight:600;">V-Sync</span><span style="font-size:14px; color:#98A1AB;">Reduces tearing; may add latency</span></div>
+                <div style="width:60px; height:34px; border-radius:999px; background:#2A2F37; position:relative; flex:none;"><div style="position:absolute; left:4px; top:4px; width:26px; height:26px; border-radius:50%; background:#98A1AB;"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <sc-if value="{{ showHints }}" hint-placeholder-val="{{ true }}">
+        <div style="height:72px; flex:none; display:flex; align-items:center; gap:36px; padding:0 44px; border-top:1px solid rgba(255,255,255,0.06); background:#0B0D10;">
+          <div style="display:flex; align-items:center; gap:11px;"><span style="display:inline-flex; height:30px; padding:0 10px; border-radius:8px; border:2px solid #98A1AB; align-items:center; justify-content:center; font-size:13px; font-weight:800; color:#ECEEF1;">LB</span><span style="display:inline-flex; height:30px; padding:0 10px; border-radius:8px; border:2px solid #98A1AB; align-items:center; justify-content:center; font-size:13px; font-weight:800; color:#ECEEF1;">RB</span><span style="font-size:16px; color:#98A1AB;">Switch category</span></div>
+          <div style="display:flex; align-items:center; gap:11px;"><span style="display:inline-flex; width:30px; height:30px; border-radius:50%; border:2px solid #98A1AB; align-items:center; justify-content:center; font-size:14px; font-weight:800; color:#ECEEF1;">A</span><span style="font-size:16px; color:#98A1AB;">Toggle / adjust</span></div>
+          <div style="flex:1;"></div>
+          <div style="display:flex; align-items:center; gap:11px;"><span style="display:inline-flex; width:30px; height:30px; border-radius:50%; border:2px solid #98A1AB; align-items:center; justify-content:center; font-size:14px; font-weight:800; color:#ECEEF1;">B</span><span style="font-size:16px; color:#98A1AB;">Back</span></div>
+        </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- ============ 1f HELP ============ -->
+    <div id="1f" style="display:flex; flex-direction:column; gap:14px;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-family:'Sora',sans-serif; font-weight:700; font-size:14px; background:#1B1F26; border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:3px 10px;">1f</span>
+        <span style="font-size:15px; color:#98A1AB;">Help — shortcuts &amp; Quick Menu</span>
+      </div>
+      <div style="width:1920px; height:1200px; background:#0E1013; border:1px solid rgba(255,255,255,0.08); border-radius:20px; overflow:hidden; display:flex; flex-direction:column;">
+        <div style="height:84px; flex:none; display:flex; align-items:center; gap:20px; padding:0 40px; border-bottom:1px solid rgba(255,255,255,0.06);">
+          <div style="width:52px; height:52px; border-radius:14px; background:#15181D; border:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; font-size:24px; color:#ECEEF1;">‹</div>
+          <div style="font-family:'Sora',sans-serif; font-weight:700; font-size:22px;">Help</div>
+        </div>
+        <div data-screen-label="Help" style="flex:1; padding:52px 56px; display:flex; gap:32px; overflow:hidden;">
+          <div style="flex:1.1; display:flex; flex-direction:column; gap:22px;">
+            <div style="border-radius:20px; background:linear-gradient(135deg, color-mix(in srgb, var(--ac) 20%, #15181D), #15181D); border:1px solid color-mix(in srgb, var(--ac) 30%, transparent); padding:32px; display:flex; flex-direction:column; gap:14px;">
+              <div style="font-size:14px; font-weight:800; letter-spacing:1.4px; color:var(--ac);">QUICK MENU</div>
+              <div style="font-family:'Sora',sans-serif; font-weight:700; font-size:24px;">Open the in-stream overlay</div>
+              <div style="font-size:16px; color:#B9C0C8; line-height:1.5;">Clipboard sync, server commands, and stream controls — any time during a session.</div>
+              <div style="display:flex; gap:10px; align-items:center; margin-top:6px; flex-wrap:wrap;">
+                <span style="height:38px; padding:0 14px; border-radius:9px; background:#0E1013; border:1px solid rgba(255,255,255,0.14); display:flex; align-items:center; font-size:15px; font-weight:700;">Select</span><span style="color:#98A1AB;">+</span>
+                <span style="height:38px; padding:0 14px; border-radius:9px; background:#0E1013; border:1px solid rgba(255,255,255,0.14); display:flex; align-items:center; font-size:15px; font-weight:700;">L1</span><span style="color:#98A1AB;">+</span>
+                <span style="height:38px; padding:0 14px; border-radius:9px; background:#0E1013; border:1px solid rgba(255,255,255,0.14); display:flex; align-items:center; font-size:15px; font-weight:700;">R1</span><span style="color:#98A1AB;">+</span>
+                <span style="height:38px; width:38px; border-radius:50%; background:#0E1013; border:1px solid rgba(255,255,255,0.14); display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:800;">Y</span>
+              </div>
+            </div>
+            <div style="border-radius:20px; background:#15181D; border:1px solid rgba(255,255,255,0.08); padding:28px; display:flex; flex-direction:column; gap:18px;">
+              <div style="font-size:19px; font-weight:700;">Gamepad shortcuts</div>
+              <div style="display:flex; flex-direction:column; gap:14px;">
+                <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:16px; color:#B9C0C8;">Quit stream</span><span style="font-size:14px; color:#98A1AB; font-weight:600;">Start + Select + L1 + R1</span></div>
+                <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:16px; color:#B9C0C8;">Performance stats</span><span style="font-size:14px; color:#98A1AB; font-weight:600;">Select + L1 + R1 + X</span></div>
+                <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:16px; color:#B9C0C8;">Mouse emulation</span><span style="font-size:14px; color:#98A1AB; font-weight:600;">Long press Start</span></div>
+              </div>
+            </div>
+          </div>
+          <div style="flex:1; display:flex; flex-direction:column; gap:22px;">
+            <div style="border-radius:20px; background:#15181D; border:1px solid rgba(255,255,255,0.08); padding:28px; display:flex; flex-direction:column; gap:18px;">
+              <div style="font-size:19px; font-weight:700;">Keyboard shortcuts</div>
+              <div style="font-size:14px; color:#98A1AB;">All require <span style="color:#B9C0C8; font-weight:600;">Ctrl + Alt + Shift</span></div>
+              <div style="display:flex; flex-direction:column; gap:12px;">
+                <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:16px; color:#B9C0C8;">Toggle Quick Menu</span><span style="height:34px; width:34px; border-radius:8px; background:#0E1013; border:1px solid rgba(255,255,255,0.14); display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:700;">\</span></div>
+                <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:16px; color:#B9C0C8;">Quit stream</span><span style="height:34px; width:34px; border-radius:8px; background:#0E1013; border:1px solid rgba(255,255,255,0.14); display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:700;">Q</span></div>
+                <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:16px; color:#B9C0C8;">Toggle fullscreen</span><span style="height:34px; width:34px; border-radius:8px; background:#0E1013; border:1px solid rgba(255,255,255,0.14); display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:700;">X</span></div>
+                <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:16px; color:#B9C0C8;">Paste clipboard</span><span style="height:34px; width:34px; border-radius:8px; background:#0E1013; border:1px solid rgba(255,255,255,0.14); display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:700;">V</span></div>
+              </div>
+            </div>
+            <div style="border-radius:20px; background:#15181D; border:1px solid rgba(255,255,255,0.08); padding:28px; display:flex; flex-direction:column; gap:12px;">
+              <div style="font-size:19px; font-weight:700;">Remote play</div>
+              <div style="font-size:15.5px; color:#B9C0C8; line-height:1.6;">Streaming over LAN works out of the box. For a different network, put both devices on <span style="color:var(--ac); font-weight:600;">Tailscale</span> and add the host by its Tailscale address — no port forwarding.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#2FC6D0&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#2FC6D0&quot;,&quot;#7C8CF8&quot;,&quot;#3ED598&quot;,&quot;#F0A868&quot;],&quot;section&quot;:&quot;Theme&quot;},&quot;showHints&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Chrome&quot;}}">
+class Component extends DCLogic {
+  applyAccent() {
+    document.body.style.setProperty('--ac', this.props.accent ?? '#2FC6D0');
+  }
+  componentDidMount() { this.applyAccent(); }
+  componentDidUpdate() { this.applyAccent(); }
+  renderVals() {
+    return {
+      showHints: this.props.showHints ?? true
+    };
+  }
+}
+</script>
+</body>
+</html>
