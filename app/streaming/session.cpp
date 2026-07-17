@@ -193,9 +193,13 @@ void Session::clConnectionStatusUpdate(int connectionStatus)
     // Vibemis: adaptive-bitrate observation slice. When the user enables adaptive bitrate
     // and the host reports a POOR connection, emit a structured recommendation to the log. This is
     // intentionally observation-only for now.
-    // TODO: once moonlight-common-c exposes a runtime bitrate API, step
-    // m_StreamConfig.bitrate down here on sustained CONN_STATUS_POOR and recover slowly on
-    // sustained CONN_STATUS_OKAY, instead of only logging the recommendation.
+    // NOTE(P3.24): runtime bitrate stepping is UPSTREAM-GATED and deliberately not implemented.
+    // The BL-2092 phase-sweep pre-check confirmed the moonlight-common-c submodule (ClassicOldSong
+    // fork, HEAD ad329b2) exposes NO LiSetVideoBitrate-class runtime-bitrate symbol — the only
+    // runtime video-control entry point is LiRequestIdrFrame(), and STREAM_CONFIGURATION.bitrate is
+    // write-once at LiStartConnection(). Stepping the live encoder bitrate would require hacking the
+    // control stream, which we will not do. Revisit when upstream adds a runtime bitrate API (see
+    // docs/PHASE_STATUS.md P3.24 and the P4.2 upstream-rebase symbol re-check).
     if (s_ActiveSession->m_Preferences->adaptiveBitrate && connectionStatus == CONN_STATUS_POOR) {
         SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
                     "[adaptive-bitrate] Poor connection at %d kbps — recommend lowering bitrate "

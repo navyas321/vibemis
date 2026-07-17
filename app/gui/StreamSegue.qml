@@ -77,7 +77,8 @@ Item {
     function sessionFinished(portTestResult)
     {
         // If the stream was up and dropped unexpectedly, retry in place
-        // instead of popping back to the grid. Guarded by the setting (default off).
+        // instead of popping back to the grid. Guarded by the setting (default on,
+        // Android parity — see StreamingPreferences::autoReconnect, BL-2072/P3.21).
         if (StreamingPreferences.autoReconnect && !quitAfter && streamStarted &&
                 session && session.wasUnexpectedTermination() &&
                 reconnectAttempts < maxReconnectAttempts) {
