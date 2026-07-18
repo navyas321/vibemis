@@ -22,12 +22,19 @@ off as fixes land.)
 | **Settings page doesn't drag-scroll** (touch or pointer drag) | Use the scroll wheel or D-pad/stick navigation | Confirmed |
 | **Host-type badge can mislabel** Apollo-lineage vs Sunshine hosts | Cosmetic only — streaming is unaffected | Fix in flight |
 
+## Limitations
+
+Permanent / architectural constraints (not build-specific bugs). Kept here so the README stays
+version-less and free of any issues/limitations tables.
+
+| Feature | Status |
+|---|---|
+| **Microphone passthrough** | Not possible yet in any Moonlight-family client: it requires host-side protocol support that Apollo/Vibepollo does not ship (tracked upstream — Apollo discussion #591). |
+
 ## Experimental / not yet validated
 
-The microphone-passthrough limit is an architectural protocol gap (a permanent constraint of
-the Moonlight family) and stays in the README's **Known limitations**. The HDR item below is a
-validation gap specific to the current build — it resolves once the code path is tested on HDR
-hardware — so it lives here rather than in the README.
+The HDR item below is a validation gap specific to the current build — it resolves once the code
+path is tested on HDR hardware.
 
 | Feature | Status |
 |---|---|

@@ -152,15 +152,9 @@ AppImage to a stable path with a clean `Vibemis` desktop entry, ready to Add to 
   chord, the Add-to-Steam tip, and a pointer to Settings, then it never shows again. Gamepad-first —
   a single focused "Get started" action (**A**); **B** / Esc dismisses
 
-### Known issues
+### Known issues & limitations
 
-Current known issues & per-release changes -> see [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) and the latest Release.
-
-### Known limitations
-
-| Feature | Status |
-|---|---|
-| **Microphone passthrough** | Not possible yet in any Moonlight-family client: it requires host-side protocol support that Apollo/Vibepollo does not ship (tracked upstream — Apollo discussion #591). |
+Current known issues, limitations, and per-release changes -> see [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) and the latest [Release](https://github.com/navyas321/vibemis/releases/latest).
 
 ---
 

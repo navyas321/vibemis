@@ -114,14 +114,17 @@ Vibemis IS and DOES right now, in **evergreen, version-less terms only**:
   itself changed (channels, SemVer rules) — never a specific "current" version number
 - **Keyboard/Gamepad shortcuts** — update if anything changed
 
-**The README must contain NO Known-Issues table and NO version-specific content.** No
-"current stable is X.Y.Z", no per-build bug/status list, no version enumerations — every one
-of those rots the moment the next build ships. That content lives outside the README:
+**The README must contain NO Known-Issues table, NO Known-Limitations table, and NO
+version-specific content.** No "current stable is X.Y.Z", no per-build bug/status list, no
+known-limitations table, no version enumerations — every one of those rots the moment the next
+build ships. That content lives outside the README:
 
-- **Current known issues** — hand-maintained in `docs/KNOWN_ISSUES.md`. Update that file
-  (not the README) when bugs are found, worked around, or fixed.
+- **Current known issues & limitations** — hand-maintained in `docs/KNOWN_ISSUES.md` (which has
+  a `## Confirmed bugs`, a `## Limitations`, and an `## Experimental` section). Update that file
+  (not the README) when bugs or limitations are found, worked around, or fixed.
 - **Per-release changes** ("what was fixed/added in this release") — `docs/release-notes-*.md`
   and the GitHub Release for that tag. Never in the README.
 
-Do NOT re-add a Known-Issues table or a current-version line to the README. The README is
-always the present-tense, version-less description of what the current build is and does.
+Do NOT re-add a Known-Issues or Known-Limitations table, or a current-version line, to the
+README. The README is always the present-tense, version-less description of what the current
+build is and does.
