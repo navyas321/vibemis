@@ -348,7 +348,16 @@ void SteamShortcut::ensureRegistered()
         return; // no Steam installation found on this machine - nothing to do
     }
 
-    const QString exe = QCoreApplication::applicationFilePath();
+    // Under an AppImage, applicationFilePath() resolves to the ephemeral
+    // FUSE mount point (/tmp/.mount_*), which stops existing the moment this
+    // process exits - writing that into shortcuts.vdf would break the tile on
+    // the very next launch. $APPIMAGE is the runtime-provided stable path to
+    // the outer .AppImage file itself; same convention main.cpp's updater
+    // already relies on (see UpdateSelfTestRequested).
+    QString exe = qEnvironmentVariable("APPIMAGE");
+    if (exe.isEmpty()) {
+        exe = QCoreApplication::applicationFilePath();
+    }
     if (exe.isEmpty()) {
         return;
     }
