@@ -178,6 +178,7 @@ SOURCES += \
     backend/computermanager.cpp \
     backend/boxartmanager.cpp \
     backend/richpresencemanager.cpp \
+    backend/steamshortcut.cpp \
     cli/commandlineparser.cpp \
     cli/listapps.cpp \
     cli/quitstream.cpp \
@@ -230,6 +231,7 @@ HEADERS += \
     backend/computermanager.h \
     backend/boxartmanager.h \
     backend/richpresencemanager.h \
+    backend/steamshortcut.h \
     cli/commandlineparser.h \
     cli/listapps.h \
     cli/quitstream.h \

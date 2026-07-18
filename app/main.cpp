@@ -38,6 +38,7 @@
 #include "cli/startstream.h"
 #include "cli/pair.h"
 #include "cli/commandlineparser.h"
+#include "backend/steamshortcut.h"
 #include "path.h"
 #include "utils.h"
 #include "gui/computermodel.h"
@@ -1053,6 +1054,17 @@ int main(int argc, char *argv[])
             hasGUI = false;
             break;
         }
+    }
+
+    if (commandLineParserResult == GlobalCommandLineParser::NormalStartRequested) {
+        // Vibemis: silently self-heal our own Steam library shortcut/icon on every
+        // normal launch (fixes a fragile manual "Add a Non-Steam Game" flow that
+        // otherwise leaves a blank icon). Runs in the background and is idempotent,
+        // so it costs nothing once the shortcut is already correct. Only for the
+        // interactive launch path, not the scripted CLI stream/quit/pair/list actions.
+        QThreadPool::globalInstance()->start(QRunnable::create([]() {
+            SteamShortcut::ensureRegistered();
+        }));
     }
 
     if (hasGUI) {

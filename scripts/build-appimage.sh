@@ -208,8 +208,16 @@ export QMAKE=qmake6
 echo Creating AppImage
 pushd "$INSTALLER_FOLDER"
 # Vibemis: take upstream's modern linuxdeploy approach (linuxdeployqt is broken on glibc >= 2.36).
+# Mirrors the proven invocation in .github/workflows/dev-build.yml exactly (--executable and
+# --desktop-file passed explicitly rather than relying on linuxdeploy's single-file auto-detection).
+# The --library=/usr/local/lib/libSDL3.so.0 flag that used to be here was leftover from an
+# abandoned SDL2->SDL3 migration attempt: the compiled binary only ever links libSDL2 (confirmed
+# via `ldd`), no file on a stock build machine provides that path, and CI's own working AppImage
+# job has never passed this flag - it just made every local build of this script fail at the
+# packaging step with "ERROR: No such file or directory: /usr/local/lib/libSDL3.so.0".
 VERSION=$VERSION $LINUXDEPLOY --appdir $DEPLOY_FOLDER \
-  --library=/usr/local/lib/libSDL3.so.0 \
+  --executable $DEPLOY_FOLDER/usr/bin/vibemis \
+  --desktop-file $DEPLOY_FOLDER/usr/share/applications/com.vibemis.Vibemis.desktop \
   --icon-file $DEPLOY_FOLDER/usr/share/icons/hicolor/256x256/apps/vibemis.png \
   --plugin qt --output appimage || fail "linuxdeploy failed!"
 popd
