@@ -58,9 +58,8 @@ Same idea: download the latest `.AppImage` from
 (right-click → Properties → *"Allow executing as program"*, or `chmod +x Vibemis-*.AppImage`),
 then double-click or run `./Vibemis-*.AppImage`.
 
-> **`0.3.0` is the current stable** — the redesign release, shipped with a from-scratch
-> rebuilt auto-updater after four release candidates of on-device verification. The
-> **`.AppImage` is Vibemis's distribution channel** on every distro — download it, run it,
+> **Install the latest stable from the [Releases page](https://github.com/navyas321/vibemis/releases/latest).**
+> The **`.AppImage` is Vibemis's distribution channel** on every distro — download it, run it,
 > and it keeps itself up to date in place (see [Auto-updates](#auto-updates)). A Flathub
 > (Flatpak) package was explored but **declined under Flathub's policy on
 > generative-AI-assisted projects**, so there is no Flatpak build; the self-updating
@@ -155,24 +154,12 @@ AppImage to a stable path with a clean `Vibemis` desktop entry, ready to Add to 
 
 ### Known issues
 
-Confirmed bugs in the current build, with workarounds. (Fixes in flight are noted; rows drop
-off as fixes land.)
-
-| Issue | Workaround | Status |
-|---|---|---|
-| **D-pad steps twice** on adjustable Settings controls (e.g. the resolution-scale slider moves ±10 per press instead of ±5) | Use keyboard arrows, touch drag, or the mouse | Confirmed; fix queued (gamepad→key translation layer) |
-| **In-stream touch taps still don't click** (and drags don't draw) on the host in direct-touch mode — the client now sends correct full-contact touch, but the host injects it as hover | Enable "Use touchscreen as a virtual trackpad" in Input settings | Client side fixed; awaiting a host-side (Vibepollo) fix |
-| **Quick Menu items can't be tapped** — menu navigation is gamepad/keyboard only, so a touch-only user can open the menu but not operate it | Navigate with D-pad + A, or arrow keys + Enter | Confirmed; touch operability planned |
-| **Text-send has no on-screen keyboard** — on a keyboard-less handheld there's no way to type into it; the first character can also drop if you type immediately | Use a physical/USB keyboard, or Paste Clipboard (clipboard sync) instead | Confirmed; OSK planned |
-| **MENU / KBD touch buttons have small tap targets** | Aim carefully, or use the gamepad combo / keyboard shortcut | Confirmed; enlargement queued |
-| **Settings page doesn't drag-scroll** (touch or pointer drag) | Use the scroll wheel or D-pad/stick navigation | Confirmed |
-| **Host-type badge can mislabel** Apollo-lineage vs Sunshine hosts | Cosmetic only — streaming is unaffected | Fix in flight |
+Current known issues & per-release changes -> see [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) and the latest Release.
 
 ### Known limitations
 
 | Feature | Status |
 |---|---|
-| **HDR streaming** | Ships **opt-in and marked Experimental** (off by default; auto-disabled on unsupported PCs). The code path is complete but has not yet been validated on HDR hardware — the primary test device's panel is SDR. Validation is planned via an external HDR display. |
 | **Microphone passthrough** | Not possible yet in any Moonlight-family client: it requires host-side protocol support that Apollo/Vibepollo does not ship (tracked upstream — Apollo discussion #591). |
 
 ---
@@ -292,10 +279,9 @@ zero-padded counters. The first stable is `0.1.0`; its release-candidate lineage
 > the in-app channel picker, to find the newest build of a specific tier.
 
 The releases page lists the project's **complete build history** under the semver catalog —
-from `0.1.0-alpha.001` (the first automated build, July 2025) through the beta and rc
-trains to the `0.1.0` stable. Historical entries are prerelease-flagged markers without
-artifacts; see [`docs/RELEASE_HISTORY.md`](docs/RELEASE_HISTORY.md) for the full map
-(original tags, commits, CI runs, and the story of every stable number).
+every alpha, beta, and rc train through each stable. Historical entries are prerelease-flagged
+markers without artifacts; see [`docs/RELEASE_HISTORY.md`](docs/RELEASE_HISTORY.md) for the
+full map (original tags, commits, CI runs, and the story of every stable number).
 
 ---
 

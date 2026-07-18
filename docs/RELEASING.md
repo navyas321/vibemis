@@ -105,13 +105,23 @@ the OLD one (from the commit before the fix).
 ## README update rule — required at every release
 
 After merging a feature to `vibemis-main`, update `README.md` before the release.
-The README is NOT a changelog — it describes what Vibemis IS and DOES right now:
+The README is NOT a changelog and NOT a build-specific status page — it describes what
+Vibemis IS and DOES right now, in **evergreen, version-less terms only**:
 
 - **Features section** — add any new user-visible features under the right heading
-  (Inherited from Moonlight Qt / Artemis Qt / Added by Vibemis)
-- **Known Issues table** — list current confirmed bugs with workaround and status
-- **Downloads section** — reflect current release tier model if it changed
+  (From Moonlight Qt / From Artemis / Apollo / Added by Vibemis)
+- **Downloads section** — reflect the channel / release-tier model only if the *policy*
+  itself changed (channels, SemVer rules) — never a specific "current" version number
 - **Keyboard/Gamepad shortcuts** — update if anything changed
 
-Do NOT list "what was fixed in this release" — that belongs in commit messages and PRs.
-The README is always the present-tense description of the current build.
+**The README must contain NO Known-Issues table and NO version-specific content.** No
+"current stable is X.Y.Z", no per-build bug/status list, no version enumerations — every one
+of those rots the moment the next build ships. That content lives outside the README:
+
+- **Current known issues** — hand-maintained in `docs/KNOWN_ISSUES.md`. Update that file
+  (not the README) when bugs are found, worked around, or fixed.
+- **Per-release changes** ("what was fixed/added in this release") — `docs/release-notes-*.md`
+  and the GitHub Release for that tag. Never in the README.
+
+Do NOT re-add a Known-Issues table or a current-version line to the README. The README is
+always the present-tense, version-less description of what the current build is and does.
