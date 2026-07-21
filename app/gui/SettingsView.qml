@@ -309,7 +309,7 @@ Item {
         }
     }
 
-    // ---- Sidebar: 5 focusable category rows (redesign) ----
+    // ---- Sidebar: 6 focusable category rows (redesign) ----
     Rectangle {
         id: sidebar
         anchors.top: header.bottom
@@ -345,6 +345,7 @@ Item {
                     { icon: "audio",     label: qsTr("Audio") },
                     { icon: "gamepad",   label: qsTr("Input & gamepad") },
                     { icon: "streaming", label: qsTr("Streaming") },
+                    { icon: "apps",      label: qsTr("App & UI") },
                     { icon: "advanced",  label: qsTr("Advanced") }
                 ]
                 delegate: Button {
@@ -1675,6 +1676,22 @@ Item {
                     topPadding: VbTokens.space1
                 }
 
+                // BL-2263 (Settings IA): relocated from the (old) UI Settings card -
+                // it modulates the stream bitrate configured just above.
+                VbToggleRow {
+                    id: reduceBitrateOnBatteryCheck
+                    text: qsTr("Reduce bitrate when on battery")
+                    checked: StreamingPreferences.reduceBitrateOnBattery
+                    onCheckedChanged: {
+                        StreamingPreferences.reduceBitrateOnBattery = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("When this device is running on battery, start streams at a lower bitrate (60% of the configured value) to save power and reduce heat. Plugged-in streams are unaffected.")
+                }
+
                 Label {
                     width: parent.width
                     id: windowModeTitle
@@ -2037,11 +2054,12 @@ Item {
             }
         }
 
-        // Restyled to the Video-page card pattern (VbSettingsCard + Sora header +
-        // VbToggleRow rows). Bindings, visibility logic and tooltips are unchanged.
+        // BL-2263 (Settings IA): decoder/codec/renderer/HDR/YUV444 relocated here from
+        // the Advanced page - they are Video concerns. Ids, bindings, tooltips and
+        // preference keys unchanged; pure relocation.
         VbSettingsCard {
-            id: artemisStreamingGroupBox
-            visible: settingsPage.category === 3
+            id: videoDecodingGroupBox
+            visible: settingsPage.category === 0
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
             font.pixelSize: VbTokens.typeBody
 
@@ -2050,1035 +2068,7 @@ Item {
                 spacing: VbTokens.space3
 
                 VbSectionHeader {
-                    text: qsTr("Vibemis Streaming Enhancements")
-                }
-
-                Label {
-                    width: parent.width
-                    text: qsTr("Client-side streaming enhancements")
-                    font.pixelSize: VbTokens.typeLabel
-                    font.family: VbTokens.fontBody
-                    wrapMode: Text.Wrap
-                }
-
-                Label {
-                    width: parent.width
-                    text: qsTr("These features require an Apollo / Vibepollo host (they use Apollo's extended protocol — not available with plain Sunshine or GeForce Experience).")
-                    font.pixelSize: VbTokens.typeCaption
-                    font.family: VbTokens.fontBody
-                    wrapMode: Text.Wrap
-                    color: VbTokens.textDim
-                }
-
-                // Virtual Display Control
-                VbToggleRow {
-                    id: virtualDisplayCheck
-                    text: qsTr("Use Virtual Display")
-                    checked: StreamingPreferences.useVirtualDisplay
-                    onCheckedChanged: {
-                        StreamingPreferences.useVirtualDisplay = checked
-                    }
-
-                    ToolTip.delay: 1000
-                    ToolTip.timeout: 5000
-                    ToolTip.visible: hovered
-                    ToolTip.text: qsTr("Creates a virtual display on the host for streaming. Requires an Apollo / Vibepollo host - not available with plain Sunshine/GeForce Experience.")
-                }
-
-                // Vibemis: clarify the virtual-display behavior, which commonly confuses
-                // new users. Apollo auto-creates a per-client virtual display matching the
-                // resolution/refresh you select above — ideal on a handheld so you don't have to
-                // change the host's physical display. Shown contextually based on the toggle.
-                Label {
-                    width: parent.width
-                    visible: virtualDisplayCheck.checked
-                    text: qsTr("✓ Your Apollo / Vibepollo host will create a virtual display matching your selected resolution and refresh rate — recommended on a handheld (the host's physical monitor is left untouched).")
-                    font.pixelSize: VbTokens.typeCaption
-                    font.family: VbTokens.fontBody
-                    wrapMode: Text.Wrap
-                    color: VbTokens.statusSuccess
-                    leftPadding: VbTokens.space2
-                }
-                Label {
-                    width: parent.width
-                    visible: !virtualDisplayCheck.checked
-                    text: qsTr("Without a virtual display, the stream uses the host's current physical display resolution. Enable this with an Apollo / Vibepollo host to match this device's resolution automatically.")
-                    font.pixelSize: VbTokens.typeCaption
-                    font.family: VbTokens.fontBody
-                    wrapMode: Text.Wrap
-                    color: VbTokens.textTertiary
-                    leftPadding: VbTokens.space2
-                }
-
-                // Resolution Scaling
-                VbToggleRow {
-                    id: resolutionScalingCheck
-                    text: qsTr("Enable Resolution Scaling")
-                    checked: StreamingPreferences.enableResolutionScaling
-                    onCheckedChanged: {
-                        StreamingPreferences.enableResolutionScaling = checked
-                    }
-
-                    ToolTip.delay: 1000
-                    ToolTip.timeout: 5000
-                    ToolTip.visible: hovered
-                    ToolTip.text: qsTr("Scales the stream resolution. Useful for improving performance on lower-end devices or increasing quality on high-DPI displays.")
-                }
-
-                Row {
-                    spacing: VbTokens.space3
-                    visible: StreamingPreferences.enableResolutionScaling
-                    width: parent.width
-
-                    Label {
-                        id: scaleFactorLabel
-                        text: qsTr("Scale Factor:")
-                        font.pixelSize: VbTokens.typeCaption
-                        font.family: VbTokens.fontBody
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-
-                    Slider {
-                        id: resolutionScaleSlider
-                        from: 50    // 50%
-                        to: 200     // 200%
-                        stepSize: 5
-                        value: StreamingPreferences.resolutionScaleFactor
-
-                        // This Slider sits in a plain Row and its background derives
-                        // width from availableWidth (contributing no implicitWidth), so without
-                        // an explicit width it collapsed to ~0px and the handle was undraggable.
-                        // Mirror the Video-page bitrate slider: fill the row between the labels.
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: parent.width - scaleFactorLabel.width - scaleValueLabel.width - (2 * parent.spacing)
-
-                        // Guarantee one arrow / d-pad press moves exactly one stepSize
-                        // (5). The default handling was observed stepping twice (+10); overriding
-                        // Left/Right with a single accepted increase()/decrease() forces one step
-                        // per press and stops Left from bubbling to the Flickable's focus-return
-                        // handler mid-adjustment. Range 50-200 / stepSize 5 unchanged.
-                        Keys.onLeftPressed: { resolutionScaleSlider.decrease(); event.accepted = true }
-                        Keys.onRightPressed: { resolutionScaleSlider.increase(); event.accepted = true }
-
-                        // Same track/handle recipe as the Video page's bitrate slider.
-                        background: Rectangle {
-                            x: resolutionScaleSlider.leftPadding
-                            y: resolutionScaleSlider.topPadding + resolutionScaleSlider.availableHeight / 2 - height / 2
-                            width: resolutionScaleSlider.availableWidth
-                            height: 10
-                            radius: 6
-                            color: VbTokens.bgWindow
-                            Rectangle {
-                                width: resolutionScaleSlider.visualPosition * parent.width
-                                height: parent.height
-                                radius: 6
-                                color: VbTokens.accent
-                            }
-                        }
-                        handle: Rectangle {
-                            x: resolutionScaleSlider.leftPadding + resolutionScaleSlider.visualPosition * (resolutionScaleSlider.availableWidth - width)
-                            y: resolutionScaleSlider.topPadding + resolutionScaleSlider.availableHeight / 2 - height / 2
-                            width: 26
-                            height: 26
-                            radius: 13
-                            color: VbTokens.text
-                        }
-
-                        onValueChanged: {
-                            StreamingPreferences.resolutionScaleFactor = value
-                        }
-                    }
-
-                    Label {
-                        id: scaleValueLabel
-                        text: resolutionScaleSlider.value + "%"
-                        font.pixelSize: VbTokens.typeCaption
-                        font.family: VbTokens.fontBody
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: 40
-                    }
-                }
-            }
-        }
-
-        // Restyled to the Video-page card pattern. Bindings unchanged.
-        VbSettingsCard {
-            id: audioSettingsGroupBox
-            visible: settingsPage.category === 1
-            width: (parent.width - (parent.leftPadding + parent.rightPadding))
-            font.pixelSize: VbTokens.typeBody
-
-            Column {
-                anchors.fill: parent
-                spacing: VbTokens.space3
-
-                VbSectionHeader {
-                    text: qsTr("Audio Settings")
-                }
-
-                Label {
-                    width: parent.width
-                    id: resAudioTitle
-                    text: qsTr("Audio configuration")
-                    font.pixelSize: VbTokens.typeLabel
-                    font.family: VbTokens.fontBody
-                    wrapMode: Text.Wrap
-                }
-
-                AutoResizingComboBox {
-                    // ignore setting the index at first, and actually set it when the component is loaded
-                    Component.onCompleted: {
-                        var saved_audio = StreamingPreferences.audioConfig
-                        currentIndex = 0
-                        for (var i = 0; i < audioListModel.count; i++) {
-                            var el_audio = audioListModel.get(i).val;
-                            if (saved_audio === el_audio) {
-                                currentIndex = i
-                                break
-                            }
-                        }
-                        activated(currentIndex)
-                    }
-
-                    id: audioComboBox
-                    textRole: "text"
-                    model: ListModel {
-                        id: audioListModel
-                        ListElement {
-                            text: qsTr("Stereo")
-                            val: StreamingPreferences.AC_STEREO
-                        }
-                        ListElement {
-                            text: qsTr("5.1 surround sound")
-                            val: StreamingPreferences.AC_51_SURROUND
-                        }
-                        ListElement {
-                            text: qsTr("7.1 surround sound")
-                            val: StreamingPreferences.AC_71_SURROUND
-                        }
-                    }
-                    // ::onActivated must be used, as it only listens for when the index is changed by a human
-                    onActivated : {
-                        StreamingPreferences.audioConfig = audioListModel.get(currentIndex).val
-                    }
-                }
-
-
-                VbToggleRow {
-                    id: audioPcCheck
-                    text: qsTr("Mute host PC speakers while streaming")
-                    checked: !StreamingPreferences.playAudioOnHost
-                    onCheckedChanged: {
-                        StreamingPreferences.playAudioOnHost = !checked
-                    }
-
-                    ToolTip.delay: 1000
-                    ToolTip.timeout: 5000
-                    ToolTip.visible: hovered
-                    ToolTip.text: qsTr("You must restart any game currently in progress for this setting to take effect")
-                }
-
-                VbToggleRow {
-                    id: muteOnFocusLossCheck
-                    text: qsTr("Mute audio stream when Vibemis is not the active window")
-                    visible: SystemProperties.hasDesktopEnvironment
-                    checked: StreamingPreferences.muteOnFocusLoss
-                    onCheckedChanged: {
-                        StreamingPreferences.muteOnFocusLoss = checked
-                    }
-
-                    ToolTip.delay: 1000
-                    ToolTip.timeout: 5000
-                    ToolTip.visible: hovered
-                    ToolTip.text: qsTr("Mutes Vibemis's audio when you Alt+Tab out of the stream or click on a different window.")
-                }
-            }
-        }
-
-        // Restyled to the Video-page card pattern. Bindings unchanged.
-        VbSettingsCard {
-            id: hostSettingsGroupBox
-            visible: settingsPage.category === 3
-            width: (parent.width - (parent.leftPadding + parent.rightPadding))
-            font.pixelSize: VbTokens.typeBody
-
-            Column {
-                anchors.fill: parent
-                spacing: VbTokens.space3
-
-                VbSectionHeader {
-                    text: qsTr("Host Settings")
-                }
-
-                VbToggleRow {
-                    id: optimizeGameSettingsCheck
-                    text: qsTr("Optimize game settings for streaming")
-                    checked: StreamingPreferences.gameOptimizations
-                    onCheckedChanged: {
-                        StreamingPreferences.gameOptimizations = checked
-                    }
-                }
-
-                VbToggleRow {
-                    id: quitAppAfter
-                    text: qsTr("Quit app on host PC after ending stream")
-                    checked: StreamingPreferences.quitAppAfter
-                    onCheckedChanged: {
-                        StreamingPreferences.quitAppAfter = checked
-                    }
-
-                    ToolTip.delay: 1000
-                    ToolTip.timeout: 5000
-                    ToolTip.visible: hovered
-                    ToolTip.text: qsTr("This will close the app or game you are streaming when you end your stream. You will lose any unsaved progress!")
-                }
-
-                VbToggleRow {
-                    id: autoReconnectCheck
-                    text: qsTr("Automatically reconnect if the stream drops")
-                    checked: StreamingPreferences.autoReconnect
-                    onCheckedChanged: {
-                        StreamingPreferences.autoReconnect = checked
-                    }
-
-                    ToolTip.delay: 1000
-                    ToolTip.timeout: 5000
-                    ToolTip.visible: hovered
-                    ToolTip.text: qsTr("If a stream ends unexpectedly (a network blip or the host waking), Vibemis will try to reconnect automatically.")
-                }
-            }
-        }
-
-        // Restyled to the Video-page card pattern. Bindings unchanged.
-        VbSettingsCard {
-            id: uiSettingsGroupBox
-            visible: settingsPage.category === 4
-            width: (parent.width - (parent.leftPadding + parent.rightPadding))
-            font.pixelSize: VbTokens.typeBody
-
-            Column {
-                anchors.fill: parent
-                spacing: VbTokens.space3
-
-                VbSectionHeader {
-                    text: qsTr("UI Settings")
-                }
-
-                Label {
-                    width: parent.width
-                    id: languageTitle
-                    text: qsTr("Language")
-                    font.pixelSize: VbTokens.typeLabel
-                    font.family: VbTokens.fontBody
-                    wrapMode: Text.Wrap
-                }
-
-                AutoResizingComboBox {
-                    // ignore setting the index at first, and actually set it when the component is loaded
-                    Component.onCompleted: {
-                        var saved_language = StreamingPreferences.language
-                        currentIndex = 0
-                        for (var i = 0; i < languageListModel.count; i++) {
-                            var el_language = languageListModel.get(i).val;
-                            if (saved_language === el_language) {
-                                currentIndex = i
-                                break
-                            }
-                        }
-
-                        activated(currentIndex)
-                    }
-
-                    id: languageComboBox
-                    textRole: "text"
-                    model: ListModel {
-                        id: languageListModel
-                        ListElement {
-                            text: qsTr("Automatic")
-                            val: StreamingPreferences.LANG_AUTO
-                        }
-                        ListElement {
-                            text: "Deutsch" // German
-                            val: StreamingPreferences.LANG_DE
-                        }
-                        ListElement {
-                            text: "English"
-                            val: StreamingPreferences.LANG_EN
-                        }
-                        ListElement {
-                            text: "Français" // French
-                            val: StreamingPreferences.LANG_FR
-                        }
-                        ListElement {
-                            text: "简体中文" // Simplified Chinese
-                            val: StreamingPreferences.LANG_ZH_CN
-                        }
-                        ListElement {
-                            text: "Norwegian Bokmål"
-                            val: StreamingPreferences.LANG_NB_NO
-                        }
-                        ListElement {
-                            text: "русский" // Russian
-                            val: StreamingPreferences.LANG_RU
-                        }
-                        ListElement {
-                            text: "Español" // Spanish
-                            val: StreamingPreferences.LANG_ES
-                        }
-                        ListElement {
-                            text: "日本語" // Japanese
-                            val: StreamingPreferences.LANG_JA
-                        }
-                        ListElement {
-                            text: "Tiếng Việt" // Vietnamese
-                            val: StreamingPreferences.LANG_VI
-                        }
-                        ListElement {
-                            text: "ภาษาไทย" // Thai
-                            val: StreamingPreferences.LANG_TH
-                        }
-                        ListElement {
-                            text: "한국어" // Korean
-                            val: StreamingPreferences.LANG_KO
-                        }
-                        ListElement {
-                            text: "Magyar" // Hungarian
-                            val: StreamingPreferences.LANG_HU
-                        }
-                        ListElement {
-                            text: "Nederlands" // Dutch
-                            val: StreamingPreferences.LANG_NL
-                        }
-                        ListElement {
-                            text: "Svenska" // Swedish
-                            val: StreamingPreferences.LANG_SV
-                        }
-                        ListElement {
-                            text: "Türkçe" // Turkish
-                            val: StreamingPreferences.LANG_TR
-                        }
-                        /* ListElement {
-                            text: "Українська" // Ukrainian
-                            val: StreamingPreferences.LANG_UK
-                        } */
-                        ListElement {
-                            text: "繁體中文" // Traditional Chinese
-                            val: StreamingPreferences.LANG_ZH_TW
-                        }
-                        ListElement {
-                            text: "Português" // Portuguese
-                            val: StreamingPreferences.LANG_PT
-                        }
-                        ListElement {
-                            text: "Português do Brasil" // Brazilian Portuguese
-                            val: StreamingPreferences.LANG_PT_BR
-                        }
-                        ListElement {
-                            text: "Ελληνικά" // Greek
-                            val: StreamingPreferences.LANG_EL
-                        }
-                        ListElement {
-                            text: "Italiano" // Italian
-                            val: StreamingPreferences.LANG_IT
-                        }
-                        /* ListElement {
-                            text: "हिन्दी, हिंदी" // Hindi
-                            val: StreamingPreferences.LANG_HI
-                        } */
-                        ListElement {
-                            text: "Język polski" // Polish
-                            val: StreamingPreferences.LANG_PL
-                        }
-                        ListElement {
-                            text: "Čeština" // Czech
-                            val: StreamingPreferences.LANG_CS
-                        }
-                        /* ListElement {
-                            text: "עִבְרִית" // Hebrew
-                            val: StreamingPreferences.LANG_HE
-                        } */
-                        /* ListElement {
-                            text: "کرمانجیی خواروو" // Central Kurdish
-                            val: StreamingPreferences.LANG_CKB
-                        } */
-                        /* ListElement {
-                            text: "Lietuvių kalba" // Lithuanian
-                            val: StreamingPreferences.LANG_LT
-                        } */
-                        /* ListElement {
-                            text: "Eesti" // Estonian
-                            val: StreamingPreferences.LANG_ET
-                        } */
-                        ListElement {
-                            text: "Български" // Bulgarian
-                            val: StreamingPreferences.LANG_BG
-                        }
-                        /* ListElement {
-                            text: "Esperanto"
-                            val: StreamingPreferences.LANG_EO
-                        } */
-                        ListElement {
-                            text: "தமிழ்" // Tamil
-                            val: StreamingPreferences.LANG_TA
-                        }
-                    }
-                    // ::onActivated must be used, as it only listens for when the index is changed by a human
-                    onActivated : {
-                        // Retranslating is expensive, so only do it if the language actually changed
-                        var new_language = languageListModel.get(currentIndex).val
-                        if (StreamingPreferences.language !== new_language) {
-                            StreamingPreferences.language = languageListModel.get(currentIndex).val
-                            if (!StreamingPreferences.retranslate()) {
-                                ToolTip.show(qsTr("You must restart Vibemis for this change to take effect"), 5000)
-                            }
-                            else {
-                                // Force the back operation to pop any AppView pages that exist.
-                                // The AppView stops working after retranslate() for some reason.
-                                window.clearOnBack = true
-
-                                // Signal other controls to adjust their text
-                                languageChanged()
-                            }
-                        }
-                    }
-                }
-
-                Label {
-                    width: parent.width
-                    id: uiDisplayModeTitle
-                    text: qsTr("GUI display mode")
-                    font.pixelSize: VbTokens.typeLabel
-                    font.family: VbTokens.fontBody
-                    wrapMode: Text.Wrap
-                    visible: SystemProperties.hasDesktopEnvironment
-                }
-
-                AutoResizingComboBox {
-                    // ignore setting the index at first, and actually set it when the component is loaded
-                    Component.onCompleted: {
-                        if (!visible) {
-                            // Do nothing if the control won't even be visible
-                            return
-                        }
-
-                        var saved_uidisplaymode = StreamingPreferences.uiDisplayMode
-                        currentIndex = 0
-                        for (var i = 0; i < uiDisplayModeListModel.count; i++) {
-                            var el_uidisplaymode = uiDisplayModeListModel.get(i).val;
-                            if (saved_uidisplaymode === el_uidisplaymode) {
-                                currentIndex = i
-                                break
-                            }
-                        }
-
-                        activated(currentIndex)
-                    }
-
-                    id: uiDisplayModeComboBox
-                    visible: SystemProperties.hasDesktopEnvironment
-                    textRole: "text"
-                    model: ListModel {
-                        id: uiDisplayModeListModel
-                        ListElement {
-                            text: qsTr("Windowed")
-                            val: StreamingPreferences.UI_WINDOWED
-                        }
-                        ListElement {
-                            text: qsTr("Maximized")
-                            val: StreamingPreferences.UI_MAXIMIZED
-                        }   
-                        ListElement {
-                            text: qsTr("Fullscreen")
-                            val: StreamingPreferences.UI_FULLSCREEN
-                        }
-                    }
-                    // ::onActivated must be used, as it only listens for when the index is changed by a human
-                    onActivated : {
-                        StreamingPreferences.uiDisplayMode = uiDisplayModeListModel.get(currentIndex).val
-                    }
-                }
-
-                VbToggleRow {
-                    id: connectionWarningsCheck
-                    text: qsTr("Show connection quality warnings")
-                    checked: StreamingPreferences.connectionWarnings
-                    onCheckedChanged: {
-                        StreamingPreferences.connectionWarnings = checked
-                    }
-                }
-
-                VbToggleRow {
-                    id: configurationWarningsCheck
-                    text: qsTr("Show configuration warnings")
-                    checked: StreamingPreferences.configurationWarnings
-                    onCheckedChanged: {
-                        StreamingPreferences.configurationWarnings = checked
-                    }
-                }
-
-                // Gate for the controller-nav UI sounds (UiSoundManager)
-                VbToggleRow {
-                    id: uiSoundsCheck
-                    text: qsTr("Play navigation sounds")
-                    checked: StreamingPreferences.uiSounds
-                    onCheckedChanged: StreamingPreferences.uiSounds = checked
-                    ToolTip.text: qsTr("Play a short sound when moving focus or activating items with the gamepad or keyboard, including the in-stream Quick Menu.")
-                    ToolTip.delay: 1000
-                    ToolTip.visible: hovered
-                }
-
-                VbToggleRow {
-                    visible: SystemProperties.hasDiscordIntegration
-                    id: discordPresenceCheck
-                    text: qsTr("Discord Rich Presence integration")
-                    checked: StreamingPreferences.richPresence
-                    onCheckedChanged: {
-                        StreamingPreferences.richPresence = checked
-                    }
-
-                    ToolTip.delay: 1000
-                    ToolTip.timeout: 5000
-                    ToolTip.visible: hovered
-                    ToolTip.text: qsTr("Updates your Discord status to display the name of the game you're streaming.")
-                }
-
-                VbToggleRow {
-                    id: keepAwakeCheck
-                    text: qsTr("Keep the display awake while streaming")
-                    checked: StreamingPreferences.keepAwake
-                    onCheckedChanged: {
-                        StreamingPreferences.keepAwake = checked
-                    }
-
-                    ToolTip.delay: 1000
-                    ToolTip.timeout: 5000
-                    ToolTip.visible: hovered
-                    ToolTip.text: qsTr("Prevents the screensaver from starting or the display from going to sleep while streaming.")
-                }
-
-                VbToggleRow {
-                    id: reduceBitrateOnBatteryCheck
-                    text: qsTr("Reduce bitrate when on battery")
-                    checked: StreamingPreferences.reduceBitrateOnBattery
-                    onCheckedChanged: {
-                        StreamingPreferences.reduceBitrateOnBattery = checked
-                    }
-
-                    ToolTip.delay: 1000
-                    ToolTip.timeout: 5000
-                    ToolTip.visible: hovered
-                    ToolTip.text: qsTr("When this device is running on battery, start streams at a lower bitrate (60% of the configured value) to save power and reduce heat. Plugged-in streams are unaffected.")
-                }
-
-                Label {
-                    width: parent.width
-                    text: qsTr("Settings backup")
-                    font.pixelSize: VbTokens.typeLabel
-                    font.family: VbTokens.fontBody
-                    topPadding: VbTokens.space2
-                }
-
-                Row {
-                    spacing: VbTokens.space2
-
-                    Button {
-                        text: qsTr("Export settings")
-                        onClicked: {
-                            var p = StreamingPreferences.exportSettings()
-                            settingsBackupStatus.text = p
-                                ? qsTr("Exported to %1").arg(p)
-                                : qsTr("Export failed")
-                        }
-                        ToolTip.delay: 1000
-                        ToolTip.timeout: 5000
-                        ToolTip.visible: hovered
-                        ToolTip.text: qsTr("Save all Vibemis settings to ~/vibemis-settings.ini for backup or to copy to another device.")
-                    }
-
-                    Button {
-                        text: qsTr("Import settings")
-                        onClicked: {
-                            settingsBackupStatus.text = StreamingPreferences.importSettings()
-                                ? qsTr("Imported from ~/vibemis-settings.ini — reopen Settings or restart to see all values.")
-                                : qsTr("No backup found at ~/vibemis-settings.ini")
-                        }
-                        ToolTip.delay: 1000
-                        ToolTip.timeout: 5000
-                        ToolTip.visible: hovered
-                        ToolTip.text: qsTr("Load settings previously exported to ~/vibemis-settings.ini.")
-                    }
-                }
-
-                Label {
-                    id: settingsBackupStatus
-                    width: parent.width
-                    text: ""
-                    visible: text !== ""
-                    color: VbTokens.accent  // BL-2077: brand accent via token, single source of truth
-                    font.pixelSize: VbTokens.typeCaption
-                    font.family: VbTokens.fontBody
-                    wrapMode: Text.Wrap
-                }
-            }
-        }
-    }
-
-    Column {
-        padding: VbTokens.space3
-        rightPadding: VbTokens.space5
-        bottomPadding: VbTokens.space6
-        anchors.top: settingsColumn1.bottom
-        anchors.left: settingsColumn1.left
-        id: settingsColumn2
-        width: settingsFlick.width - 20
-        spacing: VbTokens.space4
-
-        // Restyled to the Video-page card pattern. Bindings unchanged. The
-        // capture-shortcuts checkbox + mode combo were a side-by-side Row; the toggle row is
-        // full-width now, so the combo moved directly below it (layout only — same ids,
-        // same enabled/checked logic).
-        VbSettingsCard {
-            id: inputSettingsGroupBox
-            visible: settingsPage.category === 2
-            width: (parent.width - (parent.leftPadding + parent.rightPadding))
-            font.pixelSize: VbTokens.typeBody
-
-            Column {
-                anchors.fill: parent
-                spacing: VbTokens.space3
-
-                VbSectionHeader {
-                    text: qsTr("Input Settings")
-                }
-
-                VbToggleRow {
-                    id: absoluteMouseCheck
-                    text: qsTr("Optimize mouse for remote desktop instead of games")
-                    checked: StreamingPreferences.absoluteMouseMode
-                    onCheckedChanged: {
-                        StreamingPreferences.absoluteMouseMode = checked
-                    }
-
-                    ToolTip.delay: 1000
-                    ToolTip.timeout: 10000
-                    ToolTip.visible: hovered
-                    ToolTip.text: qsTr("This enables seamless mouse control without capturing the client's mouse cursor. It is ideal for remote desktop usage but will not work in most games.") + " " +
-                                  qsTr("You can toggle this while streaming using Ctrl+Alt+Shift+M.") + "\n\n" +
-                                  qsTr("NOTE: Due to a bug in GeForce Experience, this option may not work properly if your host PC has multiple monitors.")
-                }
-
-                VbToggleRow {
-                    id: captureSysKeysCheck
-                    text: qsTr("Capture system keyboard shortcuts")
-                    enabled: SystemProperties.hasDesktopEnvironment
-                    checked: StreamingPreferences.captureSysKeysMode !== StreamingPreferences.CSK_OFF || !SystemProperties.hasDesktopEnvironment
-
-                    ToolTip.delay: 1000
-                    ToolTip.timeout: 10000
-                    ToolTip.visible: hovered
-                    ToolTip.text: qsTr("This enables the capture of system-wide keyboard shortcuts like Alt+Tab that would normally be handled by the client OS while streaming.") + "\n\n" +
-                                  qsTr("NOTE: Certain keyboard shortcuts like Ctrl+Alt+Del on Windows cannot be intercepted by any application, including Vibemis.")
-                }
-
-                AutoResizingComboBox {
-                    // ignore setting the index at first, and actually set it when the component is loaded
-                    Component.onCompleted: {
-                        if (!visible) {
-                            // Do nothing if the control won't even be visible
-                            return
-                        }
-
-                        var saved_syskeysmode = StreamingPreferences.captureSysKeysMode
-                        currentIndex = 0
-                        for (var i = 0; i < captureSysKeysModeListModel.count; i++) {
-                            var el_syskeysmode = captureSysKeysModeListModel.get(i).val;
-                            if (saved_syskeysmode === el_syskeysmode) {
-                                currentIndex = i
-                                break
-                            }
-                        }
-
-                        activated(currentIndex)
-                    }
-
-                    enabled: captureSysKeysCheck.checked && captureSysKeysCheck.enabled
-                    textRole: "text"
-                    model: ListModel {
-                        id: captureSysKeysModeListModel
-                        ListElement {
-                            text: qsTr("in fullscreen")
-                            val: StreamingPreferences.CSK_FULLSCREEN
-                        }
-                        ListElement {
-                            text: qsTr("always")
-                            val: StreamingPreferences.CSK_ALWAYS
-                        }
-                    }
-
-                    function updatePref() {
-                        if (!enabled) {
-                            StreamingPreferences.captureSysKeysMode = StreamingPreferences.CSK_OFF
-                        }
-                        else {
-                            StreamingPreferences.captureSysKeysMode = captureSysKeysModeListModel.get(currentIndex).val
-                        }
-                    }
-
-                    // ::onActivated must be used, as it only listens for when the index is changed by a human
-                    onActivated: {
-                        updatePref()
-                    }
-
-                    // This handles transition of the checkbox state
-                    onEnabledChanged: {
-                        updatePref()
-                    }
-                }
-
-                VbToggleRow {
-                    id: absoluteTouchCheck
-                    text: qsTr("Use touchscreen as a virtual trackpad")
-                    checked: !StreamingPreferences.absoluteTouchMode
-                    onCheckedChanged: {
-                        StreamingPreferences.absoluteTouchMode = !checked
-                    }
-
-                    ToolTip.delay: 1000
-                    ToolTip.timeout: 5000
-                    ToolTip.visible: hovered
-                    ToolTip.text: qsTr("When checked, the touchscreen acts like a trackpad. When unchecked, the touchscreen will directly control the mouse pointer.")
-                }
-
-                VbToggleRow {
-                    id: swapMouseButtonsCheck
-                    text: qsTr("Swap left and right mouse buttons")
-                    checked: StreamingPreferences.swapMouseButtons
-                    onCheckedChanged: {
-                        StreamingPreferences.swapMouseButtons = checked
-                    }
-                }
-
-                VbToggleRow {
-                    id: reverseScrollButtonsCheck
-                    text: qsTr("Reverse mouse scrolling direction")
-                    checked: StreamingPreferences.reverseScrollDirection
-                    onCheckedChanged: {
-                        StreamingPreferences.reverseScrollDirection = checked
-                    }
-                }
-            }
-        }
-
-        // Restyled to the Video-page card pattern. Bindings unchanged.
-        VbSettingsCard {
-            id: gamepadSettingsGroupBox
-            visible: settingsPage.category === 2
-            width: (parent.width - (parent.leftPadding + parent.rightPadding))
-            font.pixelSize: VbTokens.typeBody
-
-            Column {
-                anchors.fill: parent
-                spacing: VbTokens.space3
-
-                VbSectionHeader {
-                    text: qsTr("Gamepad Settings")
-                }
-
-                // Expose the (previously hidden) gamepad remapping screen.
-                Button {
-                    id: gamepadMapButton
-                    // No trailing ellipsis — it read as clipped text on device.
-                    text: qsTr("Configure gamepad mapping")
-                    onClicked: navigateTo("qrc:/gui/GamepadMapper.qml", "GamepadMapper")
-                    ToolTip.text: qsTr("Remap or calibrate connected controllers (paddles, face buttons, sticks).")
-                    ToolTip.delay: 1000
-                    ToolTip.visible: hovered
-                }
-
-                // Redesign live tweaks (State model: showHints + accent). Persisted via prefs.
-                VbToggleRow {
-                    id: showHintsCheck
-                    text: qsTr("Show the gamepad hint bar")
-                    checked: StreamingPreferences.uiShowHints
-                    onCheckedChanged: StreamingPreferences.uiShowHints = checked
-                    ToolTip.text: qsTr("Show the button-hint bar at the bottom of every screen.")
-                    ToolTip.delay: 1000
-                    ToolTip.visible: hovered
-                }
-
-                Label {
-                    width: parent.width
-                    text: qsTr("Accent color")
-                    font.pixelSize: VbTokens.typeLabel
-                    font.family: VbTokens.fontBody
-                    wrapMode: Text.Wrap
-                }
-
-                AutoResizingComboBox {
-                    id: accentComboBox
-                    textRole: "text"
-                    hoverEnabled: true
-                    model: ListModel {
-                        ListElement { text: qsTr("Teal (default)") }
-                        ListElement { text: qsTr("Indigo") }
-                        ListElement { text: qsTr("Green") }
-                        ListElement { text: qsTr("Amber") }
-                    }
-                    Component.onCompleted: currentIndex = StreamingPreferences.uiAccentIndex
-                    onActivated: StreamingPreferences.uiAccentIndex = currentIndex
-                    ToolTip.text: qsTr("The accent color used across the redesigned UI.")
-                    ToolTip.delay: 1000
-                    ToolTip.visible: hovered
-                }
-
-                Label {
-                    width: parent.width
-                    id: quickMenuComboTitle
-                    text: qsTr("Quick Menu shortcut")
-                    font.pixelSize: VbTokens.typeLabel
-                    font.family: VbTokens.fontBody
-                    wrapMode: Text.Wrap
-                }
-
-                AutoResizingComboBox {
-                    id: quickMenuComboBox
-                    textRole: "text"
-                    hoverEnabled: true
-                    model: ListModel {
-                        id: quickMenuComboModel
-                        ListElement { text: qsTr("Select + L1 + R1 + Y (default)"); val: 0 }
-                        ListElement { text: qsTr("Select + L1 + R1 + B"); val: 1 }
-                        ListElement { text: qsTr("L3 + R3 (click both sticks)"); val: 2 }
-                        ListElement { text: qsTr("Select + Start"); val: 3 }
-                        ListElement { text: qsTr("Back paddle P1"); val: 4 }
-                        ListElement { text: qsTr("Back paddle P2"); val: 5 }
-                        ListElement { text: qsTr("Back paddle P3"); val: 6 }
-                        ListElement { text: qsTr("Back paddle P4"); val: 7 }
-                    }
-
-                    function reinitialize() {
-                        var saved = StreamingPreferences.quickMenuGamepadCombo
-                        currentIndex = 0
-                        for (var i = 0; i < quickMenuComboModel.count; i++) {
-                            if (quickMenuComboModel.get(i).val === saved) {
-                                currentIndex = i
-                                break
-                            }
-                        }
-                    }
-
-                    Component.onCompleted: {
-                        reinitialize()
-                        languageChanged.connect(reinitialize)
-                    }
-
-                    onActivated: {
-                        StreamingPreferences.quickMenuGamepadCombo = quickMenuComboModel.get(currentIndex).val
-                    }
-
-                    ToolTip.delay: 1000
-                    ToolTip.timeout: 5000
-                    ToolTip.visible: hovered
-                    ToolTip.text: qsTr("Which gamepad button combination opens the in-stream Quick Menu.") + "\n\n" +
-                                  qsTr("On controllers with back paddles (Legion Go, Xbox Elite, …) the P1 paddle ALSO opens the menu while the default combo is selected — no setup needed. Picking any other combo takes full control.")
-                }
-
-                VbToggleRow {
-                    id: swapFaceButtonsCheck
-                    text: qsTr("Swap A/B and X/Y gamepad buttons")
-                    checked: StreamingPreferences.swapFaceButtons
-                    onCheckedChanged: {
-                        StreamingPreferences.swapFaceButtons = checked
-                    }
-
-                    ToolTip.delay: 1000
-                    ToolTip.timeout: 5000
-                    ToolTip.visible: hovered
-                    ToolTip.text: qsTr("This switches gamepads into a Nintendo-style button layout")
-                }
-
-                VbToggleRow {
-                    id: singleControllerCheck
-                    text: qsTr("Force gamepad #1 always connected")
-                    checked: !StreamingPreferences.multiController
-                    onCheckedChanged: {
-                        StreamingPreferences.multiController = !checked
-                    }
-
-                    ToolTip.delay: 1000
-                    ToolTip.timeout: 5000
-                    ToolTip.visible: hovered
-                    ToolTip.text: qsTr("Forces a single gamepad to always stay connected to the host, even if no gamepads are actually connected to this PC.") + " " +
-                                  qsTr("Only enable this option when streaming a game that doesn't support gamepads being connected after startup.")
-                }
-
-                VbToggleRow {
-                    id: gamepadMouseCheck
-                    text: qsTr("Enable mouse control with gamepads by holding the 'Start' button")
-                    checked: StreamingPreferences.gamepadMouse
-                    onCheckedChanged: {
-                        StreamingPreferences.gamepadMouse = checked
-                    }
-                }
-
-                VbToggleRow {
-                    id: backgroundGamepadCheck
-                    text: qsTr("Process gamepad input when Vibemis is in the background")
-                    visible: SystemProperties.hasDesktopEnvironment
-                    checked: StreamingPreferences.backgroundGamepad
-                    onCheckedChanged: {
-                        StreamingPreferences.backgroundGamepad = checked
-                    }
-
-                    ToolTip.delay: 1000
-                    ToolTip.timeout: 5000
-                    ToolTip.visible: hovered
-                    ToolTip.text: qsTr("Allows Vibemis to capture gamepad inputs even if it's not the current window in focus")
-                }
-
-                VbToggleRow {
-                    id: forwardMotionCheck
-                    text: qsTr("Forward motion controls (gyro) — experimental")
-                    checked: StreamingPreferences.forwardMotionControls
-                    onCheckedChanged: {
-                        StreamingPreferences.forwardMotionControls = checked
-                    }
-
-                    ToolTip.delay: 1000
-                    ToolTip.timeout: 5000
-                    ToolTip.visible: hovered
-                    ToolTip.text: qsTr("Experimental: detect this device's gyro/accelerometer for forwarding to the host (motion/gyro aim). Sensor forwarding is still in development; enabling this currently logs the detected sensors.")
-                }
-
-                VbToggleRow {
-                    id: suppressRumbleCheck
-                    text: qsTr("Disable controller rumble")
-                    checked: StreamingPreferences.suppressControllerRumble
-                    onCheckedChanged: {
-                        StreamingPreferences.suppressControllerRumble = checked
-                    }
-
-                    ToolTip.delay: 1000
-                    ToolTip.timeout: 5000
-                    ToolTip.visible: hovered
-                    ToolTip.text: qsTr("Ignore rumble/force-feedback sent by the host. Useful to save battery on a handheld or if you find rumble distracting.")
-                }
-            }
-        }
-
-        // Restyled to the Video-page card pattern. Bindings unchanged.
-        VbSettingsCard {
-            id: advancedSettingsGroupBox
-            visible: settingsPage.category === 4
-            width: (parent.width - (parent.leftPadding + parent.rightPadding))
-            font.pixelSize: VbTokens.typeBody
-
-            Column {
-                anchors.fill: parent
-                spacing: VbTokens.space3
-
-                VbSectionHeader {
-                    text: qsTr("Advanced Settings")
+                    text: qsTr("Decoding & HDR")
                 }
 
                 Label {
@@ -3358,22 +2348,77 @@ Item {
                                     :
                                       qsTr("YUV 4:4:4 is not supported on this PC.")
                 }
+            }
+        }
+
+        // Restyled to the Video-page card pattern. Bindings unchanged.
+        VbSettingsCard {
+            id: hostSettingsGroupBox
+            visible: settingsPage.category === 3
+            width: (parent.width - (parent.leftPadding + parent.rightPadding))
+            font.pixelSize: VbTokens.typeBody
+
+            Column {
+                anchors.fill: parent
+                spacing: VbTokens.space3
+
+                VbSectionHeader {
+                    text: qsTr("Host Settings")
+                }
 
                 VbToggleRow {
-                    id: unlockBitrate
-                    text: qsTr("Unlock bitrate limit (Experimental)")
-
-                    checked: StreamingPreferences.unlockBitrate
+                    id: optimizeGameSettingsCheck
+                    text: qsTr("Optimize game settings for streaming")
+                    checked: StreamingPreferences.gameOptimizations
                     onCheckedChanged: {
-                        StreamingPreferences.unlockBitrate = checked
-                        StreamingPreferences.bitrateKbps = Math.min(StreamingPreferences.bitrateKbps, slider.to)
-                        slider.value = StreamingPreferences.bitrateKbps
+                        StreamingPreferences.gameOptimizations = checked
+                    }
+                }
+
+                VbToggleRow {
+                    id: quitAppAfter
+                    text: qsTr("Quit app on host PC after ending stream")
+                    checked: StreamingPreferences.quitAppAfter
+                    onCheckedChanged: {
+                        StreamingPreferences.quitAppAfter = checked
                     }
 
                     ToolTip.delay: 1000
                     ToolTip.timeout: 5000
                     ToolTip.visible: hovered
-                    ToolTip.text: qsTr("This unlocks extremely high video bitrates for use with Sunshine hosts. It should only be used when streaming over an Ethernet LAN connection.")
+                    ToolTip.text: qsTr("This will close the app or game you are streaming when you end your stream. You will lose any unsaved progress!")
+                }
+
+                VbToggleRow {
+                    id: autoReconnectCheck
+                    text: qsTr("Automatically reconnect if the stream drops")
+                    checked: StreamingPreferences.autoReconnect
+                    onCheckedChanged: {
+                        StreamingPreferences.autoReconnect = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("If a stream ends unexpectedly (a network blip or the host waking), Vibemis will try to reconnect automatically.")
+                }
+            }
+        }
+
+        // BL-2263 (Settings IA): connection/discovery toggles relocated here from the
+        // Advanced page - they are Streaming concerns. Bindings unchanged.
+        VbSettingsCard {
+            id: connectionGroupBox
+            visible: settingsPage.category === 3
+            width: (parent.width - (parent.leftPadding + parent.rightPadding))
+            font.pixelSize: VbTokens.typeBody
+
+            Column {
+                anchors.fill: parent
+                spacing: VbTokens.space3
+
+                VbSectionHeader {
+                    text: qsTr("Connection")
                 }
 
                 VbToggleRow {
@@ -3402,6 +2447,669 @@ Item {
                     onCheckedChanged: {
                         StreamingPreferences.detectNetworkBlocking = checked
                     }
+                }
+            }
+        }
+
+        // Restyled to the Video-page card pattern (VbSettingsCard + Sora header +
+        // VbToggleRow rows). Bindings, visibility logic and tooltips are unchanged.
+        VbSettingsCard {
+            id: artemisStreamingGroupBox
+            visible: settingsPage.category === 3
+            width: (parent.width - (parent.leftPadding + parent.rightPadding))
+            font.pixelSize: VbTokens.typeBody
+
+            Column {
+                anchors.fill: parent
+                spacing: VbTokens.space3
+
+                VbSectionHeader {
+                    text: qsTr("Vibemis Streaming Enhancements")
+                }
+
+                Label {
+                    width: parent.width
+                    text: qsTr("Client-side streaming enhancements")
+                    font.pixelSize: VbTokens.typeLabel
+                    font.family: VbTokens.fontBody
+                    wrapMode: Text.Wrap
+                }
+
+                Label {
+                    width: parent.width
+                    text: qsTr("These features require an Apollo / Vibepollo host (they use Apollo's extended protocol — not available with plain Sunshine or GeForce Experience).")
+                    font.pixelSize: VbTokens.typeCaption
+                    font.family: VbTokens.fontBody
+                    wrapMode: Text.Wrap
+                    color: VbTokens.textDim
+                }
+
+                // Virtual Display Control
+                VbToggleRow {
+                    id: virtualDisplayCheck
+                    text: qsTr("Use Virtual Display")
+                    checked: StreamingPreferences.useVirtualDisplay
+                    onCheckedChanged: {
+                        StreamingPreferences.useVirtualDisplay = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Creates a virtual display on the host for streaming. Requires an Apollo / Vibepollo host - not available with plain Sunshine/GeForce Experience.")
+                }
+
+                // Vibemis: clarify the virtual-display behavior, which commonly confuses
+                // new users. Apollo auto-creates a per-client virtual display matching the
+                // resolution/refresh you select above — ideal on a handheld so you don't have to
+                // change the host's physical display. Shown contextually based on the toggle.
+                Label {
+                    width: parent.width
+                    visible: virtualDisplayCheck.checked
+                    text: qsTr("✓ Your Apollo / Vibepollo host will create a virtual display matching your selected resolution and refresh rate — recommended on a handheld (the host's physical monitor is left untouched).")
+                    font.pixelSize: VbTokens.typeCaption
+                    font.family: VbTokens.fontBody
+                    wrapMode: Text.Wrap
+                    color: VbTokens.statusSuccess
+                    leftPadding: VbTokens.space2
+                }
+                Label {
+                    width: parent.width
+                    visible: !virtualDisplayCheck.checked
+                    text: qsTr("Without a virtual display, the stream uses the host's current physical display resolution. Enable this with an Apollo / Vibepollo host to match this device's resolution automatically.")
+                    font.pixelSize: VbTokens.typeCaption
+                    font.family: VbTokens.fontBody
+                    wrapMode: Text.Wrap
+                    color: VbTokens.textTertiary
+                    leftPadding: VbTokens.space2
+                }
+
+                // Resolution Scaling
+                VbToggleRow {
+                    id: resolutionScalingCheck
+                    text: qsTr("Enable Resolution Scaling")
+                    checked: StreamingPreferences.enableResolutionScaling
+                    onCheckedChanged: {
+                        StreamingPreferences.enableResolutionScaling = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Scales the stream resolution. Useful for improving performance on lower-end devices or increasing quality on high-DPI displays.")
+                }
+
+                Row {
+                    spacing: VbTokens.space3
+                    visible: StreamingPreferences.enableResolutionScaling
+                    width: parent.width
+
+                    Label {
+                        id: scaleFactorLabel
+                        text: qsTr("Scale Factor:")
+                        font.pixelSize: VbTokens.typeCaption
+                        font.family: VbTokens.fontBody
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    Slider {
+                        id: resolutionScaleSlider
+                        from: 50    // 50%
+                        to: 200     // 200%
+                        stepSize: 5
+                        value: StreamingPreferences.resolutionScaleFactor
+
+                        // This Slider sits in a plain Row and its background derives
+                        // width from availableWidth (contributing no implicitWidth), so without
+                        // an explicit width it collapsed to ~0px and the handle was undraggable.
+                        // Mirror the Video-page bitrate slider: fill the row between the labels.
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: parent.width - scaleFactorLabel.width - scaleValueLabel.width - (2 * parent.spacing)
+
+                        // Guarantee one arrow / d-pad press moves exactly one stepSize
+                        // (5). The default handling was observed stepping twice (+10); overriding
+                        // Left/Right with a single accepted increase()/decrease() forces one step
+                        // per press and stops Left from bubbling to the Flickable's focus-return
+                        // handler mid-adjustment. Range 50-200 / stepSize 5 unchanged.
+                        Keys.onLeftPressed: { resolutionScaleSlider.decrease(); event.accepted = true }
+                        Keys.onRightPressed: { resolutionScaleSlider.increase(); event.accepted = true }
+
+                        // Same track/handle recipe as the Video page's bitrate slider.
+                        background: Rectangle {
+                            x: resolutionScaleSlider.leftPadding
+                            y: resolutionScaleSlider.topPadding + resolutionScaleSlider.availableHeight / 2 - height / 2
+                            width: resolutionScaleSlider.availableWidth
+                            height: 10
+                            radius: 6
+                            color: VbTokens.bgWindow
+                            Rectangle {
+                                width: resolutionScaleSlider.visualPosition * parent.width
+                                height: parent.height
+                                radius: 6
+                                color: VbTokens.accent
+                            }
+                        }
+                        handle: Rectangle {
+                            x: resolutionScaleSlider.leftPadding + resolutionScaleSlider.visualPosition * (resolutionScaleSlider.availableWidth - width)
+                            y: resolutionScaleSlider.topPadding + resolutionScaleSlider.availableHeight / 2 - height / 2
+                            width: 26
+                            height: 26
+                            radius: 13
+                            color: VbTokens.text
+                        }
+
+                        onValueChanged: {
+                            StreamingPreferences.resolutionScaleFactor = value
+                        }
+                    }
+
+                    Label {
+                        id: scaleValueLabel
+                        text: resolutionScaleSlider.value + "%"
+                        font.pixelSize: VbTokens.typeCaption
+                        font.family: VbTokens.fontBody
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 40
+                    }
+                }
+            }
+        }
+
+        // Restyled to the Video-page card pattern. Bindings unchanged.
+        VbSettingsCard {
+            id: audioSettingsGroupBox
+            visible: settingsPage.category === 1
+            width: (parent.width - (parent.leftPadding + parent.rightPadding))
+            font.pixelSize: VbTokens.typeBody
+
+            Column {
+                anchors.fill: parent
+                spacing: VbTokens.space3
+
+                VbSectionHeader {
+                    text: qsTr("Audio Settings")
+                }
+
+                Label {
+                    width: parent.width
+                    id: resAudioTitle
+                    text: qsTr("Audio configuration")
+                    font.pixelSize: VbTokens.typeLabel
+                    font.family: VbTokens.fontBody
+                    wrapMode: Text.Wrap
+                }
+
+                AutoResizingComboBox {
+                    // ignore setting the index at first, and actually set it when the component is loaded
+                    Component.onCompleted: {
+                        var saved_audio = StreamingPreferences.audioConfig
+                        currentIndex = 0
+                        for (var i = 0; i < audioListModel.count; i++) {
+                            var el_audio = audioListModel.get(i).val;
+                            if (saved_audio === el_audio) {
+                                currentIndex = i
+                                break
+                            }
+                        }
+                        activated(currentIndex)
+                    }
+
+                    id: audioComboBox
+                    textRole: "text"
+                    model: ListModel {
+                        id: audioListModel
+                        ListElement {
+                            text: qsTr("Stereo")
+                            val: StreamingPreferences.AC_STEREO
+                        }
+                        ListElement {
+                            text: qsTr("5.1 surround sound")
+                            val: StreamingPreferences.AC_51_SURROUND
+                        }
+                        ListElement {
+                            text: qsTr("7.1 surround sound")
+                            val: StreamingPreferences.AC_71_SURROUND
+                        }
+                    }
+                    // ::onActivated must be used, as it only listens for when the index is changed by a human
+                    onActivated : {
+                        StreamingPreferences.audioConfig = audioListModel.get(currentIndex).val
+                    }
+                }
+
+
+                VbToggleRow {
+                    id: audioPcCheck
+                    text: qsTr("Mute host PC speakers while streaming")
+                    checked: !StreamingPreferences.playAudioOnHost
+                    onCheckedChanged: {
+                        StreamingPreferences.playAudioOnHost = !checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("You must restart any game currently in progress for this setting to take effect")
+                }
+
+                VbToggleRow {
+                    id: muteOnFocusLossCheck
+                    text: qsTr("Mute audio stream when Vibemis is not the active window")
+                    visible: SystemProperties.hasDesktopEnvironment
+                    checked: StreamingPreferences.muteOnFocusLoss
+                    onCheckedChanged: {
+                        StreamingPreferences.muteOnFocusLoss = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Mutes Vibemis's audio when you Alt+Tab out of the stream or click on a different window.")
+                }
+            }
+        }
+
+        // Restyled to the Video-page card pattern. Bindings unchanged.
+        VbSettingsCard {
+            id: uiSettingsGroupBox
+            visible: settingsPage.category === 4
+            width: (parent.width - (parent.leftPadding + parent.rightPadding))
+            font.pixelSize: VbTokens.typeBody
+
+            Column {
+                anchors.fill: parent
+                spacing: VbTokens.space3
+
+                VbSectionHeader {
+                    text: qsTr("UI Settings")
+                }
+
+                Label {
+                    width: parent.width
+                    id: languageTitle
+                    text: qsTr("Language")
+                    font.pixelSize: VbTokens.typeLabel
+                    font.family: VbTokens.fontBody
+                    wrapMode: Text.Wrap
+                }
+
+                AutoResizingComboBox {
+                    // ignore setting the index at first, and actually set it when the component is loaded
+                    Component.onCompleted: {
+                        var saved_language = StreamingPreferences.language
+                        currentIndex = 0
+                        for (var i = 0; i < languageListModel.count; i++) {
+                            var el_language = languageListModel.get(i).val;
+                            if (saved_language === el_language) {
+                                currentIndex = i
+                                break
+                            }
+                        }
+
+                        activated(currentIndex)
+                    }
+
+                    id: languageComboBox
+                    textRole: "text"
+                    model: ListModel {
+                        id: languageListModel
+                        ListElement {
+                            text: qsTr("Automatic")
+                            val: StreamingPreferences.LANG_AUTO
+                        }
+                        ListElement {
+                            text: "Deutsch" // German
+                            val: StreamingPreferences.LANG_DE
+                        }
+                        ListElement {
+                            text: "English"
+                            val: StreamingPreferences.LANG_EN
+                        }
+                        ListElement {
+                            text: "Français" // French
+                            val: StreamingPreferences.LANG_FR
+                        }
+                        ListElement {
+                            text: "简体中文" // Simplified Chinese
+                            val: StreamingPreferences.LANG_ZH_CN
+                        }
+                        ListElement {
+                            text: "Norwegian Bokmål"
+                            val: StreamingPreferences.LANG_NB_NO
+                        }
+                        ListElement {
+                            text: "русский" // Russian
+                            val: StreamingPreferences.LANG_RU
+                        }
+                        ListElement {
+                            text: "Español" // Spanish
+                            val: StreamingPreferences.LANG_ES
+                        }
+                        ListElement {
+                            text: "日本語" // Japanese
+                            val: StreamingPreferences.LANG_JA
+                        }
+                        ListElement {
+                            text: "Tiếng Việt" // Vietnamese
+                            val: StreamingPreferences.LANG_VI
+                        }
+                        ListElement {
+                            text: "ภาษาไทย" // Thai
+                            val: StreamingPreferences.LANG_TH
+                        }
+                        ListElement {
+                            text: "한국어" // Korean
+                            val: StreamingPreferences.LANG_KO
+                        }
+                        ListElement {
+                            text: "Magyar" // Hungarian
+                            val: StreamingPreferences.LANG_HU
+                        }
+                        ListElement {
+                            text: "Nederlands" // Dutch
+                            val: StreamingPreferences.LANG_NL
+                        }
+                        ListElement {
+                            text: "Svenska" // Swedish
+                            val: StreamingPreferences.LANG_SV
+                        }
+                        ListElement {
+                            text: "Türkçe" // Turkish
+                            val: StreamingPreferences.LANG_TR
+                        }
+                        /* ListElement {
+                            text: "Українська" // Ukrainian
+                            val: StreamingPreferences.LANG_UK
+                        } */
+                        ListElement {
+                            text: "繁體中文" // Traditional Chinese
+                            val: StreamingPreferences.LANG_ZH_TW
+                        }
+                        ListElement {
+                            text: "Português" // Portuguese
+                            val: StreamingPreferences.LANG_PT
+                        }
+                        ListElement {
+                            text: "Português do Brasil" // Brazilian Portuguese
+                            val: StreamingPreferences.LANG_PT_BR
+                        }
+                        ListElement {
+                            text: "Ελληνικά" // Greek
+                            val: StreamingPreferences.LANG_EL
+                        }
+                        ListElement {
+                            text: "Italiano" // Italian
+                            val: StreamingPreferences.LANG_IT
+                        }
+                        /* ListElement {
+                            text: "हिन्दी, हिंदी" // Hindi
+                            val: StreamingPreferences.LANG_HI
+                        } */
+                        ListElement {
+                            text: "Język polski" // Polish
+                            val: StreamingPreferences.LANG_PL
+                        }
+                        ListElement {
+                            text: "Čeština" // Czech
+                            val: StreamingPreferences.LANG_CS
+                        }
+                        /* ListElement {
+                            text: "עִבְרִית" // Hebrew
+                            val: StreamingPreferences.LANG_HE
+                        } */
+                        /* ListElement {
+                            text: "کرمانجیی خواروو" // Central Kurdish
+                            val: StreamingPreferences.LANG_CKB
+                        } */
+                        /* ListElement {
+                            text: "Lietuvių kalba" // Lithuanian
+                            val: StreamingPreferences.LANG_LT
+                        } */
+                        /* ListElement {
+                            text: "Eesti" // Estonian
+                            val: StreamingPreferences.LANG_ET
+                        } */
+                        ListElement {
+                            text: "Български" // Bulgarian
+                            val: StreamingPreferences.LANG_BG
+                        }
+                        /* ListElement {
+                            text: "Esperanto"
+                            val: StreamingPreferences.LANG_EO
+                        } */
+                        ListElement {
+                            text: "தமிழ்" // Tamil
+                            val: StreamingPreferences.LANG_TA
+                        }
+                    }
+                    // ::onActivated must be used, as it only listens for when the index is changed by a human
+                    onActivated : {
+                        // Retranslating is expensive, so only do it if the language actually changed
+                        var new_language = languageListModel.get(currentIndex).val
+                        if (StreamingPreferences.language !== new_language) {
+                            StreamingPreferences.language = languageListModel.get(currentIndex).val
+                            if (!StreamingPreferences.retranslate()) {
+                                ToolTip.show(qsTr("You must restart Vibemis for this change to take effect"), 5000)
+                            }
+                            else {
+                                // Force the back operation to pop any AppView pages that exist.
+                                // The AppView stops working after retranslate() for some reason.
+                                window.clearOnBack = true
+
+                                // Signal other controls to adjust their text
+                                languageChanged()
+                            }
+                        }
+                    }
+                }
+
+                Label {
+                    width: parent.width
+                    id: uiDisplayModeTitle
+                    text: qsTr("GUI display mode")
+                    font.pixelSize: VbTokens.typeLabel
+                    font.family: VbTokens.fontBody
+                    wrapMode: Text.Wrap
+                    visible: SystemProperties.hasDesktopEnvironment
+                }
+
+                AutoResizingComboBox {
+                    // ignore setting the index at first, and actually set it when the component is loaded
+                    Component.onCompleted: {
+                        if (!visible) {
+                            // Do nothing if the control won't even be visible
+                            return
+                        }
+
+                        var saved_uidisplaymode = StreamingPreferences.uiDisplayMode
+                        currentIndex = 0
+                        for (var i = 0; i < uiDisplayModeListModel.count; i++) {
+                            var el_uidisplaymode = uiDisplayModeListModel.get(i).val;
+                            if (saved_uidisplaymode === el_uidisplaymode) {
+                                currentIndex = i
+                                break
+                            }
+                        }
+
+                        activated(currentIndex)
+                    }
+
+                    id: uiDisplayModeComboBox
+                    visible: SystemProperties.hasDesktopEnvironment
+                    textRole: "text"
+                    model: ListModel {
+                        id: uiDisplayModeListModel
+                        ListElement {
+                            text: qsTr("Windowed")
+                            val: StreamingPreferences.UI_WINDOWED
+                        }
+                        ListElement {
+                            text: qsTr("Maximized")
+                            val: StreamingPreferences.UI_MAXIMIZED
+                        }   
+                        ListElement {
+                            text: qsTr("Fullscreen")
+                            val: StreamingPreferences.UI_FULLSCREEN
+                        }
+                    }
+                    // ::onActivated must be used, as it only listens for when the index is changed by a human
+                    onActivated : {
+                        StreamingPreferences.uiDisplayMode = uiDisplayModeListModel.get(currentIndex).val
+                    }
+                }
+
+                // BL-2263 (Settings IA): relocated from the Gamepad card -
+                // app-wide appearance, nothing gamepad-specific.
+                Label {
+                    width: parent.width
+                    text: qsTr("Accent color")
+                    font.pixelSize: VbTokens.typeLabel
+                    font.family: VbTokens.fontBody
+                    wrapMode: Text.Wrap
+                }
+
+                AutoResizingComboBox {
+                    id: accentComboBox
+                    textRole: "text"
+                    hoverEnabled: true
+                    model: ListModel {
+                        ListElement { text: qsTr("Teal (default)") }
+                        ListElement { text: qsTr("Indigo") }
+                        ListElement { text: qsTr("Green") }
+                        ListElement { text: qsTr("Amber") }
+                    }
+                    Component.onCompleted: currentIndex = StreamingPreferences.uiAccentIndex
+                    onActivated: StreamingPreferences.uiAccentIndex = currentIndex
+                    ToolTip.text: qsTr("The accent color used across the redesigned UI.")
+                    ToolTip.delay: 1000
+                    ToolTip.visible: hovered
+                }
+
+                VbToggleRow {
+                    id: connectionWarningsCheck
+                    text: qsTr("Show connection quality warnings")
+                    checked: StreamingPreferences.connectionWarnings
+                    onCheckedChanged: {
+                        StreamingPreferences.connectionWarnings = checked
+                    }
+                }
+
+                VbToggleRow {
+                    id: configurationWarningsCheck
+                    text: qsTr("Show configuration warnings")
+                    checked: StreamingPreferences.configurationWarnings
+                    onCheckedChanged: {
+                        StreamingPreferences.configurationWarnings = checked
+                    }
+                }
+
+                // Gate for the controller-nav UI sounds (UiSoundManager)
+                VbToggleRow {
+                    id: uiSoundsCheck
+                    text: qsTr("Play navigation sounds")
+                    checked: StreamingPreferences.uiSounds
+                    onCheckedChanged: StreamingPreferences.uiSounds = checked
+                    ToolTip.text: qsTr("Play a short sound when moving focus or activating items with the gamepad or keyboard, including the in-stream Quick Menu.")
+                    ToolTip.delay: 1000
+                    ToolTip.visible: hovered
+                }
+
+                VbToggleRow {
+                    visible: SystemProperties.hasDiscordIntegration
+                    id: discordPresenceCheck
+                    text: qsTr("Discord Rich Presence integration")
+                    checked: StreamingPreferences.richPresence
+                    onCheckedChanged: {
+                        StreamingPreferences.richPresence = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Updates your Discord status to display the name of the game you're streaming.")
+                }
+
+                VbToggleRow {
+                    id: keepAwakeCheck
+                    text: qsTr("Keep the display awake while streaming")
+                    checked: StreamingPreferences.keepAwake
+                    onCheckedChanged: {
+                        StreamingPreferences.keepAwake = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Prevents the screensaver from starting or the display from going to sleep while streaming.")
+                }
+
+                Label {
+                    width: parent.width
+                    text: qsTr("Settings backup")
+                    font.pixelSize: VbTokens.typeLabel
+                    font.family: VbTokens.fontBody
+                    topPadding: VbTokens.space2
+                }
+
+                Row {
+                    spacing: VbTokens.space2
+
+                    Button {
+                        text: qsTr("Export settings")
+                        onClicked: {
+                            var p = StreamingPreferences.exportSettings()
+                            settingsBackupStatus.text = p
+                                ? qsTr("Exported to %1").arg(p)
+                                : qsTr("Export failed")
+                        }
+                        ToolTip.delay: 1000
+                        ToolTip.timeout: 5000
+                        ToolTip.visible: hovered
+                        ToolTip.text: qsTr("Save all Vibemis settings to ~/vibemis-settings.ini for backup or to copy to another device.")
+                    }
+
+                    Button {
+                        text: qsTr("Import settings")
+                        onClicked: {
+                            settingsBackupStatus.text = StreamingPreferences.importSettings()
+                                ? qsTr("Imported from ~/vibemis-settings.ini — reopen Settings or restart to see all values.")
+                                : qsTr("No backup found at ~/vibemis-settings.ini")
+                        }
+                        ToolTip.delay: 1000
+                        ToolTip.timeout: 5000
+                        ToolTip.visible: hovered
+                        ToolTip.text: qsTr("Load settings previously exported to ~/vibemis-settings.ini.")
+                    }
+                }
+
+                Label {
+                    id: settingsBackupStatus
+                    width: parent.width
+                    text: ""
+                    visible: text !== ""
+                    color: VbTokens.accent  // BL-2077: brand accent via token, single source of truth
+                    font.pixelSize: VbTokens.typeCaption
+                    font.family: VbTokens.fontBody
+                    wrapMode: Text.Wrap
+                }
+            }
+        }
+
+        // BL-2263 (Settings IA): performance-overlay controls relocated here from the
+        // Advanced page - client UI appearance/behavior. The enabled/visible chains to
+        // showPerformanceOverlay (file-scoped id) are unchanged.
+        VbSettingsCard {
+            id: perfOverlayGroupBox
+            visible: settingsPage.category === 4
+            width: (parent.width - (parent.leftPadding + parent.rightPadding))
+            font.pixelSize: VbTokens.typeBody
+
+            Column {
+                anchors.fill: parent
+                spacing: VbTokens.space3
+
+                VbSectionHeader {
+                    text: qsTr("Performance Overlay")
                 }
 
                 VbToggleRow {
@@ -3554,6 +3262,379 @@ Item {
                     ToolTip.visible: hovered
                     ToolTip.text: qsTr("Choose which corner of the screen the performance overlay appears in.")
                 }
+            }
+        }
+    }
+
+    Column {
+        padding: VbTokens.space3
+        rightPadding: VbTokens.space5
+        bottomPadding: VbTokens.space6
+        anchors.top: settingsColumn1.bottom
+        anchors.left: settingsColumn1.left
+        id: settingsColumn2
+        width: settingsFlick.width - 20
+        spacing: VbTokens.space4
+
+        // Restyled to the Video-page card pattern. Bindings unchanged. The
+        // capture-shortcuts checkbox + mode combo were a side-by-side Row; the toggle row is
+        // full-width now, so the combo moved directly below it (layout only — same ids,
+        // same enabled/checked logic).
+        VbSettingsCard {
+            id: inputSettingsGroupBox
+            visible: settingsPage.category === 2
+            width: (parent.width - (parent.leftPadding + parent.rightPadding))
+            font.pixelSize: VbTokens.typeBody
+
+            Column {
+                anchors.fill: parent
+                spacing: VbTokens.space3
+
+                VbSectionHeader {
+                    text: qsTr("Input Settings")
+                }
+
+                VbToggleRow {
+                    id: absoluteMouseCheck
+                    text: qsTr("Optimize mouse for remote desktop instead of games")
+                    checked: StreamingPreferences.absoluteMouseMode
+                    onCheckedChanged: {
+                        StreamingPreferences.absoluteMouseMode = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 10000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("This enables seamless mouse control without capturing the client's mouse cursor. It is ideal for remote desktop usage but will not work in most games.") + " " +
+                                  qsTr("You can toggle this while streaming using Ctrl+Alt+Shift+M.") + "\n\n" +
+                                  qsTr("NOTE: Due to a bug in GeForce Experience, this option may not work properly if your host PC has multiple monitors.")
+                }
+
+                VbToggleRow {
+                    id: captureSysKeysCheck
+                    text: qsTr("Capture system keyboard shortcuts")
+                    enabled: SystemProperties.hasDesktopEnvironment
+                    checked: StreamingPreferences.captureSysKeysMode !== StreamingPreferences.CSK_OFF || !SystemProperties.hasDesktopEnvironment
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 10000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("This enables the capture of system-wide keyboard shortcuts like Alt+Tab that would normally be handled by the client OS while streaming.") + "\n\n" +
+                                  qsTr("NOTE: Certain keyboard shortcuts like Ctrl+Alt+Del on Windows cannot be intercepted by any application, including Vibemis.")
+                }
+
+                AutoResizingComboBox {
+                    // ignore setting the index at first, and actually set it when the component is loaded
+                    Component.onCompleted: {
+                        if (!visible) {
+                            // Do nothing if the control won't even be visible
+                            return
+                        }
+
+                        var saved_syskeysmode = StreamingPreferences.captureSysKeysMode
+                        currentIndex = 0
+                        for (var i = 0; i < captureSysKeysModeListModel.count; i++) {
+                            var el_syskeysmode = captureSysKeysModeListModel.get(i).val;
+                            if (saved_syskeysmode === el_syskeysmode) {
+                                currentIndex = i
+                                break
+                            }
+                        }
+
+                        activated(currentIndex)
+                    }
+
+                    enabled: captureSysKeysCheck.checked && captureSysKeysCheck.enabled
+                    textRole: "text"
+                    model: ListModel {
+                        id: captureSysKeysModeListModel
+                        ListElement {
+                            text: qsTr("in fullscreen")
+                            val: StreamingPreferences.CSK_FULLSCREEN
+                        }
+                        ListElement {
+                            text: qsTr("always")
+                            val: StreamingPreferences.CSK_ALWAYS
+                        }
+                    }
+
+                    function updatePref() {
+                        if (!enabled) {
+                            StreamingPreferences.captureSysKeysMode = StreamingPreferences.CSK_OFF
+                        }
+                        else {
+                            StreamingPreferences.captureSysKeysMode = captureSysKeysModeListModel.get(currentIndex).val
+                        }
+                    }
+
+                    // ::onActivated must be used, as it only listens for when the index is changed by a human
+                    onActivated: {
+                        updatePref()
+                    }
+
+                    // This handles transition of the checkbox state
+                    onEnabledChanged: {
+                        updatePref()
+                    }
+                }
+
+                VbToggleRow {
+                    id: absoluteTouchCheck
+                    text: qsTr("Use touchscreen as a virtual trackpad")
+                    checked: !StreamingPreferences.absoluteTouchMode
+                    onCheckedChanged: {
+                        StreamingPreferences.absoluteTouchMode = !checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("When checked, the touchscreen acts like a trackpad. When unchecked, the touchscreen will directly control the mouse pointer.")
+                }
+
+                // BL-2263 (Settings IA): relocated from Streaming/Vibemis Features -
+                // client-side touch input, no Apollo dependency.
+                // The touch-overlay PREF shipped with a
+                // Quick-Menu toggle but never got its Settings row — unfindable outside a
+                // stream. Same opt-in default (off).
+                VbToggleRow {
+                    id: touchOverlayCheck
+                    text: qsTr("On-screen touch controls while streaming")
+                    checked: StreamingPreferences.enableTouchOverlay
+                    onCheckedChanged: {
+                        StreamingPreferences.enableTouchOverlay = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Composites three translucent buttons into the stream: MENU (top-left, opens the Quick Menu), KBD (top-right, opens the SteamOS on-screen keyboard) and a touch-mode toggle (next to KBD, switches trackpad/direct touch). Finger taps only — mouse clicks in those corners pass through to the game.") + "\n\n" +
+                                  qsTr("Can also be toggled mid-stream from the Quick Menu (\"Touch overlay\").")
+                }
+
+                VbToggleRow {
+                    id: swapMouseButtonsCheck
+                    text: qsTr("Swap left and right mouse buttons")
+                    checked: StreamingPreferences.swapMouseButtons
+                    onCheckedChanged: {
+                        StreamingPreferences.swapMouseButtons = checked
+                    }
+                }
+
+                VbToggleRow {
+                    id: reverseScrollButtonsCheck
+                    text: qsTr("Reverse mouse scrolling direction")
+                    checked: StreamingPreferences.reverseScrollDirection
+                    onCheckedChanged: {
+                        StreamingPreferences.reverseScrollDirection = checked
+                    }
+                }
+            }
+        }
+
+        // Restyled to the Video-page card pattern. Bindings unchanged.
+        VbSettingsCard {
+            id: gamepadSettingsGroupBox
+            visible: settingsPage.category === 2
+            width: (parent.width - (parent.leftPadding + parent.rightPadding))
+            font.pixelSize: VbTokens.typeBody
+
+            Column {
+                anchors.fill: parent
+                spacing: VbTokens.space3
+
+                VbSectionHeader {
+                    text: qsTr("Gamepad Settings")
+                }
+
+                // Expose the (previously hidden) gamepad remapping screen.
+                Button {
+                    id: gamepadMapButton
+                    // No trailing ellipsis — it read as clipped text on device.
+                    text: qsTr("Configure gamepad mapping")
+                    onClicked: navigateTo("qrc:/gui/GamepadMapper.qml", "GamepadMapper")
+                    ToolTip.text: qsTr("Remap or calibrate connected controllers (paddles, face buttons, sticks).")
+                    ToolTip.delay: 1000
+                    ToolTip.visible: hovered
+                }
+
+                // Redesign live tweaks (State model: showHints). Persisted via prefs.
+                VbToggleRow {
+                    id: showHintsCheck
+                    text: qsTr("Show the gamepad hint bar")
+                    checked: StreamingPreferences.uiShowHints
+                    onCheckedChanged: StreamingPreferences.uiShowHints = checked
+                    ToolTip.text: qsTr("Show the button-hint bar at the bottom of every screen.")
+                    ToolTip.delay: 1000
+                    ToolTip.visible: hovered
+                }
+
+                Label {
+                    width: parent.width
+                    id: quickMenuComboTitle
+                    text: qsTr("Quick Menu shortcut")
+                    font.pixelSize: VbTokens.typeLabel
+                    font.family: VbTokens.fontBody
+                    wrapMode: Text.Wrap
+                }
+
+                AutoResizingComboBox {
+                    id: quickMenuComboBox
+                    textRole: "text"
+                    hoverEnabled: true
+                    model: ListModel {
+                        id: quickMenuComboModel
+                        ListElement { text: qsTr("Select + L1 + R1 + Y (default)"); val: 0 }
+                        ListElement { text: qsTr("Select + L1 + R1 + B"); val: 1 }
+                        ListElement { text: qsTr("L3 + R3 (click both sticks)"); val: 2 }
+                        ListElement { text: qsTr("Select + Start"); val: 3 }
+                        ListElement { text: qsTr("Back paddle P1"); val: 4 }
+                        ListElement { text: qsTr("Back paddle P2"); val: 5 }
+                        ListElement { text: qsTr("Back paddle P3"); val: 6 }
+                        ListElement { text: qsTr("Back paddle P4"); val: 7 }
+                    }
+
+                    function reinitialize() {
+                        var saved = StreamingPreferences.quickMenuGamepadCombo
+                        currentIndex = 0
+                        for (var i = 0; i < quickMenuComboModel.count; i++) {
+                            if (quickMenuComboModel.get(i).val === saved) {
+                                currentIndex = i
+                                break
+                            }
+                        }
+                    }
+
+                    Component.onCompleted: {
+                        reinitialize()
+                        languageChanged.connect(reinitialize)
+                    }
+
+                    onActivated: {
+                        StreamingPreferences.quickMenuGamepadCombo = quickMenuComboModel.get(currentIndex).val
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Which gamepad button combination opens the in-stream Quick Menu.") + "\n\n" +
+                                  qsTr("On controllers with back paddles (Legion Go, Xbox Elite, …) the P1 paddle ALSO opens the menu while the default combo is selected — no setup needed. Picking any other combo takes full control.")
+                }
+
+                VbToggleRow {
+                    id: swapFaceButtonsCheck
+                    text: qsTr("Swap A/B and X/Y gamepad buttons")
+                    checked: StreamingPreferences.swapFaceButtons
+                    onCheckedChanged: {
+                        StreamingPreferences.swapFaceButtons = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("This switches gamepads into a Nintendo-style button layout")
+                }
+
+                VbToggleRow {
+                    id: singleControllerCheck
+                    text: qsTr("Force gamepad #1 always connected")
+                    checked: !StreamingPreferences.multiController
+                    onCheckedChanged: {
+                        StreamingPreferences.multiController = !checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Forces a single gamepad to always stay connected to the host, even if no gamepads are actually connected to this PC.") + " " +
+                                  qsTr("Only enable this option when streaming a game that doesn't support gamepads being connected after startup.")
+                }
+
+                VbToggleRow {
+                    id: gamepadMouseCheck
+                    text: qsTr("Enable mouse control with gamepads by holding the 'Start' button")
+                    checked: StreamingPreferences.gamepadMouse
+                    onCheckedChanged: {
+                        StreamingPreferences.gamepadMouse = checked
+                    }
+                }
+
+                VbToggleRow {
+                    id: backgroundGamepadCheck
+                    text: qsTr("Process gamepad input when Vibemis is in the background")
+                    visible: SystemProperties.hasDesktopEnvironment
+                    checked: StreamingPreferences.backgroundGamepad
+                    onCheckedChanged: {
+                        StreamingPreferences.backgroundGamepad = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Allows Vibemis to capture gamepad inputs even if it's not the current window in focus")
+                }
+
+                VbToggleRow {
+                    id: forwardMotionCheck
+                    text: qsTr("Forward motion controls (gyro) — experimental")
+                    checked: StreamingPreferences.forwardMotionControls
+                    onCheckedChanged: {
+                        StreamingPreferences.forwardMotionControls = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Experimental: detect this device's gyro/accelerometer for forwarding to the host (motion/gyro aim). Sensor forwarding is still in development; enabling this currently logs the detected sensors.")
+                }
+
+                VbToggleRow {
+                    id: suppressRumbleCheck
+                    text: qsTr("Disable controller rumble")
+                    checked: StreamingPreferences.suppressControllerRumble
+                    onCheckedChanged: {
+                        StreamingPreferences.suppressControllerRumble = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Ignore rumble/force-feedback sent by the host. Useful to save battery on a handheld or if you find rumble distracting.")
+                }
+            }
+        }
+
+        // Restyled to the Video-page card pattern. Bindings unchanged.
+        VbSettingsCard {
+            id: advancedSettingsGroupBox
+            visible: settingsPage.category === 5
+            width: (parent.width - (parent.leftPadding + parent.rightPadding))
+            font.pixelSize: VbTokens.typeBody
+
+            Column {
+                anchors.fill: parent
+                spacing: VbTokens.space3
+
+                VbSectionHeader {
+                    text: qsTr("Advanced Settings")
+                }
+
+                VbToggleRow {
+                    id: unlockBitrate
+                    text: qsTr("Unlock bitrate limit (Experimental)")
+
+                    checked: StreamingPreferences.unlockBitrate
+                    onCheckedChanged: {
+                        StreamingPreferences.unlockBitrate = checked
+                        StreamingPreferences.bitrateKbps = Math.min(StreamingPreferences.bitrateKbps, slider.to)
+                        slider.value = StreamingPreferences.bitrateKbps
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("This unlocks extremely high video bitrates for use with Sunshine hosts. It should only be used when streaming over an Ethernet LAN connection.")
+                }
 
                 // Vibemis: in-app update channel + manual check + one-tap install.
                 // The checker follows StreamingPreferences.updateChannel; installUpdate()
@@ -3687,24 +3768,6 @@ Item {
                     width: parent.width
                 }
 
-                // The touch-overlay PREF shipped with a
-                // Quick-Menu toggle but never got its Settings row — unfindable outside a
-                // stream. Same opt-in default (off).
-                VbToggleRow {
-                    id: touchOverlayCheck
-                    text: qsTr("On-screen touch controls while streaming")
-                    checked: StreamingPreferences.enableTouchOverlay
-                    onCheckedChanged: {
-                        StreamingPreferences.enableTouchOverlay = checked
-                    }
-
-                    ToolTip.delay: 1000
-                    ToolTip.timeout: 5000
-                    ToolTip.visible: hovered
-                    ToolTip.text: qsTr("Composites three translucent buttons into the stream: MENU (top-left, opens the Quick Menu), KBD (top-right, opens the SteamOS on-screen keyboard) and a touch-mode toggle (next to KBD, switches trackpad/direct touch). Finger taps only — mouse clicks in those corners pass through to the game.") + "\n\n" +
-                                  qsTr("Can also be toggled mid-stream from the Quick Menu (\"Touch overlay\").")
-                }
-
                 VbToggleRow {
                     id: preferTailscaleCheck
                     text: qsTr("Prefer Tailscale addresses for remote play")
@@ -3787,7 +3850,7 @@ Item {
         // Restyled to the Video-page card pattern. Bindings unchanged.
         VbSettingsCard {
             id: systemInfoGroupBox
-            visible: settingsPage.category === 4
+            visible: settingsPage.category === 5
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
             font.pixelSize: VbTokens.typeBody
 
@@ -3854,7 +3917,7 @@ Item {
         // Restyled to the Video-page card pattern. Bindings unchanged.
         VbSettingsCard {
             id: aboutGroupBox
-            visible: settingsPage.category === 4
+            visible: settingsPage.category === 5
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
             font.pixelSize: VbTokens.typeBody
 
@@ -3899,7 +3962,7 @@ Item {
         // Restyled to the Video-page card pattern. Bindings unchanged.
         VbSettingsCard {
             id: helpLinksGroupBox
-            visible: SystemProperties.hasBrowser && settingsPage.category === 4
+            visible: SystemProperties.hasBrowser && settingsPage.category === 5
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
             font.pixelSize: VbTokens.typeBody
 
