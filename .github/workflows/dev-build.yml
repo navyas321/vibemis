@@ -1,14 +1,22 @@
 name: Development Build
 
-# This workflow handles development builds with intelligent build skipping:
-# - test** branches: build a 🔬 alpha pre-release (for test-cycle validation)
-# - vibemis-main: publish a 🧪 beta ONLY when a PR is MERGED in (HEAD is a merge commit) and the
-#   merge touched non-docs files. Direct/regular pushes to vibemis-main (docs, CI tweaks, hotfix
-#   commits) do NOT build a beta — this is what keeps the Releases page quiet.
+# This workflow handles development builds with intelligent build skipping (rules cleaned
+# up 2026-07-21, BL-2270 — deterministic, content-based, merge-method-agnostic):
+# - test** branches: ANY push whose DIFF vs vibemis-main contains meaningful (non-docs)
+#   changes builds a 🔬 alpha pre-release. The branch name IS the intent — no [alpha]
+#   marker commit is required (the old marker + per-commit gate skipped empty marker
+#   commits and forced cherry-pick dances). An empty/no-op branch is skipped.
+# - vibemis-main: ANY push that changes non-docs paths publishes a 🧪 beta — merge commit,
+#   squash merge, rebase merge, and direct push all count identically. The decision is by
+#   CONTENT (what the push changed), never by whether HEAD is a merge commit (the old
+#   HEAD-is-a-merge-commit rule silently skipped every squash merge). Docs/config-only
+#   pushes (.md/.txt/non-workflow .yml) do NOT build — the quiet fast path stays.
 # - release/** / main / master / workflow_dispatch: ALWAYS build + create production releases
 #
-# Beta policy = "beta tracks PR merges into vibemis-main, nothing else." Releases are PERMANENT:
-# every cut stays on the Releases page forever, like tags —
+# Beta policy = "a beta tracks every meaningful change landing on vibemis-main, regardless
+# of merge method." Release builds on vibemis-main are NEVER concurrency-cancelled (they
+# queue — see the concurrency block); only test** alpha builds may be superseded.
+# Releases are PERMANENT: every cut stays on the Releases page forever, like tags —
 # SemVer §3 released-version immutability. Superseded releases are never deleted.
 
 on:
@@ -53,12 +61,18 @@ on:
 env:
   QT_VERSION: '6.8.3'
 
-# CI-minutes hygiene: one active run per ref+event — a newer push/dispatch
-# cancels the older superseded build instead of finishing a release that the newer
-# run's prune would delete minutes later.
+# Concurrency policy (BL-2270): release builds must never be killed mid-flight.
+# - vibemis-main / main / master / release/** pushes and ALL manual dispatches QUEUE:
+#   cancel-in-progress is FALSE for them, so an in-flight release build survives any
+#   follow-up push (the old blanket cancel-in-progress silently destroyed the #245 and
+#   #249 beta builds). GitHub keeps at most one PENDING run per group; if a queued run
+#   is superseded by an even newer push, the newer HEAD contains the superseded commits,
+#   so its beta (and the same-tier changelog anchoring) still covers them.
+# - test** pushes keep cancel-in-progress: a newer alpha supersedes an older in-flight
+#   one — losing the older alpha is the desired behavior there.
 concurrency:
   group: dev-build-${{ github.ref }}-${{ github.event_name }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'push' && startsWith(github.ref_name, 'test') }}
 
 jobs:
   setup-version:
@@ -78,7 +92,7 @@ jobs:
 
       # Post-split content guard: internal-only content (the testing/ cycle
       # directory beyond its stub README, and docs/personas/) must not drift back
-      # into this public repository. Runs on vibemis-main pushes (PR merges) so a
+      # into this public repository. Runs on vibemis-main pushes (any merge method) so a
       # reintroduction fails fast.
       - name: Post-split content guard
         if: github.ref_name == 'vibemis-main'
@@ -106,6 +120,14 @@ jobs:
           # failed the whole job. Reading it from an env var is injection-safe.
           HEAD_COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
+          # ── Release-cut rules (BL-2270, 2026-07-21) — deterministic + content-based ──
+          #   beta  : ANY push to vibemis-main whose CONTENT changes non-docs paths.
+          #           Merge commit / squash / rebase / direct push all count identically.
+          #   alpha : ANY push to a test** branch whose DIFF vs vibemis-main (merge-base)
+          #           contains non-docs changes. No [alpha] marker commit — the branch
+          #           name IS the intent. Empty/no-op branches are skipped.
+          #   docs-only pushes (only .md/.txt/non-workflow .yml/.yaml) never release.
+
           # Always build on true release branches and workflow_dispatch.
           if [[ "${{ github.ref_name }}" == "main" || \
                 "${{ github.ref_name }}" == "master" || \
@@ -116,103 +138,78 @@ jobs:
             exit 0
           fi
 
-          # vibemis-main (beta integration branch): a 🧪 beta is published ONLY when a PR is
-          # merged in — i.e. the pushed HEAD is a MERGE COMMIT (>1 parent). Direct/regular pushes
-          # to vibemis-main (docs, CI tweaks, hotfix commits) do NOT build a beta. This is what
-          # keeps the Releases page quiet — betas track PR merges, nothing else.
+          # Meaningful = non-docs. Docs/config (.md, .txt, non-workflow .yml/.yaml) don't
+          # count; .github/workflows/ files DO (CI changes are releasable behavior).
+          count_meaningful() {  # $1 = base commit, $2 = head commit -> count on stdout
+            local CODE_FILES WORKFLOW_FILES
+            CODE_FILES=$(git diff --name-only "$1" "$2" | grep -v -E "(\.md$|\.txt$|\.yml$|\.yaml$)" | wc -l)
+            WORKFLOW_FILES=$(git diff --name-only "$1" "$2" | grep -E "^\.github/workflows/.*\.(yml|yaml)$" | wc -l)
+            echo $((CODE_FILES + WORKFLOW_FILES))
+          }
+
+          # vibemis-main (beta integration branch): a 🧪 beta is published for ANY push
+          # that changes non-docs paths. The decision is by push CONTENT (event.before →
+          # HEAD), never by whether HEAD is a merge commit — the old merge-commit rule
+          # silently skipped every squash/rebase merge (#243/#244/#246/#247/#248/#251).
           if [[ "${{ github.ref_name }}" == "vibemis-main" || "${{ github.ref_name }}" == "develop" ]]; then
-            PARENT_COUNT=$(git rev-list --parents -n 1 HEAD | wc -w)
-            PARENT_COUNT=$((PARENT_COUNT - 1))
-            if [ "$PARENT_COUNT" -le 1 ]; then
-              echo "should_build=false" >> $GITHUB_OUTPUT
-              echo "Skipping beta — HEAD is a direct (non-merge) push to vibemis-main, not a PR merge"
+            BASE="${{ github.event.before }}"
+            ZERO="0000000000000000000000000000000000000000"
+            if [ -z "$BASE" ] || [ "$BASE" = "$ZERO" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+              # Fallback (branch creation / force-push away / unknown before): diff the
+              # HEAD commit itself against its first parent.
+              BASE=$(git rev-parse HEAD^1 2>/dev/null || echo "")
+            fi
+            if [ -z "$BASE" ]; then
+              echo "should_build=true" >> $GITHUB_OUTPUT
+              echo "Building beta — no usable diff base (root commit?); failing open"
               exit 0
             fi
-            # Merge commit = a PR landed. Still skip if the merge only touched docs/config.
-            FIRST_PARENT=$(git rev-parse HEAD^1)
-            CODE_FILES=$(git diff --name-only $FIRST_PARENT HEAD | grep -v -E "(\.md$|\.txt$|\.yml$|\.yaml$)" | wc -l)
-            WORKFLOW_FILES=$(git diff --name-only $FIRST_PARENT HEAD | grep -E "^\.github/workflows/.*\.(yml|yaml)$" | wc -l)
-            TOTAL=$((CODE_FILES + WORKFLOW_FILES))
+            TOTAL=$(count_meaningful "$BASE" HEAD)
             if [ "$TOTAL" -eq 0 ]; then
               echo "should_build=false" >> $GITHUB_OUTPUT
-              echo "Skipping beta — merged PR touched only docs/config"
-              exit 0
+              echo "Skipping beta — push to vibemis-main changed only docs/config paths (range $BASE..HEAD)"
             else
               echo "should_build=true" >> $GITHUB_OUTPUT
-              echo "Building beta — PR merge into vibemis-main with $TOTAL meaningful file(s)"
-              exit 0
+              echo "Building beta — push to vibemis-main changed $TOTAL meaningful file(s) (range $BASE..HEAD)"
             fi
+            exit 0
           fi
 
-          # Skip builds if commit message contains [skip ci] or [ci skip]
+          # Explicit [skip ci]/[ci skip] escape hatch (GitHub also skips these natively).
           if echo "$HEAD_COMMIT_MSG" | grep -E "\[(skip ci|ci skip)\]" > /dev/null; then
             echo "should_build=false" >> $GITHUB_OUTPUT
             echo "Build skipped due to [skip ci] in commit message"
             exit 0
           fi
 
-          # Alpha = automated-testing artifacts only (CI-minutes hygiene): a test**
-          # push builds an alpha ONLY when the HEAD commit message carries an explicit
-          # [alpha] request tag (added when an artifact is actually needed). Branch-sync/
-          # WIP pushes no longer burn a full pipeline per push. Betas (vibemis-main) are
-          # the MANUAL-testing channel.
+          # test** (alpha channel): ANY push builds a 🔬 alpha when the branch's diff vs
+          # the merge-base with vibemis-main contains meaningful (non-docs) changes.
+          # No [alpha] marker commit is required — the old marker + per-commit gate
+          # SKIPPED empty marker commits (test137) and forced cherry-pick dances.
+          # Diffing vs the merge-base means a cherry-picked or merged test branch always
+          # qualifies; an empty/no-op branch (no diff vs vibemis-main) does not.
           if [[ "${{ github.ref_name }}" =~ ^test ]]; then
-            if ! echo "$HEAD_COMMIT_MSG" | grep -F "[alpha]" > /dev/null; then
-              echo "should_build=false" >> $GITHUB_OUTPUT
-              echo "Skipping alpha - test** push without an [alpha] request tag"
+            git fetch --no-tags origin "+refs/heads/vibemis-main:refs/remotes/origin/vibemis-main" 2>/dev/null || true
+            MERGE_BASE=$(git merge-base HEAD origin/vibemis-main 2>/dev/null || echo "")
+            if [ -z "$MERGE_BASE" ]; then
+              echo "should_build=true" >> $GITHUB_OUTPUT
+              echo "Building alpha — no merge-base with vibemis-main; failing open"
               exit 0
             fi
-          fi
-          
-          # Check if this is a merge commit (has multiple parents)
-          PARENT_COUNT=$(git rev-list --parents -n 1 HEAD | wc -w)
-          PARENT_COUNT=$((PARENT_COUNT - 1))  # Subtract 1 because first item is the commit hash itself
-          
-          if [ "$PARENT_COUNT" -gt 1 ]; then
-            echo "Detected merge commit with $PARENT_COUNT parents"
-            
-            # For merge commits, check the actual changes being merged
-            # Compare against the first parent (the target branch before merge)
-            FIRST_PARENT=$(git rev-parse HEAD^1)
-            echo "Comparing changes against first parent: $FIRST_PARENT"
-            
-            # Get all changed files in this merge, excluding documentation/config files but allowing workflow changes
-            CHANGED_FILES=$(git diff --name-only $FIRST_PARENT HEAD | grep -v -E "(\.md$|test.*\.txt$|README.*\.txt$|CHANGELOG.*\.txt$)" | grep -v -E "(\.yml$|\.yaml$)" | wc -l)
-            WORKFLOW_FILES=$(git diff --name-only $FIRST_PARENT HEAD | grep -E "^\.github/workflows/.*\.(yml|yaml)$" | wc -l)
-            TOTAL_MEANINGFUL=$((CHANGED_FILES + WORKFLOW_FILES))
-            echo "Meaningful files changed in merge: $CHANGED_FILES"
-            echo "Workflow files changed: $WORKFLOW_FILES"
-            echo "Total meaningful changes: $TOTAL_MEANINGFUL"
-            
-            if [ "$TOTAL_MEANINGFUL" -eq 0 ]; then
+            TOTAL=$(count_meaningful "$MERGE_BASE" HEAD)
+            if [ "$TOTAL" -eq 0 ]; then
               echo "should_build=false" >> $GITHUB_OUTPUT
-              echo "Skipping build - merge contains no meaningful code changes"
-              exit 0
+              echo "Skipping alpha — test branch has no meaningful (non-docs) diff vs vibemis-main (merge-base $MERGE_BASE)"
             else
               echo "should_build=true" >> $GITHUB_OUTPUT
-              echo "Build will proceed - merge contains $TOTAL_MEANINGFUL meaningful changes (code: $CHANGED_FILES, workflows: $WORKFLOW_FILES)"
-              exit 0
+              echo "Building alpha — test branch diff vs vibemis-main has $TOTAL meaningful file(s) (merge-base $MERGE_BASE)"
             fi
-          else
-            echo "Regular commit (not a merge) - checking for meaningful changes"
-            
-            # For regular commits, check against previous commit
-            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD | grep -v -E "(\.md$|test.*\.txt$|README.*\.txt$|CHANGELOG.*\.txt$)" | grep -v -E "(\.yml$|\.yaml$)" | wc -l)
-            WORKFLOW_FILES=$(git diff --name-only HEAD~1 HEAD | grep -E "^\.github/workflows/.*\.(yml|yaml)$" | wc -l)
-            TOTAL_MEANINGFUL=$((CHANGED_FILES + WORKFLOW_FILES))
-            echo "Meaningful files changed: $CHANGED_FILES"
-            echo "Workflow files changed: $WORKFLOW_FILES" 
-            echo "Total meaningful changes: $TOTAL_MEANINGFUL"
-            
-            if [ "$TOTAL_MEANINGFUL" -eq 0 ]; then
-              echo "should_build=false" >> $GITHUB_OUTPUT
-              echo "Skipping build - no meaningful code changes detected"
-              exit 0
-            fi
+            exit 0
           fi
-          
+
+          # Unreachable today (the push trigger list is tight), kept as a safe default.
           echo "should_build=true" >> $GITHUB_OUTPUT
-          echo "Build will proceed - meaningful changes detected (including code and/or workflow changes)"
+          echo "Build will proceed — unmatched ref ${{ github.ref_name }} defaults to build"
       
       # The stable-approval rule (docs/RELEASING.md tier matrix) enforced at the CI layer,
       # not just in prose — a release_type=stable dispatch without the literal confirmation
@@ -327,8 +324,8 @@ jobs:
           #          ⚠ MAINTAINER-APPROVAL GATE: only the maintainer decides a stable cut;
           #            a stable dispatch requires the CONFIRM-STABLE approval input.
           # rc       dispatch release_type=rc                             <next>-rc.NNN      true
-          # beta     vibemis-main PR merge / plain dispatch on main       <next>-beta.NNN    true
-          # alpha    test** push tagged [alpha]                           <next>-alpha.NNN   true
+          # beta     any non-docs push to vibemis-main (any merge method)  <next>-beta.NNN    true
+          # alpha    test** push with non-docs diff vs vibemis-main        <next>-alpha.NNN   true
           # dev      any other branch                                     <next>-dev.<run>.<branch>  true
 
           IS_PRERELEASE="true"
