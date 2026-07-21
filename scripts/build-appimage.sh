@@ -185,6 +185,7 @@ Icon=vibemis
 Categories=Game;Network;
 Keywords=streaming;gaming;moonlight;vibepollo;
 StartupNotify=true
+StartupWMClass=com.vibemis.Vibemis
 DESKEOF
 
 # Install the branded PNG icon if not already present (icon rarely changes)

@@ -1189,10 +1189,20 @@ int main(int argc, char *argv[])
     }
 #endif
 
-    // This is necessary to show our icon correctly on Wayland
-    app.setDesktopFileName("com.moonlight_stream.Moonlight");
-    qputenv("SDL_VIDEO_WAYLAND_WMCLASS", "com.moonlight_stream.Moonlight");
-    qputenv("SDL_VIDEO_X11_WMCLASS", "com.moonlight_stream.Moonlight");
+    // This is necessary to show our icon correctly on Wayland: compositors
+    // resolve the taskbar/dock icon by matching the window's app id against
+    // an installed .desktop file, so the id must be OUR desktop entry
+    // (com.vibemis.Vibemis) — not the old upstream com.moonlight_stream
+    // id, which made Desktop Mode show the Moonlight moon icon whenever an
+    // old Moonlight desktop entry was present (BL-2243). Inside Flatpak the
+    // app id must equal the Flatpak app-id for the same match to work.
+    QByteArray desktopId = qgetenv("FLATPAK_ID");
+    if (desktopId.isEmpty()) {
+        desktopId = QByteArrayLiteral("com.vibemis.Vibemis");
+    }
+    app.setDesktopFileName(QString::fromLatin1(desktopId));
+    qputenv("SDL_VIDEO_WAYLAND_WMCLASS", desktopId);
+    qputenv("SDL_VIDEO_X11_WMCLASS", desktopId);
 
     // Register our C++ types for QML
     qmlRegisterType<ComputerModel>("ComputerModel", 1, 0, "ComputerModel");

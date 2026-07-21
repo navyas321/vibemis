@@ -3,6 +3,7 @@ Name=Vibemis
 Comment=Linux-focused Vibemis Qt fork tuned for pairing with Vibepollo. Streams games and applications from a Sunshine / Apollo / Vibepollo host.
 Exec=vibemis
 Icon=vibemis
+StartupWMClass=com.vibemis.Vibemis
 Terminal=false
 Type=Application
 Categories=Qt;Game;Network;RemoteAccess;

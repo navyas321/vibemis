@@ -57,7 +57,7 @@ Icon=$ICON_LINE
 Categories=Game;
 Keywords=moonlight;apollo;vibepollo;streaming;steam;
 Terminal=false
-StartupWMClass=Vibemis
+StartupWMClass=com.vibemis.Vibemis
 EOF
 chmod +x "$DESKTOP_FILE"
 
