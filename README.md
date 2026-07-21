@@ -9,8 +9,9 @@
 **Built for SteamOS.** The primary target is SteamOS Game Mode (Gamescope) on AMD handhelds; every release is hardware-verified on a **Lenovo Legion Go S Z2** test device before it ships. It runs on any modern Linux desktop too.
 
 <p align="center">
-  <img src="docs/design/screenshots/pcview.png" alt="Computers list — gamepad-first host cards with live status and a Vibepollo host badge" width="49%">
-  <img src="docs/design/screenshots/quickmenu.png" alt="In-stream Quick Menu overlay — clipboard, server commands, text-send, and stream controls over a live stream" width="49%">
+  <img src="docs/design/screenshots/pcview.png" alt="Computers list — gamepad-first host cards with live status and a Vibepollo host badge" width="32%">
+  <img src="docs/design/screenshots/settings.png" alt="Settings — category sidebar with token-styled controls, presets, and native-resolution guidance" width="32%">
+  <img src="docs/design/screenshots/quickmenu.png" alt="In-stream Quick Menu overlay — clipboard, server commands, text-send, and stream controls over a live stream" width="32%">
 </p>
 
 ## Why Vibemis? (the best of both worlds)

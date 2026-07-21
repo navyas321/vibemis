@@ -1,7 +1,5 @@
 # Vibemis — Development Notes
 
-> Contributing conventions (commit format, PR test scorecard) are in [CONTRIBUTING.md](../CONTRIBUTING.md).
-
 ## Project structure
 
 ```
@@ -21,12 +19,10 @@ vibemis/
 │   ├── RELEASING.md        # Versioning, CI release tiers, AppImage pipeline
 │   ├── SELFTEST.md         # Scriptable self-test / verification surfaces
 │   └── DEVELOPMENT.md      # This file — project structure, key files
-├── CONTRIBUTING.md         # Commit format, PR test scorecard
 └── README.md               # User-facing project README
 ```
 
-> Versioning and release policy are documented in [RELEASING.md](RELEASING.md); contribution
-> conventions (commit format, PR test scorecard) are in [CONTRIBUTING.md](../CONTRIBUTING.md).
+> Versioning and release policy are documented in [RELEASING.md](RELEASING.md).
 
 ## Key source files
 
