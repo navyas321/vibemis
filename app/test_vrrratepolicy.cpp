@@ -175,3 +175,8 @@ int main()
     printf("test_vrrratepolicy: %d checks, %d failure(s)\n", g_Checks, g_Failures);
     return g_Failures == 0 ? 0 : 1;
 }
+
+// test120 alpha marker (BL-2234 P2b): CI cuts an alpha from test** branches
+// only when the HEAD commit touches a code file and carries the [alpha] tag.
+// This cut packages alpha.003: the consolidated VRR stack (PR #240 + #241 +
+// #242) plus the BL-2235 one-toggle FPS auto-derive fix (6bf02f21).
