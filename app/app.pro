@@ -370,10 +370,6 @@ libplacebo {
     HEADERS += \
         streaming/video/ffmpeg-renderers/plvk.h \
         streaming/video/ffmpeg-renderers/pl_libav_shim.h
-
-    macx {
-        SOURCES += streaming/video/ffmpeg-renderers/plvk_objc.mm
-    }
 }
 config_EGL {
     message(EGL renderer selected)
