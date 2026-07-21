@@ -30,9 +30,10 @@
 #define XML_NAME_EQUALS(x, y) ((x) == (u##y))
 #endif
 
-NvHTTP::NvHTTP(NvAddress address, uint16_t httpsPort, QSslCertificate serverCert, QNetworkAccessManager* nam) :
+NvHTTP::NvHTTP(NvAddress address, uint16_t httpsPort, QSslCertificate serverCert, bool useTrueUid, QNetworkAccessManager* nam) :
     m_Nam(nam ? nam : new QNetworkAccessManager(this)),
-    m_ServerCert(serverCert)
+    m_ServerCert(serverCert),
+    m_UseTrueUid(useTrueUid)
 {
     m_BaseUrlHttp.setScheme("http");
     m_BaseUrlHttps.setScheme("https");
@@ -46,9 +47,8 @@ NvHTTP::NvHTTP(NvAddress address, uint16_t httpsPort, QSslCertificate serverCert
 }
 
 NvHTTP::NvHTTP(NvComputer* computer, QNetworkAccessManager* nam) :
-    NvHTTP(computer->activeAddress, computer->activeHttpsPort, computer->serverCert, nam)
+    NvHTTP(computer->activeAddress, computer->activeHttpsPort, computer->serverCert, !computer->isNvidiaServerSoftware, nam)
 {
-
 }
 
 void NvHTTP::setServerCert(QSslCertificate serverCert)
@@ -71,6 +71,11 @@ void NvHTTP::setAddress(NvAddress address)
 void NvHTTP::setHttpsPort(uint16_t port)
 {
     m_BaseUrlHttps.setPort(port);
+}
+
+void NvHTTP::setTrueUid(bool useTrueUid)
+{
+    m_UseTrueUid = useTrueUid;
 }
 
 NvAddress NvHTTP::address()
@@ -370,12 +375,21 @@ NvHTTP::getAppList(NvLogLevel logLevel)
                 }
                 apps.append(NvApp());
             }
-            // Vibemis: hand-merged — upstream added the `!apps.isEmpty()` safety
-            // wrapper and the XML_NAME_EQUALS macro style; wjbeckett added the
-            // UUID branch for Apollo's UUID-based app launching. Keeping both.
+            // Vibemis: hand-merged — upstream's null-AppTitle normalization for
+            // Sunshine (<AppTitle/>) is adopted; wjbeckett's UUID branch for
+            // Apollo's UUID-based app launching is kept below.
             else if (!apps.isEmpty()) {
                 if (XML_NAME_EQUALS(name, "AppTitle")) {
-                    apps.last().name = xmlReader.readElementText();
+                    // If an app has no name, Sunshine may send us <AppTitle/>,
+                    // which readElementText() returns as a null QString.
+                    // We want to treat this as an empty QString instead, so we
+                    // will explicitly convert it. An empty string will satisfy
+                    // NvApp's isInitialized() check.
+                    QString name = xmlReader.readElementText();
+                    if (name.isNull()) {
+                        name = "";
+                    }
+                    apps.last().name = name;
                 }
                 else if (XML_NAME_EQUALS(name, "ID")) {
                     apps.last().id = xmlReader.readElementText().toInt();
@@ -572,13 +586,14 @@ NvHTTP::openConnection(QUrl baseUrl,
     QUrl url(baseUrl);
     url.setPath("/" + command);
 
-    // Use the persistent uniqueid from IdentityManager. This ID is generated once
-    // and stored in QSettings, so it survives app restarts. Pairing on Vibepollo
-    // (and Apollo) is tied to the client cert+uniqueid pair — using a new random
-    // uniqueid on every launch causes 403 Forbidden on all HTTPS endpoints after
-    // the first session because the server has only authorized the original id.
-    url.setQuery("uniqueid=" + IdentityManager::get()->getUniqueId() + "&uuid=" +
-                 QUuid::createUuid().toString(QUuid::WithoutBraces) +
+    // Vibemis: the persistent uniqueid from IdentityManager is REQUIRED for
+    // Vibepollo/Apollo — pairing is tied to the cert+uniqueid pair and a random
+    // id 403s after the first session. Upstream's m_UseTrueUid only substitutes
+    // a shared placeholder UID for NVIDIA GFE hosts (so users can quit each
+    // other's games); non-NVIDIA hosts (all of ours) keep the true id.
+    // The dashed WithoutBraces uuid format is kept for Apollo compatibility.
+    url.setQuery("uniqueid=" + (m_UseTrueUid ? IdentityManager::get()->getUniqueId() : "0123456789ABCDEF") +
+                 "&uuid=" + QUuid::createUuid().toString(QUuid::WithoutBraces) +
                  ((arguments != nullptr) ? ("&" + arguments) : ""));
 
     QNetworkRequest request(url);
