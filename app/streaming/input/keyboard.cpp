@@ -146,7 +146,9 @@ void SdlInputHandler::performSpecialKeyCombo(KeyCombo combo)
                     "Detected quitAndExit key combo");
 
         // Indicate that we want to exit afterwards
-        Session::get()->setShouldExit(true);
+        // Vibemis (BL-2226): keep the fork's session-exit API; upstream's
+        // setShouldExit(true) belongs to the un-adopted QML lifecycle refactor.
+        Session::get()->setShouldExitAfterQuit();
 
         // Push a quit event to the main loop
         SDL_Event quitExitEvent;
