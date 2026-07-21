@@ -79,7 +79,15 @@ Item {
         // If the stream was up and dropped unexpectedly, retry in place
         // instead of popping back to the grid. Guarded by the setting (default on,
         // Android parity — see StreamingPreferences::autoReconnect, BL-2072/P3.21).
-        if (StreamingPreferences.autoReconnect && !quitAfter && streamStarted &&
+        //
+        // BL-2265 (test140 v2 attribution): a BITRATE-RESCUE teardown is
+        // deliberately reconnect-eligible even for one-shot CLI launches
+        // (quitAfter) — the rescue's entire purpose is keeping the stream
+        // up, and it is bounded by the attempt cap here plus the bitrate
+        // floor in BitrateRescuePolicy. Every NON-rescue path keeps the
+        // CLI's exit-at-session-end semantics exactly as before.
+        var rescueReconnect = session && session.wasBitrateRescue()
+        if (StreamingPreferences.autoReconnect && (!quitAfter || rescueReconnect) && streamStarted &&
                 session && session.wasUnexpectedTermination() &&
                 reconnectAttempts < maxReconnectAttempts) {
             reconnectAttempts++

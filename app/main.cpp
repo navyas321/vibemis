@@ -1014,6 +1014,21 @@ int main(int argc, char *argv[])
               !BitrateRescuePolicy::isCollapseWallClock(5000, 25, 0, 116));
         check("bitrate-rescue-wallclock-healthy-holds",
               !BitrateRescuePolicy::isCollapseWallClock(2500, 290, 0, 116));
+        // BL-2265 (test140 v2 follow-up): rescue-chain override wiring —
+        // trigger->pending->consume through the EXACT production seam that
+        // Session::initialize() uses on a rescue reconnect. Proves the
+        // one-shot override half of the reconnect chain offscreen (no host
+        // needed); the QML relaunch half is device-validated via the CLI
+        // vehicle now that rescue reconnects are quitAfter-eligible.
+        Session::stagePendingRescueKbpsForTest(16000);
+        check("bitrate-rescue-consume-lowers",
+              Session::consumePendingRescueKbps(32000) == 16000);
+        check("bitrate-rescue-consume-oneshot",
+              Session::consumePendingRescueKbps(32000) == 32000);
+        Session::stagePendingRescueKbpsForTest(16000);
+        check("bitrate-rescue-consume-never-raises",
+              Session::consumePendingRescueKbps(10000) == 10000);
+        Session::stagePendingRescueKbpsForTest(0);   // leave pristine
 
         // Non-destructive QSettings round-trip in an isolated group so we never touch real
         // preferences or paired-host data: write a probe, read it back, then delete the group.
