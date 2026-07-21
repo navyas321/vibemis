@@ -1,0 +1,126 @@
+# Flatpak packaging CI (BL-2231) — ADDITIVE next to the AppImage pipeline
+# (dev-build.yml), which this workflow never touches.
+#
+# validate: cheap, deterministic manifest checks on every packaging change.
+# bundle:   full flatpak build + .flatpak bundle artifact, MANUAL dispatch only
+#           (builds the KDE 6.10 runtime module chain — long).
+name: flatpak
+
+on:
+  push:
+    branches: [vibemis-main]
+    paths:
+      - "packaging/flatpak/**"
+      - ".github/workflows/flatpak.yml"
+  pull_request:
+    paths:
+      - "packaging/flatpak/**"
+      - ".github/workflows/flatpak.yml"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Parse manifest + sibling JSON, resolve file references
+        run: |
+          python3 - <<'EOF'
+          import json, os, sys
+          try:
+              import yaml
+          except ImportError:
+              import subprocess
+              subprocess.check_call([sys.executable, "-m", "pip", "install", "pyyaml"])
+              import yaml
+
+          base = "packaging/flatpak"
+          manifest_path = os.path.join(base, "io.github.navyas321.Vibemis.yml")
+          with open(manifest_path, encoding="utf-8") as f:
+              manifest = yaml.safe_load(f)
+
+          assert manifest["app-id"] == "io.github.navyas321.Vibemis", manifest["app-id"]
+          assert manifest["command"] == "vibemis"
+
+          # Every type:file source must exist next to the manifest.
+          missing = []
+          for mod in manifest["modules"]:
+              for src in mod.get("sources", []):
+                  if isinstance(src, dict) and src.get("type") == "file":
+                      p = os.path.join(base, src["path"])
+                      if not os.path.isfile(p):
+                          missing.append(p)
+          assert not missing, f"manifest references missing files: {missing}"
+
+          for j in ("flathub.json", "VkLayer_FROG_gamescope_wsi.x86_64.json"):
+              with open(os.path.join(base, j), encoding="utf-8") as f:
+                  json.load(f)
+
+          # AUDIO INVARIANT GUARD (BL-2213): the manifest must build REAL SDL2
+          # and must never grow SDL3 / sdl2-compat modules or sources.
+          names = [m["name"] for m in manifest["modules"]]
+          assert "SDL2" in names, f"real SDL2 module missing: {names}"
+          bad = [n for n in names if n.lower() in ("sdl3", "sdl2-compat")]
+          assert not bad, f"FORBIDDEN SDL module(s) (BL-2213 audio invariant): {bad}"
+
+          sdl2 = next(m for m in manifest["modules"] if m["name"] == "SDL2")
+          git_srcs = [s for s in sdl2["sources"] if isinstance(s, dict) and s.get("type") == "git"]
+          for s in git_srcs:
+              assert "sdl2-compat" not in s.get("url", ""), f"sdl2-compat source URL forbidden: {s['url']}"
+              assert s.get("tag", "release-2.").startswith("release-2."), \
+                  f"SDL2 module must pin a real SDL2-line tag, got {s.get('tag')}"
+          opts = sdl2.get("build-options", {}).get("config-opts", [])
+          assert "-DSDL_PULSEAUDIO=ON" in opts, "SDL2 must be built with PulseAudio"
+
+          print("manifest OK:", manifest_path)
+          print("modules:", ", ".join(names))
+          EOF
+
+      - name: flatpak-builder dry parse (--show-manifest)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends flatpak-builder
+          flatpak-builder --show-manifest packaging/flatpak/io.github.navyas321.Vibemis.yml > /tmp/expanded.json
+          python3 -c "import json; m = json.load(open('/tmp/expanded.json')); print('expanded OK,', len(m['modules']), 'modules')"
+
+      - name: Validate desktop entry + metainfo
+        run: |
+          sudo apt-get install -y --no-install-recommends desktop-file-utils appstream
+          desktop-file-validate packaging/flatpak/io.github.navyas321.Vibemis.desktop
+          # appstreamcli validate is advisory here (screenshot URLs are
+          # placeholders until submission; see docs/FLATHUB.md) — report, don't fail.
+          appstreamcli validate --pedantic packaging/flatpak/io.github.navyas321.Vibemis.metainfo.xml || true
+
+  bundle:
+    # Full build: only on manual dispatch — the module chain (SDL2, ffmpeg,
+    # libplacebo, vibemis) on the KDE 6.10 SDK takes a long time.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    needs: validate
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install flatpak tooling + KDE 6.10 runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends flatpak flatpak-builder
+          flatpak --user remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak --user install -y flathub org.kde.Platform//6.10 org.kde.Sdk//6.10
+
+      - name: Build
+        run: |
+          flatpak-builder --user --force-clean --disable-rofiles-fuse \
+            --install-deps-from=flathub \
+            --repo=repo builddir packaging/flatpak/io.github.navyas321.Vibemis.yml
+
+      - name: Bundle
+        run: |
+          flatpak build-bundle repo Vibemis.flatpak io.github.navyas321.Vibemis master
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Vibemis-flatpak
+          path: Vibemis.flatpak
+          if-no-files-found: error
