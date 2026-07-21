@@ -2,10 +2,22 @@
 
 #include "../../decoder.h"
 #include "../renderer.h"
+#include "pacertelemetry.h"
+#include "vrr/vrrtypes.h"
 
 #include <QQueue>
 #include <QMutex>
 #include <QWaitCondition>
+
+#include <memory>
+
+class VrrPacingWorker;
+
+// The maximum number of frames pacer will ever hold is:
+// - 3 frames in the pacing queue
+// - 1 frame removed from the render queue in the process of rendering
+// - 1 frame for deferred free
+#define PACER_MAX_OUTSTANDING_FRAMES (3 + 1 + 1)
 
 class IVsyncSource {
 public:
@@ -25,13 +37,28 @@ public:
 class Pacer
 {
 public:
-    Pacer(IFFmpegRenderer* renderer, PVIDEO_STATS videoStats);
+    Pacer(IFFmpegRenderer* renderer);
 
     ~Pacer();
 
+    // Stop all producer threads before a final telemetry snapshot is merged
+    // by the decoder. It is safe to call this more than once.
+    void shutdown();
+
+    PacerTelemetrySnapshot telemetrySnapshot() const;
+
+    // Only the active VRR worker consumes the decoder-facing pacing metadata.
+    void submitFrame(PacedFrame&& frame);
+
     void submitFrame(AVFrame* frame);
 
-    bool initialize(SDL_Window* window, int maxVideoFps, bool enablePacing);
+    bool isVrrActive() const;
+
+    bool initialize(SDL_Window* window, int maxVideoFps,
+                    bool enablePacing, bool enableVsync,
+                    bool enableVrr, int vrrDisplayRefreshHz);
+
+    void notifyWindowChanged(PWINDOW_STATE_CHANGE_INFO info);
 
     void signalVsync();
 
@@ -60,12 +87,15 @@ private:
     QWaitCondition m_VsyncSignalled;
     SDL_Thread* m_RenderThread;
     SDL_Thread* m_VsyncThread;
+    AVFrame* m_DeferredFreeFrame;
     bool m_Stopping;
+    bool m_Shutdown;
 
     IVsyncSource* m_VsyncSource;
     IFFmpegRenderer* m_VsyncRenderer;
     int m_MaxVideoFps;
     int m_DisplayFps;
-    PVIDEO_STATS m_VideoStats;
     int m_RendererAttributes;
+    PacerTelemetry m_Telemetry;
+    std::unique_ptr<VrrPacingWorker> m_VrrWorker;
 };

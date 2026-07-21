@@ -85,7 +85,11 @@ private:
         bool enabled;
         int fontSize;
         SDL_Color color;
-        char text[512];
+        // 1024 matches Nonary v6.1.0-vrr9.1 (BL-2229): the debug overlay's
+        // base video stats (~500 chars) plus the five VRR pacing telemetry
+        // lines (~375 chars) exceed the historical 512-byte buffer, and
+        // stringifyVideoStats() drops any section that would overflow.
+        char text[1024];
 
         TTF_Font* font;
         SDL_Surface* surface;

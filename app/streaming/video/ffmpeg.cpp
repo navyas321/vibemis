@@ -120,7 +120,16 @@ void FFmpegVideoDecoder::setHdrMode(bool enabled)
 
 bool FFmpegVideoDecoder::notifyWindowChanged(PWINDOW_STATE_CHANGE_INFO info)
 {
+    if (m_Pacer != nullptr) {
+        m_Pacer->notifyWindowChanged(info);
+    }
+
     return m_FrontendRenderer->notifyWindowChanged(info);
+}
+
+bool FFmpegVideoDecoder::isVrrActive()
+{
+    return m_Pacer != nullptr && m_Pacer->isVrrActive();
 }
 
 int FFmpegVideoDecoder::getDecoderCapabilities()
@@ -295,8 +304,17 @@ void FFmpegVideoDecoder::reset()
     m_FramesIn = m_FramesOut = 0;
     m_FrameInfoQueue.clear();
 
-    delete m_Pacer;
-    m_Pacer = nullptr;
+    if (m_Pacer != nullptr) {
+        // Pacer owns all producer threads. Stop them first so this final
+        // cumulative snapshot includes work that finished after the last
+        // one-second decoder window. (BL-2212)
+        m_Pacer->shutdown();
+        syncPacerTelemetry();
+
+        delete m_Pacer;
+        m_Pacer = nullptr;
+        m_LastPacerTelemetry = {};
+    }
 
     // This must be called after deleting Pacer because it
     // may be holding AVFrames to free in its destructor.
@@ -361,6 +379,24 @@ bool FFmpegVideoDecoder::createFrontendRenderer(PDECODER_PARAMETERS params, bool
     }
 
     if (useAlternateFrontend) {
+#if defined(HAVE_LIBPLACEBO_VULKAN)
+        // VRR pacing needs the Vulkan presenter (BL-2212). When the user
+        // enabled VRR, automatically prefer the Vulkan frontend — no
+        // PREFER_VULKAN environment variable or script required. If Vulkan
+        // cannot initialize here, the ordinary fallback order below still
+        // runs and Pacer/Session will fall back to fixed V-sync pacing.
+        if (params->enableVrr &&
+            m_BackendRenderer->getRendererType() != IFFmpegRenderer::RendererType::Vulkan) {
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                        "VRR enabled: Trying Vulkan (PlVkRenderer) as frontend first");
+            m_FrontendRenderer = new PlVkRenderer(false, m_BackendRenderer);
+            if (initializeRendererInternal(m_FrontendRenderer, params)) {
+                return true;
+            }
+            delete m_FrontendRenderer;
+            m_FrontendRenderer = nullptr;
+        }
+#endif
         // Respect user's preferred frontend renderer first, then fall back to existing logic
 #if defined(HAVE_LIBPLACEBO_VULKAN)
         if (preferredBackend == StreamingPreferences::RB_VULKAN &&
@@ -477,6 +513,21 @@ bool FFmpegVideoDecoder::createFrontendRenderer(PDECODER_PARAMETERS params, bool
         // The backend renderer cannot directly render to the display, so
         // we will create an SDL or DRM renderer to draw the frames.
 
+#if defined(HAVE_LIBPLACEBO_VULKAN)
+        // VRR pacing needs the Vulkan presenter (BL-2212): prefer it
+        // automatically when VRR is enabled, before any other fallback.
+        if (params->enableVrr) {
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                        "VRR enabled: Trying Vulkan (PlVkRenderer) frontend");
+            m_FrontendRenderer = new PlVkRenderer(false, m_BackendRenderer);
+            if (initializeRendererInternal(m_FrontendRenderer, params)) {
+                return true;
+            }
+            delete m_FrontendRenderer;
+            m_FrontendRenderer = nullptr;
+        }
+#endif
+
         // Respect user's preferred frontend first where possible
 #if defined(HAVE_LIBPLACEBO_VULKAN)
         if (preferredBackend == StreamingPreferences::RB_VULKAN) {
@@ -561,9 +612,13 @@ bool FFmpegVideoDecoder::completeInitialization(const AVCodec* decoder, enum AVP
 
     // Don't bother initializing Pacer if we're not actually going to render
     if (!testFrame) {
-        m_Pacer = new Pacer(m_FrontendRenderer, &m_ActiveWndVideoStats);
+        m_Pacer = new Pacer(m_FrontendRenderer);
+        m_LastPacerTelemetry = {};
         if (!m_Pacer->initialize(params->window, params->frameRate,
-                                 params->enableFramePacing || (params->enableVsync && (m_FrontendRenderer->getRendererAttributes() & RENDERER_ATTRIBUTE_FORCE_PACING)))) {
+                                 params->enableFramePacing || (params->enableVsync && (m_FrontendRenderer->getRendererAttributes() & RENDERER_ATTRIBUTE_FORCE_PACING)),
+                                 params->enableVsync,
+                                 params->enableVrr,
+                                 params->vrrDisplayRefreshHz)) {
             return false;
         }
     }
@@ -788,6 +843,41 @@ void FFmpegVideoDecoder::addVideoStats(VIDEO_STATS& src, VIDEO_STATS& dst)
     dst.totalFrames += src.totalFrames;
     dst.networkDroppedFrames += src.networkDroppedFrames;
     dst.pacerDroppedFrames += src.pacerDroppedFrames;
+    // VRR pacing telemetry (BL-2212)
+    dst.vrrPacingDroppedFrames += src.vrrPacingDroppedFrames;
+    dst.vrrEligibleFrames += src.vrrEligibleFrames;
+    dst.vrrPrepareLateFrames += src.vrrPrepareLateFrames;
+    dst.vrrTargetWaitEntryLateFrames += src.vrrTargetWaitEntryLateFrames;
+    dst.vrrPresentFailedFrames += src.vrrPresentFailedFrames;
+    dst.vrrPresentCancelledFrames += src.vrrPresentCancelledFrames;
+    dst.vrrSpacingCorrections += src.vrrSpacingCorrections;
+    dst.vrrTelemetryActive = dst.vrrTelemetryActive || src.vrrTelemetryActive;
+    // These are decision-time VRR state rather than counters. Preserve the
+    // newest complete sample; a Pacer-local sequence can restart when a
+    // decoder is reinitialized, so timestamp is the primary ordering key.
+    // Zeros are valid state values during startup/rebase.
+    const bool sourceHasNewerVrrState = src.vrrStateSequence != 0 &&
+        (src.vrrStateSampleTimeUs > dst.vrrStateSampleTimeUs ||
+         (src.vrrStateSampleTimeUs == dst.vrrStateSampleTimeUs &&
+          src.vrrStateSequence > dst.vrrStateSequence));
+    if (sourceHasNewerVrrState) {
+        dst.vrrStateSequence = src.vrrStateSequence;
+        dst.vrrStateSampleTimeUs = src.vrrStateSampleTimeUs;
+        dst.vrrReadinessBudgetUs = src.vrrReadinessBudgetUs;
+        dst.vrrTimingBudgetUs = src.vrrTimingBudgetUs;
+        dst.vrrRenderLeadUs = src.vrrRenderLeadUs;
+        dst.vrrRenderWakeLeadUs = src.vrrRenderWakeLeadUs;
+        dst.vrrTargetWakeLeadUs = src.vrrTargetWakeLeadUs;
+        dst.vrrGuardUs = src.vrrGuardUs;
+        dst.vrrSourcePeriodUs = src.vrrSourcePeriodUs;
+        dst.vrrPrepareLatenessP50Us = src.vrrPrepareLatenessP50Us;
+        dst.vrrPrepareLatenessP95Us = src.vrrPrepareLatenessP95Us;
+        dst.vrrPrepareLatenessP99Us = src.vrrPrepareLatenessP99Us;
+        dst.vrrSubmitErrorP50Us = src.vrrSubmitErrorP50Us;
+        dst.vrrSubmitErrorP95Us = src.vrrSubmitErrorP95Us;
+        dst.vrrSubmitErrorP99Us = src.vrrSubmitErrorP99Us;
+        dst.vrrSubmitErrorMaxUs = src.vrrSubmitErrorMaxUs;
+    }
     dst.totalReassemblyTime += src.totalReassemblyTime;
     dst.totalDecodeTime += src.totalDecodeTime;
     dst.totalPacerTime += src.totalPacerTime;
@@ -827,6 +917,95 @@ void FFmpegVideoDecoder::addVideoStats(VIDEO_STATS& src, VIDEO_STATS& dst)
     dst.receivedFps = (float)dst.receivedFrames / ((float)(now - dst.measurementStartTimestamp) / 1000);
     dst.decodedFps = (float)dst.decodedFrames / ((float)(now - dst.measurementStartTimestamp) / 1000);
     dst.renderedFps = (float)dst.renderedFrames / ((float)(now - dst.measurementStartTimestamp) / 1000);
+}
+
+void FFmpegVideoDecoder::syncPacerTelemetry()
+{
+    if (m_Pacer == nullptr) {
+        return;
+    }
+
+    const PacerTelemetrySnapshot snapshot = m_Pacer->telemetrySnapshot();
+    if (snapshot.sequence == m_LastPacerTelemetry.sequence) {
+        return;
+    }
+
+    const auto delta = [](uint64_t current, uint64_t previous) {
+        // A Pacer instance publishes cumulative counters for its whole
+        // lifetime. Treat an unexpected decrease as a fresh baseline rather
+        // than allowing unsigned underflow to manufacture a huge window.
+        return current >= previous ? current - previous : current;
+    };
+
+    m_ActiveWndVideoStats.renderedFrames += static_cast<uint32_t>(
+        delta(snapshot.renderedFrames, m_LastPacerTelemetry.renderedFrames));
+    m_ActiveWndVideoStats.pacerDroppedFrames += static_cast<uint32_t>(
+        delta(snapshot.pacerDroppedFrames,
+              m_LastPacerTelemetry.pacerDroppedFrames));
+    // NB: The vendored Pacer publishes microsecond totals; vibemis's
+    // VIDEO_STATS keeps its historical millisecond fields, so convert here.
+    m_ActiveWndVideoStats.totalPacerTime += static_cast<uint32_t>(
+        delta(snapshot.totalPacerTimeUs,
+              m_LastPacerTelemetry.totalPacerTimeUs) / 1000);
+    m_ActiveWndVideoStats.totalRenderTime += static_cast<uint32_t>(
+        delta(snapshot.totalRenderTimeUs,
+              m_LastPacerTelemetry.totalRenderTimeUs) / 1000);
+
+    m_ActiveWndVideoStats.vrrTelemetryActive =
+        m_ActiveWndVideoStats.vrrTelemetryActive || snapshot.vrrActive;
+    m_ActiveWndVideoStats.vrrPacingDroppedFrames +=
+        delta(snapshot.vrrPacingDroppedFrames,
+              m_LastPacerTelemetry.vrrPacingDroppedFrames);
+    m_ActiveWndVideoStats.vrrEligibleFrames +=
+        delta(snapshot.vrrEligibleFrames,
+              m_LastPacerTelemetry.vrrEligibleFrames);
+    m_ActiveWndVideoStats.vrrPrepareLateFrames +=
+        delta(snapshot.vrrPrepareLateFrames,
+              m_LastPacerTelemetry.vrrPrepareLateFrames);
+    m_ActiveWndVideoStats.vrrTargetWaitEntryLateFrames +=
+        delta(snapshot.vrrTargetWaitEntryLateFrames,
+              m_LastPacerTelemetry.vrrTargetWaitEntryLateFrames);
+    m_ActiveWndVideoStats.vrrPresentFailedFrames +=
+        delta(snapshot.vrrPresentFailedFrames,
+              m_LastPacerTelemetry.vrrPresentFailedFrames);
+    m_ActiveWndVideoStats.vrrPresentCancelledFrames +=
+        delta(snapshot.vrrPresentCancelledFrames,
+              m_LastPacerTelemetry.vrrPresentCancelledFrames);
+    m_ActiveWndVideoStats.vrrSpacingCorrections +=
+        delta(snapshot.vrrSpacingCorrections,
+              m_LastPacerTelemetry.vrrSpacingCorrections);
+
+    if (snapshot.vrrStateSequence > m_LastPacerTelemetry.vrrStateSequence) {
+        m_ActiveWndVideoStats.vrrStateSequence = snapshot.vrrStateSequence;
+        m_ActiveWndVideoStats.vrrStateSampleTimeUs =
+            snapshot.vrrStateSampleTimeUs;
+        m_ActiveWndVideoStats.vrrReadinessBudgetUs =
+            snapshot.vrrReadinessBudgetUs;
+        m_ActiveWndVideoStats.vrrTimingBudgetUs = snapshot.vrrTimingBudgetUs;
+        m_ActiveWndVideoStats.vrrRenderLeadUs = snapshot.vrrRenderLeadUs;
+        m_ActiveWndVideoStats.vrrRenderWakeLeadUs =
+            snapshot.vrrRenderWakeLeadUs;
+        m_ActiveWndVideoStats.vrrTargetWakeLeadUs =
+            snapshot.vrrTargetWakeLeadUs;
+        m_ActiveWndVideoStats.vrrGuardUs = snapshot.vrrGuardUs;
+        m_ActiveWndVideoStats.vrrSourcePeriodUs = snapshot.vrrSourcePeriodUs;
+        m_ActiveWndVideoStats.vrrPrepareLatenessP50Us =
+            snapshot.vrrPrepareLatenessP50Us;
+        m_ActiveWndVideoStats.vrrPrepareLatenessP95Us =
+            snapshot.vrrPrepareLatenessP95Us;
+        m_ActiveWndVideoStats.vrrPrepareLatenessP99Us =
+            snapshot.vrrPrepareLatenessP99Us;
+        m_ActiveWndVideoStats.vrrSubmitErrorP50Us =
+            snapshot.vrrSubmitErrorP50Us;
+        m_ActiveWndVideoStats.vrrSubmitErrorP95Us =
+            snapshot.vrrSubmitErrorP95Us;
+        m_ActiveWndVideoStats.vrrSubmitErrorP99Us =
+            snapshot.vrrSubmitErrorP99Us;
+        m_ActiveWndVideoStats.vrrSubmitErrorMaxUs =
+            snapshot.vrrSubmitErrorMaxUs;
+    }
+
+    m_LastPacerTelemetry = snapshot;
 }
 
 void FFmpegVideoDecoder::stringifyVideoStats(VIDEO_STATS& stats, char* output, int length)
@@ -1035,12 +1214,74 @@ void FFmpegVideoDecoder::stringifyVideoStats(VIDEO_STATS& stats, char* output, i
 
         offset += ret;
     }
+
+    // VRR pacing telemetry (BL-2212, from Nonary v6.1.0-vrr9.1)
+    if (stats.vrrTelemetryActive || stats.vrrEligibleFrames != 0 ||
+            stats.vrrPacingDroppedFrames != 0 ||
+            stats.vrrPresentFailedFrames != 0 ||
+            stats.vrrPresentCancelledFrames != 0) {
+        const auto percentOfEligible = [&stats](uint64_t count) {
+            return stats.vrrEligibleFrames == 0 ? 0.0 :
+                static_cast<double>(count) * 100.0 /
+                static_cast<double>(stats.vrrEligibleFrames);
+        };
+        char sampleAge[64];
+        if (stats.vrrStateSequence == 0) {
+            snprintf(sampleAge, sizeof(sampleAge), "N/A");
+        }
+        else {
+            const uint64_t nowUs = LiGetMicroseconds();
+            const uint64_t ageUs = nowUs >= stats.vrrStateSampleTimeUs ?
+                nowUs - stats.vrrStateSampleTimeUs : 0;
+            snprintf(sampleAge, sizeof(sampleAge), "%.2f ms, seq %llu",
+                     static_cast<double>(ageUs) / 1000.0,
+                     static_cast<unsigned long long>(stats.vrrStateSequence));
+        }
+
+        ret = snprintf(&output[offset],
+                       length - offset,
+                       "VRR eligible: %llu; prepare late %.2f%% (%llu, p50/p95/p99: %.2f/%.2f/%.2f ms)\n"
+                       "VRR wait-entry late: %.2f%%; submit error p50/p95/p99/max: %+.2f/%+.2f/%+.2f/%+.2f ms\n"
+                       "VRR failed/cancelled: %llu/%llu; drops/spacing: %llu/%llu\n"
+                       "VRR decision readiness/timing reserve/guard: %.2f/%.2f/%.2f ms (sample %s)\n"
+                       "VRR render lead/wake lead (render/target)/source: %.2f/%.2f/%.2f/%.2f ms\n",
+                       static_cast<unsigned long long>(stats.vrrEligibleFrames),
+                       percentOfEligible(stats.vrrPrepareLateFrames),
+                       static_cast<unsigned long long>(stats.vrrPrepareLateFrames),
+                       static_cast<double>(stats.vrrPrepareLatenessP50Us) / 1000.0,
+                       static_cast<double>(stats.vrrPrepareLatenessP95Us) / 1000.0,
+                       static_cast<double>(stats.vrrPrepareLatenessP99Us) / 1000.0,
+                       percentOfEligible(stats.vrrTargetWaitEntryLateFrames),
+                       static_cast<double>(stats.vrrSubmitErrorP50Us) / 1000.0,
+                       static_cast<double>(stats.vrrSubmitErrorP95Us) / 1000.0,
+                       static_cast<double>(stats.vrrSubmitErrorP99Us) / 1000.0,
+                       static_cast<double>(stats.vrrSubmitErrorMaxUs) / 1000.0,
+                       static_cast<unsigned long long>(stats.vrrPresentFailedFrames),
+                       static_cast<unsigned long long>(stats.vrrPresentCancelledFrames),
+                       static_cast<unsigned long long>(stats.vrrPacingDroppedFrames),
+                       static_cast<unsigned long long>(stats.vrrSpacingCorrections),
+                       static_cast<double>(stats.vrrReadinessBudgetUs) / 1000.0,
+                       static_cast<double>(stats.vrrTimingBudgetUs) / 1000.0,
+                       static_cast<double>(stats.vrrGuardUs) / 1000.0,
+                       sampleAge,
+                       static_cast<double>(stats.vrrRenderLeadUs) / 1000.0,
+                       static_cast<double>(stats.vrrRenderWakeLeadUs) / 1000.0,
+                       static_cast<double>(stats.vrrTargetWakeLeadUs) / 1000.0,
+                       static_cast<double>(stats.vrrSourcePeriodUs) / 1000.0);
+        if (ret < 0 || ret >= length - offset) {
+            SDL_assert(false);
+            return;
+        }
+
+        offset += ret;
+    }
 }
 
 void FFmpegVideoDecoder::logVideoStats(VIDEO_STATS& stats, const char* title)
 {
-    if (stats.renderedFps > 0 || stats.renderedFrames != 0) {
-        char videoStatsStr[512];
+    if (stats.renderedFps > 0 || stats.renderedFrames != 0 ||
+            stats.vrrTelemetryActive) {
+        char videoStatsStr[2048];
         stringifyVideoStats(stats, videoStatsStr, sizeof(videoStatsStr));
 
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
@@ -1828,6 +2069,36 @@ void FFmpegVideoDecoder::decoderThreadProc()
                     SDL_assert(m_FrameInfoQueue.size() == m_FramesIn - m_FramesOut);
                     m_FramesOut++;
 
+                    // Only active VRR needs decoder-facing pacing metadata.
+                    // Keep legacy handoff and its AVFrame-only path unchanged.
+                    // (BL-2212, from Nonary v6.1.0-vrr9.1)
+                    const bool vrrActive = m_Pacer->isVrrActive();
+                    uint64_t decodeCompleteUs = 0;
+                    int pacedFrameNumber = -1;
+                    uint32_t pacedRtpTimestamp = 0;
+                    bool pacedTimestampValid = false;
+
+                    if (vrrActive) {
+                        // Capture timing while the matching DECODE_UNIT is
+                        // still available.
+                        decodeCompleteUs = LiGetMicroseconds();
+                        if (!m_FrameInfoQueue.isEmpty()) {
+                            // Snapshot without moving the legacy dequeue point.
+                            const DECODE_UNIT& du = m_FrameInfoQueue.head();
+                            pacedFrameNumber = du.frameNumber;
+                            // ClassicOldSong's moonlight-common-c fork doesn't
+                            // expose the raw RTP timestamp on DECODE_UNIT like
+                            // mainline does; it only carries presentationTimeMs
+                            // (= rtpTimestamp / 90, truncated). Reconstruct the
+                            // 90 kHz value so the VRR cadence learner tracks
+                            // the host's true capture clock. The ~0.5 ms
+                            // quantization noise this reintroduces is well
+                            // within the controller's filtering.
+                            pacedRtpTimestamp = (uint32_t)(du.presentationTimeMs * 90u);
+                            pacedTimestampValid = true;
+                        }
+                    }
+
                     // Attach HDR metadata to the frame if it's not already present. We will defer to
                     // any metadata contained in the bitstream itself since that is guaranteed to be
                     // correctly synchronized to each frame, unlike our async HDR metadata message.
@@ -1868,8 +2139,10 @@ void FFmpegVideoDecoder::decoderThreadProc()
                     // Restore default log level after a successful decode
                     av_log_set_level(AV_LOG_INFO);
 
-                    // Capture a frame timestamp to measuring pacing delay
-                    frame->pkt_dts = SDL_GetTicks();
+                    // Capture a frame timestamp to measure pacing delay.
+                    // The vendored Pacer computes queue time in microseconds
+                    // (LiGetMicroseconds), so stamp with the same clock.
+                    frame->pkt_dts = LiGetMicroseconds();
 
                     if (!m_FrameInfoQueue.isEmpty()) {
                         // Data buffers in the DU are not valid here!
@@ -1887,7 +2160,16 @@ void FFmpegVideoDecoder::decoderThreadProc()
                     m_ActiveWndVideoStats.decodedFrames++;
 
                     // Queue the frame for rendering (or render now if pacer is disabled)
-                    m_Pacer->submitFrame(frame);
+                    if (vrrActive) {
+                        m_Pacer->submitFrame(PacedFrame(frame,
+                                                        pacedFrameNumber,
+                                                        pacedRtpTimestamp,
+                                                        pacedTimestampValid,
+                                                        decodeCompleteUs));
+                    }
+                    else {
+                        m_Pacer->submitFrame(frame);
+                    }
                 }
                 else if (err == AVERROR(EAGAIN)) {
                     VIDEO_FRAME_HANDLE handle;
@@ -1966,6 +2248,10 @@ int FFmpegVideoDecoder::submitDecodeUnit(PDECODE_UNIT du)
 
     // Flip stats windows roughly every second
     if (SDL_TICKS_PASSED(SDL_GetTicks(), m_ActiveWndVideoStats.measurementStartTimestamp + 1000)) {
+        // Pacer producers publish cumulative snapshots. Merge the delta before
+        // this decoder-owned window is read, accumulated, and reset. (BL-2212)
+        syncPacerTelemetry();
+
         // Update overlay stats if it's enabled
         if (Session::get()->getOverlayManager().isOverlayEnabled(Overlay::OverlayDebug)) {
             VIDEO_STATS lastTwoWndStats = {};

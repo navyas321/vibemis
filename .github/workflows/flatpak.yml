@@ -1,0 +1,82 @@
+# Flatpak packaging CI (BL-2231) — ADDITIVE next to the AppImage pipeline
+# (dev-build.yml), which this workflow never touches.
+#
+# validate: cheap, deterministic manifest checks on every packaging change.
+# bundle:   full flatpak build + .flatpak bundle artifact, MANUAL dispatch only
+#           (builds the KDE 6.10 runtime module chain — long).
+name: flatpak
+
+on:
+  push:
+    branches: [vibemis-main]
+    paths:
+      - "packaging/flatpak/**"
+      - ".github/workflows/flatpak.yml"
+  pull_request:
+    paths:
+      - "packaging/flatpak/**"
+      - ".github/workflows/flatpak.yml"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      # The manifest checks (including the BL-2213 SDL2-only enforcement) live
+      # in packaging/flatpak/validate_manifest.py, NOT inline here: the
+      # audio-invariants guard (scripts/check-audio-invariants.sh, check 7)
+      # greps .github/workflows/ for forbidden-SDL adoption strings, and the
+      # enforcement code must name those strings to forbid them. Same checks,
+      # different file — do not inline them back.
+      - name: Parse manifest + sibling JSON, resolve file references
+        run: python3 packaging/flatpak/validate_manifest.py
+
+      - name: flatpak-builder dry parse (--show-manifest)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends flatpak-builder
+          flatpak-builder --show-manifest packaging/flatpak/io.github.navyas321.Vibemis.yml > /tmp/expanded.json
+          python3 -c "import json; m = json.load(open('/tmp/expanded.json')); print('expanded OK,', len(m['modules']), 'modules')"
+
+      - name: Validate desktop entry + metainfo
+        run: |
+          sudo apt-get install -y --no-install-recommends desktop-file-utils appstream
+          desktop-file-validate packaging/flatpak/io.github.navyas321.Vibemis.desktop
+          # appstreamcli validate is advisory here (screenshot URLs are
+          # placeholders until submission; see docs/FLATHUB.md) — report, don't fail.
+          appstreamcli validate --pedantic packaging/flatpak/io.github.navyas321.Vibemis.metainfo.xml || true
+
+  bundle:
+    # Full build: only on manual dispatch — the module chain (SDL2, ffmpeg,
+    # libplacebo, vibemis) on the KDE 6.10 SDK takes a long time.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    needs: validate
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install flatpak tooling + KDE 6.10 runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends flatpak flatpak-builder
+          flatpak --user remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak --user install -y flathub org.kde.Platform//6.10 org.kde.Sdk//6.10
+
+      - name: Build
+        run: |
+          flatpak-builder --user --force-clean --disable-rofiles-fuse \
+            --install-deps-from=flathub \
+            --repo=repo builddir packaging/flatpak/io.github.navyas321.Vibemis.yml
+
+      - name: Bundle
+        run: |
+          flatpak build-bundle repo Vibemis.flatpak io.github.navyas321.Vibemis master
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Vibemis-flatpak
+          path: Vibemis.flatpak
+          if-no-files-found: error
