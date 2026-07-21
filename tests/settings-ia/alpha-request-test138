@@ -1,0 +1,2 @@
+BL-2263 device-validation alpha request for test138-settings-ia (PR #254).
+The dev-build gate requires a meaningful (non-doc) file change alongside the [alpha] tag.
