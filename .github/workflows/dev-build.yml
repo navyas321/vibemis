@@ -545,9 +545,13 @@ jobs:
         echo "=== Creating dependency bundle ==="
         mkdir -p linux-package/lib
         mkdir -p linux-package/bin
-        
+
         # Copy the main binary
         cp app/vibemis linux-package/bin/
+
+        # Stage the branded app icon so install.sh can register it (BL-2243)
+        mkdir -p linux-package/icon
+        cp app/res/icons/hicolor/256x256/apps/vibemis.png linux-package/icon/vibemis.png
         
         # Bundle critical shared libraries that may not be available on all systems
         # Include SDL2 main library and SDL2_ttf which are commonly missing
@@ -609,6 +613,12 @@ jobs:
         # Create symlink to launcher
         ln -sf "$INSTALL_DIR/vibemis" "$BIN_DIR/vibemis"
         
+        # Install the branded icon into the hicolor theme so Icon=vibemis resolves
+        if [ -f icon/vibemis.png ]; then
+            mkdir -p "$HOME/.local/share/icons/hicolor/256x256/apps"
+            cp -f icon/vibemis.png "$HOME/.local/share/icons/hicolor/256x256/apps/vibemis.png"
+        fi
+
         # Create desktop entry
         mkdir -p "$HOME/.local/share/applications"
         cat > "$HOME/.local/share/applications/vibemis-desktop.desktop" << 'EOD'
@@ -617,7 +627,8 @@ jobs:
         Name=Vibemis
         Comment=Game streaming client
         Exec=vibemis
-        Icon=vibemis-desktop
+        Icon=vibemis
+        StartupWMClass=com.vibemis.Vibemis
         Categories=Game;Network;
         EOD
         
