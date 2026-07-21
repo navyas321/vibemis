@@ -155,3 +155,8 @@ int main()
     printf("test_vrrratepolicy: %d checks, %d failure(s)\n", g_Checks, g_Failures);
     return g_Failures == 0 ? 0 : 1;
 }
+
+// test120 alpha marker (BL-2234): CI cuts an alpha from test** branches only
+// when the HEAD commit touches a code file and carries the [alpha] tag.
+// This cut packages the consolidated VRR stack: PR #240 base + #241 test
+// harness + #242 polish + vibemis-main (audio guard, BL-2232 RELEASES.md fix).
