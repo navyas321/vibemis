@@ -1,0 +1,24 @@
+---
+name: BL-2213 audio invariants
+# Regression guard for the no-audio-crackle differentiator (vibemis issue #239).
+# RCA: vibemis-agent-meta docs/engineering/BL-2213-audio-no-crackle-rca.md
+# A failure means an upstream merge or the VRR port (BL-2212) touched the guarded
+# audio surface. Do NOT weaken the check without an on-device audio A/B.
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [vibemis-main]
+  pull_request:
+
+jobs:
+  audio-invariants:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+      - name: Check BL-2213 audio invariants
+        run: bash scripts/check-audio-invariants.sh
