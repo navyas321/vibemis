@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ivrrframepresenter.h"
 #include "renderer.h"
 
 #ifdef Q_OS_WIN32
@@ -10,13 +11,24 @@
 #include <libplacebo/renderer.h>
 #include <libplacebo/vulkan.h>
 
-class PlVkRenderer : public IFFmpegRenderer {
+#include <atomic>
+
+class PlVkRenderer : public IFFmpegRenderer, public IVrrFramePresenter {
 public:
     PlVkRenderer(bool hwaccel = false, IFFmpegRenderer *backendRenderer = nullptr);
     virtual ~PlVkRenderer() override;
     virtual bool initialize(PDECODER_PARAMETERS params) override;
     virtual bool prepareDecoderContext(AVCodecContext* context, AVDictionary** options) override;
     virtual void renderFrame(AVFrame* frame) override;
+    // IVrrFramePresenter (BL-2212, vendored from Nonary v6.1.0-vrr9.1)
+    virtual IVrrFramePresenter* getVrrFramePresenter() override;
+    virtual VrrFallbackReason checkSupport() const override;
+    virtual VrrPrepareResult prepareFrame(AVFrame* frame) override;
+    virtual VrrPresentFeedback presentAdaptive(
+        const VrrPresentRequest& request) override;
+    virtual VrrPresentFeedback cancelFrame() override;
+    virtual void setSuspended(bool suspended) override;
+    virtual bool restoreFixedPresentation(VrrFallbackReason reason) override;
     virtual bool testRenderFrame(AVFrame* frame) override;
     virtual void waitToRender() override;
     virtual void cleanupRenderContext() override;
@@ -31,10 +43,27 @@ public:
     virtual AVPixelFormat getPreferredPixelFormat(int videoFormat) override;
     virtual void setHdrMode(bool enabled) override;
 
+    // The Vulkan present mode is immutable for the life of a swapchain.  This
+    // exposes the mode selected during initialization for diagnostics without
+    // implying that the compositor or display enabled physical adaptive sync.
+    VkPresentModeKHR vrrSelectedPresentMode() const {
+        return m_VkPresentMode;
+    }
+    const char* vrrSelectedPresentModeName() const;
+
 private:
     static void lockQueue(AVHWDeviceContext *dev_ctx, uint32_t queue_family, uint32_t index);
     static void unlockQueue(AVHWDeviceContext *dev_ctx, uint32_t queue_family, uint32_t index);
     static void overlayUploadComplete(void* opaque);
+
+    void selectPresentationMode(PDECODER_PARAMETERS params);
+    void selectLegacyPresentMode(PDECODER_PARAMETERS params);
+    bool acquirePendingSwapchainFrame();
+    bool acquireVrrSwapchainFrame();
+    bool submitPendingSwapchainFrame();
+    bool cancelVrrFrame();
+    void queueRenderDeviceReset();
+    bool createSwapchain(int depth);
 
     bool mapAvFrameToPlacebo(const AVFrame *frame, pl_frame* mappedFrame);
     bool populateQueues(int videoFormat);
@@ -57,6 +86,8 @@ private:
     pl_log m_Log = nullptr;
     pl_vk_inst m_PlVkInstance = nullptr;
     VkSurfaceKHR m_VkSurface = VK_NULL_HANDLE;
+    int m_SwapchainDepth = 0;
+    VkPresentModeKHR m_VkPresentMode = VK_PRESENT_MODE_FIFO_KHR;
     pl_vulkan m_Vulkan = nullptr;
     pl_swapchain m_Swapchain = nullptr;
     pl_renderer m_Renderer = nullptr;
@@ -64,9 +95,25 @@ private:
     pl_color_space m_LastColorspace = {};
     bool m_HdrModeEnabled = false;
 
-    // Pending swapchain state shared between waitToRender(), renderFrame(), and cleanupRenderContext()
+    // Pending swapchain state shared between the legacy wait/render path and
+    // the VRR preparation/presentation path. A successfully started frame
+    // must always be submitted before it is resized, destroyed, or replaced.
     pl_swapchain_frame m_SwapchainFrame = {};
     bool m_HasPendingSwapchainFrame = false;
+
+    // VRR presentation state (BL-2212). The pacing worker is the only thread
+    // that touches the non-atomic fields after initialization. Window
+    // callbacks on the main thread only mark the atomic resize flag; the
+    // worker then safely abandons a prepared image before resizing the
+    // swapchain.
+    bool m_VrrRequested = false;
+    bool m_VrrSuspended = false;
+    VrrFallbackReason m_VrrFallbackReason = VrrFallbackReason::InitializationFailed;
+    std::atomic<bool> m_VrrWindowChangePending { false };
+    bool m_VrrPreparingFrame = false;
+    bool m_VrrFramePrepared = false;
+    bool m_VrrRenderSucceeded = false;
+    AVFrame* m_VrrPreparedFrame = nullptr;
 
     // Overlay state
     SDL_SpinLock m_OverlayLock = 0;
