@@ -1002,6 +1002,18 @@ int main(int argc, char *argv[])
               BitrateRescuePolicy::bitrateForAutoDerivedFps(32000, 23000, 32000) == 23000);
         check("bitrate-rescue-vrr-derive-respects-explicit",
               BitrateRescuePolicy::bitrateForAutoDerivedFps(15000, 23000, 32000) == 15000);
+        // BL-2265 v2 (test140 FAIL RCA): the wall-clock verdict that replaced
+        // the delivery-event-driven one. Trickle-with-gaps and TOTAL
+        // starvation both fire; host idle-throttle (few frames, no gaps)
+        // and healthy full-rate delivery never do.
+        check("bitrate-rescue-wallclock-trickle",
+              BitrateRescuePolicy::isCollapseWallClock(2500, 1, 430, 116));
+        check("bitrate-rescue-wallclock-starvation",
+              BitrateRescuePolicy::isCollapseWallClock(2500, 0, 0, 116));
+        check("bitrate-rescue-wallclock-idle-throttle-holds",
+              !BitrateRescuePolicy::isCollapseWallClock(5000, 25, 0, 116));
+        check("bitrate-rescue-wallclock-healthy-holds",
+              !BitrateRescuePolicy::isCollapseWallClock(2500, 290, 0, 116));
 
         // Non-destructive QSettings round-trip in an isolated group so we never touch real
         // preferences or paired-host data: write a probe, read it back, then delete the group.

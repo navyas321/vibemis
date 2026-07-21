@@ -43,6 +43,38 @@ bool BitrateRescuePolicy::isCollapse(uint32_t elapsedMs,
     return deliveredFps <= cfg.maxDeliveredFpsShare * (double)targetFps;
 }
 
+uint32_t BitrateRescuePolicy::expectedFrames(uint32_t elapsedMs, int targetFps)
+{
+    if (targetFps <= 0) {
+        return 0;
+    }
+    return (uint32_t)(((uint64_t)targetFps * elapsedMs) / 1000);
+}
+
+bool BitrateRescuePolicy::isCollapseWallClock(uint32_t elapsedMs,
+                                             uint32_t deliveredFrames,
+                                             uint32_t gapDroppedFrames,
+                                             int targetFps,
+                                             const Config& cfg)
+{
+    const uint32_t expected = expectedFrames(elapsedMs, targetFps);
+
+    // Effective dropped count is inferred from what the host should have
+    // offered, so it keeps counting even when delivery (and therefore
+    // gap-based accounting) starves completely.
+    const uint32_t effDropped = (expected > deliveredFrames) ? (expected - deliveredFrames) : 0;
+
+    if (!isCollapse(elapsedMs, deliveredFrames, effDropped, targetFps, cfg)) {
+        return false;
+    }
+
+    // Network-loss evidence gate (idle-throttle false-positive guard): a
+    // host that intentionally sends few frames produces no frame-number
+    // gaps; genuine collapse either shows gaps at the trickle deliveries or
+    // delivers nothing at all.
+    return gapDroppedFrames > 0 || deliveredFrames == 0;
+}
+
 int BitrateRescuePolicy::nextBitrateKbps(int currentKbps, const Config& cfg)
 {
     if (currentKbps <= cfg.floorKbps) {

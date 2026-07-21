@@ -19,6 +19,8 @@ private slots:
     void stepScheduleHalvesTowardFloor();
     void stepScheduleStopsAtFloor();
     void vrrAutoDeriveNeverInflatesBitrate();
+    void wallClockCollapseDetection();
+    void wallClockStarvationAndIdleThrottle();
 };
 
 void BitrateRescuePolicyTest::collapseSignatureDetected()
@@ -105,6 +107,55 @@ void BitrateRescuePolicyTest::vrrAutoDeriveNeverInflatesBitrate()
     QCOMPARE(BitrateRescuePolicy::bitrateForAutoDerivedFps(23000, 23000, 23000), 23000);
     // Degenerate defaults never rewrite the configured bitrate.
     QCOMPARE(BitrateRescuePolicy::bitrateForAutoDerivedFps(32000, 0, 32000), 32000);
+}
+
+void BitrateRescuePolicyTest::wallClockCollapseDetection()
+{
+    // test140 device-observed shape: trickle delivery (~0.2 fps of 116)
+    // WITH frame-number gaps at the deliveries that did occur. At 2.5s the
+    // expected count is 290; 1 delivered + gap evidence => collapse.
+    QVERIFY(BitrateRescuePolicy::isCollapseWallClock(2500, 1, 430, 116));
+    QVERIFY(BitrateRescuePolicy::isCollapseWallClock(5000, 2, 900, 116));
+
+    // The v1 killer case: burst-then-starve. A window that saw a small
+    // burst (10 frames early) and then nothing, with gaps recorded at the
+    // burst, must still fire on wall-clock at 5s (expected 580).
+    QVERIFY(BitrateRescuePolicy::isCollapseWallClock(5000, 10, 55, 116));
+
+    // Healthy full-rate delivery never fires (expected ~= delivered).
+    QVERIFY(!BitrateRescuePolicy::isCollapseWallClock(2500, 290, 0, 116));
+    QVERIFY(!BitrateRescuePolicy::isCollapseWallClock(10000, 1157, 0, 116));
+
+    // Rough-but-usable Wi-Fi: 70% of target delivered with gaps — the fps
+    // gate (<=25% of target) must hold it back.
+    QVERIFY(!BitrateRescuePolicy::isCollapseWallClock(2500, 203, 87, 116));
+
+    // Below the minimum window or sample, no verdict even when starved.
+    QVERIFY(!BitrateRescuePolicy::isCollapseWallClock(2499, 0, 0, 116));
+    QVERIFY(!BitrateRescuePolicy::isCollapseWallClock(2500, 0, 0, 0));
+}
+
+void BitrateRescuePolicyTest::wallClockStarvationAndIdleThrottle()
+{
+    // TOTAL starvation: zero deliveries, zero gap evidence (gap accounting
+    // needs deliveries) — must STILL fire; total video starvation on a live
+    // connection is never healthy idling on this host stack.
+    QVERIFY(BitrateRescuePolicy::isCollapseWallClock(2500, 0, 0, 116));
+    QVERIFY(BitrateRescuePolicy::isCollapseWallClock(5000, 0, 0, 60));
+
+    // Host idle-throttle guard: a host legitimately sending few frames
+    // produces NO frame-number gaps -> delivered>0 with gapDropped==0 must
+    // NOT trigger, no matter how far below target the delivery rate is.
+    QVERIFY(!BitrateRescuePolicy::isCollapseWallClock(5000, 25, 0, 116));
+    QVERIFY(!BitrateRescuePolicy::isCollapseWallClock(5000, 5, 0, 60));
+
+    // ...but the same delivery rate WITH loss evidence is a collapse.
+    QVERIFY(BitrateRescuePolicy::isCollapseWallClock(5000, 25, 300, 116));
+
+    // expectedFrames sanity.
+    QCOMPARE(BitrateRescuePolicy::expectedFrames(2500, 116), (uint32_t)290);
+    QCOMPARE(BitrateRescuePolicy::expectedFrames(1000, 60), (uint32_t)60);
+    QCOMPARE(BitrateRescuePolicy::expectedFrames(2500, 0), (uint32_t)0);
 }
 
 QTEST_APPLESS_MAIN(BitrateRescuePolicyTest)
