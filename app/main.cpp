@@ -379,13 +379,22 @@ int SDLCALL signalHandlerThread(void* data)
                 }
 
                 if (sig == SIGTERM) {
-                    // If this is a SIGTERM, set the flag to quit
-                    session->setShouldExit();
+                    // If this is a SIGTERM, set the flag to quit.
+                    // Vibemis (BL-2226): fork session API — upstream's
+                    // setShouldExit()/interrupt() belong to the un-adopted QML
+                    // session-lifecycle refactor. setShouldExitAfterQuit() +
+                    // an SDL_QUIT push mirror the KeyComboQuitAndExit path.
+                    session->setShouldExitAfterQuit();
                     requestedQuit = true;
                 }
 
-                // Stop the streaming session
-                session->interrupt();
+                // Stop the streaming session (SDL's event queue is thread-safe)
+                {
+                    SDL_Event quitEvent = {};
+                    quitEvent.type = SDL_QUIT;
+                    quitEvent.quit.timestamp = SDL_GetTicks();
+                    SDL_PushEvent(&quitEvent);
+                }
                 lastSession = session;
             }
             else {
