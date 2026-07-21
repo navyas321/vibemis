@@ -239,7 +239,9 @@ private:
                        SDL_Window* window, int videoFormat, int width, int height,
                        int frameRate, bool enableVsync, bool enableFramePacing,
                        bool testOnly,
-                       IVideoDecoder*& chosenDecoder);
+                       IVideoDecoder*& chosenDecoder,
+                       bool enableVrr = false,
+                       int vrrDisplayRefreshHz = 0);
 
     static
     void clStageStarting(int stage);
@@ -314,6 +316,8 @@ private:
     SdlInputHandler* m_InputHandler;
     int m_MouseEmulationRefCount;
     int m_FlushingWindowEventsRef;
+    // One-time "VRR unavailable" fallback notice latch (BL-2212)
+    bool m_VrrFallbackNotified = false;
     QList<QString> m_LaunchWarnings;
     bool m_ShouldExitAfterQuit;
     // Vibemis: see setShouldQuitAppAfter()
