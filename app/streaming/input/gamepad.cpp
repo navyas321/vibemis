@@ -668,7 +668,19 @@ void SdlInputHandler::handleControllerTouchpadEvent(SDL_ControllerTouchpadEvent*
         return;
     }
 
-    LiSendControllerTouchEvent((uint8_t)state->index, eventType, event->finger, event->x, event->y, event->pressure);
+#ifdef LI_CCAP_DUAL_TOUCHPAD
+    LiSendControllerTouchEvent2((uint8_t)state->index, eventType,
+                                (uint8_t)event->touchpad, event->finger,
+                                event->x, event->y, event->pressure);
+#else
+    // Vibemis (BL-2226): the pinned ClassicOldSong moonlight-common-c (ad329b24)
+    // predates upstream's dual-touchpad protocol extension
+    // (LiSendControllerTouchEvent2 / LI_CCAP_DUAL_TOUCHPAD). Fall back to the
+    // single-touchpad event and drop the touchpad index. Auto-upgrades if the
+    // pin is ever deliberately bumped (BL-2213 gates that on an audio A/B).
+    LiSendControllerTouchEvent((uint8_t)state->index, eventType, event->finger,
+                               event->x, event->y, event->pressure);
+#endif
 }
 
 #endif
@@ -886,6 +898,11 @@ void SdlInputHandler::handleControllerDeviceEvent(SDL_ControllerDeviceEvent* eve
         }
         if (SDL_GameControllerGetNumTouchpads(state->controller) > 0) {
             capabilities |= LI_CCAP_TOUCHPAD;
+#ifdef LI_CCAP_DUAL_TOUCHPAD
+            if (SDL_GameControllerGetNumTouchpads(state->controller) > 1) {
+                capabilities |= LI_CCAP_DUAL_TOUCHPAD;
+            }
+#endif
         }
         if (SDL_GameControllerHasSensor(state->controller, SDL_SENSOR_ACCEL)) {
             capabilities |= LI_CCAP_ACCEL;

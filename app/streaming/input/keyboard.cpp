@@ -146,6 +146,8 @@ void SdlInputHandler::performSpecialKeyCombo(KeyCombo combo)
                     "Detected quitAndExit key combo");
 
         // Indicate that we want to exit afterwards
+        // Vibemis (BL-2226): keep the fork's session-exit API; upstream's
+        // setShouldExit(true) belongs to the un-adopted QML lifecycle refactor.
         Session::get()->setShouldExitAfterQuit();
 
         // Push a quit event to the main loop
@@ -214,6 +216,21 @@ void SdlInputHandler::performSpecialKeyCombo(KeyCombo combo)
         }
         break;
     }
+
+    case KeyComboToggleKeyboardGrab:
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "Detected keyboard grab toggle combo");
+
+        // Toggle the system key capture mode
+        if (isSystemKeyCaptureActive()) {
+            m_CaptureSystemKeysMode = StreamingPreferences::CSK_OFF;
+        }
+        else {
+            m_CaptureSystemKeysMode = StreamingPreferences::CSK_ALWAYS;
+        }
+
+        updateKeyboardGrabState();
+        break;
 
     default:
         Q_UNREACHABLE();
@@ -549,7 +566,7 @@ void SdlInputHandler::handleKeyEvent(SDL_KeyboardEvent* event)
                 break;
             case SDL_SCANCODE_INTERNATIONAL3:
                 shouldNotConvertToScanCodeOnServer = true;
-                [[fallthrough]];
+                Q_FALLTHROUGH();
             case SDL_SCANCODE_BACKSLASH:
                 keyCode = 0xDC;
                 break;
@@ -561,7 +578,7 @@ void SdlInputHandler::handleKeyEvent(SDL_KeyboardEvent* event)
                 break;
             case SDL_SCANCODE_INTERNATIONAL1:
                 shouldNotConvertToScanCodeOnServer = true;
-                [[fallthrough]];
+                Q_FALLTHROUGH();
             case SDL_SCANCODE_NONUSBACKSLASH:
                 keyCode = 0xE2;
                 break;

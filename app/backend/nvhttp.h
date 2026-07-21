@@ -109,7 +109,7 @@ public:
         NVLL_VERBOSE
     };
 
-    explicit NvHTTP(NvAddress address, uint16_t httpsPort, QSslCertificate serverCert, QNetworkAccessManager* nam = nullptr);
+    explicit NvHTTP(NvAddress address, uint16_t httpsPort, QSslCertificate serverCert, bool useTrueUid, QNetworkAccessManager* nam = nullptr);
 
     explicit NvHTTP(NvComputer* computer, QNetworkAccessManager* nam = nullptr);
 
@@ -152,9 +152,9 @@ public:
     static QString getAuthParams();
 
     void setServerCert(QSslCertificate serverCert);
-
     void setAddress(NvAddress address);
     void setHttpsPort(uint16_t port);
+    void setTrueUid(bool useTrueUid);
 
     NvAddress address();
 
@@ -218,4 +218,5 @@ private:
     NvAddress m_Address;
     QNetworkAccessManager* m_Nam;
     QSslCertificate m_ServerCert;
+    bool m_UseTrueUid;
 };

@@ -157,6 +157,8 @@ public:
 
     void notifyFocusLost();
 
+    void notifyFocusGained();
+
     bool isCaptureActive();
 
     bool isSystemKeyCaptureActive();
@@ -192,6 +194,7 @@ private:
         KeyComboPanRight,
         KeyComboPanUp,
         KeyComboPanDown,
+        KeyComboToggleKeyboardGrab,
         KeyComboMax
     };
 
@@ -251,7 +254,8 @@ private:
     // must be swallowed too — but a key held since BEFORE the menu opened must still get
     // its release sent to the host (stuck-key fix).
     QSet<int> m_MenuConsumedKeys;
-    bool m_FakeCaptureActive;
+    bool m_FakeMouseCaptureActive;
+    bool m_KeyboardCaptureActive;
     QString m_OldIgnoreDevices;
     QString m_OldIgnoreDevicesExcept;
     QStringList m_IgnoreDeviceGuids;
