@@ -1,4 +1,5 @@
 #include "autoupdatechecker.h"
+#include "appimageswap.h"
 #include "settings/streamingpreferences.h"
 
 #include <QNetworkReply>
@@ -9,6 +10,10 @@
 #include <QFile>
 #include <QProcess>
 #include <QSharedPointer>
+
+#if defined(Q_OS_UNIX)
+#include <unistd.h>
+#endif
 
 // ── Version comparison (SemVer 2.0.0 §11) ──────────────────────────────────
 
@@ -434,10 +439,14 @@ void AutoUpdateChecker::install()
     m_StatusMessage = tr("Downloading update…");
     emit stateChanged();
 
-    // Download side-by-side with the current binary, then swap atomically and
-    // keep the previous build as "<AppImage>.old" for manual rollback. Every
-    // failure path leaves a runnable AppImage on disk, drops the offer's asset
-    // (so the next click falls back to the release page) and emits installFailed.
+    // Download side-by-side with the current binary (same directory = same
+    // filesystem, pid-unique name), fsync, then swap names atomically via
+    // AppImageSwap and keep the previous build as "<AppImage>.old" for manual
+    // rollback. Bytes are NEVER written into the live target path — the
+    // running build's squashfs is mounted from that inode, and overwriting it
+    // in place SIGBUSes every running instance (BL-2259). Every failure path
+    // leaves a runnable AppImage on disk, drops the offer's asset (so the
+    // next click falls back to the release page) and emits installFailed.
     auto fail = [this](const QString& error) {
         m_Installing = false;
         m_AssetUrl.clear();
@@ -446,7 +455,12 @@ void AutoUpdateChecker::install()
         emit installFailed(error, m_ReleaseUrl);
     };
 
-    QString newPath = appImagePath + QStringLiteral(".new");
+    // A previous crashed/killed install may have stranded full-size staging
+    // files next to the target — clear them before writing a fresh one.
+    AppImageSwap::sweepStaleStaging(appImagePath);
+
+    QString newPath = AppImageSwap::stagingPath(appImagePath,
+                                                QCoreApplication::applicationPid());
     QFile* newFile = new QFile(newPath, this);
     if (!newFile->open(QIODevice::WriteOnly | QIODevice::Truncate)) {
         QString error = newFile->errorString();
@@ -500,6 +514,15 @@ void AutoUpdateChecker::install()
                 *bytesWritten += written;
             }
         }
+        // Force the bytes to stable storage BEFORE the file can be renamed
+        // into place: close() only hands Qt's buffer to the page cache, and a
+        // crash between the swap and the kernel's own writeback would
+        // otherwise leave a zero/partial-length AppImage at the stable path
+        // (the classic rename-without-fsync window).
+        bool synced = newFile->flush();
+#if defined(Q_OS_UNIX)
+        synced = synced && ::fsync(newFile->handle()) == 0;
+#endif
         newFile->close();
         reply->deleteLater();
 
@@ -509,10 +532,10 @@ void AutoUpdateChecker::install()
         qint64 expected = reply->header(QNetworkRequest::ContentLengthHeader).toLongLong();
         int httpStatus = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         if (reply->error() != QNetworkReply::NoError || httpStatus != 200 || *writeFailed
-                || *bytesWritten == 0 || newFile->size() != *bytesWritten
+                || !synced || *bytesWritten == 0 || newFile->size() != *bytesWritten
                 || (expected > 0 && *bytesWritten != expected)) {
             QString error;
-            if (*writeFailed) {
+            if (*writeFailed || !synced) {
                 error = tr("could not write the full file (disk full?)");
             }
             else if (reply->error() != QNetworkReply::NoError) {
@@ -540,19 +563,18 @@ void AutoUpdateChecker::install()
         }
         newFile->deleteLater();
 
-        QString oldPath = appImagePath + QStringLiteral(".old");
-        QFile::remove(oldPath);
-        if (!QFile::rename(appImagePath, oldPath)) {
-            QFile::remove(newPath);
+        // Pure-rename swap (see appimageswap.cpp): current -> .old backup,
+        // then staging -> current, both plain rename(2). Any failure rolls
+        // the previous build back into place before reporting.
+        switch (AppImageSwap::swap(appImagePath, newPath)) {
+        case AppImageSwap::BackupRenameFailed:
             fail(tr("Could not replace the current AppImage (read-only filesystem?)."));
             return;
-        }
-        if (!QFile::rename(newPath, appImagePath)) {
-            // Put the original back so the user still has a working install
-            QFile::rename(oldPath, appImagePath);
-            QFile::remove(newPath);
+        case AppImageSwap::SwapRenameFailed:
             fail(tr("Swapping in the new AppImage failed; the previous version was restored."));
             return;
+        case AppImageSwap::SwapOk:
+            break;
         }
 
         qInfo() << "Update installed at" << appImagePath;
