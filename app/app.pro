@@ -193,6 +193,7 @@ SOURCES += \
     streaming/input/mouse.cpp \
     streaming/input/reltouch.cpp \
     streaming/session.cpp \
+    streaming/bitraterescuepolicy.cpp \
     streaming/vrrratepolicy.cpp \
     streaming/audio/audio.cpp \
     streaming/audio/renderers/sdlaud.cpp \
@@ -240,6 +241,7 @@ HEADERS += \
     settings/streamingpreferences.h \
     streaming/input/input.h \
     streaming/session.h \
+    streaming/bitraterescuepolicy.h \
     streaming/vrrratepolicy.h \
     streaming/audio/renderers/renderer.h \
     streaming/audio/renderers/sdl.h \

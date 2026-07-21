@@ -55,6 +55,7 @@
 #include "backend/systemproperties.h"
 #include "streaming/session.h"
 #include "streaming/vrrratepolicy.h"
+#include "streaming/bitraterescuepolicy.h"
 #include "settings/streamingpreferences.h"
 #include "gui/sdlgamepadkeynavigation.h"
 #include "gui/uisoundmanager.h"
@@ -917,6 +918,26 @@ int main(int argc, char *argv[])
             }
             check("vrr-choices-120hz", has116 && !hasNative120);
         }
+
+        // BL-2265: catastrophic bitrate-collapse rescue pure-function checks.
+        // These prove the FEC-tail-drop collapse signature detection and the
+        // halving step schedule shipped in this build without needing a host
+        // or stream. The collapse sample mirrors the RCA evidence (S1: <1 fps
+        // delivered of a 116 fps stream, >95% of offered frames dropped).
+        check("bitrate-rescue-collapse-detected",
+              BitrateRescuePolicy::isCollapse(3000, 2, 300, 116));
+        check("bitrate-rescue-healthy-not-collapsed",
+              !BitrateRescuePolicy::isCollapse(3000, 340, 8, 116));
+        check("bitrate-rescue-short-window-holds",
+              !BitrateRescuePolicy::isCollapse(1000, 1, 100, 116));
+        check("bitrate-rescue-step-32000",
+              BitrateRescuePolicy::nextBitrateKbps(32000) == 16000);
+        check("bitrate-rescue-step-floor-stops",
+              BitrateRescuePolicy::nextBitrateKbps(2000) == 0);
+        check("bitrate-rescue-vrr-derive-clamps",
+              BitrateRescuePolicy::bitrateForAutoDerivedFps(32000, 23000, 32000) == 23000);
+        check("bitrate-rescue-vrr-derive-respects-explicit",
+              BitrateRescuePolicy::bitrateForAutoDerivedFps(15000, 23000, 32000) == 15000);
 
         // Non-destructive QSettings round-trip in an isolated group so we never touch real
         // preferences or paired-host data: write a probe, read it back, then delete the group.
