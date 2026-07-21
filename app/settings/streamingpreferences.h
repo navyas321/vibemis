@@ -3,6 +3,9 @@
 #include <QObject>
 #include <QRect>
 #include <QQmlEngine>
+#include <QVariant>
+
+#include <vector>
 
 class StreamingPreferences : public QObject
 {
@@ -202,6 +205,11 @@ public:
     Q_PROPERTY(bool unlockBitrate MEMBER unlockBitrate NOTIFY unlockBitrateChanged)
     Q_PROPERTY(bool autoAdjustBitrate MEMBER autoAdjustBitrate NOTIFY autoAdjustBitrateChanged)
     Q_PROPERTY(bool enableVsync MEMBER enableVsync NOTIFY enableVsyncChanged)
+    // Vibemis (BL-2212): VRR pacing (vendored from Nonary v6.1.0-vrr9.1).
+    // Presents each fully-prepared frame at a learned margin on an
+    // adaptive-sync display instead of latching to fixed V-sync slots.
+    // Requires V-sync; every rejection falls back to fixed V-sync pacing.
+    Q_PROPERTY(bool enableVrr MEMBER enableVrr NOTIFY enableVrrChanged)
     Q_PROPERTY(bool gameOptimizations MEMBER gameOptimizations NOTIFY gameOptimizationsChanged)
     Q_PROPERTY(bool playAudioOnHost MEMBER playAudioOnHost NOTIFY playAudioOnHostChanged)
     Q_PROPERTY(bool multiController MEMBER multiController NOTIFY multiControllerChanged)
@@ -290,6 +298,14 @@ public:
 
     Q_INVOKABLE bool retranslate();
 
+    // Vibemis (BL-2212): build the Settings FPS combo list. With VRR enabled
+    // (and its V-sync precondition met), exact native refresh choices are
+    // replaced by the calculated VRR rate (floor(r - r^2/3600)) and
+    // low-latency rate (floor((r*5/6)/5)*5) for each detected display.
+    Q_INVOKABLE QVariantList getFpsChoices(const QVariantList& refreshRates) const;
+
+    static std::vector<int> toRefreshRates(const QVariantList& refreshRates);
+
     // Directly accessible members for preferences
     int width;
     int height;
@@ -298,6 +314,8 @@ public:
     bool unlockBitrate;
     bool autoAdjustBitrate;
     bool enableVsync;
+    // Vibemis (BL-2212): see Q_PROPERTY comment above.
+    bool enableVrr;
     bool gameOptimizations;
     bool playAudioOnHost;
     bool multiController;
@@ -374,6 +392,7 @@ signals:
     void unlockBitrateChanged();
     void autoAdjustBitrateChanged();
     void enableVsyncChanged();
+    void enableVrrChanged();
     void gameOptimizationsChanged();
     void playAudioOnHostChanged();
     void multiControllerChanged();

@@ -1354,52 +1354,52 @@ Item {
                             }
                         }
 
-                        function addRefreshRateOrdered(fpsListModel, refreshRate, description, custom) {
-                            var indexToAdd = 0
-                            for (var j = 0; j < fpsListModel.count; j++) {
-                                var existing_fps = parseInt(fpsListModel.get(j).video_fps);
-
-                                if (refreshRate === existing_fps || (custom && fpsListModel.get(j).is_custom)) {
-                                    // Duplicate entry, skip
-                                    indexToAdd = -1
+                        // Vibemis (BL-2212): the FPS list is built by
+                        // VrrRatePolicy::buildChoices via
+                        // StreamingPreferences.getFpsChoices — with VRR enabled,
+                        // exact native refresh choices are replaced by the
+                        // calculated VRR and low-latency VRR rates for each
+                        // detected display (e.g. 116 FPS on a 120 Hz panel).
+                        function getRefreshRates() {
+                            var refreshRates = []
+                            for (var displayIndex = 0; ; displayIndex++) {
+                                var refreshRate = SystemProperties.getRefreshRate(displayIndex)
+                                if (refreshRate === 0) {
                                     break
                                 }
-                                else if (refreshRate > existing_fps) {
-                                    // Candidate entrypoint after this entry
-                                    indexToAdd = j + 1
-                                }
+
+                                refreshRates.push(refreshRate)
                             }
 
-                            // Insert this frame rate if it's not a duplicate
-                            if (indexToAdd >= 0) {
-                                // Custom values always go at the end of the list
-                                if (custom) {
-                                    indexToAdd = fpsListModel.count
-                                }
+                            return refreshRates
+                        }
 
-                                fpsListModel.insert(indexToAdd,
-                                                    {
-                                                        "text": description,
-                                                        "video_fps": ""+refreshRate,
-                                                        "is_custom": custom
-                                                    })
+                        function choiceText(choice) {
+                            switch (choice.kind) {
+                            case "vrr":
+                                return qsTr("VRR (%1 FPS)").arg(choice.video_fps)
+                            case "low-latency-vrr":
+                                return qsTr("Low-latency VRR (%1 FPS)").arg(choice.video_fps)
+                            case "custom":
+                                return qsTr("Custom (%1 FPS)").arg(choice.video_fps)
+                            default:
+                                return qsTr("%1 FPS").arg(choice.video_fps)
                             }
-
-                            return indexToAdd
                         }
 
                         function reinitialize() {
-                            // Add native refresh rate for all attached displays
-                            var done = false
-                            for (var displayIndex = 0; !done; displayIndex++) {
-                                var refreshRate = SystemProperties.getRefreshRate(displayIndex);
-                                if (refreshRate === 0) {
-                                    // Exceeded max count of displays
-                                    done = true
-                                    break
-                                }
+                            var choices = StreamingPreferences.getFpsChoices(getRefreshRates())
+                            model.clear()
+                            var hasCustomChoice = false
 
-                                addRefreshRateOrdered(fpsListModel, refreshRate, qsTr("%1 FPS").arg(refreshRate), false)
+                            for (var i = 0; i < choices.length; i++) {
+                                var choice = choices[i]
+                                hasCustomChoice = hasCustomChoice || choice.is_custom
+                                model.append({
+                                                 "text": choiceText(choice),
+                                                 "video_fps": choice.video_fps,
+                                                 "is_custom": choice.is_custom
+                                             })
                             }
 
                             var saved_fps = StreamingPreferences.fps
@@ -1415,12 +1415,36 @@ Item {
                                 }
                             }
 
-                            // If we didn't find one, add a custom frame rate for the current value
+                            // VrrRatePolicy preserves every saved custom value.  An
+                            // exact native refresh is intentionally absent in VRR
+                            // mode (e.g. a saved 120 FPS on a 120 Hz panel), so
+                            // default to the calculated VRR rate of the display
+                            // instead — the recommended VRR streaming rate
+                            // (BL-2212). Without VRR, fall back to the first
+                            // valid choice for a stale external setting.
                             if (!found) {
-                                currentIndex = addRefreshRateOrdered(model, saved_fps, qsTr("Custom (%1 FPS)").arg(saved_fps), true)
+                                currentIndex = model.count > 0 ? 0 : -1
+                                for (var k = 0; k < model.count; k++) {
+                                    if (choices[k] !== undefined && choices[k].kind === "vrr") {
+                                        // Highest VRR-kind rate (the active
+                                        // display's on single-panel handhelds)
+                                        currentIndex = k
+                                    }
+                                }
+                                if (currentIndex >= 0 && model.get(currentIndex).video_fps !== "") {
+                                    var newFps = parseInt(model.get(currentIndex).video_fps)
+                                    if (!isNaN(newFps) && StreamingPreferences.fps !== newFps) {
+                                        StreamingPreferences.fps = newFps
+                                    }
+                                }
                             }
-                            else {
-                                addRefreshRateOrdered(model, "", qsTr("Custom"), true)
+
+                            if (!hasCustomChoice) {
+                                model.append({
+                                                 "text": qsTr("Custom"),
+                                                 "video_fps": "",
+                                                 "is_custom": true
+                                             })
                             }
 
                             recalculateWidth()
@@ -1432,21 +1456,13 @@ Item {
                         Component.onCompleted: {
                             reinitialize()
                             languageChanged.connect(reinitialize)
+                            StreamingPreferences.enableVsyncChanged.connect(reinitialize)
+                            StreamingPreferences.enableVrrChanged.connect(reinitialize)
                         }
 
                         model: ListModel {
                             id: fpsListModel
-                            // Other elements may be added at runtime
-                            ListElement {
-                                text: qsTr("30 FPS")
-                                video_fps: "30"
-                                is_custom: false
-                            }
-                            ListElement {
-                                text: qsTr("60 FPS")
-                                video_fps: "60"
-                                is_custom: false
-                            }
+                            // Elements are populated at runtime by reinitialize()
                         }
 
                         id: fpsComboBox
@@ -1920,6 +1936,78 @@ Item {
                     ToolTip.text: qsTr("Frame pacing reduces micro-stutter by delaying frames that come in too early")
                 }
 
+                // Vibemis (BL-2212): VRR pacing toggle (vendored from Nonary
+                // v6.1.0-vrr9.1). Same toggle-row visual language as V-Sync /
+                // Frame pacing above. Enabling VRR auto-enables V-Sync (its
+                // precondition) rather than graying itself out.
+                CheckBox {
+                    id: vrrCheck
+                    width: parent.width
+                    height: 70
+                    hoverEnabled: true
+                    checked: StreamingPreferences.enableVrr
+                    onCheckedChanged: {
+                        if (checked !== StreamingPreferences.enableVrr) {
+                            StreamingPreferences.enableVrr = checked
+                        }
+                        if (checked && !StreamingPreferences.enableVsync) {
+                            // V-Sync is VRR's precondition: enable it automatically
+                            // instead of failing silently at stream start.
+                            StreamingPreferences.enableVsync = true
+                        }
+                    }
+
+                    indicator: Item {}
+                    background: Rectangle {
+                        anchors.bottom: parent.bottom
+                        width: parent.width
+                        height: 1
+                        color: VbTokens.strokeSoft
+                    }
+                    contentItem: Item {
+                        anchors.fill: parent
+                        Column {
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: parent.width - 80
+                            spacing: VbTokens.space1
+                            Text {
+                                text: qsTr("Enable VRR (beta)")
+                                font.family: VbTokens.fontBody
+                                font.weight: Font.DemiBold
+                                font.pixelSize: 18
+                                color: VbTokens.text
+                            }
+                            Text {
+                                width: parent.width
+                                text: qsTr("Adaptive-sync frame pacing; turns on V-Sync automatically")
+                                font.family: VbTokens.fontBody
+                                font.pixelSize: VbTokens.sizeLabel
+                                color: VbTokens.textDim
+                                wrapMode: Text.Wrap
+                            }
+                        }
+                        Rectangle {
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 60; height: 34; radius: 999
+                            color: vrrCheck.checked ? VbTokens.accent : VbTokens.controlTrackOff
+                            Rectangle {
+                                width: 26; height: 26; radius: 13
+                                anchors.verticalCenter: parent.verticalCenter
+                                x: vrrCheck.checked ? parent.width - width - 4 : 4
+                                color: vrrCheck.checked ? VbTokens.textOnAccent : VbTokens.textDim
+                                Behavior on x { NumberAnimation { duration: 120 } }
+                            }
+                        }
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("VRR presents each frame at a learned margin on adaptive-sync displays for smoother pacing. Requires V-Sync (enabled automatically). Sessions without enough refresh-rate headroom fall back to fixed V-Sync pacing, and borderless fullscreen is used while VRR is active.")
+                }
+
                 // Vibemis: one-tap low-latency / "competitive" preset. Frame pacing delays
                 // early frames (smoother but higher latency) and V-Sync adds a frame of latency;
                 // turning both off minimises input-to-photon latency for fast/competitive games.
@@ -1929,6 +2017,10 @@ Item {
                     onClicked: {
                         StreamingPreferences.framePacing = false
                         StreamingPreferences.enableVsync = false
+                        // VRR requires V-Sync (BL-2212): the low-latency preset
+                        // disables it, so turn VRR off too rather than leaving a
+                        // request that would silently fall back at stream start.
+                        StreamingPreferences.enableVrr = false
                         lowLatencyPresetButton.text = qsTr("Applied — V-Sync & frame pacing off")
                         lowLatencyFeedbackTimer.restart()
                     }

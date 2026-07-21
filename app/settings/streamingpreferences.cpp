@@ -1,4 +1,5 @@
 #include "streamingpreferences.h"
+#include "streaming/vrrratepolicy.h"
 #include "utils.h"
 
 #include <QSettings>
@@ -24,6 +25,9 @@
 #define SER_AUTOADJUSTBITRATE "autoadjustbitrate"
 #define SER_FULLSCREEN "fullscreen"
 #define SER_VSYNC "vsync"
+// Vibemis (BL-2212): VRR pacing (vendored from Nonary v6.1.0-vrr9.1).
+// Key name matches Nonary's so users migrating settings keep their choice.
+#define SER_ENABLEVRR "enablevrr"
 #define SER_GAMEOPTS "gameopts"
 #define SER_HOSTAUDIO "hostaudio"
 #define SER_MULTICONT "multicontroller"
@@ -175,6 +179,7 @@ void StreamingPreferences::reload()
     unlockBitrate = settings.value(SER_UNLOCK_BITRATE, false).toBool();
     autoAdjustBitrate = settings.value(SER_AUTOADJUSTBITRATE, true).toBool();
     enableVsync = settings.value(SER_VSYNC, true).toBool();
+    enableVrr = settings.value(SER_ENABLEVRR, false).toBool();
     gameOptimizations = settings.value(SER_GAMEOPTS, true).toBool();
     playAudioOnHost = settings.value(SER_HOSTAUDIO, false).toBool();
     multiController = settings.value(SER_MULTICONT, true).toBool();
@@ -413,6 +418,7 @@ void StreamingPreferences::save()
     settings.setValue(SER_UNLOCK_BITRATE, unlockBitrate);
     settings.setValue(SER_AUTOADJUSTBITRATE, autoAdjustBitrate);
     settings.setValue(SER_VSYNC, enableVsync);
+    settings.setValue(SER_ENABLEVRR, enableVrr);
     settings.setValue(SER_GAMEOPTS, gameOptimizations);
     settings.setValue(SER_HOSTAUDIO, playAudioOnHost);
     settings.setValue(SER_MULTICONT, multiController);
@@ -585,6 +591,58 @@ bool StreamingPreferences::importSettings()
     // Refresh in-memory values from the imported settings.
     reload();
     return true;
+}
+
+// Vibemis (BL-2212): VRR-aware FPS choice list (from Nonary v6.1.0-vrr9.1).
+std::vector<int> StreamingPreferences::toRefreshRates(const QVariantList& refreshRates)
+{
+    std::vector<int> result;
+    result.reserve(refreshRates.size());
+
+    for (const QVariant& value : refreshRates) {
+        bool ok = false;
+        const int refreshHz = value.toInt(&ok);
+        if (ok && refreshHz > 0) {
+            result.push_back(refreshHz);
+        }
+    }
+
+    return result;
+}
+
+QVariantList StreamingPreferences::getFpsChoices(const QVariantList& refreshRates) const
+{
+    const std::vector<VrrFpsChoice> choices = VrrRatePolicy::buildChoices(toRefreshRates(refreshRates),
+                                                                            fps,
+                                                                            enableVsync && enableVrr);
+    QVariantList result;
+    for (const VrrFpsChoice& choice : choices) {
+        QVariantMap item;
+        item.insert("video_fps", QString::number(choice.fps));
+        item.insert("is_custom", choice.kind == VrrFpsChoiceKind::Custom);
+
+        switch (choice.kind) {
+        case VrrFpsChoiceKind::Baseline:
+            item.insert("kind", "baseline");
+            break;
+        case VrrFpsChoiceKind::Native:
+            item.insert("kind", "native");
+            break;
+        case VrrFpsChoiceKind::Vrr:
+            item.insert("kind", "vrr");
+            break;
+        case VrrFpsChoiceKind::LowLatencyVrr:
+            item.insert("kind", "low-latency-vrr");
+            break;
+        case VrrFpsChoiceKind::Custom:
+            item.insert("kind", "custom");
+            break;
+        }
+
+        result.append(item);
+    }
+
+    return result;
 }
 
 int StreamingPreferences::getDefaultBitrate(int width, int height, int fps, bool yuv444)
