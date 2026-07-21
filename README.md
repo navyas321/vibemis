@@ -13,6 +13,10 @@
   <img src="docs/design/screenshots/settings.png" alt="Settings — category sidebar with token-styled controls, presets, and native-resolution guidance" width="32%">
   <img src="docs/design/screenshots/quickmenu.png" alt="In-stream Quick Menu overlay — clipboard, server commands, text-send, and stream controls over a live stream" width="32%">
 </p>
+<p align="center">
+  <img src="docs/design/screenshots/appgrid.png" alt="App grid — box-art tiles with gamepad focus and launch hints for a paired Vibepollo host" width="48%">
+  <img src="docs/design/screenshots/addpc.png" alt="Add a computer — manual pairing dialog with Tailscale guidance" width="48%">
+</p>
 
 ## Why Vibemis? (the best of both worlds)
 
@@ -26,6 +30,7 @@ Streaming clients in this world come in two flavors, and until now you couldn't 
 - **The Apollo features, on a maintained Linux handheld** — clipboard sync, server commands, OTP pairing, virtual display, in-stream Quick Menu, and per-client permissions, all surfaced on-device
 - **Works on current SteamOS** — VAAPI/Mesa compatibility fixes for AMD hardware; every cycle is verified on the Lenovo Legion Go S Z2 (including nested-Gamescope "Game Mode" runs)
 - **Tuned for Vibepollo** — pairing flow, clipboard auth, and SSL handling built for the Vibepollo host specifically
+- **Clean audio on PipeWire handhelds (user-reported, [#239](https://github.com/navyas321/vibemis/issues/239))** — a Bazzite/ROG Ally user reports Vibemis is the only Moonlight fork without severe audio crackling on their setup. Our analysis: Vibemis ships a real SDL2 audio runtime (PulseAudio path) instead of the SDL3+sdl2-compat native-PipeWire stack current upstream builds use — and this difference is now CI-guarded so upstream merges can't silently lose it
 - **Kept current** — merged with upstream moonlight-qt (May 2026), CI pipeline on every push
 
 > **Clients vs. hosts:** Vibemis, Moonlight Qt, and Artemis are **clients** (they run on your handheld/PC). They pair with a **host** on your gaming PC: **Vibepollo** (the counterpart Vibemis is tuned for), [Apollo](https://github.com/ClassicOldSong/Apollo), or vanilla [Sunshine](https://github.com/LizardByte/Sunshine). Apollo/Vibepollo are Sunshine-lineage hosts; their extended features light up automatically when the host supports them.
