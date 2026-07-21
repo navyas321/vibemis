@@ -12,7 +12,9 @@ the CI smart-build behavior, and the README-update rule.
 - **Stable** = the bare version itself, non-prerelease, takes Latest; cut via
   workflow_dispatch `release_type=stable`. Hotfix patches via the `version_override`
   input (`0.5.1`). **Bump version.txt to the next stable right after every cut.**
-- **When each tier cuts:**
+- **When each tier cuts** (rules effective 2026-07-21 — deterministic, content-based,
+  merge-method-agnostic; the authoritative logic lives in the header comments and
+  `check-changes` step of `.github/workflows/dev-build.yml`):
   | Tier | Trigger | Who decides |
   |------|---------|-------------|
   | alpha | ANY `test**` push whose diff vs `vibemis-main` touches non-docs paths (no `[alpha]` marker needed — the branch name is the intent; empty/no-op branches skip) | automatic |
