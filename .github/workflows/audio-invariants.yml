@@ -11,6 +11,9 @@ on:
   push:
     branches: [vibemis-main]
   pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'RELEASES.md'
 
 jobs:
   audio-invariants:
