@@ -75,7 +75,11 @@ SOURCES += \
     $$COMMON_C_DIR/src/SdpGenerator.c \
     $$COMMON_C_DIR/src/SimpleStun.c \
     $$COMMON_C_DIR/src/VideoDepacketizer.c \
-    $$COMMON_C_DIR/src/VideoStream.c
+    $$COMMON_C_DIR/src/VideoStream.c \
+    # Vibemis (BL-2212): mainline moonlight-common-c exports LiGetMicroseconds()
+    # (the VRR pacing clock) but ClassicOldSong's Apollo-lineage fork doesn't.
+    # Provide it at the wrapper level, like the rs.c indirection above.
+    $$PWD/limelight_compat.c
 HEADERS += \
     $$COMMON_C_DIR/src/Limelight.h
 INCLUDEPATH += \
