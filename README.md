@@ -1,15 +1,24 @@
 # Vibemis
 
-**Vibemis** is a gamepad-first, actively-maintained game-streaming **client** for **SteamOS** and Linux handhelds. It takes the best of both sides of the Moonlight/Artemis world — [Moonlight Qt](https://github.com/moonlight-stream/moonlight-qt)'s solid Linux/handheld foundation and [Artemis](https://github.com/MobinYengejehi/Artemis)'s support for **Apollo**'s extended protocol — and pairs with **[Vibepollo](https://github.com/Nonary/Vibepollo)**, the Apollo-lineage host it's tuned for. Set up Vibepollo on your gaming PC, run Vibemis on your handheld, pair, and stream.
+[![Latest stable](https://img.shields.io/github/v/release/navyas321/vibemis?label=stable&color=00cccc)](https://github.com/navyas321/vibemis/releases/latest)
+[![Build](https://github.com/navyas321/vibemis/actions/workflows/dev-build.yml/badge.svg)](https://github.com/navyas321/vibemis/actions/workflows/dev-build.yml)
+[![License: GPL v3](https://img.shields.io/github/license/navyas321/vibemis)](LICENSE)
+
+**Vibemis** is a gamepad-first, actively-maintained game-streaming **client** for **SteamOS** and Linux handhelds. It takes the best of both sides of the Moonlight/Artemis world — [Moonlight Qt](https://github.com/moonlight-stream/moonlight-qt)'s solid Linux/handheld foundation and [Artemis](https://github.com/ClassicOldSong/moonlight-android)'s support for **Apollo**'s extended protocol — and pairs with **[Vibepollo](https://github.com/Nonary/Vibepollo)**, the Apollo-lineage host it's tuned for. Set up Vibepollo on your gaming PC, run Vibemis on your handheld, pair, and stream.
 
 **Built for SteamOS.** The primary target is SteamOS Game Mode (Gamescope) on AMD handhelds; every release is hardware-verified on a **Lenovo Legion Go S Z2** test device before it ships. It runs on any modern Linux desktop too.
+
+<p align="center">
+  <img src="docs/design/screenshots/pcview.png" alt="Computers list — gamepad-first host cards with live status and a Vibepollo host badge" width="49%">
+  <img src="docs/design/screenshots/quickmenu.png" alt="In-stream Quick Menu overlay — clipboard, server commands, text-send, and stream controls over a live stream" width="49%">
+</p>
 
 ## Why Vibemis? (the best of both worlds)
 
 Streaming clients in this world come in two flavors, and until now you couldn't get both on a Linux handheld:
 
 - **[Moonlight Qt](https://github.com/moonlight-stream/moonlight-qt)** is the mainline open-source Qt **client** for PCs and handhelds — rock-solid and actively maintained — **but it speaks only the base GameStream/Sunshine protocol.** The extras that [Apollo](https://github.com/ClassicOldSong/Apollo) / Vibepollo hosts add (clipboard sync, server commands, OTP pairing, virtual display control, an in-stream Quick Menu, per-client permissions) simply don't work through it.
-- **[Artemis](https://github.com/MobinYengejehi/Artemis)** ("Moonlight Noir") is the **client** family that *does* speak those Apollo extensions. **Artemis for Android is active**, but the **desktop/Linux** build — [wjbeckett/artemis](https://github.com/wjbeckett/artemis), which Vibemis is forked from — **went dormant (Aug 2025)** with an AppImage that no longer builds on current Mesa/glibc. That left **no maintained Linux/handheld client with the Apollo features.**
+- **[Artemis](https://github.com/ClassicOldSong/moonlight-android)** is the **client** family that *does* speak those Apollo extensions. **Artemis for Android comes from Apollo's own author**, but the **desktop/Linux** build — [wjbeckett/artemis](https://github.com/wjbeckett/artemis) ("Moonlight Noir"), which Vibemis is forked from — **went dormant (Aug 2025)** with an AppImage that no longer builds on current Mesa/glibc. That left **no maintained Linux/handheld client with the Apollo features.**
 
 **Vibemis takes the best of both:** Moonlight Qt's current, well-supported Linux/handheld base **plus** the Apollo-protocol features from the Artemis lineage — actively maintained, fixed for current SteamOS/Mesa/AMD, gamepad-first, and tuned for the Vibepollo host.
 
@@ -98,7 +107,7 @@ AppImage to a stable path with a clean `Vibemis` desktop entry, ready to Add to 
 - **Server Commands** — trigger custom commands on the Apollo/Vibepollo host
 - **OTP Pairing** — secure pairing via Vibepollo's "Pair Client" web UI
 - **Quick Menu** — in-stream overlay for clipboard, commands, and stream controls
-- **Fractional Refresh Rates** — client-side custom refresh (e.g. 90 Hz, 120 Hz)
+- **Custom Refresh Rates** — client-side custom refresh, including fractional rates (e.g. 59.94 Hz, 90 Hz, 120 Hz)
 - **Resolution Scaling** — client-side scale factor for performance tuning
 - **Virtual Display Control** — request a virtual display on the host
 - **UUID-Based App Launching** — modern app identification with legacy fallback
@@ -330,7 +339,7 @@ bash scripts/build-appimage.sh
 ## Attribution
 
 - **[Artemis (desktop / "Moonlight Noir")](https://github.com/wjbeckett/artemis)** by [wjbeckett](https://github.com/wjbeckett) — the C++/QML desktop client (a Moonlight-Qt-lineage build that speaks Apollo's extensions) that Vibemis is forked from; now dormant
-- **[Artemis Android](https://github.com/MobinYengejehi/Artemis)** by [MobinYengejehi](https://github.com/MobinYengejehi) — Android Apollo client whose features serve as a reference for Vibemis
+- **[MobinYengejehi/Artemis](https://github.com/MobinYengejehi/Artemis)** by [MobinYengejehi](https://github.com/MobinYengejehi) — a community fork of Artemis Android whose features served as a reference for Vibemis
 - **[Moonlight Qt](https://github.com/moonlight-stream/moonlight-qt)** by the [Moonlight Team](https://github.com/moonlight-stream) — the upstream streaming client this is built on
 - **[Apollo](https://github.com/ClassicOldSong/Apollo)** and **[Artemis Android](https://github.com/ClassicOldSong/moonlight-android)** by [ClassicOldSong](https://github.com/ClassicOldSong) — the Sunshine fork and Android client whose protocol extensions this client speaks
 - **[Sunshine](https://github.com/LizardByte/Sunshine)** by [LizardByte](https://github.com/LizardByte) — the original open-source game streaming server
