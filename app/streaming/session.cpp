@@ -2586,6 +2586,40 @@ void Session::execInternal()
                 }
 
                 int newDisplayIndex = SDL_GetWindowDisplayIndex(m_Window);
+
+                // A DISPLAY_CHANGED notification can describe a refresh-mode
+                // switch on the SAME monitor, not just a move to another
+                // display, and some backends report that mode transition as a
+                // size change instead (BL-2296, from Nonary v6.1.0-vrr9.1).
+                // Without this guard, notifyWindowChanged() can absorb the
+                // event and leave the VRR worker pacing against the stale
+                // qualified rate. Unlike Nonary (immutable per-session
+                // snapshot, so it must permanently disable VRR here), our
+                // qualification is re-derived on every decoder (re)creation -
+                // forcing recreation is enough to requalify at the new rate
+                // or fall back to fixed pacing.
+                bool refreshMayHaveChanged = newDisplayIndex != currentDisplayIndex ||
+                    event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED;
+#if SDL_VERSION_ATLEAST(2, 0, 18)
+                refreshMayHaveChanged = refreshMayHaveChanged ||
+                    event.window.event == SDL_WINDOWEVENT_DISPLAY_CHANGED;
+#endif
+                if (StreamUtils::vrrRefreshSwitchNeedsProbe(m_ActiveVrrRefreshHz,
+                                                            m_VideoDecoder->isVrrActive(),
+                                                            refreshMayHaveChanged)) {
+                    int currentRefreshHz = 0;
+                    const bool refreshReadable =
+                        StreamUtils::tryGetDisplayRefreshRate(m_Window, currentRefreshHz);
+                    if (StreamUtils::vrrRefreshSwitchRequiresRequalification(m_ActiveVrrRefreshHz,
+                                                                             refreshReadable,
+                                                                             currentRefreshHz)) {
+                        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                                    "VRR qualified rate is stale after a display refresh change (%d Hz -> %d Hz, readable: %d); forcing decoder recreation to requalify",
+                                    m_ActiveVrrRefreshHz, currentRefreshHz, refreshReadable);
+                        forceRecreation = true;
+                    }
+                }
+
                 if (newDisplayIndex != currentDisplayIndex) {
                     windowChangeInfo.stateChangeFlags |= WINDOW_STATE_CHANGE_DISPLAY;
 
@@ -2701,6 +2735,11 @@ void Session::execInternal()
                                     strictRefreshHz, getActualFpsForDecoderTest());
                     }
                 }
+
+                // Remember the qualified rate so the window-event guard can
+                // detect a same-display refresh-mode switch that invalidates
+                // it (BL-2296). 0 = this decoder is not VRR-qualified.
+                m_ActiveVrrRefreshHz = enableVrr ? vrrDisplayRefreshHz : 0;
 
                 // A rejected VRR request still uses the seamless fixed-V-sync
                 // fallback. Keep that fallback paced even when the separate
