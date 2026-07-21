@@ -871,6 +871,26 @@ jobs:
         md5sum "$APP"
         file "$APP"
 
+        # BL-2266 teardown contract: the type-2 runtime execs AppRun in-place
+        # and unmounts the payload the moment the AppRun process tree's last
+        # holder of the keepalive fd dies. The linuxdeploy-generated AppRun
+        # wrapper must therefore exec (replace itself with) the real binary —
+        # a wrapper that forks-and-exits, or backgrounds the app, would let
+        # the squashfs vanish under a still-running process (SIGBUS-on-quit
+        # family). linuxdeploy is fetched as `continuous`, so guard the
+        # contract on every build instead of trusting it.
+        APPRUN="$PWD/deploy/AppRun"
+        if [ -L "$APPRUN" ]; then
+            echo "AppRun is a symlink (direct exec) — teardown contract OK"
+        elif grep -Eq '^[[:space:]]*exec[[:space:]].*AppRun\.wrapped' "$APPRUN"; then
+            echo "AppRun wrapper execs AppRun.wrapped — teardown contract OK"
+        else
+            echo "ERROR: AppRun wrapper no longer exec's the payload binary."
+            echo "----- deploy/AppRun -----"
+            cat "$APPRUN"
+            exit 1
+        fi
+
     - name: Upload AppImage artifact
       uses: actions/upload-artifact@v6
       with:

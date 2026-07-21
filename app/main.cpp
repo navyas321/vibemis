@@ -18,6 +18,10 @@
 #ifdef Q_OS_UNIX
 #include <sys/socket.h>
 #include <signal.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <dirent.h>
+#include <cstdlib>
 #endif
 
 // Don't let SDL hook our main function, since Qt is already
@@ -442,9 +446,69 @@ void configureSignalHandlers()
 
 #endif
 
+#if defined(Q_OS_LINUX)
+// BL-2266: seal the inherited AppImage runtime fds against child inheritance.
+//
+// The type-2 AppImage runtime does NOT supervise us from a parent process:
+// it execs the payload's AppRun in-place (runtime pid == app pid) and leaves
+// two file descriptors open in our process WITHOUT FD_CLOEXEC:
+//   - the keepalive pipe's read end: the daemonized squashfuse process sits
+//     in a blocked write() on the other end and unmounts /tmp/.mount_* the
+//     moment every copy of this fd is gone;
+//   - fd 1023: an O_RDONLY fd on the mount point itself.
+// Every child we spawn (QProcess helpers, xdg-open — most critically the
+// updater's relaunch of the freshly installed AppImage) inherits both, which
+// breaks teardown in both directions: a long-lived child pins the OLD
+// payload mount forever (orphaned squashfuse daemon + stale /tmp/.mount_*,
+// the AppImage/type2-runtime#92 family — mounts SteamOS may then tear down
+// behind our back around suspend/session changes), and the unmount stops
+// being coupled to *our* lifetime, which is the AppRun/FUSE teardown race
+// behind the intermittent SIGBUS-on-quit (BL-2266, test139 Tier 2).
+// Marking them CLOEXEC keeps both fds open for our own lifetime (the mount
+// lives exactly as long as we do) while guaranteeing no child can extend or
+// entangle it.
+//
+// Must run before anything (Qt, SDL) opens fds of its own: at main() entry
+// the only inherited descriptors are std{in,out,err} plus the runtime's.
+static void sealAppImageRuntimeFds()
+{
+    if (qEnvironmentVariableIsEmpty("APPIMAGE")) {
+        // Not running from an AppImage mount (bare binary, Flatpak, distro
+        // package) — nothing to seal.
+        return;
+    }
+
+    DIR* dir = opendir("/proc/self/fd");
+    if (dir == nullptr) {
+        return;
+    }
+
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != nullptr) {
+        char* end = nullptr;
+        long fd = strtol(entry->d_name, &end, 10);
+        if (end == entry->d_name || *end != '\0' ||
+                fd <= STDERR_FILENO || fd == dirfd(dir)) {
+            continue;
+        }
+
+        int flags = fcntl(static_cast<int>(fd), F_GETFD);
+        if (flags != -1 && !(flags & FD_CLOEXEC)) {
+            fcntl(static_cast<int>(fd), F_SETFD, flags | FD_CLOEXEC);
+        }
+    }
+    closedir(dir);
+}
+#endif
+
 int main(int argc, char *argv[])
 {
     SDL_SetMainReady();
+
+#if defined(Q_OS_LINUX)
+    // BL-2266: must run before any other fd exists — see the function docs.
+    sealAppImageRuntimeFds();
+#endif
 
     // Gamescope runs at a fixed, nested resolution and manages its own window scaling.
     // Qt's automatic high-DPI scaling applies a device-pixel-ratio (e.g. 1.5x) on high-DPI
@@ -1403,5 +1467,29 @@ int main(int argc, char *argv[])
     fflush(stdout);
 #endif
 
+#if defined(Q_OS_LINUX) && defined(APP_IMAGE)
+    // BL-2266: deterministic AppImage quit.
+    //
+    // At this point everything observable is finished: aboutToQuit handlers
+    // ran inside exec(), the global thread pool (DeferredSessionCleanupTask /
+    // PendingQuitTask) was drained above, settings were flushed by their
+    // explicit save() calls, and the log queue was waited on. All that
+    // remains is in-process memory teardown — ~QQmlApplicationEngine, Qt/QML
+    // static destructors, plugin dlclose — seconds of cold-page faults
+    // against the FUSE-mounted squashfs payload. The type-2 runtime execs us
+    // in-place and unmounts from a daemonized squashfuse process the moment
+    // our keepalive pipe closes, so a premature unmount during that
+    // destructor window turns each cold page fault into SIGBUS (test139
+    // Tier 2: core 48860 died inside bundled libQt6Qml during exactly this
+    // phase), and a wedged destructor is the beta.001 TERM-hang face of the
+    // same race. Ending the process here, while every mapped page is still
+    // guaranteed present, makes quit deterministic; the kernel reclaims all
+    // remaining resources.
+    fflush(stdout);
+    fflush(stderr);
+    SDL_Quit(); // would otherwise run via the atexit() hook that _exit skips
+    _exit(err);
+#else
     return err;
+#endif
 }
