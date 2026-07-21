@@ -7,6 +7,7 @@ not edit by hand.
 
 | Published (UTC) | Build | Channel | Artifact |
 |---|---|---|---|
+| 2026-07-21 16:58:29Z | [`0.4.0-beta.003`](https://github.com/navyas321/vibemis/releases/tag/0.4.0-beta.003) | 🧪 Beta | [AppImage](https://github.com/navyas321/vibemis/releases/tag/0.4.0-beta.003) |
 | 2026-07-21 16:47:15Z | [`0.4.0-beta.002`](https://github.com/navyas321/vibemis/releases/tag/0.4.0-beta.002) | 🧪 Beta | [AppImage](https://github.com/navyas321/vibemis/releases/tag/0.4.0-beta.002) |
 | 2026-07-21 14:25:33Z | [`0.4.0-alpha.003`](https://github.com/navyas321/vibemis/releases/tag/0.4.0-alpha.003) | 🔬 Alpha | [AppImage](https://github.com/navyas321/vibemis/releases/tag/0.4.0-alpha.003) |
 | 2026-07-21 13:51:02Z | [`0.4.0-alpha.002`](https://github.com/navyas321/vibemis/releases/tag/0.4.0-alpha.002) | 🔬 Alpha | [AppImage](https://github.com/navyas321/vibemis/releases/tag/0.4.0-alpha.002) |
