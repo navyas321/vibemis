@@ -1,6 +1,6 @@
 # Vibemis
 
-**Vibemis** is a gamepad-first, actively-maintained game-streaming **client** for **SteamOS** and Linux handhelds. It takes the best of both sides of the Moonlight/Artemis world — [Moonlight Qt](https://github.com/moonlight-stream/moonlight-qt)'s solid Linux/handheld foundation and [Artemis](https://github.com/MobinYengejehi/Artemis)'s support for **Apollo**'s extended protocol — and pairs with **[Vibepollo](https://github.com/navyas321/Vibepollo)**, its host-side counterpart. Set up Vibepollo on your gaming PC, run Vibemis on your handheld, pair, and stream.
+**Vibemis** is a gamepad-first, actively-maintained game-streaming **client** for **SteamOS** and Linux handhelds. It takes the best of both sides of the Moonlight/Artemis world — [Moonlight Qt](https://github.com/moonlight-stream/moonlight-qt)'s solid Linux/handheld foundation and [Artemis](https://github.com/MobinYengejehi/Artemis)'s support for **Apollo**'s extended protocol — and pairs with **[Vibepollo](https://github.com/Nonary/Vibepollo)**, the Apollo-lineage host it's tuned for. Set up Vibepollo on your gaming PC, run Vibemis on your handheld, pair, and stream.
 
 **Built for SteamOS.** The primary target is SteamOS Game Mode (Gamescope) on AMD handhelds; every release is hardware-verified on a **Lenovo Legion Go S Z2** test device before it ships. It runs on any modern Linux desktop too.
 
@@ -335,7 +335,7 @@ bash scripts/build-appimage.sh
 - **[Apollo](https://github.com/ClassicOldSong/Apollo)** and **[Artemis Android](https://github.com/ClassicOldSong/moonlight-android)** by [ClassicOldSong](https://github.com/ClassicOldSong) — the Sunshine fork and Android client whose protocol extensions this client speaks
 - **[Sunshine](https://github.com/LizardByte/Sunshine)** by [LizardByte](https://github.com/LizardByte) — the original open-source game streaming server
 - **[moonlight-common-c](https://github.com/ClassicOldSong/moonlight-common-c)** (ClassicOldSong's Apollo-lineage fork) — the protocol/codec library submodule
-- **[Vibepollo](https://github.com/navyas321/Vibepollo)** — the Apollo/Sunshine-lineage **host** Vibemis is built to pair with (the counterpart to this client)
+- **[Vibepollo](https://github.com/Nonary/Vibepollo)** by [Nonary](https://github.com/Nonary) — the Apollo-lineage **host** Vibemis is built to pair with (the counterpart to this client)
 
 ---
 
