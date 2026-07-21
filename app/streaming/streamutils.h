@@ -13,9 +13,6 @@ public:
     // takes an explicit mode. Using the configured mode for BOTH video rendering and input
     // coordinate mapping keeps absolute mouse/touch aligned with what's on screen.
     static
-    SDL_Window* createTestWindow();
-
-    static
     void scaleSourceToDestinationSurface(SDL_Rect* src, SDL_Rect* dst);
 
     static
@@ -41,10 +38,4 @@ public:
 
     static
     int getDrmFd(bool preferRenderNode);
-
-    static
-    void enterAsyncLoggingMode();
-
-    static
-    void exitAsyncLoggingMode();
 };
