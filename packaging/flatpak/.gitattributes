@@ -1,0 +1,4 @@
+# Flatpak/Flathub packaging files are consumed on Linux — keep LF line endings
+# regardless of the checkout platform (a CRLF in the .desktop or manifest breaks
+# on Linux). Applies to the manifest, metainfo, desktop entry, JSON, and README.
+* text eol=lf
