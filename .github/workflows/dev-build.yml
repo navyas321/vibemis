@@ -878,6 +878,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      # pull-requests: write is needed ONLY by the fail-soft "Refresh RELEASES.md
+      # build timeline" step (BL-2232): the refresh flows through a PR now because
+      # vibemis-main branch protection 409s direct content updates.
+      pull-requests: write
     # dry_run=true skips this job entirely — the pipeline builds and verifies but
     # mints no release/tag. Use it for validating CI changes; cut a real version
     # only when a release is intended.
@@ -1163,33 +1167,83 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    # Refresh the chronological build timeline (RELEASES.md) on vibemis-main
-    # after every cut. GitHub's Releases page sorts by SemVer precedence (alphas sink
-    # below betas of the same base version), so RELEASES.md is the newest-first-by-date
-    # view for humans. Fail-soft: a timeline refresh failure never fails a release.
+    # Refresh the chronological build timeline (RELEASES.md) after every cut.
+    # GitHub's Releases page sorts by SemVer precedence (alphas sink below betas of
+    # the same base version), so RELEASES.md is the newest-first-by-date view for
+    # humans. vibemis-main is branch-protected (3 required checks), so the former
+    # direct contents-API update was rejected with HTTP 409 on EVERY cut (BL-2232,
+    # run 29811232501). Mechanism now: rebuild the dedicated branch
+    # ci/releases-md-refresh from the current vibemis-main tip (force-updated each
+    # cut; its history is disposable), commit the regenerated file there, and
+    # open-or-update ONE reusable PR into vibemis-main. Branch protection stays
+    # fully intact. ci/** is not a build-trigger branch and RELEASES.md is docs,
+    # so neither the push nor the eventual merge can mint a release.
+    # Fail-soft: a refresh failure never fails a release — the ERR trap converts
+    # any error into a ::notice + step-summary line and exits 0 (no red
+    # annotation); continue-on-error remains as the backstop.
     - name: Refresh RELEASES.md build timeline
       continue-on-error: true
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        REPO: ${{ github.repository }}
+        CUT_VERSION: ${{ needs.setup-version.outputs.version }}
+        REFRESH_BRANCH: ci/releases-md-refresh
+        BASE_BRANCH: vibemis-main
       run: |
+        set -Eeuo pipefail
+        fail_soft() {
+          echo "::notice title=RELEASES.md refresh deferred::non-fatal error near line $1 - the timeline catches up on the next cut (BL-2232)"
+          echo "- WARNING: RELEASES.md timeline refresh hit a non-fatal error near line $1; it will catch up on the next cut" >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+        }
+        trap 'fail_soft $LINENO' ERR
         if [ ! -f scripts/gen-releases-index.sh ]; then
-          echo "::warning::gen-releases-index.sh not on this branch - skipping timeline refresh"
+          echo "::notice::gen-releases-index.sh not on this branch - skipping timeline refresh"
           exit 0
         fi
-        bash scripts/gen-releases-index.sh "${{ github.repository }}" > /tmp/RELEASES.md
-        SHA=$(gh api "repos/${{ github.repository }}/contents/RELEASES.md?ref=vibemis-main" --jq .sha 2>/dev/null || true)
-        if [ -n "$SHA" ]; then
-          gh api -X PUT "repos/${{ github.repository }}/contents/RELEASES.md" \
-            -f message="docs: refresh RELEASES.md build timeline [skip ci]" \
-            -f branch=vibemis-main -f sha="$SHA" \
-            -f content="$(base64 -w0 /tmp/RELEASES.md)" > /dev/null
-        else
-          gh api -X PUT "repos/${{ github.repository }}/contents/RELEASES.md" \
-            -f message="docs: add RELEASES.md build timeline [skip ci]" \
-            -f branch=vibemis-main \
-            -f content="$(base64 -w0 /tmp/RELEASES.md)" > /dev/null
+        bash scripts/gen-releases-index.sh "$REPO" > /tmp/RELEASES.md
+        # The job checkout may be a test** ref; materialize the base tip explicitly.
+        git fetch --no-tags origin "+refs/heads/$BASE_BRANCH:refs/remotes/origin/$BASE_BRANCH"
+        if git cat-file -e "refs/remotes/origin/$BASE_BRANCH:RELEASES.md" 2>/dev/null \
+           && git show "refs/remotes/origin/$BASE_BRANCH:RELEASES.md" | cmp -s - /tmp/RELEASES.md; then
+          echo "RELEASES.md already current on $BASE_BRANCH - nothing to refresh"
+          echo "- RELEASES.md timeline already current on $BASE_BRANCH - no refresh PR needed" >> "$GITHUB_STEP_SUMMARY"
+          exit 0
         fi
-        echo "RELEASES.md timeline refreshed"
+        # Throwaway worktree keeps the job's own checkout (github.sha) untouched.
+        git worktree add --force -B "$REFRESH_BRANCH" /tmp/releases-refresh "refs/remotes/origin/$BASE_BRANCH"
+        cp /tmp/RELEASES.md /tmp/releases-refresh/RELEASES.md
+        git -C /tmp/releases-refresh config user.name "github-actions[bot]"
+        git -C /tmp/releases-refresh config user.email "github-actions[bot]@users.noreply.github.com"
+        git -C /tmp/releases-refresh add RELEASES.md
+        git -C /tmp/releases-refresh commit -m "docs: refresh RELEASES.md build timeline for $CUT_VERSION"
+        git -C /tmp/releases-refresh push --force origin "$REFRESH_BRANCH"
+        cat > /tmp/releases-refresh-pr-body.md <<EOF
+        Auto-opened by the Create Development Release job after cutting $CUT_VERSION.
+
+        Why a PR: vibemis-main branch protection (3 required checks) rejects the old
+        direct contents-API update with HTTP 409 on every cut (BL-2232, diagnosed in
+        run 29811232501). The refresh now lands on the dedicated branch
+        $REFRESH_BRANCH - rebuilt from the $BASE_BRANCH tip and force-updated on each
+        cut - and flows through this single PR, which is reused while open.
+
+        Docs-only: RELEASES.md is auto-generated by scripts/gen-releases-index.sh;
+        merging is safe and never builds a beta (docs-only merges do not build).
+
+        Heads-up: pushes and PRs made with the workflow GITHUB_TOKEN do not trigger
+        other workflows, so the required checks may stay at "Expected" - merge as an
+        admin, or close/reopen the PR to nudge the checks if needed.
+        EOF
+        PR_URL=$(gh pr list --repo "$REPO" --head "$REFRESH_BRANCH" --base "$BASE_BRANCH" \
+          --state open --json url --jq '.[0].url // empty')
+        if [ -z "$PR_URL" ]; then
+          PR_URL=$(gh pr create --repo "$REPO" --head "$REFRESH_BRANCH" --base "$BASE_BRANCH" \
+            --title "docs(auto): refresh RELEASES.md build timeline" \
+            --body-file /tmp/releases-refresh-pr-body.md)
+        fi
+        gh pr edit "$PR_URL" --repo "$REPO" --add-label auto-review 2>/dev/null || true
+        echo "RELEASES.md refresh staged for review: $PR_URL"
+        echo "- RELEASES.md timeline refresh for $CUT_VERSION staged via PR: $PR_URL" >> "$GITHUB_STEP_SUMMARY"
 
     # ── Releases are PERMANENT, like tags ──
     # SemVer 2.0.0 §3: "Once a versioned package has been released, the contents of that
