@@ -209,7 +209,13 @@ void StreamingPreferences::reload()
                                                            static_cast<int>(PerfOverlayPosition::POS_TOP_LEFT)).toInt());
     updateChannel = static_cast<UpdateChannel>(settings.value(SER_UPDATECHANNEL,
                                                static_cast<int>(UpdateChannel::UC_STABLE)).toInt());
-    adaptiveBitrate = settings.value(SER_ADAPTIVEBITRATE, false).toBool();
+    // BL-2265: default ON. This gates the catastrophic bitrate-collapse
+    // rescue (fast reconnect at a halved bitrate on the FEC-tail-drop
+    // signature) in addition to the CONN_STATUS_POOR log recommendation.
+    // A collapsed stream is unusable anyway, so rescuing by default is
+    // strictly better; the Settings toggle remains the opt-out. An explicit
+    // saved 'false' from a user who unchecked it is still respected.
+    adaptiveBitrate = settings.value(SER_ADAPTIVEBITRATE, true).toBool();
     packetSize = settings.value(SER_PACKETSIZE, 0).toInt();
     swapMouseButtons = settings.value(SER_SWAPMOUSEBUTTONS, false).toBool();
     muteOnFocusLoss = settings.value(SER_MUTEONFOCUSLOSS, false).toBool();

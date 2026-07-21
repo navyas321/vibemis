@@ -84,8 +84,23 @@ Item {
                 reconnectAttempts < maxReconnectAttempts) {
             reconnectAttempts++
             streamStarted = false
-            stageText = qsTr("Connection lost — reconnecting to %1 (attempt %2 of %3)...")
-                            .arg(appName).arg(reconnectAttempts).arg(maxReconnectAttempts)
+            if (session.wasBitrateRescue()) {
+                // BL-2265: the collapse rescue tore the stream down on
+                // purpose — tell the user WHY and at what rate we resume.
+                // The replacement session consumes the stepped-down bitrate
+                // via Session's pending-rescue override.
+                var rescueMsg = qsTr("Network can't sustain %1 Mbps — reduced to %2 Mbps")
+                                    .arg((session.rescueFromKbps() / 1000.0).toFixed(1))
+                                    .arg((session.rescueToKbps() / 1000.0).toFixed(1))
+                stageText = rescueMsg + "\n" +
+                            qsTr("Reconnecting to %1 (attempt %2 of %3)...")
+                                .arg(appName).arg(reconnectAttempts).arg(maxReconnectAttempts)
+                displayLaunchWarning(rescueMsg)
+            }
+            else {
+                stageText = qsTr("Connection lost — reconnecting to %1 (attempt %2 of %3)...")
+                                .arg(appName).arg(reconnectAttempts).arg(maxReconnectAttempts)
+            }
             stageSpinner.visible = true
             stageLabel.visible = true
             window.visible = true

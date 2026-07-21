@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QAtomicInt>
 #include <QSemaphore>
 #include <QWindow>
 
@@ -136,6 +137,14 @@ public:
     // True when the stream was cut unexpectedly (connection loss),
     // as opposed to a user-initiated quit — used by the auto-reconnect logic in QML.
     Q_INVOKABLE bool wasUnexpectedTermination() const { return m_UnexpectedTermination; }
+
+    // BL-2265: true when THIS session ended because the catastrophic
+    // bitrate-collapse rescue tore it down to reconnect at a lower bitrate.
+    // The reconnect session picks the stepped-down bitrate up via the
+    // one-shot s_PendingRescueBitrateKbps override in initialize().
+    Q_INVOKABLE bool wasBitrateRescue() const { return m_RescueToKbps > 0; }
+    Q_INVOKABLE int rescueFromKbps() const { return m_RescueFromKbps; }
+    Q_INVOKABLE int rescueToKbps() const { return m_RescueToKbps; }
 
     // A fresh Session for the same host+app (per-game profiles and
     // preferences re-apply automatically). QML takes ownership of the returned object.
@@ -296,6 +305,14 @@ private:
     static
     int drSubmitDecodeUnit(PDECODE_UNIT du);
 
+    // BL-2265 collapse detector: fed one call per DELIVERED frame (with the
+    // network-dropped gap before it) from drSubmitDecodeUnit on the
+    // depacketizer thread. Confirms the catastrophic-collapse signature via
+    // BitrateRescuePolicy and then triggers the rescue reconnect.
+    void onRescueFrameDelivery(uint32_t frameNumber);
+
+    void triggerBitrateRescue(uint32_t elapsedMs, uint32_t delivered, uint32_t dropped);
+
     StreamingPreferences* m_Preferences;
     bool m_IsFullScreen;
     SupportedVideoFormatList m_SupportedVideoFormats; // Sorted in order of descending priority
@@ -323,6 +340,23 @@ private:
     // window-event guard detect a same-display refresh-mode switch that
     // invalidates the qualified rate (BL-2296, Nonary v6.1.0-vrr9.1 parity).
     int m_ActiveVrrRefreshHz = 0;
+    // BL-2265 bitrate-collapse rescue state. The detector counters are only
+    // touched on the depacketizer thread (drSubmitDecodeUnit is serialized);
+    // the trigger latch is atomic because QML/main read the results after
+    // teardown.
+    bool m_RescueArmed = false;
+    SDL_atomic_t m_RescueTriggered {};
+    uint32_t m_RescueWndStartMs = 0;
+    uint32_t m_RescueWndDelivered = 0;
+    uint32_t m_RescueWndDropped = 0;
+    uint32_t m_RescueLastFrameNumber = 0;
+    int m_RescueFromKbps = 0;
+    int m_RescueToKbps = 0;
+    // One-shot cross-session carry of the stepped-down bitrate: written when
+    // a rescue triggers, consumed (and cleared) by the NEXT session's
+    // initialize(). Never persisted to settings — the user's saved bitrate
+    // preference is untouched.
+    static QAtomicInt s_PendingRescueBitrateKbps;
     QList<QString> m_LaunchWarnings;
     bool m_ShouldExitAfterQuit;
     // Vibemis: see setShouldQuitAppAfter()
