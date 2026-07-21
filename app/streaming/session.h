@@ -146,6 +146,17 @@ public:
     Q_INVOKABLE int rescueFromKbps() const { return m_RescueFromKbps; }
     Q_INVOKABLE int rescueToKbps() const { return m_RescueToKbps; }
 
+    // BL-2265 (test140 v2): the one-shot pending-rescue consume, factored to
+    // a static seam so the selftest can prove the trigger->pending->consume
+    // chain offscreen with no host or stream. Returns the bitrate the next
+    // session must run at; clears the pending override (one-shot); never
+    // raises above configuredKbps.
+    static int consumePendingRescueKbps(int configuredKbps);
+
+    // Test-only (selftest): stage a pending rescue as if a session had
+    // triggered one. Never called from production flows.
+    static void stagePendingRescueKbpsForTest(int kbps) { s_PendingRescueBitrateKbps.storeRelease(kbps); }
+
     // A fresh Session for the same host+app (per-game profiles and
     // preferences re-apply automatically). QML takes ownership of the returned object.
     Q_INVOKABLE Session* createResumeSession() { return new Session(m_Computer, m_App); }

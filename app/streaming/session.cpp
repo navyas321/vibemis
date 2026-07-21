@@ -561,6 +561,17 @@ void Session::checkBitrateRescue()
     }
 }
 
+// BL-2265 (test140 v2): the one-shot consume seam. Kept trivially small so
+// the selftest exercises the EXACT production code path.
+int Session::consumePendingRescueKbps(int configuredKbps)
+{
+    const int rescueKbps = s_PendingRescueBitrateKbps.fetchAndStoreOrdered(0);
+    if (rescueKbps > 0 && rescueKbps < configuredKbps) {
+        return rescueKbps;
+    }
+    return configuredKbps;
+}
+
 void Session::triggerBitrateRescue(uint32_t elapsedMs, uint32_t delivered, uint32_t dropped)
 {
     const int next = BitrateRescuePolicy::nextBitrateKbps(m_StreamConfig.bitrate);
@@ -966,12 +977,12 @@ bool Session::initialize()
     // never modified — an explicit user choice always remains the starting
     // point of any future stream; the stepper only rescues collapse.
     {
-        const int rescueKbps = s_PendingRescueBitrateKbps.fetchAndStoreOrdered(0);
-        if (rescueKbps > 0 && rescueKbps < m_StreamConfig.bitrate) {
+        const int effectiveKbps = consumePendingRescueKbps(m_StreamConfig.bitrate);
+        if (effectiveKbps != m_StreamConfig.bitrate) {
             SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
                         "[bitrate-rescue] resuming at %d kbps (configured %d kbps could not be sustained by the network path)",
-                        rescueKbps, m_StreamConfig.bitrate);
-            m_StreamConfig.bitrate = rescueKbps;
+                        effectiveKbps, m_StreamConfig.bitrate);
+            m_StreamConfig.bitrate = effectiveKbps;
         }
     }
 
