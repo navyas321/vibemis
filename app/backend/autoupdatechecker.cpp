@@ -7,6 +7,7 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QCoreApplication>
+#include <QDir>
 #include <QFile>
 #include <QProcess>
 #include <QSharedPointer>
@@ -590,7 +591,13 @@ void AutoUpdateChecker::install()
         // fails the install still succeeded, so quit either way rather than
         // leaving two half-states.
         if (!qEnvironmentVariableIsSet("VIBEMIS_UPDATE_SELFTEST")) {
-            QProcess::startDetached(appImagePath, QStringList());
+            // BL-2266: launch the new build from a neutral working directory.
+            // Inheriting our CWD could hand the child a directory inside a
+            // FUSE mount whose teardown is tied to our exit (keeping the old
+            // mount busy past our death); paired with the startup fd-seal in
+            // main.cpp (sealAppImageRuntimeFds), this fully decouples the
+            // relaunched instance from the dying instance's mount lifetime.
+            QProcess::startDetached(appImagePath, QStringList(), QDir::homePath());
             QCoreApplication::quit();
         }
     });
