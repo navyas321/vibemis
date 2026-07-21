@@ -57,6 +57,34 @@ public:
                            int targetFps,
                            const Config& cfg = defaultConfig());
 
+    // Frames the host is expected to have offered in elapsedMs at targetFps.
+    static uint32_t expectedFrames(uint32_t elapsedMs, int targetFps);
+
+    // WALL-CLOCK verdict (test140 device FAIL RCA): the v1 detector both
+    // accumulated AND evaluated inside submitDecodeUnit — but common-c only
+    // invokes that callback for COMPLETE reassembled frames, and in a real
+    // collapse (IDR-request storm, ~99% unrecoverable) delivery is
+    // burst-then-starve: every in-burst evaluation lands under the minimum
+    // window and then the callback simply stops firing, so the verdict code
+    // never ran (3x device-reproduced: condition met 130-190s, zero
+    // triggers). This verdict is therefore driven by a wall-clock tick and
+    // infers the dropped count from EXPECTED frames (targetFps * elapsed)
+    // rather than from delivery-time frame-number gaps, so total starvation
+    // is detected with zero deliveries.
+    //
+    // gapDroppedFrames (frame-number gaps observed at the deliveries that
+    // DID occur in the window) serves as network-loss evidence: a host that
+    // legitimately throttles its encoder on idle content delivers few
+    // frames WITHOUT gaps and must not trigger a rescue. Collapse requires
+    // the expected-based signature AND (gap evidence OR zero deliveries —
+    // total video starvation on a live connection is never healthy idling
+    // on the Sunshine/Apollo stack, which duplicates frames at full rate).
+    static bool isCollapseWallClock(uint32_t elapsedMs,
+                                    uint32_t deliveredFrames,
+                                    uint32_t gapDroppedFrames,
+                                    int targetFps,
+                                    const Config& cfg = defaultConfig());
+
     // The step schedule: aggressive halving toward the floor, rounded down
     // to cfg.roundKbps. Returns 0 when no further step is possible (current
     // bitrate already at/below the floor) — the caller must NOT rescue then.

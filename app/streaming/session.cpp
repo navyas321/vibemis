@@ -431,11 +431,11 @@ int Session::drSetup(int videoFormat, int width, int height, int frameRate, void
 
 int Session::drSubmitDecodeUnit(PDECODE_UNIT du)
 {
-    // BL-2265: feed the collapse detector one observation per DELIVERED
-    // frame. Frames the FEC layer could not recover never reach this
-    // callback and show up as frame-number gaps — the client-side mirror of
-    // the host's unrecoverable-frame streak + IDR-request storm. This is
-    // decoder-agnostic (runs before dispatch to whichever IVideoDecoder).
+    // BL-2265 v2: rescue ACCOUNTING only (delivered count + frame-number-gap
+    // loss evidence). The verdict deliberately does NOT live here — this
+    // callback only fires for COMPLETE reassembled frames and starves in a
+    // real collapse (test140 device RCA). Decoder-agnostic; runs before
+    // dispatch to whichever IVideoDecoder, even while the decoder is null.
     s_ActiveSession->onRescueFrameDelivery(du->frameNumber);
 
     // Use a lock since we'll be yanking this decoder out
@@ -465,11 +465,41 @@ int Session::drSubmitDecodeUnit(PDECODE_UNIT du)
     }
 }
 
-// BL-2265: catastrophic bitrate-collapse detector. Runs on the depacketizer
-// thread, once per delivered frame. Pure decision logic lives in
-// BitrateRescuePolicy; this method only accumulates the observation window
-// and initiates the rescue reconnect when the signature is confirmed.
+// BL-2265 v2: ACCOUNTING ONLY — runs on the depacketizer thread once per
+// DELIVERED frame. No evaluation happens here (test140 device FAIL RCA:
+// common-c only invokes submitDecodeUnit for COMPLETE reassembled frames —
+// VideoDepacketizer.c reassembleFrame() — so in a real collapse this
+// callback is burst-then-starve and any evaluation living here never runs;
+// device evidence: trigger condition met 130-190s in 3 independent runs,
+// zero verdicts). The wall-clock evaluation lives in checkBitrateRescue().
 void Session::onRescueFrameDelivery(uint32_t frameNumber)
+{
+    if (!m_RescueArmed || SDL_AtomicGet(&m_RescueTriggered)) {
+        return;
+    }
+
+    if (m_RescueLastFrameNumber == 0) {
+        m_RescueLastFrameNumber = frameNumber;
+        SDL_AtomicAdd(&m_RescueDeliveredTotal, 1);
+        return;
+    }
+
+    if (frameNumber > m_RescueLastFrameNumber) {
+        // Any gap in frame numbers is a network-dropped (FEC-unrecoverable)
+        // frame — kept as corroborating loss evidence for the verdict and
+        // the debug trace, NOT as the primary dropped count (gap accounting
+        // freezes when delivery starves; expected-based accounting doesn't).
+        SDL_AtomicAdd(&m_RescueGapDroppedTotal,
+                      (int)(frameNumber - m_RescueLastFrameNumber - 1));
+        SDL_AtomicAdd(&m_RescueDeliveredTotal, 1);
+        m_RescueLastFrameNumber = frameNumber;
+    }
+}
+
+// BL-2265 v2: wall-clock collapse evaluation — called every streaming event
+// loop iteration (>=1 Hz even with zero SDL events and zero deliveries).
+// Window and verdict state live exclusively on this thread.
+void Session::checkBitrateRescue()
 {
     if (!m_RescueArmed || SDL_AtomicGet(&m_RescueTriggered)) {
         return;
@@ -477,35 +507,57 @@ void Session::onRescueFrameDelivery(uint32_t frameNumber)
 
     const uint32_t now = SDL_GetTicks();
 
-    if (m_RescueLastFrameNumber == 0) {
-        // First delivered frame opens the observation window.
+    if (m_RescueWndStartMs == 0) {
+        // First loop iteration after streaming became active opens the
+        // window — deliberately NOT tied to the first delivered frame, so a
+        // stream that never delivers anything still gets a verdict.
         m_RescueWndStartMs = now;
-        m_RescueWndDelivered = 1;
-        m_RescueWndDropped = 0;
-        m_RescueLastFrameNumber = frameNumber;
+        m_RescueWndBaseDelivered = SDL_AtomicGet(&m_RescueDeliveredTotal);
+        m_RescueWndBaseGapDropped = SDL_AtomicGet(&m_RescueGapDroppedTotal);
+        m_RescueLastTraceMs = now;
         return;
     }
 
-    if (frameNumber > m_RescueLastFrameNumber) {
-        // Any gap in frame numbers is a network-dropped (FEC-unrecoverable) frame.
-        m_RescueWndDropped += frameNumber - m_RescueLastFrameNumber - 1;
-        m_RescueWndDelivered++;
-        m_RescueLastFrameNumber = frameNumber;
-    }
-
     const uint32_t elapsedMs = now - m_RescueWndStartMs;
+    const uint32_t delivered =
+        (uint32_t)(SDL_AtomicGet(&m_RescueDeliveredTotal) - m_RescueWndBaseDelivered);
+    const uint32_t gapDropped =
+        (uint32_t)(SDL_AtomicGet(&m_RescueGapDroppedTotal) - m_RescueWndBaseGapDropped);
     const int targetFps = getActualFpsForDecoderTest();
+    const BitrateRescuePolicy::Config cfg = BitrateRescuePolicy::defaultConfig();
 
-    if (BitrateRescuePolicy::isCollapse(elapsedMs, m_RescueWndDelivered,
-                                        m_RescueWndDropped, targetFps)) {
-        triggerBitrateRescue(elapsedMs, m_RescueWndDelivered, m_RescueWndDropped);
+    // test140-requested debug trace: log each trigger sub-condition every 5s
+    // so a device cycle can bisect instantly if the verdict is ever wrong.
+    if (now - m_RescueLastTraceMs >= 5000) {
+        m_RescueLastTraceMs = now;
+        const uint32_t expected = BitrateRescuePolicy::expectedFrames(elapsedMs, targetFps);
+        const uint32_t effDropped = (expected > delivered) ? (expected - delivered) : 0;
+        const uint32_t offered = delivered + effDropped;
+        const bool condDuration = elapsedMs >= cfg.windowMs && offered >= cfg.minOfferedFrames;
+        const bool condDropShare = offered > 0 &&
+                (double)effDropped / (double)offered >= cfg.minDroppedShare;
+        const bool condFpsShare = elapsedMs > 0 && targetFps > 0 &&
+                ((double)delivered * 1000.0 / (double)elapsedMs)
+                    <= cfg.maxDeliveredFpsShare * (double)targetFps;
+        const bool condLossEvidence = gapDropped > 0 || delivered == 0;
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "[bitrate-rescue] trace: wnd=%ums delivered=%u expected=%u gapDropped=%u target=%dfps "
+                    "| conds: duration=%d dropShare=%d fpsShare=%d lossEvidence=%d",
+                    elapsedMs, delivered, expected, gapDropped, targetFps,
+                    condDuration, condDropShare, condFpsShare, condLossEvidence);
     }
-    else if (elapsedMs >= 2 * BitrateRescuePolicy::defaultConfig().windowMs) {
-        // Not catastrophic — restart the window so any later verdict always
+
+    if (BitrateRescuePolicy::isCollapseWallClock(elapsedMs, delivered, gapDropped, targetFps, cfg)) {
+        const uint32_t expected = BitrateRescuePolicy::expectedFrames(elapsedMs, targetFps);
+        triggerBitrateRescue(elapsedMs, delivered,
+                             (expected > delivered) ? (expected - delivered) : 0);
+    }
+    else if (elapsedMs >= 2 * cfg.windowMs) {
+        // Not catastrophic — slide the window so any later verdict always
         // reflects the recent past, not ancient history.
         m_RescueWndStartMs = now;
-        m_RescueWndDelivered = 0;
-        m_RescueWndDropped = 0;
+        m_RescueWndBaseDelivered = SDL_AtomicGet(&m_RescueDeliveredTotal);
+        m_RescueWndBaseGapDropped = SDL_AtomicGet(&m_RescueGapDroppedTotal);
     }
 }
 
@@ -2551,6 +2603,13 @@ void Session::execInternal()
     };
 
     for (;;) {
+        // BL-2265 v2: wall-clock collapse evaluation. This loop iterates at
+        // least every 1000ms (threaded WaitEventTimeout) / ~16ms (polling
+        // path) even with ZERO SDL events and ZERO delivered frames, which
+        // is exactly why the rescue verdict lives here and not in the
+        // delivery callback (test140: delivery starves in a collapse).
+        checkBitrateRescue();
+
         // On the NON-threaded exec path (Windows/macOS/EGLFS)
         // this loop runs on the main thread, so nothing else pumps Qt — the queued
         // QuickMenuManager::toggle() posted from the SDL input handler and the offscreen
