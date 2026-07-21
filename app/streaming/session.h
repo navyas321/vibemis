@@ -318,6 +318,11 @@ private:
     int m_FlushingWindowEventsRef;
     // One-time "VRR unavailable" fallback notice latch (BL-2212)
     bool m_VrrFallbackNotified = false;
+    // Refresh rate the current decoder's VRR session qualified at, 0 when the
+    // last qualification pass rejected (or never requested) VRR. Lets the
+    // window-event guard detect a same-display refresh-mode switch that
+    // invalidates the qualified rate (BL-2296, Nonary v6.1.0-vrr9.1 parity).
+    int m_ActiveVrrRefreshHz = 0;
     QList<QString> m_LaunchWarnings;
     bool m_ShouldExitAfterQuit;
     // Vibemis: see setShouldQuitAppAfter()

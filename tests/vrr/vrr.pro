@@ -14,8 +14,14 @@ pacingworker.file = $$PWD/pacingworker.pro
 # byte-identical to Nonary for cheap future merges.
 ratepolicy_standalone.file = $$PWD/ratepolicy_standalone.pro
 
+# Vibemis (BL-2296): standalone checker for the same-display
+# refresh-mode-switch guard predicates (StreamUtils, ported from the Nonary
+# v6.1.0-vrr9.1 refreshMayHaveChanged guard).
+refreshguard_standalone.file = $$PWD/refreshguard_standalone.pro
+
 SUBDIRS += \
     timingcontroller \
     ratepolicy \
     ratepolicy_standalone \
+    refreshguard_standalone \
     pacingworker

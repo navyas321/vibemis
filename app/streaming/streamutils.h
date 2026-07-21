@@ -35,6 +35,41 @@ public:
     static
     bool tryGetDisplayRefreshRate(SDL_Window* window, int& outHz);
 
+    // Same-display refresh-mode-switch guard (BL-2296, from the Nonary
+    // v6.1.0-vrr9.1 refreshMayHaveChanged guard in session.cpp): a mode switch
+    // on the CURRENT display invalidates the qualified VRR rate just like a
+    // move to another display does. Nonary permanently disables VRR for the
+    // session there because its per-session PresentationSettings snapshot is
+    // immutable; vibemis re-derives qualification on every decoder
+    // (re)creation, so our guard only needs to force that recreation and let
+    // the new qualification pass pick up the new rate or fall back to fixed
+    // pacing. The decision logic is kept as pure header-inline predicates so
+    // the standalone checker (app/test_vrrrefreshguard.cpp) can exercise it
+    // without SDL linkage.
+    //
+    // Phase 1 - cheap gate before touching SDL display state: only probe the
+    // refresh when a VRR session is actually pacing adaptively and the window
+    // event could have changed the display refresh.
+    static
+    bool vrrRefreshSwitchNeedsProbe(int qualifiedRefreshHz,
+                                    bool vrrPacingActive,
+                                    bool refreshMayHaveChanged)
+    {
+        return qualifiedRefreshHz > 0 && vrrPacingActive && refreshMayHaveChanged;
+    }
+
+    // Phase 2 - the requalification decision from the probe result: an
+    // unreadable refresh or any deviation from the qualified rate means the
+    // worker would otherwise keep pacing against a stale period.
+    static
+    bool vrrRefreshSwitchRequiresRequalification(int qualifiedRefreshHz,
+                                                 bool refreshReadable,
+                                                 int currentRefreshHz)
+    {
+        return qualifiedRefreshHz > 0 &&
+               (!refreshReadable || currentRefreshHz != qualifiedRefreshHz);
+    }
+
     static
     bool hasFastAes();
 

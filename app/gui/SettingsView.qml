@@ -1746,8 +1746,13 @@ Item {
                         model = createModel()
                         currentIndex = 0
 
-                        // Set the current value based on the saved preferences
-                        var savedWm = StreamingPreferences.windowMode
+                        // VRR sessions use borderless presentation, but the
+                        // saved window-mode preference is never overwritten
+                        // (BL-2296, Nonary vrrForced parity): show what the
+                        // session will actually use, restore on VRR-off.
+                        var savedWm = vrrForced ?
+                                          StreamingPreferences.WM_FULLSCREEN_DESKTOP :
+                                          StreamingPreferences.windowMode
                         for (var i = 0; i < model.count; i++) {
                              var thisWm = model.get(i).val;
                              if (savedWm === thisWm) {
@@ -1756,7 +1761,9 @@ Item {
                              }
                         }
 
-                        activated(currentIndex)
+                        if (!vrrForced) {
+                            activated(currentIndex)
+                        }
                     }
 
                     Component.onCompleted: {
@@ -1765,8 +1772,14 @@ Item {
                     }
 
                     id: windowModeComboBox
+                    // Active VRR forces borderless presentation at stream
+                    // start (session.cpp), so lock the combo while VRR is on
+                    // instead of showing a choice that would be silently
+                    // overridden (BL-2296, Nonary vrrForced parity).
+                    property bool vrrForced: StreamingPreferences.enableVsync && StreamingPreferences.enableVrr
+                    onVrrForcedChanged: reinitialize()
                     visible: SystemProperties.hasDesktopEnvironment
-                    enabled: !SystemProperties.rendererAlwaysFullScreen
+                    enabled: !SystemProperties.rendererAlwaysFullScreen && !vrrForced
                     hoverEnabled: true
                     textRole: "text"
                     onActivated: {
@@ -1776,7 +1789,23 @@ Item {
                     ToolTip.delay: 1000
                     ToolTip.timeout: 5000
                     ToolTip.visible: hovered
-                    ToolTip.text: qsTr("Fullscreen generally provides the best performance, but borderless windowed may work better with features like macOS Spaces, Alt+Tab, screenshot tools, on-screen overlays, etc.")
+                    ToolTip.text: vrrForced ?
+                                      qsTr("Borderless windowed mode is required for active VRR streaming. Your saved display mode will be restored for non-VRR sessions.")
+                                    :
+                                      qsTr("Fullscreen generally provides the best performance, but borderless windowed may work better with features like macOS Spaces, Alt+Tab, screenshot tools, on-screen overlays, etc.")
+                }
+
+                Label {
+                    width: parent.width
+                    // Disabled controls do not receive hover, so the vrrForced
+                    // tooltip alone can never surface its explanation; show it
+                    // as a caption while the lockout is active (BL-2296).
+                    visible: windowModeComboBox.visible && windowModeComboBox.vrrForced
+                    text: qsTr("Borderless windowed mode is required for active VRR streaming. Your saved display mode will be restored for non-VRR sessions.")
+                    font.pixelSize: VbTokens.typeCaption
+                    font.family: VbTokens.fontBody
+                    color: VbTokens.textDim
+                    wrapMode: Text.Wrap
                 }
 
                 Label {
