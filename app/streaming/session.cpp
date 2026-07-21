@@ -806,6 +806,34 @@ bool Session::initialize()
                     fractionalFps);
     }
 
+    // BL-2235: the one-toggle VRR guarantee. When VRR is enabled and the
+    // user never explicitly chose an FPS (no stored fps key, no --fps, no
+    // fractional override), derive the session FPS from the actual display
+    // refresh rate instead of streaming at the generic 60 FPS default. The
+    // refresh source is the same strict probe VRR qualification uses --
+    // never the legacy 60 Hz fallback.
+    if (m_Preferences->enableVrr &&
+        !m_Preferences->hasExplicitFps &&
+        !m_Preferences->enableFractionalRefreshRate) {
+        int displayRefreshHz = 0;
+        if (!StreamUtils::tryGetDisplayRefreshRate(testWindow, displayRefreshHz)) {
+            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                        "VRR: FPS auto-derive skipped (display refresh unavailable); keeping %d FPS",
+                        m_StreamConfig.fps);
+        }
+        else {
+            const int autoFps = VrrRatePolicy::sessionFpsForStart(true, false,
+                                                                  m_StreamConfig.fps,
+                                                                  displayRefreshHz);
+            if (autoFps != m_StreamConfig.fps) {
+                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                            "VRR: auto-selected %d FPS for the %d Hz display (no explicit FPS set)",
+                            autoFps, displayRefreshHz);
+                m_StreamConfig.fps = autoFps;
+            }
+        }
+    }
+
 #ifndef STEAM_LINK
     // Opt-in to all encryption features if we detect that the platform
     // has AES cryptography acceleration instructions and more than 2 cores.

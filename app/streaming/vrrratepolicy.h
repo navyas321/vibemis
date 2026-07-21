@@ -34,6 +34,16 @@ public:
     // deterministic session qualification, not a per-frame latching policy.
     static bool hasAdaptiveHeadroom(int streamRateHz, int displayRefreshHz);
 
+    // BL-2235: the one-toggle guarantee. Decide the FPS a session should
+    // request at stream start. When VRR is enabled and the user never
+    // explicitly chose an FPS, the display's calculated VRR rate wins; an
+    // explicit choice (or an unusable refresh reading) always leaves the
+    // configured FPS untouched.
+    static int sessionFpsForStart(bool vrrEnabled,
+                                  bool fpsExplicitlySet,
+                                  int configuredFps,
+                                  int displayRefreshHz);
+
     // Build the complete FPS list for the settings UI.  With VRR enabled,
     // exact native refresh choices are intentionally left out, while the two
     // baseline choices and calculated rates remain available.

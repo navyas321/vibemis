@@ -9,6 +9,7 @@ class VrrRatePolicyTest : public QObject
 private slots:
     void calculatedRates();
     void adaptiveHeadroomQualification();
+    void sessionFpsAutoDerive();
     void vrrChoicesOmitNativeRefresh();
     void disabledChoicesKeepNativeRefresh();
 };
@@ -39,6 +40,26 @@ void VrrRatePolicyTest::adaptiveHeadroomQualification()
     QVERIFY(!VrrRatePolicy::hasAdaptiveHeadroom(121, 120));
     QVERIFY(!VrrRatePolicy::hasAdaptiveHeadroom(0, 120));
     QVERIFY(!VrrRatePolicy::hasAdaptiveHeadroom(60, 0));
+}
+
+void VrrRatePolicyTest::sessionFpsAutoDerive()
+{
+    // BL-2235: VRR enabled + no explicit fps -> the display VRR rate.
+    QCOMPARE(VrrRatePolicy::sessionFpsForStart(true, false, 60, 120), 116);
+    QCOMPARE(VrrRatePolicy::sessionFpsForStart(true, false, 60, 144), 138);
+    QCOMPARE(VrrRatePolicy::sessionFpsForStart(true, false, 60, 60), 59);
+
+    // An explicit user choice is always respected exactly.
+    QCOMPARE(VrrRatePolicy::sessionFpsForStart(true, true, 60, 120), 60);
+    QCOMPARE(VrrRatePolicy::sessionFpsForStart(true, true, 120, 120), 120);
+
+    // VRR off never rewrites the configured fps.
+    QCOMPARE(VrrRatePolicy::sessionFpsForStart(false, false, 60, 120), 60);
+
+    // An unusable refresh keeps the configured fps (no silent fallback).
+    QCOMPARE(VrrRatePolicy::sessionFpsForStart(true, false, 60, 0), 60);
+    QCOMPARE(VrrRatePolicy::sessionFpsForStart(true, false, 60, -120), 60);
+    QCOMPARE(VrrRatePolicy::sessionFpsForStart(true, false, 60, 4000), 60);
 }
 
 void VrrRatePolicyTest::vrrChoicesOmitNativeRefresh()

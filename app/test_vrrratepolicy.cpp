@@ -103,6 +103,26 @@ int main()
     CHECK(!VrrRatePolicy::hasAdaptiveHeadroom(120, 0));
     CHECK(!VrrRatePolicy::hasAdaptiveHeadroom(-1, -1));
 
+    // ---- sessionFpsForStart: the BL-2235 one-toggle FPS decision ----
+    // VRR on + no explicit fps -> the display's calculated VRR rate.
+    CHECK(VrrRatePolicy::sessionFpsForStart(true, false, 60, 120) == 116);
+    CHECK(VrrRatePolicy::sessionFpsForStart(true, false, 60, 144) == 138);
+    CHECK(VrrRatePolicy::sessionFpsForStart(true, false, 60, 60) == 59);
+    // An explicit fps choice always wins, whatever the display says.
+    CHECK(VrrRatePolicy::sessionFpsForStart(true, true, 60, 120) == 60);
+    CHECK(VrrRatePolicy::sessionFpsForStart(true, true, 120, 120) == 120);
+    // VRR off never rewrites the configured fps.
+    CHECK(VrrRatePolicy::sessionFpsForStart(false, false, 60, 120) == 60);
+    CHECK(VrrRatePolicy::sessionFpsForStart(false, true, 90, 120) == 90);
+    // An unusable refresh reading keeps the configured fps (no silent 60
+    // fallback and no zero fps).
+    CHECK(VrrRatePolicy::sessionFpsForStart(true, false, 60, 0) == 60);
+    CHECK(VrrRatePolicy::sessionFpsForStart(true, false, 60, -120) == 60);
+    CHECK(VrrRatePolicy::sessionFpsForStart(true, false, 60, 4000) == 60);
+    // Degenerate corner: a 62 Hz panel derives 60 -- identical to the
+    // default, which is a no-op by value, not an error.
+    CHECK(VrrRatePolicy::sessionFpsForStart(true, false, 60, 62) == 60);
+
     // ---- buildChoices: the settings FPS list ----
     {
         // VRR enabled on a 120 Hz panel with a saved native 120 FPS:

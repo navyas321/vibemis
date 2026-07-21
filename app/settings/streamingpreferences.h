@@ -310,6 +310,10 @@ public:
     int width;
     int height;
     int fps;
+    // BL-2235: true when the fps value is an explicit user choice (stored
+    // fps key, Settings save, or --fps) rather than the generic default.
+    // Session start only auto-derives a VRR FPS when this is false.
+    bool hasExplicitFps;
     int bitrateKbps;
     bool unlockBitrate;
     bool autoAdjustBitrate;

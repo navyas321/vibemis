@@ -691,6 +691,13 @@ int main(int argc, char *argv[])
         check("vrr-lowlatency-120", VrrRatePolicy::lowLatencyRateForRefresh(120) == 100);
         check("vrr-headroom-116at120", VrrRatePolicy::hasAdaptiveHeadroom(116, 120));
         check("vrr-headroom-reject-120at120", !VrrRatePolicy::hasAdaptiveHeadroom(120, 120));
+        // BL-2235: one-toggle FPS auto-derive rule. VRR + no explicit fps
+        // derives the display VRR rate; an explicit fps (or VRR off, or an
+        // unusable refresh) is always respected exactly.
+        check("vrr-autofps-derive-120", VrrRatePolicy::sessionFpsForStart(true, false, 60, 120) == 116);
+        check("vrr-autofps-explicit-wins", VrrRatePolicy::sessionFpsForStart(true, true, 60, 120) == 60);
+        check("vrr-autofps-off-untouched", VrrRatePolicy::sessionFpsForStart(false, false, 60, 120) == 60);
+        check("vrr-autofps-badrefresh-keeps", VrrRatePolicy::sessionFpsForStart(true, false, 60, 0) == 60);
         {
             const std::vector<VrrFpsChoice> choices =
                 VrrRatePolicy::buildChoices({120}, 120, true);

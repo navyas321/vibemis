@@ -78,6 +78,21 @@ bool VrrRatePolicy::hasAdaptiveHeadroom(int streamRateHz, int displayRefreshHz)
     return streamPeriodUs > displayPeriodUs + guardUs;
 }
 
+int VrrRatePolicy::sessionFpsForStart(bool vrrEnabled,
+                                      bool fpsExplicitlySet,
+                                      int configuredFps,
+                                      int displayRefreshHz)
+{
+    // An explicit user choice is always respected exactly; auto-derivation
+    // only fills the gap left by an absent fps setting while VRR is on.
+    if (!vrrEnabled || fpsExplicitlySet) {
+        return configuredFps;
+    }
+
+    const int derived = vrrRateForRefresh(displayRefreshHz);
+    return derived > 0 ? derived : configuredFps;
+}
+
 std::vector<VrrFpsChoice> VrrRatePolicy::buildChoices(const std::vector<int>& refreshRates,
                                                        int savedFps,
                                                        bool vrrEnabled)
