@@ -122,6 +122,8 @@ private:
 #define RENDERER_ATTRIBUTE_NO_BUFFERING 0x08
 #define RENDERER_ATTRIBUTE_FORCE_PACING 0x10
 
+class IVrrFramePresenter;
+
 class IFFmpegRenderer : public Overlay::IOverlayRenderer {
 public:
     enum class RendererType {
@@ -244,6 +246,13 @@ public:
     virtual bool isRenderThreadSupported() {
         // Render thread is supported by default
         return true;
+    }
+
+    // Renderers opt into VRR through a separate presenter rather than changing
+    // renderFrame().  The ordinary fixed and unpaced paths continue to call
+    // renderFrame() exactly as before. (BL-2212, from Nonary v6.1.0-vrr9.1)
+    virtual IVrrFramePresenter* getVrrFramePresenter() {
+        return nullptr;
     }
 
     virtual bool isDirectRenderingSupported() {

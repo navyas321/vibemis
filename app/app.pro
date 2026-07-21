@@ -193,6 +193,7 @@ SOURCES += \
     streaming/input/mouse.cpp \
     streaming/input/reltouch.cpp \
     streaming/session.cpp \
+    streaming/vrrratepolicy.cpp \
     streaming/audio/audio.cpp \
     streaming/audio/renderers/sdlaud.cpp \
     gui/computermodel.cpp \
@@ -239,6 +240,7 @@ HEADERS += \
     settings/streamingpreferences.h \
     streaming/input/input.h \
     streaming/session.h \
+    streaming/vrrratepolicy.h \
     streaming/audio/renderers/renderer.h \
     streaming/audio/renderers/sdl.h \
     gui/computermodel.h \
@@ -271,15 +273,24 @@ ffmpeg {
         streaming/video/ffmpeg-renderers/genhwaccel.cpp \
         streaming/video/ffmpeg-renderers/sdlvid.cpp \
         streaming/video/ffmpeg-renderers/swframemapper.cpp \
-        streaming/video/ffmpeg-renderers/pacer/pacer.cpp
+        streaming/video/ffmpeg-renderers/pacer/pacer.cpp \
+        streaming/video/ffmpeg-renderers/pacer/vrrpacingworker.cpp \
+        streaming/video/ffmpeg-renderers/pacer/vrr/vrrtargetwaiter.cpp \
+        streaming/video/ffmpeg-renderers/pacer/vrr/vrrtimingcontroller.cpp
 
     HEADERS += \
         streaming/video/ffmpeg.h \
         streaming/video/ffmpeg-renderers/renderer.h \
+        streaming/video/ffmpeg-renderers/ivrrframepresenter.h \
         streaming/video/ffmpeg-renderers/genhwaccel.h \
         streaming/video/ffmpeg-renderers/sdlvid.h \
         streaming/video/ffmpeg-renderers/swframemapper.h \
-        streaming/video/ffmpeg-renderers/pacer/pacer.h
+        streaming/video/ffmpeg-renderers/pacer/pacer.h \
+        streaming/video/ffmpeg-renderers/pacer/pacertelemetry.h \
+        streaming/video/ffmpeg-renderers/pacer/vrrpacingworker.h \
+        streaming/video/ffmpeg-renderers/pacer/vrr/vrrtypes.h \
+        streaming/video/ffmpeg-renderers/pacer/vrr/vrrtargetwaiter.h \
+        streaming/video/ffmpeg-renderers/pacer/vrr/vrrtimingcontroller.h
 }
 libva {
     message(VAAPI renderer selected)

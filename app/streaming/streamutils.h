@@ -30,6 +30,11 @@ public:
     static
     int getDisplayRefreshRate(SDL_Window* window);
 
+    // Strict variant for VRR qualification (BL-2212): returns false instead of
+    // silently substituting a 60 Hz fallback when the display mode is unknown.
+    static
+    bool tryGetDisplayRefreshRate(SDL_Window* window, int& outHz);
+
     static
     bool hasFastAes();
 

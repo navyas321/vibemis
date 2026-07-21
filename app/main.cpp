@@ -47,6 +47,7 @@
 #include "backend/computermanager.h"
 #include "backend/systemproperties.h"
 #include "streaming/session.h"
+#include "streaming/vrrratepolicy.h"
 #include "settings/streamingpreferences.h"
 #include "gui/sdlgamepadkeynavigation.h"
 #include "gui/uisoundmanager.h"
@@ -681,6 +682,32 @@ int main(int argc, char *argv[])
         check("audio-config-range",
               p->audioConfig >= StreamingPreferences::AC_STEREO &&
               p->audioConfig <= StreamingPreferences::AC_71_SURROUND);
+
+        // BL-2212: VRR rate policy pure-function checks (vendored from
+        // Nonary v6.1.0-vrr9.1). These prove the VRR arithmetic shipped in
+        // this build without needing a display, host, or stream.
+        check("vrr-rate-120", VrrRatePolicy::vrrRateForRefresh(120) == 116);
+        check("vrr-rate-144", VrrRatePolicy::vrrRateForRefresh(144) == 138);
+        check("vrr-lowlatency-120", VrrRatePolicy::lowLatencyRateForRefresh(120) == 100);
+        check("vrr-headroom-116at120", VrrRatePolicy::hasAdaptiveHeadroom(116, 120));
+        check("vrr-headroom-reject-120at120", !VrrRatePolicy::hasAdaptiveHeadroom(120, 120));
+        // BL-2235: one-toggle FPS auto-derive rule. VRR + no explicit fps
+        // derives the display VRR rate; an explicit fps (or VRR off, or an
+        // unusable refresh) is always respected exactly.
+        check("vrr-autofps-derive-120", VrrRatePolicy::sessionFpsForStart(true, false, 60, 120) == 116);
+        check("vrr-autofps-explicit-wins", VrrRatePolicy::sessionFpsForStart(true, true, 60, 120) == 60);
+        check("vrr-autofps-off-untouched", VrrRatePolicy::sessionFpsForStart(false, false, 60, 120) == 60);
+        check("vrr-autofps-badrefresh-keeps", VrrRatePolicy::sessionFpsForStart(true, false, 60, 0) == 60);
+        {
+            const std::vector<VrrFpsChoice> choices =
+                VrrRatePolicy::buildChoices({120}, 120, true);
+            bool has116 = false, hasNative120 = false;
+            for (const VrrFpsChoice& c : choices) {
+                has116 = has116 || (c.fps == 116 && c.kind == VrrFpsChoiceKind::Vrr);
+                hasNative120 = hasNative120 || c.fps == 120;
+            }
+            check("vrr-choices-120hz", has116 && !hasNative120);
+        }
 
         // Non-destructive QSettings round-trip in an isolated group so we never touch real
         // preferences or paired-host data: write a probe, read it back, then delete the group.
