@@ -15,8 +15,8 @@ the CI smart-build behavior, and the README-update rule.
 - **When each tier cuts:**
   | Tier | Trigger | Who decides |
   |------|---------|-------------|
-  | alpha | `test**` push whose HEAD commit carries `[alpha]` | automatic (on request) |
-  | beta | PR merge into `vibemis-main` touching code; or plain dispatch on `vibemis-main` | automatic |
+  | alpha | ANY `test**` push whose diff vs `vibemis-main` touches non-docs paths (no `[alpha]` marker needed — the branch name is the intent; empty/no-op branches skip) | automatic |
+  | beta | ANY push to `vibemis-main` touching non-docs paths — merge commit, squash, rebase, or direct push all count (content-based, not merge-method-based); or plain dispatch on `vibemis-main` | automatic |
   | rc | dispatch `release_type=rc` when the next stable is feature-complete and betas are green | maintainer discretion |
   | stable | dispatch `release_type=stable` | **MAINTAINER APPROVAL REQUIRED** (rc must already exist) |
 
@@ -60,43 +60,42 @@ the CI smart-build behavior, and the README-update rule.
   in `docs/RELEASE_HISTORY.md` — never prune or reuse it.
 - **A release number is NEVER reused for different bits** — a burnt number stays burnt.
 - Release titles are uniform: `Vibemis release <tag>`.
-- Betas publish **only on PR merge commits that touch code** — a direct push never
-  releases; `gh workflow run dev-build.yml --ref vibemis-main` builds immediately.
+- Betas publish **on every `vibemis-main` push that touches non-docs paths, regardless
+  of merge method** (BL-2270 — the old merge-commit-only rule silently skipped squash
+  merges). Docs-only pushes never release;
+  `gh workflow run dev-build.yml --ref vibemis-main` still builds immediately.
+- **Release builds are never concurrency-cancelled** (BL-2270): `vibemis-main`/stable
+  builds queue behind each other instead of being killed by a follow-up push. Only
+  `test**` alpha builds keep cancel-in-progress (a newer alpha supersedes an older one).
 
 ## CI / AppImage release rules — READ BEFORE PUSHING
 
-The CI smart-build check (`setup-version` → `check-changes`) sets `should_build=false`
-when the HEAD commit only touches `.md` files. When `should_build=false`, the AppImage
-build and `create-dev-release` jobs are **skipped entirely** — no AppImage is produced.
-
-**This trips people up constantly.** The pattern that breaks things:
-
-```
-git commit -m "fix: real code change"        ← code touches .cpp/.h/.qml
-git commit -m "docs: update release notes"    ← only .md files
-git push                                     ← CI sees HEAD = .md only → skips
-```
-
-A downstream consumer that expects a fresh AppImage from GitHub Releases will instead find
-the OLD one (from the commit before the fix).
+The CI smart-build check (`setup-version` → `check-changes`) decides `should_build` by
+**content, not commit shape** (BL-2270). When `should_build=false`, the AppImage build
+and `create-dev-release` jobs are **skipped entirely** — no AppImage is produced.
 
 **Rules:**
 
-1. **The last commit before a push that is meant to produce a new release MUST touch a
-   code file** (`.cpp`, `.h`, `.qml`, `.yml`, `.pro`). `.md`-only commits set
-   `should_build=false` and no AppImage is built.
+1. **`vibemis-main`**: the WHOLE PUSH (`event.before → HEAD`) is inspected. If it changes
+   any non-docs path (anything except `.md`/`.txt`/non-workflow `.yml`/`.yaml`;
+   `.github/workflows/` counts as meaningful), a 🧪 beta cuts — merge commit, squash,
+   rebase, or direct push alike. Commit ORDER inside the push no longer matters (the old
+   HEAD-commit-only check that punished a trailing docs commit is gone). A docs-only
+   push builds nothing.
 
-2. **Order matters:** put the code fix commit last in the push, or bundle any accompanying
-   docs/test-instruction changes into the same commit as the code change, not after it.
+2. **`test**`**: the branch's DIFF vs the merge-base with `vibemis-main` is inspected.
+   Any push builds a 🔬 alpha when that diff touches non-docs paths — no `[alpha]`
+   marker commit, no per-commit gate. A branch with no diff vs `vibemis-main`
+   (empty/no-op) skips.
 
-3. **If you've already pushed a docs-only commit and need a new build:** either make a
-   trivial meaningful code change (e.g. a constraint comment in a `.cpp` file) with
-   `fix:` in the title and push it, or — on `vibemis-main` only — use
-   `gh workflow run dev-build.yml --ref vibemis-main`: a manual dispatch ALWAYS builds
-   (it bypasses the docs-only skip — verified against dev-build.yml).
-   Push-triggered runs on a docs-only HEAD still skip.
+3. **If a docs-only push built nothing and you still need a build:** use
+   `gh workflow run dev-build.yml --ref vibemis-main` — a manual dispatch ALWAYS builds.
 
-4. **The `create-dev-release` job publishes only from `test**`, `vibemis-main`,
+4. **Release builds are never cancelled by follow-up pushes**: `vibemis-main` and stable
+   builds queue (`cancel-in-progress: false` for those refs); only `test**` alpha builds
+   may be superseded mid-flight by a newer alpha.
+
+5. **The `create-dev-release` job publishes only from `test**`, `vibemis-main`,
    `main`/`master`, `release/**`, or a stable dispatch.** Other branch prefixes
    (`fix/**`, `feat/**`, `verify/**`, `chore/**`) never push-trigger the workflow at all; a
    manual dispatch on them builds a `dev`-tier CI artifact that is NOT published to
