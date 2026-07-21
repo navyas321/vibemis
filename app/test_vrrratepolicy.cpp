@@ -175,3 +175,9 @@ int main()
     printf("test_vrrratepolicy: %d checks, %d failure(s)\n", g_Checks, g_Failures);
     return g_Failures == 0 ? 0 : 1;
 }
+
+// test134 alpha marker (BL-2243): CI cuts an alpha from test** branches
+// only when the HEAD commit touches a code file and carries the [alpha] tag.
+// This cut packages the complete icon rebrand: com.vibemis.Vibemis app id /
+// WM_CLASS (Desktop Mode taskbar icon fix), the real Vibemis mark in
+// res/vibemis.svg (SDL stream-window icon), and the moon-art asset sweep.
