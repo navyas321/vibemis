@@ -59,5 +59,21 @@ for s in git_srcs:
 opts = sdl2.get("build-options", {}).get("config-opts", [])
 assert "-DSDL_PULSEAUDIO=ON" in opts, "SDL2 must be built with PulseAudio"
 
+# LIBDIR GUARD (first-build RCA, 2026-07-21): on the KDE SDK, cmake/meson
+# default to /app/lib64, which qmake's link_pkgconfig never searches (build
+# breaks) and the deployed app never loads from (RPATH + LD_LIBRARY_PATH are
+# /app/lib) — the runtime's own compat SDL would silently win at app runtime.
+assert "-DCMAKE_INSTALL_LIBDIR=lib" in opts, \
+    "SDL2 must install to /app/lib (lib64 is invisible to qmake AND to the app at runtime)"
+for m in manifest["modules"]:
+    mopts = list(m.get("config-opts") or []) + \
+        list(m.get("build-options", {}).get("config-opts") or [])
+    if m.get("buildsystem") == "meson":
+        assert "--libdir=/app/lib" in mopts, \
+            f"meson module {m['name']} must pin --libdir=/app/lib (SDK default is lib64)"
+    elif m.get("buildsystem") in ("cmake", "cmake-ninja"):
+        assert "-DCMAKE_INSTALL_LIBDIR=lib" in mopts, \
+            f"cmake module {m['name']} must pin -DCMAKE_INSTALL_LIBDIR=lib (SDK default is lib64)"
+
 print("manifest OK:", manifest_path)
 print("modules:", ", ".join(names))

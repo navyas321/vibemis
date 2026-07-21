@@ -81,10 +81,18 @@ cleanup:
 
 modules:
   # ---- Shared dependency chain (from upstream Moonlight, except SDL) --------
+  # LIBDIR NOTE (first real build, 2026-07-21): every library module pins its
+  # libdir to /app/lib. On the KDE 6.10 SDK, meson/cmake default to
+  # /app/lib64, which (a) qmake's link_pkgconfig does not search — the vibemis
+  # module then dies with "SDL2_ttf development package not found" — and
+  # (b) the deployed app never searches at runtime (RPATH + flatpak
+  # LD_LIBRARY_PATH are /app/lib), so the runtime's own (possibly sdl2-compat)
+  # libSDL2 would silently win — defeating the BL-2213 invariant.
   - name: libplacebo
     buildsystem: meson
     build-options:
       config-opts:
+        - --libdir=/app/lib
         - -Ddemos=false
         - -Dvulkan=enabled
         - -Dopengl=disabled
@@ -101,6 +109,7 @@ modules:
     buildsystem: meson
     build-options:
       config-opts:
+        - --libdir=/app/lib
         - -Ddemo=false
     sources:
       - type: git
@@ -132,6 +141,11 @@ modules:
     builddir: true
     build-options:
       config-opts:
+        # /app/lib, NOT the SDK-default lib64: qmake pkg-config visibility +
+        # runtime RPATH/LD_LIBRARY_PATH — see LIBDIR NOTE above. Guarded by
+        # validate_manifest.py: in lib64 the app would silently run on the
+        # runtime's compat SDL instead of this real SDL2.
+        - -DCMAKE_INSTALL_LIBDIR=lib
         # No raw ALSA device access inside the flatpak sandbox.
         - -DSDL_ALSA=OFF
         # THE audio path (pipewire-pulse on SteamOS/Bazzite). On by default
@@ -154,6 +168,7 @@ modules:
     builddir: true
     build-options:
       config-opts:
+        - -DCMAKE_INSTALL_LIBDIR=lib
         - -DSDL2TTF_VENDORED=ON
         - -DSDL2TTF_SAMPLES=OFF
     sources:
@@ -165,6 +180,7 @@ modules:
   - name: dav1d
     buildsystem: meson
     config-opts:
+      - --libdir=/app/lib
       - -Denable_tools=false
       - -Denable_tests=false
     sources:
