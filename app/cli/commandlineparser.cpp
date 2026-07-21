@@ -354,6 +354,7 @@ void StreamCommandLineParser::parse(const QStringList &args, StreamingPreference
     parser.addFlagOption("4K", "3840x2160 resolution");
     parser.addValueOption("resolution", "custom <width>x<height> resolution");
     parser.addToggleOption("vsync", "V-Sync");
+    parser.addToggleOption("vrr", "VRR");
     parser.addValueOption("fps", "FPS");
     parser.addValueOption("bitrate", "bitrate in Kbps");
     parser.addValueOption("packet-size", "video packet size");
@@ -444,6 +445,12 @@ void StreamCommandLineParser::parse(const QStringList &args, StreamingPreference
 
     // Resolve --vsync and --no-vsync options
     preferences->enableVsync = parser.getToggleOptionValue("vsync", preferences->enableVsync);
+
+    // Resolve --vrr and --no-vrr options (BL-2227, from Nonary v6.1.0-vrr9.1).
+    // This is intentionally an in-memory override, like the other stream
+    // command-line settings.  It must not persist a CLI choice back to the
+    // normal settings UI.
+    preferences->enableVrr = parser.getToggleOptionValue("vrr", preferences->enableVrr);
 
     // Resolve --audio-config option
     if (parser.isSet("audio-config")) {
