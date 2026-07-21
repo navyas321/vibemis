@@ -1,0 +1,1595 @@
+{
+  "cards": [
+    {
+      "category": 0,
+      "id": "vibepolloPresetsGroupBox",
+      "line": 598,
+      "source": "SettingsView.qml"
+    },
+    {
+      "category": 0,
+      "id": "basicSettingsGroupBox",
+      "line": 697,
+      "source": "SettingsView.qml"
+    },
+    {
+      "category": 1,
+      "id": "audioSettingsGroupBox",
+      "line": 2205,
+      "source": "SettingsView.qml"
+    },
+    {
+      "category": 2,
+      "id": "inputSettingsGroupBox",
+      "line": 2740,
+      "source": "SettingsView.qml"
+    },
+    {
+      "category": 2,
+      "id": "gamepadSettingsGroupBox",
+      "line": 2873,
+      "source": "SettingsView.qml"
+    },
+    {
+      "category": 3,
+      "id": "artemisStreamingGroupBox",
+      "line": 2042,
+      "source": "SettingsView.qml"
+    },
+    {
+      "category": 3,
+      "id": "hostSettingsGroupBox",
+      "line": 2299,
+      "source": "SettingsView.qml"
+    },
+    {
+      "category": 3,
+      "id": "artemisSettingsGroupBox",
+      "line": 3671,
+      "source": "SettingsView.qml"
+    },
+    {
+      "category": 4,
+      "id": "uiSettingsGroupBox",
+      "line": 2353,
+      "source": "SettingsView.qml"
+    },
+    {
+      "category": 4,
+      "id": "advancedSettingsGroupBox",
+      "line": 3070,
+      "source": "SettingsView.qml"
+    },
+    {
+      "category": 4,
+      "id": "systemInfoGroupBox",
+      "line": 3788,
+      "source": "SettingsView.qml"
+    },
+    {
+      "category": 4,
+      "id": "aboutGroupBox",
+      "line": 3855,
+      "source": "SettingsView.qml"
+    },
+    {
+      "category": 4,
+      "id": "helpLinksGroupBox",
+      "line": 3900,
+      "source": "SettingsView.qml"
+    }
+  ],
+  "categories": {
+    "0": "Video",
+    "1": "Audio",
+    "2": "Input & gamepad",
+    "3": "Streaming",
+    "4": "Advanced"
+  },
+  "control_count": 84,
+  "controls": [
+    {
+      "card": "vibepolloPresetsGroupBox",
+      "card_line": 666,
+      "card_pos": 0,
+      "category": 0,
+      "category_label": "Video",
+      "global_pos": 0,
+      "id": null,
+      "in_dialog": false,
+      "label": "Quality · 1200p120",
+      "line": 666,
+      "prefs": [],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "Button"
+    },
+    {
+      "card": "vibepolloPresetsGroupBox",
+      "card_line": 670,
+      "card_pos": 1,
+      "category": 0,
+      "category_label": "Video",
+      "global_pos": 1,
+      "id": null,
+      "in_dialog": false,
+      "label": "Balanced · 1200p90",
+      "line": 670,
+      "prefs": [],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "Button"
+    },
+    {
+      "card": "vibepolloPresetsGroupBox",
+      "card_line": 674,
+      "card_pos": 2,
+      "category": 0,
+      "category_label": "Video",
+      "global_pos": 2,
+      "id": null,
+      "in_dialog": false,
+      "label": "Performance · 800p120",
+      "line": 674,
+      "prefs": [],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "Button"
+    },
+    {
+      "card": "vibepolloPresetsGroupBox",
+      "card_line": 678,
+      "card_pos": 3,
+      "category": 0,
+      "category_label": "Video",
+      "global_pos": 3,
+      "id": null,
+      "in_dialog": false,
+      "label": "Battery · 800p60",
+      "line": 678,
+      "prefs": [],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "Button"
+    },
+    {
+      "card": "basicSettingsGroupBox",
+      "card_line": 749,
+      "card_pos": 0,
+      "category": 0,
+      "category_label": "Video",
+      "global_pos": 4,
+      "id": "resolutionComboBox",
+      "in_dialog": false,
+      "label": "Resolution",
+      "line": 749,
+      "prefs": [
+        "autoAdjustBitrate",
+        "bitrateKbps",
+        "enableYUV444",
+        "fps",
+        "height",
+        "width"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "AutoResizingComboBox"
+    },
+    {
+      "card": "basicSettingsGroupBox",
+      "card_line": 1064,
+      "card_pos": 1,
+      "category": 0,
+      "category_label": "Video",
+      "global_pos": 5,
+      "id": "widthField",
+      "in_dialog": true,
+      "label": null,
+      "line": 1064,
+      "prefs": [],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "TextField"
+    },
+    {
+      "card": "basicSettingsGroupBox",
+      "card_line": 1093,
+      "card_pos": 2,
+      "category": 0,
+      "category_label": "Video",
+      "global_pos": 6,
+      "id": "heightField",
+      "in_dialog": true,
+      "label": null,
+      "line": 1093,
+      "prefs": [],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "TextField"
+    },
+    {
+      "card": "basicSettingsGroupBox",
+      "card_line": 1120,
+      "card_pos": 3,
+      "category": 0,
+      "category_label": "Video",
+      "global_pos": 7,
+      "id": "fpsComboBox",
+      "in_dialog": false,
+      "label": "Frame rate",
+      "line": 1120,
+      "prefs": [
+        "autoAdjustBitrate",
+        "bitrateKbps",
+        "customRefreshRate",
+        "enableFractionalRefreshRate",
+        "enableYUV444",
+        "fps",
+        "height",
+        "width"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "AutoResizingComboBox"
+    },
+    {
+      "card": "basicSettingsGroupBox",
+      "card_line": 1312,
+      "card_pos": 4,
+      "category": 0,
+      "category_label": "Video",
+      "global_pos": 8,
+      "id": "fpsField",
+      "in_dialog": true,
+      "label": null,
+      "line": 1312,
+      "prefs": [
+        "enableFractionalRefreshRate"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "TextField"
+    },
+    {
+      "card": "basicSettingsGroupBox",
+      "card_line": 1538,
+      "card_pos": 5,
+      "category": 0,
+      "category_label": "Video",
+      "global_pos": 9,
+      "id": "slider",
+      "in_dialog": false,
+      "label": "%1 Mbps",
+      "line": 1538,
+      "prefs": [
+        "autoAdjustBitrate",
+        "bitrateKbps",
+        "unlockBitrate"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "Slider"
+    },
+    {
+      "card": "basicSettingsGroupBox",
+      "card_line": 1582,
+      "card_pos": 6,
+      "category": 0,
+      "category_label": "Video",
+      "global_pos": 10,
+      "id": "resetBitrateButton",
+      "in_dialog": false,
+      "label": "Use Default (%1 Mbps)",
+      "line": 1582,
+      "prefs": [
+        "autoAdjustBitrate",
+        "bitrateKbps",
+        "enableYUV444",
+        "fps",
+        "height",
+        "width"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "Button"
+    },
+    {
+      "card": "basicSettingsGroupBox",
+      "card_line": 1615,
+      "card_pos": 7,
+      "category": 0,
+      "category_label": "Video",
+      "global_pos": 11,
+      "id": "adaptiveBitrateCheck",
+      "in_dialog": false,
+      "label": "Adaptive bitrate (experimental)",
+      "line": 1615,
+      "prefs": [
+        "adaptiveBitrate"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "Experimental: when the connection to the host degrades, Vibemis notes a recommendation to lower the bitrate. Automatic runtime adjustment is still in development.",
+      "type": "CheckBox"
+    },
+    {
+      "card": "basicSettingsGroupBox",
+      "card_line": 1688,
+      "card_pos": 8,
+      "category": 0,
+      "category_label": "Video",
+      "global_pos": 12,
+      "id": "windowModeComboBox",
+      "in_dialog": false,
+      "label": "Fullscreen",
+      "line": 1688,
+      "prefs": [
+        "recommendedFullScreenMode",
+        "windowMode"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "Fullscreen generally provides the best performance, but borderless windowed may work better with features like macOS Spaces, Alt+Tab, screenshot tools, on-screen overlays, etc.",
+      "type": "AutoResizingComboBox"
+    },
+    {
+      "card": "basicSettingsGroupBox",
+      "card_line": 1774,
+      "card_pos": 9,
+      "category": 0,
+      "category_label": "Video",
+      "global_pos": 13,
+      "id": "videoScaleModeComboBox",
+      "in_dialog": false,
+      "label": "Video scaling",
+      "line": 1774,
+      "prefs": [
+        "videoScaleMode"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "Fit shows the whole image with black bars if needed. Fill crops the image to fill the screen with no bars. Stretch fills the screen ignoring the aspect ratio.",
+      "type": "AutoResizingComboBox"
+    },
+    {
+      "card": "basicSettingsGroupBox",
+      "card_line": 1813,
+      "card_pos": 10,
+      "category": 0,
+      "category_label": "Video",
+      "global_pos": 14,
+      "id": "vsyncCheck",
+      "in_dialog": false,
+      "label": "V-Sync",
+      "line": 1813,
+      "prefs": [
+        "enableVsync"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "Disabling V-Sync allows sub-frame rendering latency, but it can display visible tearing",
+      "type": "CheckBox"
+    },
+    {
+      "card": "basicSettingsGroupBox",
+      "card_line": 1876,
+      "card_pos": 11,
+      "category": 0,
+      "category_label": "Video",
+      "global_pos": 15,
+      "id": "framePacingCheck",
+      "in_dialog": false,
+      "label": "Frame pacing",
+      "line": 1876,
+      "prefs": [
+        "enableVsync",
+        "framePacing"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "Frame pacing reduces micro-stutter by delaying frames that come in too early",
+      "type": "CheckBox"
+    },
+    {
+      "card": "basicSettingsGroupBox",
+      "card_line": 1943,
+      "card_pos": 12,
+      "category": 0,
+      "category_label": "Video",
+      "global_pos": 16,
+      "id": "vrrCheck",
+      "in_dialog": false,
+      "label": "Enable VRR (beta)",
+      "line": 1943,
+      "prefs": [
+        "enableVrr",
+        "enableVsync"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "VRR presents each frame at a learned margin on adaptive-sync displays for smoother pacing. Requires V-Sync (enabled automatically). Sessions without enough refresh-rate headroom fall back to fixed V-Sync pacing, and borderless fullscreen is used while VRR is active.",
+      "type": "CheckBox"
+    },
+    {
+      "card": "basicSettingsGroupBox",
+      "card_line": 2014,
+      "card_pos": 13,
+      "category": 0,
+      "category_label": "Video",
+      "global_pos": 17,
+      "id": "lowLatencyPresetButton",
+      "in_dialog": false,
+      "label": "Apply low-latency preset",
+      "line": 2014,
+      "prefs": [
+        "enableVrr",
+        "enableVsync",
+        "framePacing"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "Turns off V-Sync and frame pacing for the lowest input latency (best for fast/competitive games). May introduce slight tearing.",
+      "type": "Button"
+    },
+    {
+      "card": "audioSettingsGroupBox",
+      "card_line": 2228,
+      "card_pos": 0,
+      "category": 1,
+      "category_label": "Audio",
+      "global_pos": 18,
+      "id": "audioComboBox",
+      "in_dialog": false,
+      "label": "Stereo",
+      "line": 2228,
+      "prefs": [
+        "audioConfig"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "AutoResizingComboBox"
+    },
+    {
+      "card": "audioSettingsGroupBox",
+      "card_line": 2267,
+      "card_pos": 1,
+      "category": 1,
+      "category_label": "Audio",
+      "global_pos": 19,
+      "id": "audioPcCheck",
+      "in_dialog": false,
+      "label": "Mute host PC speakers while streaming",
+      "line": 2267,
+      "prefs": [
+        "playAudioOnHost"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "You must restart any game currently in progress for this setting to take effect",
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "audioSettingsGroupBox",
+      "card_line": 2281,
+      "card_pos": 2,
+      "category": 1,
+      "category_label": "Audio",
+      "global_pos": 20,
+      "id": "muteOnFocusLossCheck",
+      "in_dialog": false,
+      "label": "Mute audio stream when Vibemis is not the active window",
+      "line": 2281,
+      "prefs": [
+        "muteOnFocusLoss"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "Mutes Vibemis's audio when you Alt+Tab out of the stream or click on a different window.",
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "inputSettingsGroupBox",
+      "card_line": 2754,
+      "card_pos": 0,
+      "category": 2,
+      "category_label": "Input & gamepad",
+      "global_pos": 21,
+      "id": "absoluteMouseCheck",
+      "in_dialog": false,
+      "label": "Optimize mouse for remote desktop instead of games",
+      "line": 2754,
+      "prefs": [
+        "absoluteMouseMode"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "This enables seamless mouse control without capturing the client's mouse cursor. It is ideal for remote desktop usage but will not work in most games.",
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "inputSettingsGroupBox",
+      "card_line": 2770,
+      "card_pos": 1,
+      "category": 2,
+      "category_label": "Input & gamepad",
+      "global_pos": 22,
+      "id": "captureSysKeysCheck",
+      "in_dialog": false,
+      "label": "Capture system keyboard shortcuts",
+      "line": 2770,
+      "prefs": [
+        "captureSysKeysMode"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "This enables the capture of system-wide keyboard shortcuts like Alt+Tab that would normally be handled by the client OS while streaming.",
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "inputSettingsGroupBox",
+      "card_line": 2783,
+      "card_pos": 2,
+      "category": 2,
+      "category_label": "Input & gamepad",
+      "global_pos": 23,
+      "id": null,
+      "in_dialog": false,
+      "label": "in fullscreen",
+      "line": 2783,
+      "prefs": [
+        "captureSysKeysMode"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "AutoResizingComboBox"
+    },
+    {
+      "card": "inputSettingsGroupBox",
+      "card_line": 2838,
+      "card_pos": 3,
+      "category": 2,
+      "category_label": "Input & gamepad",
+      "global_pos": 24,
+      "id": "absoluteTouchCheck",
+      "in_dialog": false,
+      "label": "Use touchscreen as a virtual trackpad",
+      "line": 2838,
+      "prefs": [
+        "absoluteTouchMode"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "When checked, the touchscreen acts like a trackpad. When unchecked, the touchscreen will directly control the mouse pointer.",
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "inputSettingsGroupBox",
+      "card_line": 2852,
+      "card_pos": 4,
+      "category": 2,
+      "category_label": "Input & gamepad",
+      "global_pos": 25,
+      "id": "swapMouseButtonsCheck",
+      "in_dialog": false,
+      "label": "Swap left and right mouse buttons",
+      "line": 2852,
+      "prefs": [
+        "swapMouseButtons"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "inputSettingsGroupBox",
+      "card_line": 2861,
+      "card_pos": 5,
+      "category": 2,
+      "category_label": "Input & gamepad",
+      "global_pos": 26,
+      "id": "reverseScrollButtonsCheck",
+      "in_dialog": false,
+      "label": "Reverse mouse scrolling direction",
+      "line": 2861,
+      "prefs": [
+        "reverseScrollDirection"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "gamepadSettingsGroupBox",
+      "card_line": 2888,
+      "card_pos": 0,
+      "category": 2,
+      "category_label": "Input & gamepad",
+      "global_pos": 27,
+      "id": "gamepadMapButton",
+      "in_dialog": false,
+      "label": "Configure gamepad mapping",
+      "line": 2888,
+      "prefs": [],
+      "source": "SettingsView.qml",
+      "tooltip": "Remap or calibrate connected controllers (paddles, face buttons, sticks).",
+      "type": "Button"
+    },
+    {
+      "card": "gamepadSettingsGroupBox",
+      "card_line": 2899,
+      "card_pos": 1,
+      "category": 2,
+      "category_label": "Input & gamepad",
+      "global_pos": 28,
+      "id": "showHintsCheck",
+      "in_dialog": false,
+      "label": "Show the gamepad hint bar",
+      "line": 2899,
+      "prefs": [
+        "uiShowHints"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "Show the button-hint bar at the bottom of every screen.",
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "gamepadSettingsGroupBox",
+      "card_line": 2917,
+      "card_pos": 2,
+      "category": 2,
+      "category_label": "Input & gamepad",
+      "global_pos": 29,
+      "id": "accentComboBox",
+      "in_dialog": false,
+      "label": "Accent color",
+      "line": 2917,
+      "prefs": [
+        "uiAccentIndex"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "The accent color used across the redesigned UI.",
+      "type": "AutoResizingComboBox"
+    },
+    {
+      "card": "gamepadSettingsGroupBox",
+      "card_line": 2943,
+      "card_pos": 3,
+      "category": 2,
+      "category_label": "Input & gamepad",
+      "global_pos": 30,
+      "id": "quickMenuComboBox",
+      "in_dialog": false,
+      "label": "Quick Menu shortcut",
+      "line": 2943,
+      "prefs": [
+        "quickMenuGamepadCombo"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "Which gamepad button combination opens the in-stream Quick Menu.",
+      "type": "AutoResizingComboBox"
+    },
+    {
+      "card": "gamepadSettingsGroupBox",
+      "card_line": 2986,
+      "card_pos": 4,
+      "category": 2,
+      "category_label": "Input & gamepad",
+      "global_pos": 31,
+      "id": "swapFaceButtonsCheck",
+      "in_dialog": false,
+      "label": "Swap A/B and X/Y gamepad buttons",
+      "line": 2986,
+      "prefs": [
+        "swapFaceButtons"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "This switches gamepads into a Nintendo-style button layout",
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "gamepadSettingsGroupBox",
+      "card_line": 3000,
+      "card_pos": 5,
+      "category": 2,
+      "category_label": "Input & gamepad",
+      "global_pos": 32,
+      "id": "singleControllerCheck",
+      "in_dialog": false,
+      "label": "Force gamepad #1 always connected",
+      "line": 3000,
+      "prefs": [
+        "multiController"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "Forces a single gamepad to always stay connected to the host, even if no gamepads are actually connected to this PC.",
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "gamepadSettingsGroupBox",
+      "card_line": 3015,
+      "card_pos": 6,
+      "category": 2,
+      "category_label": "Input & gamepad",
+      "global_pos": 33,
+      "id": "gamepadMouseCheck",
+      "in_dialog": false,
+      "label": "Enable mouse control with gamepads by holding the 'Start' button",
+      "line": 3015,
+      "prefs": [
+        "gamepadMouse"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "gamepadSettingsGroupBox",
+      "card_line": 3024,
+      "card_pos": 7,
+      "category": 2,
+      "category_label": "Input & gamepad",
+      "global_pos": 34,
+      "id": "backgroundGamepadCheck",
+      "in_dialog": false,
+      "label": "Process gamepad input when Vibemis is in the background",
+      "line": 3024,
+      "prefs": [
+        "backgroundGamepad"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "Allows Vibemis to capture gamepad inputs even if it's not the current window in focus",
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "gamepadSettingsGroupBox",
+      "card_line": 3039,
+      "card_pos": 8,
+      "category": 2,
+      "category_label": "Input & gamepad",
+      "global_pos": 35,
+      "id": "forwardMotionCheck",
+      "in_dialog": false,
+      "label": "Forward motion controls (gyro) — experimental",
+      "line": 3039,
+      "prefs": [
+        "forwardMotionControls"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "Experimental: detect this device's gyro/accelerometer for forwarding to the host (motion/gyro aim). Sensor forwarding is still in development; enabling this currently logs the detected sensors.",
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "gamepadSettingsGroupBox",
+      "card_line": 3053,
+      "card_pos": 9,
+      "category": 2,
+      "category_label": "Input & gamepad",
+      "global_pos": 36,
+      "id": "suppressRumbleCheck",
+      "in_dialog": false,
+      "label": "Disable controller rumble",
+      "line": 3053,
+      "prefs": [
+        "suppressControllerRumble"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "Ignore rumble/force-feedback sent by the host. Useful to save battery on a handheld or if you find rumble distracting.",
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "artemisSettingsGroupBox",
+      "card_line": 27,
+      "card_pos": 0,
+      "category": 3,
+      "category_label": "Streaming",
+      "global_pos": 37,
+      "id": "enableClipboardSync",
+      "in_dialog": false,
+      "label": "Enable clipboard synchronization",
+      "line": 27,
+      "prefs": [],
+      "source": "ClipboardSettings.qml",
+      "tooltip": null,
+      "type": "CheckBox"
+    },
+    {
+      "card": "artemisSettingsGroupBox",
+      "card_line": 59,
+      "card_pos": 1,
+      "category": 3,
+      "category_label": "Streaming",
+      "global_pos": 38,
+      "id": "textOnlyFilter",
+      "in_dialog": false,
+      "label": "Text content only",
+      "line": 59,
+      "prefs": [],
+      "source": "ClipboardSettings.qml",
+      "tooltip": null,
+      "type": "CheckBox"
+    },
+    {
+      "card": "artemisSettingsGroupBox",
+      "card_line": 90,
+      "card_pos": 2,
+      "category": 3,
+      "category_label": "Streaming",
+      "global_pos": 39,
+      "id": "maxSizeSpinBox",
+      "in_dialog": false,
+      "label": null,
+      "line": 90,
+      "prefs": [],
+      "source": "ClipboardSettings.qml",
+      "tooltip": null,
+      "type": "SpinBox"
+    },
+    {
+      "card": "artemisSettingsGroupBox",
+      "card_line": 122,
+      "card_pos": 3,
+      "category": 3,
+      "category_label": "Streaming",
+      "global_pos": 40,
+      "id": "showNotifications",
+      "in_dialog": false,
+      "label": "Show sync notifications",
+      "line": 122,
+      "prefs": [],
+      "source": "ClipboardSettings.qml",
+      "tooltip": null,
+      "type": "CheckBox"
+    },
+    {
+      "card": "artemisStreamingGroupBox",
+      "card_line": 2074,
+      "card_pos": 0,
+      "category": 3,
+      "category_label": "Streaming",
+      "global_pos": 41,
+      "id": "virtualDisplayCheck",
+      "in_dialog": false,
+      "label": "Use Virtual Display",
+      "line": 2074,
+      "prefs": [
+        "useVirtualDisplay"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "Creates a virtual display on the host for streaming. Requires an Apollo / Vibepollo host - not available with plain Sunshine/GeForce Experience.",
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "artemisStreamingGroupBox",
+      "card_line": 2114,
+      "card_pos": 1,
+      "category": 3,
+      "category_label": "Streaming",
+      "global_pos": 42,
+      "id": "resolutionScalingCheck",
+      "in_dialog": false,
+      "label": "Enable Resolution Scaling",
+      "line": 2114,
+      "prefs": [
+        "enableResolutionScaling"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "Scales the stream resolution. Useful for improving performance on lower-end devices or increasing quality on high-DPI displays.",
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "artemisStreamingGroupBox",
+      "card_line": 2141,
+      "card_pos": 2,
+      "category": 3,
+      "category_label": "Streaming",
+      "global_pos": 43,
+      "id": "resolutionScaleSlider",
+      "in_dialog": false,
+      "label": "Scale Factor:",
+      "line": 2141,
+      "prefs": [
+        "resolutionScaleFactor"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "Slider"
+    },
+    {
+      "card": "hostSettingsGroupBox",
+      "card_line": 2313,
+      "card_pos": 0,
+      "category": 3,
+      "category_label": "Streaming",
+      "global_pos": 44,
+      "id": "optimizeGameSettingsCheck",
+      "in_dialog": false,
+      "label": "Optimize game settings for streaming",
+      "line": 2313,
+      "prefs": [
+        "gameOptimizations"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "hostSettingsGroupBox",
+      "card_line": 2322,
+      "card_pos": 1,
+      "category": 3,
+      "category_label": "Streaming",
+      "global_pos": 45,
+      "id": "quitAppAfter",
+      "in_dialog": false,
+      "label": "Quit app on host PC after ending stream",
+      "line": 2322,
+      "prefs": [
+        "quitAppAfter"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "This will close the app or game you are streaming when you end your stream. You will lose any unsaved progress!",
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "hostSettingsGroupBox",
+      "card_line": 2336,
+      "card_pos": 2,
+      "category": 3,
+      "category_label": "Streaming",
+      "global_pos": 46,
+      "id": "autoReconnectCheck",
+      "in_dialog": false,
+      "label": "Automatically reconnect if the stream drops",
+      "line": 2336,
+      "prefs": [
+        "autoReconnect"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "If a stream ends unexpectedly (a network blip or the host waking), Vibemis will try to reconnect automatically.",
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "artemisSettingsGroupBox",
+      "card_line": 3693,
+      "card_pos": 4,
+      "category": 3,
+      "category_label": "Streaming",
+      "global_pos": 47,
+      "id": "touchOverlayCheck",
+      "in_dialog": false,
+      "label": "On-screen touch controls while streaming",
+      "line": 3693,
+      "prefs": [
+        "enableTouchOverlay"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "Composites three translucent buttons into the stream: MENU (top-left, opens the Quick Menu), KBD (top-right, opens the SteamOS on-screen keyboard) and a touch-mode toggle (next to KBD, switches trackpad/direct touch). Finger taps only — mouse clicks in those corners pass through to the game.",
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "artemisSettingsGroupBox",
+      "card_line": 3708,
+      "card_pos": 5,
+      "category": 3,
+      "category_label": "Streaming",
+      "global_pos": 48,
+      "id": "preferTailscaleCheck",
+      "in_dialog": false,
+      "label": "Prefer Tailscale addresses for remote play",
+      "line": 3708,
+      "prefs": [
+        "preferTailscale"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "When connecting to a host, try its Tailscale address (100.64.x.x or a *.ts.net MagicDNS name) before other addresses.",
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "artemisSettingsGroupBox",
+      "card_line": 3736,
+      "card_pos": 6,
+      "category": 3,
+      "category_label": "Streaming",
+      "global_pos": 49,
+      "id": null,
+      "in_dialog": false,
+      "label": "Set up Tailscale",
+      "line": 3736,
+      "prefs": [],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "Button"
+    },
+    {
+      "card": "artemisSettingsGroupBox",
+      "card_line": 3741,
+      "card_pos": 7,
+      "category": 3,
+      "category_label": "Streaming",
+      "global_pos": 50,
+      "id": null,
+      "in_dialog": false,
+      "label": "One-command setup (guide)",
+      "line": 3741,
+      "prefs": [],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "Button"
+    },
+    {
+      "card": "artemisSettingsGroupBox",
+      "card_line": 3747,
+      "card_pos": 8,
+      "category": 3,
+      "category_label": "Streaming",
+      "global_pos": 51,
+      "id": null,
+      "in_dialog": false,
+      "label": "Check status",
+      "line": 3747,
+      "prefs": [],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "Button"
+    },
+    {
+      "card": "uiSettingsGroupBox",
+      "card_line": 2376,
+      "card_pos": 0,
+      "category": 4,
+      "category_label": "Advanced",
+      "global_pos": 52,
+      "id": "languageComboBox",
+      "in_dialog": false,
+      "label": "Automatic",
+      "line": 2376,
+      "prefs": [
+        "language"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "AutoResizingComboBox"
+    },
+    {
+      "card": "uiSettingsGroupBox",
+      "card_line": 2556,
+      "card_pos": 1,
+      "category": 4,
+      "category_label": "Advanced",
+      "global_pos": 53,
+      "id": "uiDisplayModeComboBox",
+      "in_dialog": false,
+      "label": "Windowed",
+      "line": 2556,
+      "prefs": [
+        "uiDisplayMode"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "AutoResizingComboBox"
+    },
+    {
+      "card": "uiSettingsGroupBox",
+      "card_line": 2601,
+      "card_pos": 2,
+      "category": 4,
+      "category_label": "Advanced",
+      "global_pos": 54,
+      "id": "connectionWarningsCheck",
+      "in_dialog": false,
+      "label": "Show connection quality warnings",
+      "line": 2601,
+      "prefs": [
+        "connectionWarnings"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "uiSettingsGroupBox",
+      "card_line": 2610,
+      "card_pos": 3,
+      "category": 4,
+      "category_label": "Advanced",
+      "global_pos": 55,
+      "id": "configurationWarningsCheck",
+      "in_dialog": false,
+      "label": "Show configuration warnings",
+      "line": 2610,
+      "prefs": [
+        "configurationWarnings"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "uiSettingsGroupBox",
+      "card_line": 2620,
+      "card_pos": 4,
+      "category": 4,
+      "category_label": "Advanced",
+      "global_pos": 56,
+      "id": "uiSoundsCheck",
+      "in_dialog": false,
+      "label": "Play navigation sounds",
+      "line": 2620,
+      "prefs": [
+        "uiSounds"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "Play a short sound when moving focus or activating items with the gamepad or keyboard, including the in-stream Quick Menu.",
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "uiSettingsGroupBox",
+      "card_line": 2630,
+      "card_pos": 5,
+      "category": 4,
+      "category_label": "Advanced",
+      "global_pos": 57,
+      "id": "discordPresenceCheck",
+      "in_dialog": false,
+      "label": "Discord Rich Presence integration",
+      "line": 2630,
+      "prefs": [
+        "richPresence"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "Updates your Discord status to display the name of the game you're streaming.",
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "uiSettingsGroupBox",
+      "card_line": 2645,
+      "card_pos": 6,
+      "category": 4,
+      "category_label": "Advanced",
+      "global_pos": 58,
+      "id": "keepAwakeCheck",
+      "in_dialog": false,
+      "label": "Keep the display awake while streaming",
+      "line": 2645,
+      "prefs": [
+        "keepAwake"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "Prevents the screensaver from starting or the display from going to sleep while streaming.",
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "uiSettingsGroupBox",
+      "card_line": 2659,
+      "card_pos": 7,
+      "category": 4,
+      "category_label": "Advanced",
+      "global_pos": 59,
+      "id": "reduceBitrateOnBatteryCheck",
+      "in_dialog": false,
+      "label": "Reduce bitrate when on battery",
+      "line": 2659,
+      "prefs": [
+        "reduceBitrateOnBattery"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "When this device is running on battery, start streams at a lower bitrate (60% of the configured value) to save power and reduce heat. Plugged-in streams are unaffected.",
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "uiSettingsGroupBox",
+      "card_line": 2684,
+      "card_pos": 8,
+      "category": 4,
+      "category_label": "Advanced",
+      "global_pos": 60,
+      "id": null,
+      "in_dialog": false,
+      "label": "Export settings",
+      "line": 2684,
+      "prefs": [
+        "exportSettings"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "Save all Vibemis settings to ~/vibemis-settings.ini for backup or to copy to another device.",
+      "type": "Button"
+    },
+    {
+      "card": "uiSettingsGroupBox",
+      "card_line": 2698,
+      "card_pos": 9,
+      "category": 4,
+      "category_label": "Advanced",
+      "global_pos": 61,
+      "id": null,
+      "in_dialog": false,
+      "label": "Import settings",
+      "line": 2698,
+      "prefs": [
+        "importSettings"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "Load settings previously exported to ~/vibemis-settings.ini.",
+      "type": "Button"
+    },
+    {
+      "card": "advancedSettingsGroupBox",
+      "card_line": 3094,
+      "card_pos": 0,
+      "category": 4,
+      "category_label": "Advanced",
+      "global_pos": 62,
+      "id": "decoderComboBox",
+      "in_dialog": false,
+      "label": "Automatic (Recommended)",
+      "line": 3094,
+      "prefs": [
+        "videoDecoderSelection"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "AutoResizingComboBox"
+    },
+    {
+      "card": "advancedSettingsGroupBox",
+      "card_line": 3157,
+      "card_pos": 1,
+      "category": 4,
+      "category_label": "Advanced",
+      "global_pos": 63,
+      "id": "codecComboBox",
+      "in_dialog": false,
+      "label": "Automatic (Recommended)",
+      "line": 3157,
+      "prefs": [
+        "videoCodecConfig"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "AutoResizingComboBox"
+    },
+    {
+      "card": "advancedSettingsGroupBox",
+      "card_line": 3230,
+      "card_pos": 2,
+      "category": 4,
+      "category_label": "Advanced",
+      "global_pos": 64,
+      "id": "rendererBackendComboBox",
+      "in_dialog": false,
+      "label": "Preferred renderer",
+      "line": 3230,
+      "prefs": [
+        "rendererBackend"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "AutoResizingComboBox"
+    },
+    {
+      "card": "advancedSettingsGroupBox",
+      "card_line": 3265,
+      "card_pos": 3,
+      "category": 4,
+      "category_label": "Advanced",
+      "global_pos": 65,
+      "id": "enableHdr",
+      "in_dialog": false,
+      "label": "Enable HDR (Experimental)",
+      "line": 3265,
+      "prefs": [
+        "enableHdr"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "advancedSettingsGroupBox",
+      "card_line": 3290,
+      "card_pos": 4,
+      "category": 4,
+      "category_label": "Advanced",
+      "global_pos": 66,
+      "id": "displayHdrCapability",
+      "in_dialog": false,
+      "label": "    My display supports HDR",
+      "line": 3290,
+      "prefs": [
+        "displayHdrCapability"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "advancedSettingsGroupBox",
+      "card_line": 3314,
+      "card_pos": 5,
+      "category": 4,
+      "category_label": "Advanced",
+      "global_pos": 67,
+      "id": "hdrTonemapping",
+      "in_dialog": false,
+      "label": "    Tone-map HDR to SDR on this device (Experimental)",
+      "line": 3314,
+      "prefs": [
+        "hdrTonemapping"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "advancedSettingsGroupBox",
+      "card_line": 3334,
+      "card_pos": 6,
+      "category": 4,
+      "category_label": "Advanced",
+      "global_pos": 68,
+      "id": "enableYUV444",
+      "in_dialog": false,
+      "label": "Enable YUV 4:4:4 (Experimental)",
+      "line": 3334,
+      "prefs": [
+        "autoAdjustBitrate",
+        "bitrateKbps",
+        "enableYUV444",
+        "fps",
+        "height",
+        "width"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "advancedSettingsGroupBox",
+      "card_line": 3362,
+      "card_pos": 7,
+      "category": 4,
+      "category_label": "Advanced",
+      "global_pos": 69,
+      "id": "unlockBitrate",
+      "in_dialog": false,
+      "label": "Unlock bitrate limit (Experimental)",
+      "line": 3362,
+      "prefs": [
+        "bitrateKbps",
+        "unlockBitrate"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "This unlocks extremely high video bitrates for use with Sunshine hosts. It should only be used when streaming over an Ethernet LAN connection.",
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "advancedSettingsGroupBox",
+      "card_line": 3379,
+      "card_pos": 8,
+      "category": 4,
+      "category_label": "Advanced",
+      "global_pos": 70,
+      "id": "enableMdns",
+      "in_dialog": false,
+      "label": "Automatically find PCs on the local network (Recommended)",
+      "line": 3379,
+      "prefs": [
+        "enableMdns"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "advancedSettingsGroupBox",
+      "card_line": 3398,
+      "card_pos": 9,
+      "category": 4,
+      "category_label": "Advanced",
+      "global_pos": 71,
+      "id": "detectNetworkBlocking",
+      "in_dialog": false,
+      "label": "Automatically detect blocked connections (Recommended)",
+      "line": 3398,
+      "prefs": [
+        "detectNetworkBlocking"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "advancedSettingsGroupBox",
+      "card_line": 3407,
+      "card_pos": 10,
+      "category": 4,
+      "category_label": "Advanced",
+      "global_pos": 72,
+      "id": "showPerformanceOverlay",
+      "in_dialog": false,
+      "label": "Show performance stats while streaming",
+      "line": 3407,
+      "prefs": [
+        "showPerformanceOverlay"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "Display real-time stream performance information while streaming.",
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "advancedSettingsGroupBox",
+      "card_line": 3423,
+      "card_pos": 11,
+      "category": 4,
+      "category_label": "Advanced",
+      "global_pos": 73,
+      "id": "compactPerformanceOverlay",
+      "in_dialog": false,
+      "label": "Compact performance overlay",
+      "line": 3423,
+      "prefs": [
+        "compactPerformanceOverlay"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "Show the stats as a single compact line (fps, resolution, latency, dropped frames) instead of the full multi-line block — easier to read on a handheld screen.",
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "advancedSettingsGroupBox",
+      "card_line": 3438,
+      "card_pos": 12,
+      "category": 4,
+      "category_label": "Advanced",
+      "global_pos": 74,
+      "id": "perfOverlayShowClock",
+      "in_dialog": false,
+      "label": "Show clock in the performance overlay",
+      "line": 3438,
+      "prefs": [
+        "perfOverlayShowClock"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "Add a wall-clock time (HH:MM:SS) line to the top of the performance overlay.",
+      "type": "VbToggleRow"
+    },
+    {
+      "card": "advancedSettingsGroupBox",
+      "card_line": 3464,
+      "card_pos": 13,
+      "category": 4,
+      "category_label": "Advanced",
+      "global_pos": 75,
+      "id": "perfOverlayTextSizeComboBox",
+      "in_dialog": false,
+      "label": "Small",
+      "line": 3464,
+      "prefs": [
+        "perfOverlayTextSize"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "Adjust the size of the performance overlay text. Takes effect the next time you start a stream.",
+      "type": "AutoResizingComboBox"
+    },
+    {
+      "card": "advancedSettingsGroupBox",
+      "card_line": 3514,
+      "card_pos": 14,
+      "category": 4,
+      "category_label": "Advanced",
+      "global_pos": 76,
+      "id": "perfOverlayPositionComboBox",
+      "in_dialog": false,
+      "label": "Top left",
+      "line": 3514,
+      "prefs": [
+        "perfOverlayPosition"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "Choose which corner of the screen the performance overlay appears in.",
+      "type": "AutoResizingComboBox"
+    },
+    {
+      "card": "advancedSettingsGroupBox",
+      "card_line": 3571,
+      "card_pos": 15,
+      "category": 4,
+      "category_label": "Advanced",
+      "global_pos": 77,
+      "id": "updateChannelComboBox",
+      "in_dialog": false,
+      "label": "Stable (recommended)",
+      "line": 3571,
+      "prefs": [
+        "updateChannel"
+      ],
+      "source": "SettingsView.qml",
+      "tooltip": "Which release channel updates come from. Stable is safest; Beta gets features as they ship; Alpha is per-feature test builds.",
+      "type": "AutoResizingComboBox"
+    },
+    {
+      "card": "advancedSettingsGroupBox",
+      "card_line": 3625,
+      "card_pos": 16,
+      "category": 4,
+      "category_label": "Advanced",
+      "global_pos": 78,
+      "id": "checkUpdatesButton",
+      "in_dialog": false,
+      "label": "Check for updates",
+      "line": 3625,
+      "prefs": [],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "Button"
+    },
+    {
+      "card": "advancedSettingsGroupBox",
+      "card_line": 3633,
+      "card_pos": 17,
+      "category": 4,
+      "category_label": "Advanced",
+      "global_pos": 79,
+      "id": "updateNowButton",
+      "in_dialog": false,
+      "label": "Update now",
+      "line": 3633,
+      "prefs": [],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "Button"
+    },
+    {
+      "card": "advancedSettingsGroupBox",
+      "card_line": 3642,
+      "card_pos": 18,
+      "category": 4,
+      "category_label": "Advanced",
+      "global_pos": 80,
+      "id": "viewReleaseButton",
+      "in_dialog": false,
+      "label": "View release",
+      "line": 3642,
+      "prefs": [],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "Button"
+    },
+    {
+      "card": "helpLinksGroupBox",
+      "card_line": 3923,
+      "card_pos": 0,
+      "category": 4,
+      "category_label": "Advanced",
+      "global_pos": 81,
+      "id": null,
+      "in_dialog": false,
+      "label": "Vibemis on GitHub",
+      "line": 3923,
+      "prefs": [],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "Button"
+    },
+    {
+      "card": "helpLinksGroupBox",
+      "card_line": 3927,
+      "card_pos": 1,
+      "category": 4,
+      "category_label": "Advanced",
+      "global_pos": 82,
+      "id": null,
+      "in_dialog": false,
+      "label": "Install guide (README)",
+      "line": 3927,
+      "prefs": [],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "Button"
+    },
+    {
+      "card": "helpLinksGroupBox",
+      "card_line": 3931,
+      "card_pos": 2,
+      "category": 4,
+      "category_label": "Advanced",
+      "global_pos": 83,
+      "id": null,
+      "in_dialog": false,
+      "label": "Remote play over Tailscale — setup",
+      "line": 3931,
+      "prefs": [],
+      "source": "SettingsView.qml",
+      "tooltip": null,
+      "type": "Button"
+    }
+  ],
+  "schema": "bl2263-settings-ia-manifest/1"
+}
