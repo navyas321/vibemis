@@ -22,7 +22,8 @@
 
 // Don't let SDL hook our main function, since Qt is already
 // doing the same thing. This needs to be before any headers
-// that might include SDL.h themselves.
+// that might include SDL.h themselves. (Constraint, not preference:
+// letting SDL redefine main() alongside Qt breaks startup.)
 #define SDL_MAIN_HANDLED
 #include "SDL_compat.h"
 
