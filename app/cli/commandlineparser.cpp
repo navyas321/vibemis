@@ -449,14 +449,12 @@ void StreamCommandLineParser::parse(const QStringList &args, StreamingPreference
         if (savedBitrateKbps == defaultAtSavedMode) {
             preferences->bitrateKbps = preferences->getDefaultBitrate(
                 preferences->width, preferences->height, preferences->fps, preferences->enableYUV444);
-            fprintf(stderr, "Bitrate auto-scaled to %d Kbps for the requested mode (saved value tracked the default; pass --bitrate to override)
-",
+            fprintf(stderr, "Bitrate auto-scaled to %d Kbps for the requested mode (saved value tracked the default; pass --bitrate to override)\n",
                     preferences->bitrateKbps);
         }
         else {
             preferences->bitrateKbps = savedBitrateKbps;
-            fprintf(stderr, "Keeping saved bitrate preference: %d Kbps (pass --bitrate to override)
-",
+            fprintf(stderr, "Keeping saved bitrate preference: %d Kbps (pass --bitrate to override)\n",
                     savedBitrateKbps);
         }
     }
