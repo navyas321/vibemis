@@ -6,7 +6,8 @@ CONFIG += ordered
 contains(CONFIG, tests) {
     SUBDIRS += vrr \
                updater \
-               bitrate
+               bitrate \
+               overlay
 } else {
     message(VRR/updater/bitrate tests are disabled; rerun qmake with CONFIG+=tests)
 }
