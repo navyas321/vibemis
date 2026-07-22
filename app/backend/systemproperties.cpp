@@ -4,6 +4,7 @@
 #include <QGuiApplication>
 #include <QLibraryInfo>
 #include <QFile>
+#include <QDir>
 #include <QProcess>
 #include <QDesktopServices>
 #include <QUrl>
@@ -151,6 +152,52 @@ QString SystemProperties::checkTailscaleStatus()
         return tr("Connected — this device's Tailscale IP is %1.").arg(ip);
     }
     return tr("Tailscale is installed but not connected. Run the one-command setup or `tailscale up`.");
+}
+
+QString SystemProperties::checkWifiPowerSaveStatus()
+{
+#if defined(Q_OS_LINUX)
+    // Find a wireless interface: /sys/class/net/<iface>/wireless exists for 802.11 devices.
+    QString iface;
+    const QDir netDir(QStringLiteral("/sys/class/net"));
+    const auto entries = netDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+    for (const QString& name : entries) {
+        if (QDir(QStringLiteral("/sys/class/net/%1/wireless").arg(name)).exists()) {
+            iface = name;
+            break;
+        }
+    }
+    if (iface.isEmpty()) {
+        return tr("No Wi-Fi interface detected (wired connection) — power saving does not apply.");
+    }
+
+    QString iwPath;
+    for (const char* cand : {"/usr/sbin/iw", "/sbin/iw", "/usr/bin/iw"}) {
+        if (QFile::exists(QString::fromLatin1(cand))) { iwPath = QString::fromLatin1(cand); break; }
+    }
+    if (iwPath.isEmpty()) {
+        return tr("Wi-Fi power saving: undetermined (%1) — the 'iw' tool is unavailable.").arg(iface);
+    }
+
+    QProcess iw;
+    iw.setProcessChannelMode(QProcess::MergedChannels);
+    iw.start(iwPath, QStringList() << "dev" << iface << "get" << "power_save");
+    if (!iw.waitForFinished(3000) || iw.exitStatus() != QProcess::NormalExit) {
+        return tr("Wi-Fi power saving: undetermined (%1) — could not query the radio.").arg(iface);
+    }
+    const QString out = QString::fromUtf8(iw.readAll()).trimmed();
+    if (out.contains(QLatin1String("Power save: off"), Qt::CaseInsensitive)) {
+        return tr("Wi-Fi power saving: OFF on %1 — good for streaming.").arg(iface);
+    }
+    if (out.contains(QLatin1String("Power save: on"), Qt::CaseInsensitive)) {
+        return tr("Wi-Fi power saving: ON on %1 — this can throttle the link and cause stutter. "
+                  "Disable it (SteamOS: Settings > System > Wi-Fi Power Management), or install a "
+                  "NetworkManager dispatcher that re-asserts it off on every connect/resume.").arg(iface);
+    }
+    return tr("Wi-Fi power saving: undetermined (%1).").arg(iface);
+#else
+    return tr("Wi-Fi power-saving status is only reported on Linux.");
+#endif
 }
 
 bool SystemProperties::openUrl(const QString& url)
