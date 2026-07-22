@@ -1006,6 +1006,35 @@ int main(int argc, char *argv[])
         check("vrr-autofps-explicit-wins", VrrRatePolicy::sessionFpsForStart(true, true, 60, 120) == 60);
         check("vrr-autofps-off-untouched", VrrRatePolicy::sessionFpsForStart(false, false, 60, 120) == 60);
         check("vrr-autofps-badrefresh-keeps", VrrRatePolicy::sessionFpsForStart(true, false, 60, 0) == 60);
+        // BL-2321: CLI bitrate precedence. All three cases run the real stream
+        // parser against the live preferences object (in-memory only; every
+        // touched field is restored below, nothing is saved to disk).
+        {
+            StreamCommandLineParser bp;
+            const int oW = p->width, oH = p->height, oF = p->fps, oB = p->bitrateKbps;
+            const bool oE = p->hasExplicitFps;
+            auto runParse = [&](int savedKbps, const char* extraArg) {
+                p->width = 1920; p->height = 1080; p->fps = 60;
+                p->bitrateKbps = savedKbps; p->hasExplicitFps = false;
+                QStringList args{"vibemis", "stream", "selftest-host", "selftest-app", "--fps", "116"};
+                if (extraArg) args << extraArg << "20000";
+                bp.parse(args, p);
+                return p->bitrateKbps;
+            };
+            // Case 1: explicit --bitrate always wins over saved + recompute.
+            check("cli-bitrate-explicit-wins", runParse(10000, "--bitrate") == 20000);
+            // Case 2: a deliberate saved preference (not the default-table
+            // value for the saved mode) survives --fps-only invocations.
+            const int savedModeDefault = p->getDefaultBitrate(1920, 1080, 60, p->enableYUV444);
+            const int deliberate = (savedModeDefault == 10000) ? 12000 : 10000;
+            check("cli-bitrate-saved-pref-wins", runParse(deliberate, nullptr) == deliberate);
+            // Case 3: a default-tracking saved value still auto-scales to the
+            // new mode's default.
+            check("cli-bitrate-default-tracks", runParse(savedModeDefault, nullptr) ==
+                  p->getDefaultBitrate(1920, 1080, 116, p->enableYUV444));
+            p->width = oW; p->height = oH; p->fps = oF; p->bitrateKbps = oB;
+            p->hasExplicitFps = oE;
+        }
         {
             const std::vector<VrrFpsChoice> choices =
                 VrrRatePolicy::buildChoices({120}, 120, true);
