@@ -316,13 +316,19 @@ private:
     static
     int drSubmitDecodeUnit(PDECODE_UNIT du);
 
+public:
     // BL-2265 collapse detector, v2 (test140 device FAIL RCA). ACCOUNTING
     // and EVALUATION are deliberately split: v1 evaluated inside this
     // delivery callback, which starves in a real collapse (common-c only
     // calls submitDecodeUnit for COMPLETE frames), so the verdict never ran.
-    // This method now ONLY counts (depacketizer thread) ...
+    // This method now ONLY counts. PUBLIC because the consumer depends on
+    // decoder mode (BL-2319): push decoders route via the static
+    // drSubmitDecodeUnit callback; PULL renderers (every VRR/Vulkan session)
+    // never get that callback (registered nullptr), so FFmpegVideoDecoder's
+    // pull loop calls this directly from its decoder thread instead ...
     void onRescueFrameDelivery(uint32_t frameNumber);
 
+private:
     // ... and this wall-clock check — called from the streaming event loop
     // every iteration (>=1 Hz even with zero SDL events) — owns the window
     // and the verdict, using expected-vs-delivered accounting that needs no

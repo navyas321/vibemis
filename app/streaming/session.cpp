@@ -465,8 +465,11 @@ int Session::drSubmitDecodeUnit(PDECODE_UNIT du)
     }
 }
 
-// BL-2265 v2: ACCOUNTING ONLY — runs on the depacketizer thread once per
-// DELIVERED frame. No evaluation happens here (test140 device FAIL RCA:
+// BL-2265 v2: ACCOUNTING ONLY — runs once per DELIVERED frame on the
+// delivery thread (push decoders: depacketizer thread via drSubmitDecodeUnit;
+// PULL renderers: the FFmpeg decoder thread, BL-2319 — the two paths are
+// mutually exclusive per decoder, so single-writer holds either way).
+// No evaluation happens here (test140 device FAIL RCA:
 // common-c only invokes submitDecodeUnit for COMPLETE reassembled frames —
 // VideoDepacketizer.c reassembleFrame() — so in a real collapse this
 // callback is burst-then-starve and any evaluation living here never runs;
