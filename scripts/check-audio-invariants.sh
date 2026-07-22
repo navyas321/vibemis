@@ -29,14 +29,21 @@ grep -qF 'LiGetPendingAudioDuration() > 30' "$SDLAUD" \
 grep -qF 'TRY_INIT_RENDERER(SoundIoAudioRenderer, opusConfig)' "$AUDIOCPP" \
   || err "audio.cpp: libsoundio fallback removed"
 
-# 5. moonlight-common-c submodule still the ClassicOldSong fork
-grep -qF 'url = https://github.com/ClassicOldSong/moonlight-common-c.git' .gitmodules \
+# 5. moonlight-common-c submodule is our ClassicOldSong-derived fork.
+#    BL-2336 re-pointed it from ClassicOldSong to navyas321/moonlight-common-c
+#    (an ADDITIVE fork: ClassicOldSong@ad329b24 + raw-90kHz-RTP-timestamp
+#    thread-through for VRR pacing, touching only Limelight.h / RtpVideoQueue.*
+#    / VideoDepacketizer.c — zero audio/FEC files, so the audio runtime is
+#    unchanged). The fork MUST stay based on the ClassicOldSong lineage.
+grep -qF 'url = https://github.com/navyas321/moonlight-common-c.git' .gitmodules \
   || err ".gitmodules: moonlight-common-c URL changed"
 
 # 6. common-c gitlink pin frozen (classic reedsolomon audio FEC, pre-nanors de364b6).
-#    An intentional bump MUST update this hash in the same PR and cite an
-#    on-device audio A/B in the commit message.
-PIN="ad329b240f18826f320ce6a99226b36354b86b59"
+#    An intentional bump MUST update this hash in the same PR and cite why it is
+#    audio-neutral (an on-device audio A/B, or proof the diff touches no audio
+#    code). Current pin = BL-2336 fork bf826ee8 (= ad329b24 + video-only RTP
+#    timestamp plumbing; audio FEC path byte-identical to the classic pin).
+PIN="bf826ee8d53173a79361c5f4d2c49663553f4e0c"
 ACTUAL=$(git ls-tree HEAD moonlight-common-c/moonlight-common-c | awk '{print $3}')
 [ "$ACTUAL" = "$PIN" ] \
   || err "moonlight-common-c gitlink moved: ${ACTUAL:-<none>} (expected $PIN)"
