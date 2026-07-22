@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QAtomicInt>
 #include <QSemaphore>
 #include <QWindow>
 
@@ -136,6 +137,25 @@ public:
     // True when the stream was cut unexpectedly (connection loss),
     // as opposed to a user-initiated quit — used by the auto-reconnect logic in QML.
     Q_INVOKABLE bool wasUnexpectedTermination() const { return m_UnexpectedTermination; }
+
+    // BL-2265: true when THIS session ended because the catastrophic
+    // bitrate-collapse rescue tore it down to reconnect at a lower bitrate.
+    // The reconnect session picks the stepped-down bitrate up via the
+    // one-shot s_PendingRescueBitrateKbps override in initialize().
+    Q_INVOKABLE bool wasBitrateRescue() const { return m_RescueToKbps > 0; }
+    Q_INVOKABLE int rescueFromKbps() const { return m_RescueFromKbps; }
+    Q_INVOKABLE int rescueToKbps() const { return m_RescueToKbps; }
+
+    // BL-2265 (test140 v2): the one-shot pending-rescue consume, factored to
+    // a static seam so the selftest can prove the trigger->pending->consume
+    // chain offscreen with no host or stream. Returns the bitrate the next
+    // session must run at; clears the pending override (one-shot); never
+    // raises above configuredKbps.
+    static int consumePendingRescueKbps(int configuredKbps);
+
+    // Test-only (selftest): stage a pending rescue as if a session had
+    // triggered one. Never called from production flows.
+    static void stagePendingRescueKbpsForTest(int kbps) { s_PendingRescueBitrateKbps.storeRelease(kbps); }
 
     // A fresh Session for the same host+app (per-game profiles and
     // preferences re-apply automatically). QML takes ownership of the returned object.
@@ -296,6 +316,28 @@ private:
     static
     int drSubmitDecodeUnit(PDECODE_UNIT du);
 
+public:
+    // BL-2265 collapse detector, v2 (test140 device FAIL RCA). ACCOUNTING
+    // and EVALUATION are deliberately split: v1 evaluated inside this
+    // delivery callback, which starves in a real collapse (common-c only
+    // calls submitDecodeUnit for COMPLETE frames), so the verdict never ran.
+    // This method now ONLY counts. PUBLIC because the consumer depends on
+    // decoder mode (BL-2319): push decoders route via the static
+    // drSubmitDecodeUnit callback; PULL renderers (every VRR/Vulkan session)
+    // never get that callback (registered nullptr), so FFmpegVideoDecoder's
+    // pull loop calls this directly from its decoder thread instead ...
+    void onRescueFrameDelivery(uint32_t frameNumber);
+
+private:
+    // ... and this wall-clock check — called from the streaming event loop
+    // every iteration (>=1 Hz even with zero SDL events) — owns the window
+    // and the verdict, using expected-vs-delivered accounting that needs no
+    // delivery events at all. Also emits the rate-limited (5s) 3-condition
+    // debug trace requested by test140 so the next device cycle can bisect.
+    void checkBitrateRescue();
+
+    void triggerBitrateRescue(uint32_t elapsedMs, uint32_t delivered, uint32_t dropped);
+
     StreamingPreferences* m_Preferences;
     bool m_IsFullScreen;
     SupportedVideoFormatList m_SupportedVideoFormats; // Sorted in order of descending priority
@@ -323,6 +365,33 @@ private:
     // window-event guard detect a same-display refresh-mode switch that
     // invalidates the qualified rate (BL-2296, Nonary v6.1.0-vrr9.1 parity).
     int m_ActiveVrrRefreshHz = 0;
+    // BL-2265 bitrate-collapse rescue state (v2 threading contract):
+    //  - m_RescueLastFrameNumber: depacketizer thread ONLY.
+    //  - m_RescueDeliveredTotal / m_RescueGapDroppedTotal: written on the
+    //    depacketizer thread, read on the streaming-loop thread (atomics).
+    //  - m_RescueWnd* / m_RescueLastTraceMs: streaming-loop thread ONLY.
+    //  - m_RescueTriggered: CAS latch, any thread.
+    bool m_RescueArmed = false;
+    SDL_atomic_t m_RescueTriggered {};
+    SDL_atomic_t m_RescueDeliveredTotal {};
+    // BL-2319 instrumentation: unconditional count of onRescueFrameDelivery
+    // invocations (before any gating). cbCalls rising while delivered stays
+    // flat = frame-number accounting artifact; both flat = the depacketizer
+    // genuinely stopped handing us complete frames.
+    SDL_atomic_t m_RescueCallbackCalls {};
+    SDL_atomic_t m_RescueGapDroppedTotal {};
+    uint32_t m_RescueLastFrameNumber = 0;
+    uint32_t m_RescueWndStartMs = 0;
+    int m_RescueWndBaseDelivered = 0;
+    int m_RescueWndBaseGapDropped = 0;
+    uint32_t m_RescueLastTraceMs = 0;
+    int m_RescueFromKbps = 0;
+    int m_RescueToKbps = 0;
+    // One-shot cross-session carry of the stepped-down bitrate: written when
+    // a rescue triggers, consumed (and cleared) by the NEXT session's
+    // initialize(). Never persisted to settings — the user's saved bitrate
+    // preference is untouched.
+    static QAtomicInt s_PendingRescueBitrateKbps;
     QList<QString> m_LaunchWarnings;
     bool m_ShouldExitAfterQuit;
     // Vibemis: see setShouldQuitAppAfter()

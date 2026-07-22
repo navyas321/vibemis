@@ -1181,16 +1181,33 @@ Item {
 
                         function updateBitrateForSelection() {
                             // Only modify the bitrate if the values actually changed
-                            var selectedFps = parseInt(model.get(fpsComboBox.currentIndex).video_fps)
+                            var selectedItem = model.get(fpsComboBox.currentIndex)
+                            var selectedFps = parseInt(selectedItem.video_fps)
                             if (StreamingPreferences.fps !== selectedFps) {
                                 StreamingPreferences.fps = selectedFps
 
                                 if (StreamingPreferences.autoAdjustBitrate) {
-                                    StreamingPreferences.bitrateKbps = StreamingPreferences.getDefaultBitrate(StreamingPreferences.width,
-                                                                                                              StreamingPreferences.height,
-                                                                                                              StreamingPreferences.fps,
-                                                                                                              StreamingPreferences.enableYUV444);
-                                    slider.value = StreamingPreferences.bitrateKbps
+                                    var newDefault = StreamingPreferences.getDefaultBitrate(StreamingPreferences.width,
+                                                                                            StreamingPreferences.height,
+                                                                                            StreamingPreferences.fps,
+                                                                                            StreamingPreferences.enableYUV444);
+                                    // BL-2265: a VRR-derived rate (e.g. 116 FPS on a 120 Hz
+                                    // panel) changes fps, not bandwidth appetite. Auto-adjust
+                                    // may LOWER the bitrate for these choices but must never
+                                    // raise it past the user's last-known value — inflating
+                                    // the default estimate for a derived fps is what pushed
+                                    // a ~25 Mbps stream onto a ~12 Mbps path in the RCA.
+                                    var isVrrDerived = selectedItem.kind === "vrr" ||
+                                                       selectedItem.kind === "low-latency-vrr"
+                                    if (isVrrDerived && newDefault > StreamingPreferences.bitrateKbps) {
+                                        console.info("BL-2265: VRR-derived " + selectedFps +
+                                                     " FPS keeps bitrate at " + StreamingPreferences.bitrateKbps +
+                                                     " kbps (default estimate " + newDefault + " kbps not applied)")
+                                    }
+                                    else {
+                                        StreamingPreferences.bitrateKbps = newDefault
+                                        slider.value = StreamingPreferences.bitrateKbps
+                                    }
                                 }
                             }
 
@@ -1399,7 +1416,10 @@ Item {
                                 model.append({
                                                  "text": choiceText(choice),
                                                  "video_fps": choice.video_fps,
-                                                 "is_custom": choice.is_custom
+                                                 "is_custom": choice.is_custom,
+                                                 // BL-2265: carried so updateBitrateForSelection
+                                                 // can tell VRR-derived rates from user rates.
+                                                 "kind": choice.kind
                                              })
                             }
 
@@ -1444,7 +1464,8 @@ Item {
                                 model.append({
                                                  "text": qsTr("Custom"),
                                                  "video_fps": "",
-                                                 "is_custom": true
+                                                 "is_custom": true,
+                                                 "kind": "custom"
                                              })
                             }
 
@@ -1610,9 +1631,11 @@ Item {
                     }
                 }
 
-                // Vibemis: adaptive bitrate (experimental). Currently logs a recommendation
-                // when the host reports a poor connection; runtime auto-adjust is pending protocol
-                // support (see the adaptive-bitrate TODO in session.cpp). Redesign toggle-row visual.
+                // Vibemis: adaptive bitrate. BL-2265: default ON — gates the catastrophic
+                // bitrate-collapse rescue (auto reconnect at a halved bitrate when the network
+                // path can't sustain the configured rate) plus the CONN_STATUS_POOR log
+                // recommendation. Live in-stream stepping remains pending protocol support
+                // (see the adaptive-bitrate NOTE in session.cpp). Redesign toggle-row visual.
                 CheckBox {
                     id: adaptiveBitrateCheck
                     width: parent.width
@@ -1634,7 +1657,7 @@ Item {
                         Text {
                             anchors.left: parent.left
                             anchors.verticalCenter: parent.verticalCenter
-                            text: qsTr("Adaptive bitrate (experimental)")
+                            text: qsTr("Adaptive bitrate")
                             font.family: VbTokens.fontBody
                             font.weight: Font.DemiBold
                             font.pixelSize: 18
@@ -1658,7 +1681,7 @@ Item {
                     ToolTip.delay: 1000
                     ToolTip.timeout: 5000
                     ToolTip.visible: hovered
-                    ToolTip.text: qsTr("Experimental: when the connection to the host degrades, Vibemis notes a recommendation to lower the bitrate. Automatic runtime adjustment is still in development.")
+                    ToolTip.text: qsTr("When the network can't sustain the configured bitrate and the stream collapses, Vibemis automatically reconnects at a lower bitrate until the stream is usable. Your saved bitrate setting is never changed.")
                 }
 
                 // Vibemis (perf guidance): advise when the bitrate is set well above the recommended

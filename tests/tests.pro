@@ -4,7 +4,9 @@ TEMPLATE = subdirs
 CONFIG += ordered
 
 contains(CONFIG, tests) {
-    SUBDIRS += vrr updater
+    SUBDIRS += vrr \
+               updater \
+               bitrate
 } else {
-    message(VRR/updater tests are disabled; rerun qmake with CONFIG+=tests)
+    message(VRR/updater/bitrate tests are disabled; rerun qmake with CONFIG+=tests)
 }

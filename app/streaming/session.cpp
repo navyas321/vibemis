@@ -2,6 +2,7 @@
 #include "settings/streamingpreferences.h"
 #include "streaming/streamutils.h"
 #include "streaming/vrrratepolicy.h"
+#include "streaming/bitraterescuepolicy.h"
 #include "backend/richpresencemanager.h"
 #include "backend/appprofilemanager.h"
 #include "backend/quickmenumanager.h"
@@ -80,6 +81,9 @@ CONNECTION_LISTENER_CALLBACKS Session::k_ConnCallbacks = {
 
 Session* Session::s_ActiveSession;
 QSemaphore Session::s_ActiveSessionSemaphore(1);
+// BL-2265: one-shot stepped-down bitrate carried from a rescued session to
+// its auto-reconnect replacement. 0 = no rescue pending.
+QAtomicInt Session::s_PendingRescueBitrateKbps(0);
 
 void Session::clStageStarting(int stage)
 {
@@ -122,6 +126,25 @@ void Session::clConnectionTerminated(int errorCode)
 
     case ML_ERROR_NO_VIDEO_FRAME:
         s_ActiveSession->m_UnexpectedTermination = true;
+
+        // BL-2265: zero decodable frames is the extreme end of the same
+        // network-ceiling collapse the in-stream detector watches for. When
+        // the rescue is armed, arm a stepped-down bitrate for the
+        // auto-reconnect instead of letting it retry at the very rate that
+        // just failed.
+        if (s_ActiveSession->m_RescueArmed) {
+            const int next = BitrateRescuePolicy::nextBitrateKbps(s_ActiveSession->m_StreamConfig.bitrate);
+            if (next > 0 && SDL_AtomicCAS(&s_ActiveSession->m_RescueTriggered, 0, 1) == SDL_TRUE) {
+                s_ActiveSession->m_RescueFromKbps = s_ActiveSession->m_StreamConfig.bitrate;
+                s_ActiveSession->m_RescueToKbps = next;
+                s_PendingRescueBitrateKbps.storeRelease(next);
+                SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                            "[bitrate-rescue] no video frames received at %d kbps - reconnect will retry at %d kbps",
+                            s_ActiveSession->m_RescueFromKbps,
+                            s_ActiveSession->m_RescueToKbps);
+            }
+        }
+
         emit s_ActiveSession->displayLaunchError(tr("Your network connection isn't performing well. Reduce your video bitrate setting or try a faster connection."));
         break;
 
@@ -192,19 +215,20 @@ void Session::clConnectionStatusUpdate(int connectionStatus)
                 connectionStatus);
 
     // Vibemis: adaptive-bitrate observation slice. When the user enables adaptive bitrate
-    // and the host reports a POOR connection, emit a structured recommendation to the log. This is
-    // intentionally observation-only for now.
-    // NOTE(P3.24): runtime bitrate stepping is UPSTREAM-GATED and deliberately not implemented.
-    // The BL-2092 phase-sweep pre-check confirmed the moonlight-common-c submodule (ClassicOldSong
-    // fork, HEAD ad329b2) exposes NO LiSetVideoBitrate-class runtime-bitrate symbol — the only
+    // and the host reports a POOR connection, emit a structured recommendation to the log.
+    // NOTE(P3.24/BL-2265): LIVE bitrate stepping remains upstream-gated — the BL-2092
+    // phase-sweep pre-check confirmed the moonlight-common-c submodule (ClassicOldSong
+    // fork, HEAD ad329b2) exposes NO LiSetVideoBitrate-class runtime-bitrate symbol; the only
     // runtime video-control entry point is LiRequestIdrFrame(), and STREAM_CONFIGURATION.bitrate is
-    // write-once at LiStartConnection(). Stepping the live encoder bitrate would require hacking the
-    // control stream, which we will not do. Revisit when upstream adds a runtime bitrate API (see
-    // docs/PHASE_STATUS.md P3.24 and the P4.2 upstream-rebase symbol re-check).
+    // write-once at LiStartConnection(). BL-2265 therefore implements the CATASTROPHIC-collapse
+    // rescue client-side instead: Session::onRescueFrameDelivery() detects the FEC-tail-drop
+    // signature (sustained unrecoverable-frame streak, <1 fps delivered) and reconnects at a
+    // halved bitrate via the auto-reconnect path — see BitrateRescuePolicy. This CONN_STATUS_POOR
+    // hook stays observation-only for merely-degraded (non-collapsed) connections.
     if (s_ActiveSession->m_Preferences->adaptiveBitrate && connectionStatus == CONN_STATUS_POOR) {
         SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
                     "[adaptive-bitrate] Poor connection at %d kbps — recommend lowering bitrate "
-                    "(runtime auto-adjust pending protocol support).",
+                    "(live in-stream stepping pending protocol support; collapse rescue is armed separately).",
                     s_ActiveSession->m_StreamConfig.bitrate);
     }
 
@@ -407,6 +431,13 @@ int Session::drSetup(int videoFormat, int width, int height, int frameRate, void
 
 int Session::drSubmitDecodeUnit(PDECODE_UNIT du)
 {
+    // BL-2265 v2: rescue ACCOUNTING only (delivered count + frame-number-gap
+    // loss evidence). The verdict deliberately does NOT live here — this
+    // callback only fires for COMPLETE reassembled frames and starves in a
+    // real collapse (test140 device RCA). Decoder-agnostic; runs before
+    // dispatch to whichever IVideoDecoder, even while the decoder is null.
+    s_ActiveSession->onRescueFrameDelivery(du->frameNumber);
+
     // Use a lock since we'll be yanking this decoder out
     // from underneath the session when we initiate destruction.
     // We need to destroy the decoder on the main thread to satisfy
@@ -432,6 +463,186 @@ int Session::drSubmitDecodeUnit(PDECODE_UNIT du)
         // the lock is released.
         return DR_OK;
     }
+}
+
+// BL-2265 v2: ACCOUNTING ONLY — runs once per DELIVERED frame on the
+// delivery thread (push decoders: depacketizer thread via drSubmitDecodeUnit;
+// PULL renderers: the FFmpeg decoder thread, BL-2319 — the two paths are
+// mutually exclusive per decoder, so single-writer holds either way).
+// No evaluation happens here (test140 device FAIL RCA:
+// common-c only invokes submitDecodeUnit for COMPLETE reassembled frames —
+// VideoDepacketizer.c reassembleFrame() — so in a real collapse this
+// callback is burst-then-starve and any evaluation living here never runs;
+// device evidence: trigger condition met 130-190s in 3 independent runs,
+// zero verdicts). The wall-clock evaluation lives in checkBitrateRescue().
+void Session::onRescueFrameDelivery(uint32_t frameNumber)
+{
+    // BL-2319: liveness counter FIRST, before any gating, so the debug trace
+    // can distinguish "callback stopped firing" from "callback fires but the
+    // frame-number guard stops counting".
+    SDL_AtomicAdd(&m_RescueCallbackCalls, 1);
+
+    if (!m_RescueArmed || SDL_AtomicGet(&m_RescueTriggered)) {
+        return;
+    }
+
+    if (m_RescueLastFrameNumber == 0) {
+        m_RescueLastFrameNumber = frameNumber;
+        SDL_AtomicAdd(&m_RescueDeliveredTotal, 1);
+        return;
+    }
+
+    if (frameNumber > m_RescueLastFrameNumber) {
+        // Any gap in frame numbers is a network-dropped (FEC-unrecoverable)
+        // frame — kept as corroborating loss evidence for the verdict and
+        // the debug trace, NOT as the primary dropped count (gap accounting
+        // freezes when delivery starves; expected-based accounting doesn't).
+        SDL_AtomicAdd(&m_RescueGapDroppedTotal,
+                      (int)(frameNumber - m_RescueLastFrameNumber - 1));
+        SDL_AtomicAdd(&m_RescueDeliveredTotal, 1);
+        m_RescueLastFrameNumber = frameNumber;
+    }
+}
+
+// BL-2265 v2: wall-clock collapse evaluation — called every streaming event
+// loop iteration (>=1 Hz even with zero SDL events and zero deliveries).
+// Window and verdict state live exclusively on this thread.
+void Session::checkBitrateRescue()
+{
+    if (!m_RescueArmed || SDL_AtomicGet(&m_RescueTriggered)) {
+        return;
+    }
+
+    const uint32_t now = SDL_GetTicks();
+
+    if (m_RescueWndStartMs == 0) {
+        // First loop iteration after streaming became active opens the
+        // window — deliberately NOT tied to the first delivered frame, so a
+        // stream that never delivers anything still gets a verdict.
+        m_RescueWndStartMs = now;
+        m_RescueWndBaseDelivered = SDL_AtomicGet(&m_RescueDeliveredTotal);
+        m_RescueWndBaseGapDropped = SDL_AtomicGet(&m_RescueGapDroppedTotal);
+        m_RescueLastTraceMs = now;
+        return;
+    }
+
+    const uint32_t elapsedMs = now - m_RescueWndStartMs;
+    const uint32_t delivered =
+        (uint32_t)(SDL_AtomicGet(&m_RescueDeliveredTotal) - m_RescueWndBaseDelivered);
+    const uint32_t gapDropped =
+        (uint32_t)(SDL_AtomicGet(&m_RescueGapDroppedTotal) - m_RescueWndBaseGapDropped);
+    const int targetFps = getActualFpsForDecoderTest();
+    const BitrateRescuePolicy::Config cfg = BitrateRescuePolicy::defaultConfig();
+
+    // test140-requested debug trace: log each trigger sub-condition so a
+    // device cycle can bisect instantly if the verdict is ever wrong.
+    // BL-2320: device evidence showed verdicts land in ~3.2s, so a 5s-only
+    // cadence NEVER emitted before the window ended — cadence is 2.5s now,
+    // and the trigger path below always emits one trace unconditionally.
+    const auto logRescueTrace = [&]() {
+        m_RescueLastTraceMs = now;
+        const uint32_t expected = BitrateRescuePolicy::expectedFrames(elapsedMs, targetFps);
+        const uint32_t effDropped = (expected > delivered) ? (expected - delivered) : 0;
+        const uint32_t offered = delivered + effDropped;
+        const bool condDuration = elapsedMs >= cfg.windowMs && offered >= cfg.minOfferedFrames;
+        const bool condDropShare = offered > 0 &&
+                (double)effDropped / (double)offered >= cfg.minDroppedShare;
+        const bool condFpsShare = elapsedMs > 0 && targetFps > 0 &&
+                ((double)delivered * 1000.0 / (double)elapsedMs)
+                    <= cfg.maxDeliveredFpsShare * (double)targetFps;
+        const bool condLossEvidence = gapDropped > 0 || delivered == 0;
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "[bitrate-rescue] trace: wnd=%ums delivered=%u expected=%u gapDropped=%u target=%dfps "
+                    "| conds: duration=%d dropShare=%d fpsShare=%d lossEvidence=%d "
+                    "| cbCalls=%d deliveredTotal=%d lastFrame=%u",
+                    elapsedMs, delivered, expected, gapDropped, targetFps,
+                    condDuration, condDropShare, condFpsShare, condLossEvidence,
+                    SDL_AtomicGet(&m_RescueCallbackCalls),
+                    SDL_AtomicGet(&m_RescueDeliveredTotal),
+                    m_RescueLastFrameNumber);
+    };
+    if (now - m_RescueLastTraceMs >= 2500) {
+        logRescueTrace();
+    }
+
+    if (BitrateRescuePolicy::isCollapseWallClock(elapsedMs, delivered, gapDropped, targetFps, cfg)) {
+        logRescueTrace();
+        const uint32_t expected = BitrateRescuePolicy::expectedFrames(elapsedMs, targetFps);
+        triggerBitrateRescue(elapsedMs, delivered,
+                             (expected > delivered) ? (expected - delivered) : 0);
+    }
+    else if (elapsedMs >= 2 * cfg.windowMs) {
+        // Not catastrophic — slide the window so any later verdict always
+        // reflects the recent past, not ancient history.
+        m_RescueWndStartMs = now;
+        m_RescueWndBaseDelivered = SDL_AtomicGet(&m_RescueDeliveredTotal);
+        m_RescueWndBaseGapDropped = SDL_AtomicGet(&m_RescueGapDroppedTotal);
+    }
+}
+
+// BL-2265 (test140 v2): the one-shot consume seam. Kept trivially small so
+// the selftest exercises the EXACT production code path.
+int Session::consumePendingRescueKbps(int configuredKbps)
+{
+    const int rescueKbps = s_PendingRescueBitrateKbps.fetchAndStoreOrdered(0);
+    if (rescueKbps > 0 && rescueKbps < configuredKbps) {
+        return rescueKbps;
+    }
+    return configuredKbps;
+}
+
+void Session::triggerBitrateRescue(uint32_t elapsedMs, uint32_t delivered, uint32_t dropped)
+{
+    const int next = BitrateRescuePolicy::nextBitrateKbps(m_StreamConfig.bitrate);
+    if (next <= 0) {
+        // Already at the floor — nothing left to step down to. Disarm so we
+        // don't spam; the existing CONN_STATUS_POOR overlay still informs.
+        m_RescueArmed = false;
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "[bitrate-rescue] collapse signature at %d kbps but already at the floor - not stepping down",
+                    m_StreamConfig.bitrate);
+        return;
+    }
+
+    // BL-2319 circuit breaker: a REAL bandwidth collapse is fixed by 1-2
+    // step-downs. If rescues keep firing across reconnects in one app run,
+    // the verdict itself is wrong (device-proven false-positive cascade to
+    // the floor on a healthy path, test140 v3) — stop rescuing rather than
+    // degrade a working stream any further.
+    static QAtomicInt s_RescueStepsThisRun;
+    if (s_RescueStepsThisRun.fetchAndAddOrdered(1) >= 2) {
+        m_RescueArmed = false;
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "[bitrate-rescue] circuit breaker: %d rescues already fired this app run - "
+                    "disarming rescue for the remainder of the run (BL-2319 false-positive guard)",
+                    (int)s_RescueStepsThisRun.loadAcquire() - 1);
+        return;
+    }
+
+    if (SDL_AtomicCAS(&m_RescueTriggered, 0, 1) == SDL_FALSE) {
+        // Lost a race with another trigger path.
+        return;
+    }
+
+    m_RescueFromKbps = m_StreamConfig.bitrate;
+    m_RescueToKbps = next;
+    s_PendingRescueBitrateKbps.storeRelease(next);
+
+    // Not a user-initiated quit: marking the termination unexpected both
+    // suppresses any quit-app-after behavior and engages the QML bounded
+    // auto-reconnect (BL-2072), which relaunches via createResumeSession().
+    m_UnexpectedTermination = true;
+
+    SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                "[bitrate-rescue] catastrophic collapse: %u delivered / %u network-dropped frames "
+                "in %u ms at %d kbps (FEC-tail-drop signature). Reconnecting at %d kbps.",
+                delivered, dropped, elapsedMs, m_RescueFromKbps, m_RescueToKbps);
+
+    // Tear the session down exactly like a connection loss would.
+    SDL_Event event;
+    event.type = SDL_QUIT;
+    event.quit.timestamp = SDL_GetTicks();
+    SDL_PushEvent(&event);
 }
 
 void Session::getDecoderInfo(SDL_Window* window,
@@ -793,6 +1004,31 @@ bool Session::initialize()
         m_StreamConfig.bitrate = reduced;
     }
 
+    // BL-2265: consume a pending collapse-rescue override (one-shot). The
+    // previous session confirmed the configured bitrate exceeds the network
+    // path's effective ceiling (FEC-tail-drop collapse), so this reconnect
+    // runs at the stepped-down rate. The user's SAVED bitrate preference is
+    // never modified — an explicit user choice always remains the starting
+    // point of any future stream; the stepper only rescues collapse.
+    {
+        const int effectiveKbps = consumePendingRescueKbps(m_StreamConfig.bitrate);
+        if (effectiveKbps != m_StreamConfig.bitrate) {
+            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                        "[bitrate-rescue] resuming at %d kbps (configured %d kbps could not be sustained by the network path)",
+                        effectiveKbps, m_StreamConfig.bitrate);
+            m_StreamConfig.bitrate = effectiveKbps;
+        }
+    }
+
+    // BL-2265: arm the collapse rescue. It needs the auto-reconnect path to
+    // relaunch the stream, and adaptiveBitrate (default on) as the opt-out.
+    m_RescueArmed = m_Preferences->adaptiveBitrate && m_Preferences->autoReconnect;
+    if (!m_RescueArmed) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "[bitrate-rescue] disabled (adaptiveBitrate=%d, autoReconnect=%d) - collapse rescue will not engage",
+                    m_Preferences->adaptiveBitrate, m_Preferences->autoReconnect);
+    }
+
     // Vibemis Apollo integration: Apply fractional refresh rate if enabled
     if (m_Preferences->enableFractionalRefreshRate) {
         // Convert fractional refresh rate to integer (multiply by 1000 for precision)
@@ -826,10 +1062,39 @@ bool Session::initialize()
                                                                   m_StreamConfig.fps,
                                                                   displayRefreshHz);
             if (autoFps != m_StreamConfig.fps) {
+                const int preDeriveFps = m_StreamConfig.fps;
                 SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                             "VRR: auto-selected %d FPS for the %d Hz display (no explicit FPS set)",
                             autoFps, displayRefreshHz);
                 m_StreamConfig.fps = autoFps;
+
+                // BL-2265: auto-derive changes fps, NOT bandwidth appetite.
+                // A derived (higher) fps must never inflate an auto-tracked
+                // default bitrate estimate past what the user's own fps
+                // would produce — that inflation is exactly what pushed a
+                // ~25 Mbps stream onto a ~12 Mbps path in the BL-2265 RCA.
+                // An explicit user bitrate is respected exactly.
+                const int defaultAtUserFps = StreamingPreferences::getDefaultBitrate(
+                            m_Preferences->width, m_Preferences->height,
+                            preDeriveFps, m_Preferences->enableYUV444);
+                const int defaultAtDerivedFps = StreamingPreferences::getDefaultBitrate(
+                            m_Preferences->width, m_Preferences->height,
+                            autoFps, m_Preferences->enableYUV444);
+                const int saneKbps = BitrateRescuePolicy::bitrateForAutoDerivedFps(
+                            m_StreamConfig.bitrate, defaultAtUserFps, defaultAtDerivedFps);
+                if (saneKbps != m_StreamConfig.bitrate) {
+                    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                                "VRR auto-derive: clamping bitrate %d -> %d kbps "
+                                "(a derived fps must not raise the default bitrate estimate)",
+                                m_StreamConfig.bitrate, saneKbps);
+                    m_StreamConfig.bitrate = saneKbps;
+                }
+                else {
+                    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                                "VRR auto-derive: fps %d -> %d; keeping session bitrate at %d kbps "
+                                "(auto-derive changes fps, not bandwidth appetite)",
+                                preDeriveFps, autoFps, m_StreamConfig.bitrate);
+                }
             }
         }
     }
@@ -2383,6 +2648,13 @@ void Session::execInternal()
     };
 
     for (;;) {
+        // BL-2265 v2: wall-clock collapse evaluation. This loop iterates at
+        // least every 1000ms (threaded WaitEventTimeout) / ~16ms (polling
+        // path) even with ZERO SDL events and ZERO delivered frames, which
+        // is exactly why the rescue verdict lives here and not in the
+        // delivery callback (test140: delivery starves in a collapse).
+        checkBitrateRescue();
+
         // On the NON-threaded exec path (Windows/macOS/EGLFS)
         // this loop runs on the main thread, so nothing else pumps Qt — the queued
         // QuickMenuManager::toggle() posted from the SDL input handler and the offscreen
