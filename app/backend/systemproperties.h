@@ -40,6 +40,14 @@ public:
     // confirm their tailnet from Settings without a terminal. Best-effort; never throws.
     Q_INVOKABLE QString checkTailscaleStatus();
 
+    // BL-2356: read-only Wi-Fi power-save status for a visible Settings row.
+    // Wi-Fi power management throttles the client radio (SteamOS re-enables it
+    // every Game Mode session; it caused the 54 Mbps "delivery collapse").
+    // vibemis cannot change it (that needs root / the NetworkManager
+    // dispatcher) — this just reports the live state so the user can see it in
+    // Settings. Returns a short human-readable line; best-effort, never throws.
+    Q_INVOKABLE QString checkWifiPowerSaveStatus();
+
     // Open a URL in the HOST browser with a CLEANED environment.
     // Qt.openUrlExternally spawns xdg-open/the browser with the AppImage's LD_LIBRARY_PATH
     // and Qt plugin paths inherited, so the host browser loads bundled libs and dies

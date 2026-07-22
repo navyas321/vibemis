@@ -3883,6 +3883,37 @@ Item {
                     color: VbTokens.textTertiary
                 }
 
+                // BL-2356: read-only Wi-Fi power-save status. Wi-Fi power management
+                // throttles the client radio (SteamOS re-enables it every Game Mode
+                // session); this surfaces the live state in Settings. Auto-populates
+                // when this section loads; the button re-reads it on demand.
+                Label {
+                    width: parent.width
+                    text: qsTr("Wi-Fi power saving")
+                    font.pixelSize: VbTokens.sizeLabel
+                    font.family: VbTokens.fontBody
+                    font.weight: Font.DemiBold
+                    color: VbTokens.text
+                    topPadding: VbTokens.space3
+                }
+                Label {
+                    id: wifiPowerSaveLabel
+                    width: parent.width
+                    text: qsTr("Checking…")
+                    font.pixelSize: VbTokens.typeCaption
+                    font.family: VbTokens.fontBody
+                    wrapMode: Text.Wrap
+                    color: text.indexOf(" ON ") !== -1 ? VbTokens.statusWarning
+                           : text.indexOf(" OFF ") !== -1 ? VbTokens.statusSuccess
+                           : VbTokens.textSecondary
+                    topPadding: VbTokens.space1
+                    Component.onCompleted: text = SystemProperties.checkWifiPowerSaveStatus()
+                }
+                Button {
+                    text: qsTr("Re-check Wi-Fi power saving")
+                    onClicked: wifiPowerSaveLabel.text = SystemProperties.checkWifiPowerSaveStatus()
+                }
+
                 // Note about Server Commands
                 Label {
                     width: parent.width
