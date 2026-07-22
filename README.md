@@ -155,6 +155,10 @@ AppImage to a stable path with a clean `Vibemis` desktop entry, ready to Add to 
   context menu; the profile applies automatically at launch without touching global settings
 - **Auto-reconnect** *(on by default)* — a dropped stream retries in place (3 attempts with
   backoff) instead of dumping you back to the game grid; toggleable in Settings
+- **Wi-Fi power-saving control** — a status row and toggle in Settings → Streaming that shows and
+  flips your Wi-Fi radio's power-saving state. SteamOS silently re-enables Wi-Fi power management on
+  every Game Mode session, which throttles the link and causes stream stutter; this surfaces the
+  live state (green when off, amber warning when on) and turns it off in one tap
 - **Gamepad-first redesign** — a full controller-first UI built on a unified dark **design-token**
   system: a **single teal accent** (`#00CCCC`) plus one surface / spacing / type scale and
   role-named *semantic* tokens (surface tiers, text hierarchy, status colors) applied consistently
