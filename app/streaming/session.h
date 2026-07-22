@@ -336,6 +336,14 @@ private:
     // debug trace requested by test140 so the next device cycle can bisect.
     void checkBitrateRescue();
 
+    // BL-2337: poll-based VRR refresh-drift detector - gamescope delivers no
+    // SDL window/display event for a same-display refresh-mode switch, so the
+    // BL-2296 event-driven guard is unreachable in Game Mode. Called from the
+    // streaming event loop; ~2s cadence; injects the DISPLAY_CHANGED event the
+    // existing guard already handles, so requalification runs the identical
+    // path. No-op when the platform hides the new rate from SDL.
+    void checkVrrRefreshDrift();
+
     void triggerBitrateRescue(uint32_t elapsedMs, uint32_t delivered, uint32_t dropped);
 
     StreamingPreferences* m_Preferences;
@@ -360,6 +368,8 @@ private:
     int m_FlushingWindowEventsRef;
     // One-time "VRR unavailable" fallback notice latch (BL-2212)
     bool m_VrrFallbackNotified = false;
+    // BL-2337: last drift-poll tick (streaming loop thread only)
+    uint32_t m_LastVrrDriftCheckMs = 0;
     // Refresh rate the current decoder's VRR session qualified at, 0 when the
     // last qualification pass rejected (or never requested) VRR. Lets the
     // window-event guard detect a same-display refresh-mode switch that

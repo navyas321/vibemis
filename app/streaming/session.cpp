@@ -591,6 +591,58 @@ int Session::consumePendingRescueKbps(int configuredKbps)
     return configuredKbps;
 }
 
+// BL-2337: see session.h. Device-proven gap: gamescopectl refresh flips reach
+// the Vulkan WSI layer ("Swapchain received new refresh cycle") but fire no
+// SDL window/display event, so the BL-2296 guard never ran in Game Mode - the
+// surface it matters most on. The injected event is DISPLAY_CHANGED with the
+// CURRENT display index: the handler's display-move branch sees no index
+// change and only the refresh probe branch acts, exactly as intended.
+void Session::checkVrrRefreshDrift()
+{
+    if (m_Window == nullptr || m_VideoDecoder == nullptr) {
+        return;
+    }
+
+    const uint32_t now = SDL_GetTicks();
+    if (now - m_LastVrrDriftCheckMs < 2000) {
+        return;
+    }
+    m_LastVrrDriftCheckMs = now;
+
+    if (!StreamUtils::vrrRefreshSwitchNeedsProbe(m_ActiveVrrRefreshHz,
+                                                 m_VideoDecoder->isVrrActive(),
+                                                 true /* poll always probes */)) {
+        return;
+    }
+
+    int currentRefreshHz = 0;
+    const bool refreshReadable =
+        StreamUtils::tryGetDisplayRefreshRate(m_Window, currentRefreshHz);
+    if (!refreshReadable) {
+        return;
+    }
+
+    if (StreamUtils::vrrRefreshSwitchRequiresRequalification(m_ActiveVrrRefreshHz,
+                                                             refreshReadable,
+                                                             currentRefreshHz)) {
+#if SDL_VERSION_ATLEAST(2, 0, 18)
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "VRR refresh drift detected by poll (%d Hz -> %d Hz); injecting display-changed to requalify",
+                    m_ActiveVrrRefreshHz, currentRefreshHz);
+        SDL_Event ev = {};
+        ev.type = SDL_WINDOWEVENT;
+        ev.window.event = SDL_WINDOWEVENT_DISPLAY_CHANGED;
+        ev.window.windowID = SDL_GetWindowID(m_Window);
+        ev.window.data1 = SDL_GetWindowDisplayIndex(m_Window);
+        SDL_PushEvent(&ev);
+#else
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "VRR refresh drift detected by poll (%d Hz -> %d Hz) but SDL predates DISPLAY_CHANGED; cannot requalify",
+                    m_ActiveVrrRefreshHz, currentRefreshHz);
+#endif
+    }
+}
+
 void Session::triggerBitrateRescue(uint32_t elapsedMs, uint32_t delivered, uint32_t dropped)
 {
     const int next = BitrateRescuePolicy::nextBitrateKbps(m_StreamConfig.bitrate);
@@ -2654,6 +2706,7 @@ void Session::execInternal()
         // is exactly why the rescue verdict lives here and not in the
         // delivery callback (test140: delivery starves in a collapse).
         checkBitrateRescue();
+        checkVrrRefreshDrift();
 
         // On the NON-threaded exec path (Windows/macOS/EGLFS)
         // this loop runs on the main thread, so nothing else pumps Qt — the queued
