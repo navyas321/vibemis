@@ -2,6 +2,7 @@
 
 #include "streaming/session.h"
 #include "streaming/streamutils.h"
+#include "streaming/video/overlayplacement.h"
 
 // Use a C shim to call libplacebo's libav helpers from C++ safely
 #include "pl_libav_shim.h"
@@ -1326,6 +1327,17 @@ void PlVkRenderer::renderFrame(AVFrame *frame)
                                   - ((i == Overlay::OverlayTouchButtonTouchMode)
                                      ? (Overlay::TouchButtonSize + Overlay::TouchButtonSpacing) : 0));
                 overlayParts[i].dst.y0 = Overlay::TouchButtonInset;
+            }
+            else {
+                // Centered — Quick Menu, server-commands toast, and any future
+                // overlay without an explicit anchor. The zero-initialized part
+                // (top-left) is never a sane default; the SDL renderers center
+                // unknown types the same way (BL-2370).
+                OverlayPlacement::Point p = OverlayPlacement::centered(
+                    targetFrame.crop.x1, targetFrame.crop.y1,
+                    overlayParts[i].src.x1, overlayParts[i].src.y1);
+                overlayParts[i].dst.x0 = p.x;
+                overlayParts[i].dst.y0 = p.y;
             }
             overlayParts[i].dst.x1 = overlayParts[i].dst.x0 + overlayParts[i].src.x1;
             overlayParts[i].dst.y1 = overlayParts[i].dst.y0 + overlayParts[i].src.y1;

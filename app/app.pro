@@ -258,6 +258,7 @@ HEADERS += \
     gui/sdlgamepadkeynavigation.h \
     gui/uisoundmanager.h \
     streaming/video/overlaymanager.h \
+    streaming/video/overlayplacement.h \
     backend/systemproperties.h \
     backend/clipboardmanager.h \
     backend/servercommandmanager.h \
