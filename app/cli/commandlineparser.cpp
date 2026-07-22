@@ -386,6 +386,15 @@ void StreamCommandLineParser::parse(const QStringList &args, StreamingPreference
 
     parser.handleUnknownOptions();
 
+    // BL-2321: snapshot the conf-saved mode + bitrate BEFORE any CLI override
+    // mutates them - the bitrate resolution below needs to know whether the
+    // saved bitrate was a deliberate user choice or merely tracked the default
+    // table for the saved mode.
+    const int savedWidth = preferences->width;
+    const int savedHeight = preferences->height;
+    const int savedFps = preferences->fps;
+    const int savedBitrateKbps = preferences->bitrateKbps;
+
     // Resolve display's width and height
     static QRegularExpression resolutionRexExp("^(720|1080|1440|4K|resolution)$");
     QStringList resoOptions = parser.optionNames().filter(resolutionRexExp);
@@ -428,8 +437,28 @@ void StreamCommandLineParser::parse(const QStringList &args, StreamingPreference
             fprintf(stderr, "Warning: Bitrate is out of the supported range (500 - 500000 Kbps). Performance may suffer!\n");
         }
     } else if (displaySet || parser.isSet("fps")) {
-        preferences->bitrateKbps = preferences->getDefaultBitrate(
-            preferences->width, preferences->height, preferences->fps, preferences->enableYUV444);
+        // BL-2321: this branch used to recompute unconditionally, silently
+        // discarding the user's saved bitrate (a saved 10 Mbps preference ran
+        // at the ~32 Mbps default in the test140 v3 audit). Auto-scale ONLY
+        // when the saved value just tracked the default table for the saved
+        // mode (the user never chose a bitrate); a deliberate saved preference
+        // wins. Either way the decision is printed instead of silent; an
+        // explicit --bitrate always takes the branch above.
+        const int defaultAtSavedMode = preferences->getDefaultBitrate(
+            savedWidth, savedHeight, savedFps, preferences->enableYUV444);
+        if (savedBitrateKbps == defaultAtSavedMode) {
+            preferences->bitrateKbps = preferences->getDefaultBitrate(
+                preferences->width, preferences->height, preferences->fps, preferences->enableYUV444);
+            fprintf(stderr, "Bitrate auto-scaled to %d Kbps for the requested mode (saved value tracked the default; pass --bitrate to override)
+",
+                    preferences->bitrateKbps);
+        }
+        else {
+            preferences->bitrateKbps = savedBitrateKbps;
+            fprintf(stderr, "Keeping saved bitrate preference: %d Kbps (pass --bitrate to override)
+",
+                    savedBitrateKbps);
+        }
     }
 
     // Resolve --packet-size option
