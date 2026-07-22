@@ -474,6 +474,11 @@ int Session::drSubmitDecodeUnit(PDECODE_UNIT du)
 // zero verdicts). The wall-clock evaluation lives in checkBitrateRescue().
 void Session::onRescueFrameDelivery(uint32_t frameNumber)
 {
+    // BL-2319: liveness counter FIRST, before any gating, so the debug trace
+    // can distinguish "callback stopped firing" from "callback fires but the
+    // frame-number guard stops counting".
+    SDL_AtomicAdd(&m_RescueCallbackCalls, 1);
+
     if (!m_RescueArmed || SDL_AtomicGet(&m_RescueTriggered)) {
         return;
     }
@@ -526,9 +531,12 @@ void Session::checkBitrateRescue()
     const int targetFps = getActualFpsForDecoderTest();
     const BitrateRescuePolicy::Config cfg = BitrateRescuePolicy::defaultConfig();
 
-    // test140-requested debug trace: log each trigger sub-condition every 5s
-    // so a device cycle can bisect instantly if the verdict is ever wrong.
-    if (now - m_RescueLastTraceMs >= 5000) {
+    // test140-requested debug trace: log each trigger sub-condition so a
+    // device cycle can bisect instantly if the verdict is ever wrong.
+    // BL-2320: device evidence showed verdicts land in ~3.2s, so a 5s-only
+    // cadence NEVER emitted before the window ended — cadence is 2.5s now,
+    // and the trigger path below always emits one trace unconditionally.
+    const auto logRescueTrace = [&]() {
         m_RescueLastTraceMs = now;
         const uint32_t expected = BitrateRescuePolicy::expectedFrames(elapsedMs, targetFps);
         const uint32_t effDropped = (expected > delivered) ? (expected - delivered) : 0;
@@ -542,12 +550,20 @@ void Session::checkBitrateRescue()
         const bool condLossEvidence = gapDropped > 0 || delivered == 0;
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                     "[bitrate-rescue] trace: wnd=%ums delivered=%u expected=%u gapDropped=%u target=%dfps "
-                    "| conds: duration=%d dropShare=%d fpsShare=%d lossEvidence=%d",
+                    "| conds: duration=%d dropShare=%d fpsShare=%d lossEvidence=%d "
+                    "| cbCalls=%d deliveredTotal=%d lastFrame=%u",
                     elapsedMs, delivered, expected, gapDropped, targetFps,
-                    condDuration, condDropShare, condFpsShare, condLossEvidence);
+                    condDuration, condDropShare, condFpsShare, condLossEvidence,
+                    SDL_AtomicGet(&m_RescueCallbackCalls),
+                    SDL_AtomicGet(&m_RescueDeliveredTotal),
+                    m_RescueLastFrameNumber);
+    };
+    if (now - m_RescueLastTraceMs >= 2500) {
+        logRescueTrace();
     }
 
     if (BitrateRescuePolicy::isCollapseWallClock(elapsedMs, delivered, gapDropped, targetFps, cfg)) {
+        logRescueTrace();
         const uint32_t expected = BitrateRescuePolicy::expectedFrames(elapsedMs, targetFps);
         triggerBitrateRescue(elapsedMs, delivered,
                              (expected > delivered) ? (expected - delivered) : 0);
@@ -582,6 +598,21 @@ void Session::triggerBitrateRescue(uint32_t elapsedMs, uint32_t delivered, uint3
         SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
                     "[bitrate-rescue] collapse signature at %d kbps but already at the floor - not stepping down",
                     m_StreamConfig.bitrate);
+        return;
+    }
+
+    // BL-2319 circuit breaker: a REAL bandwidth collapse is fixed by 1-2
+    // step-downs. If rescues keep firing across reconnects in one app run,
+    // the verdict itself is wrong (device-proven false-positive cascade to
+    // the floor on a healthy path, test140 v3) — stop rescuing rather than
+    // degrade a working stream any further.
+    static QAtomicInt s_RescueStepsThisRun;
+    if (s_RescueStepsThisRun.fetchAndAddOrdered(1) >= 2) {
+        m_RescueArmed = false;
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "[bitrate-rescue] circuit breaker: %d rescues already fired this app run - "
+                    "disarming rescue for the remainder of the run (BL-2319 false-positive guard)",
+                    (int)s_RescueStepsThisRun.loadAcquire() - 1);
         return;
     }
 

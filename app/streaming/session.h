@@ -368,6 +368,11 @@ private:
     bool m_RescueArmed = false;
     SDL_atomic_t m_RescueTriggered {};
     SDL_atomic_t m_RescueDeliveredTotal {};
+    // BL-2319 instrumentation: unconditional count of onRescueFrameDelivery
+    // invocations (before any gating). cbCalls rising while delivered stays
+    // flat = frame-number accounting artifact; both flat = the depacketizer
+    // genuinely stopped handing us complete frames.
+    SDL_atomic_t m_RescueCallbackCalls {};
     SDL_atomic_t m_RescueGapDroppedTotal {};
     uint32_t m_RescueLastFrameNumber = 0;
     uint32_t m_RescueWndStartMs = 0;
