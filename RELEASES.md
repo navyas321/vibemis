@@ -7,6 +7,18 @@ not edit by hand.
 
 | Published (UTC) | Build | Channel | Artifact |
 |---|---|---|---|
+| 2026-07-22 08:54:03Z | [`0.4.0`](https://github.com/navyas321/vibemis/releases/tag/0.4.0) | ✅ Stable | [AppImage](https://github.com/navyas321/vibemis/releases/tag/0.4.0) |
+| 2026-07-22 08:04:51Z | [`0.4.0-rc.005`](https://github.com/navyas321/vibemis/releases/tag/0.4.0-rc.005) | 🎯 RC | [AppImage](https://github.com/navyas321/vibemis/releases/tag/0.4.0-rc.005) |
+| 2026-07-22 07:58:10Z | [`0.4.0-beta.016`](https://github.com/navyas321/vibemis/releases/tag/0.4.0-beta.016) | 🧪 Beta | [AppImage](https://github.com/navyas321/vibemis/releases/tag/0.4.0-beta.016) |
+| 2026-07-22 07:32:02Z | [`0.4.0-rc.004`](https://github.com/navyas321/vibemis/releases/tag/0.4.0-rc.004) | 🎯 RC | [AppImage](https://github.com/navyas321/vibemis/releases/tag/0.4.0-rc.004) |
+| 2026-07-22 07:25:54Z | [`0.4.0-beta.015`](https://github.com/navyas321/vibemis/releases/tag/0.4.0-beta.015) | 🧪 Beta | [AppImage](https://github.com/navyas321/vibemis/releases/tag/0.4.0-beta.015) |
+| 2026-07-22 06:20:30Z | [`0.4.0-rc.003`](https://github.com/navyas321/vibemis/releases/tag/0.4.0-rc.003) | 🎯 RC | [AppImage](https://github.com/navyas321/vibemis/releases/tag/0.4.0-rc.003) |
+| 2026-07-22 05:49:42Z | [`0.4.0-alpha.018`](https://github.com/navyas321/vibemis/releases/tag/0.4.0-alpha.018) | 🔬 Alpha | [AppImage](https://github.com/navyas321/vibemis/releases/tag/0.4.0-alpha.018) |
+| 2026-07-22 05:19:52Z | [`0.4.0-rc.002`](https://github.com/navyas321/vibemis/releases/tag/0.4.0-rc.002) | 🎯 RC | [AppImage](https://github.com/navyas321/vibemis/releases/tag/0.4.0-rc.002) |
+| 2026-07-22 05:14:14Z | [`0.4.0-beta.014`](https://github.com/navyas321/vibemis/releases/tag/0.4.0-beta.014) | 🧪 Beta | [AppImage](https://github.com/navyas321/vibemis/releases/tag/0.4.0-beta.014) |
+| 2026-07-22 05:05:49Z | [`0.4.0-beta.013`](https://github.com/navyas321/vibemis/releases/tag/0.4.0-beta.013) | 🧪 Beta | [AppImage](https://github.com/navyas321/vibemis/releases/tag/0.4.0-beta.013) |
+| 2026-07-22 03:47:26Z | [`0.4.0-alpha.017`](https://github.com/navyas321/vibemis/releases/tag/0.4.0-alpha.017) | 🔬 Alpha | [AppImage](https://github.com/navyas321/vibemis/releases/tag/0.4.0-alpha.017) |
+| 2026-07-22 03:22:59Z | [`0.4.0-alpha.016`](https://github.com/navyas321/vibemis/releases/tag/0.4.0-alpha.016) | 🔬 Alpha | [AppImage](https://github.com/navyas321/vibemis/releases/tag/0.4.0-alpha.016) |
 | 2026-07-22 00:54:28Z | [`0.4.0-rc.001`](https://github.com/navyas321/vibemis/releases/tag/0.4.0-rc.001) | 🎯 RC | [AppImage](https://github.com/navyas321/vibemis/releases/tag/0.4.0-rc.001) |
 | 2026-07-22 00:48:23Z | [`0.4.0-beta.012`](https://github.com/navyas321/vibemis/releases/tag/0.4.0-beta.012) | 🧪 Beta | [AppImage](https://github.com/navyas321/vibemis/releases/tag/0.4.0-beta.012) |
 | 2026-07-22 00:42:59Z | [`0.4.0-beta.011`](https://github.com/navyas321/vibemis/releases/tag/0.4.0-beta.011) | 🧪 Beta | [AppImage](https://github.com/navyas321/vibemis/releases/tag/0.4.0-beta.011) |
