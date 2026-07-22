@@ -200,6 +200,101 @@ QString SystemProperties::checkWifiPowerSaveStatus()
 #endif
 }
 
+#if defined(Q_OS_LINUX)
+// BL-2358: find the first 802.11 interface, "" if none.
+static QString findWirelessIface()
+{
+    const QDir netDir(QStringLiteral("/sys/class/net"));
+    const auto entries = netDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+    for (const QString& name : entries) {
+        if (QDir(QStringLiteral("/sys/class/net/%1/wireless").arg(name)).exists()) {
+            return name;
+        }
+    }
+    return QString();
+}
+#endif
+
+bool SystemProperties::isWifiPowerSaveOn()
+{
+#if defined(Q_OS_LINUX)
+    const QString iface = findWirelessIface();
+    if (iface.isEmpty()) {
+        return false;
+    }
+    QString iwPath;
+    for (const char* cand : {"/usr/sbin/iw", "/sbin/iw", "/usr/bin/iw"}) {
+        if (QFile::exists(QString::fromLatin1(cand))) { iwPath = QString::fromLatin1(cand); break; }
+    }
+    if (iwPath.isEmpty()) {
+        return false;
+    }
+    QProcess iw;
+    iw.setProcessChannelMode(QProcess::MergedChannels);
+    iw.start(iwPath, QStringList() << "dev" << iface << "get" << "power_save");
+    if (!iw.waitForFinished(3000)) {
+        return false;
+    }
+    return QString::fromUtf8(iw.readAll()).contains(QLatin1String("Power save: on"), Qt::CaseInsensitive);
+#else
+    return false;
+#endif
+}
+
+QString SystemProperties::setWifiPowerSave(bool enable)
+{
+#if defined(Q_OS_LINUX)
+    const QString iface = findWirelessIface();
+    if (iface.isEmpty()) {
+        return tr("No Wi-Fi interface detected (wired connection).");
+    }
+    const QString state = enable ? QStringLiteral("on") : QStringLiteral("off");
+
+    // Preferred path: passwordless `sudo iw` (reliable in both directions).
+    // Requires a one-time rule: /etc/sudoers.d/vibemis-wifi granting
+    //   deck ALL=(root) NOPASSWD: /usr/sbin/iw dev * set power_save *
+    {
+        QProcess sudoIw;
+        sudoIw.start(QStringLiteral("sudo"),
+                     QStringList() << "-n" << "iw" << "dev" << iface << "set" << "power_save" << state);
+        if (sudoIw.waitForFinished(4000) && sudoIw.exitStatus() == QProcess::NormalExit
+                && sudoIw.exitCode() == 0) {
+            return checkWifiPowerSaveStatus();
+        }
+    }
+
+    // Fallback: nmcli (the active desktop session is polkit-allowed to control
+    // networking without a password). Sets the persistent connection property
+    // and reapplies. powersave: 3 = enable, 2 = disable.
+    QProcess whichConn;
+    whichConn.start(QStringLiteral("nmcli"),
+                    QStringList() << "-t" << "-f" << "GENERAL.CONNECTION" << "device" << "show" << iface);
+    QString conn;
+    if (whichConn.waitForFinished(4000)) {
+        const QString out = QString::fromUtf8(whichConn.readAllStandardOutput()).trimmed();
+        const int colon = out.indexOf(QLatin1Char(':'));
+        if (colon >= 0) { conn = out.mid(colon + 1).trimmed(); }
+    }
+    if (conn.isEmpty()) {
+        return tr("Could not change Wi-Fi power saving (no active connection resolved). "
+                  "Install the one-time sudo rule for reliable control.");
+    }
+    QProcess mod;
+    mod.start(QStringLiteral("nmcli"),
+              QStringList() << "connection" << "modify" << conn
+                            << "802-11-wireless.powersave" << (enable ? "3" : "2"));
+    mod.waitForFinished(4000);
+    QProcess reapply;
+    reapply.start(QStringLiteral("nmcli"),
+                  QStringList() << "connection" << "up" << conn);
+    reapply.waitForFinished(9000);
+    return checkWifiPowerSaveStatus();
+#else
+    Q_UNUSED(enable);
+    return tr("Wi-Fi power saving control is only available on Linux.");
+#endif
+}
+
 bool SystemProperties::openUrl(const QString& url)
 {
     // Links "did nothing" in the packaged AppImage build. Root cause: the

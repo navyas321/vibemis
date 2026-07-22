@@ -3896,6 +3896,28 @@ Item {
                     color: VbTokens.text
                     topPadding: VbTokens.space3
                 }
+                // BL-2358: live toggle. Turns Wi-Fi power saving on/off (sudo iw
+                // if the one-time rule is installed, else nmcli). Initialized from
+                // the current state; re-syncs after so it reflects reality even if
+                // the write was overridden.
+                VbToggleRow {
+                    id: wifiPowerSaveToggle
+                    property bool ready: false
+                    text: qsTr("Wi-Fi power saving")
+                    onCheckedChanged: {
+                        if (!ready) return
+                        wifiPowerSaveLabel.text = SystemProperties.setWifiPowerSave(checked)
+                        ready = false
+                        checked = SystemProperties.isWifiPowerSaveOn()
+                        ready = true
+                    }
+                    Component.onCompleted: { checked = SystemProperties.isWifiPowerSaveOn(); ready = true }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 6000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("OFF is best for streaming. If turning it off does not stick, install the one-time sudo rule (see the status line) — SteamOS re-enables it every Game Mode session.")
+                }
                 Label {
                     id: wifiPowerSaveLabel
                     width: parent.width
@@ -3908,10 +3930,6 @@ Item {
                            : VbTokens.textSecondary
                     topPadding: VbTokens.space1
                     Component.onCompleted: text = SystemProperties.checkWifiPowerSaveStatus()
-                }
-                Button {
-                    text: qsTr("Re-check Wi-Fi power saving")
-                    onClicked: wifiPowerSaveLabel.text = SystemProperties.checkWifiPowerSaveStatus()
                 }
 
                 // Note about Server Commands
