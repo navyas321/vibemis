@@ -60,7 +60,7 @@ Status legend: **identical** = byte-identical to the Nonary tag · **adapted** =
 | `tests/vrr/ratepolicy_standalone.pro` | **vibemis-only** | Build target for the standalone checker |
 | selftest `vrr-*` checks (`app/main.cpp` ~959-982) | **vibemis-only** | 9 runtime checks shipped in the binary: `vrr-rate-120/144`, `vrr-lowlatency-120`, `vrr-headroom-116at120`, `vrr-headroom-reject-120at120`, `vrr-autofps-{derive-120,explicit-wins,off-untouched,badrefresh-keeps}`, `vrr-choices-120hz` |
 | `moonlight-common-c/limelight_compat.c` | **vibemis-only** | `LiGetMicroseconds()` shim — the Apollo-lineage common-c fork doesn't export the pacing clock mainline has |
-| `.github/workflows/audio-invariants.yml` | **vibemis-only (context)** | CI guard that every VRR wave was verified against (`git diff --stat -- app/streaming/audio/` must stay empty); Nonary has no equivalent |
+| `Audio Invariants` job in `.github/workflows/dev-build.yml` | **vibemis-only (context)** | CI guard that every VRR wave was verified against (`git diff --stat -- app/streaming/audio/` must stay empty); Nonary has no equivalent |
 | d3d11va VRR presenter, vrr8-era master machinery, `latency` branch | **nonary-only** | §4 |
 
 **File counts: 17 byte-identical · 20 adapted · 5 vibemis-only files (+2 in-file additions: selftest checks, isVrrActive hook) · 1 nonary-only unported surface (d3d11va) + off-tag machinery.**
@@ -117,7 +117,7 @@ One new static `sessionFpsForStart(vrrEnabled, fpsExplicitlySet, configuredFps, 
 3. **Never-silent fallback notice**: `IVideoDecoder::isVrrActive()` → `Pacer::isVrrActive()` → one-time launch-warning toast.
 4. **Verification surface**: standalone checker (`app/test_vrrratepolicy.cpp`, 55 checks) + `ratepolicy_standalone.pro` harness target + 9 in-binary selftest `vrr-*` checks + the QtTest `sessionFpsAutoDerive` slot.
 5. **`LiGetMicroseconds()` compat shim** (`moonlight-common-c/limelight_compat.c`) + RTP-timestamp reconstruction — the two Apollo-lineage common-c gaps the port had to bridge.
-6. **CI audio-invariants guard** (`.github/workflows/audio-invariants.yml`): every VRR wave shipped with proof `app/streaming/audio/` was untouched (BL-2213 differentiator protection).
+6. **CI audio-invariants guard** (`Audio Invariants` in `.github/workflows/dev-build.yml`): every VRR wave shipped with proof `app/streaming/audio/` was untouched (BL-2213 differentiator protection).
 7. **Pending, NOT on vibemis-main:** `BitrateRescuePolicy` interplay (un-merged PR #258, BL-2265) — clamps the BL-2235 auto-derived rate's default-bitrate estimate to the user's last-known bitrate (auto-derive may lower, never raise past it) plus the FEC-collapse rescue detector. Mentioned here as pending; not part of this diff's main-branch verdict.
 
 ## 4. Nonary-only, deliberately unported

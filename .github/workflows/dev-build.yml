@@ -1,4 +1,4 @@
-name: Development Build
+name: Vibemis CI & Releases
 
 # This workflow handles development builds with intelligent build skipping (rules cleaned
 # up 2026-07-21, BL-2270 — deterministic, content-based, merge-method-agnostic):
@@ -78,6 +78,23 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'push' && startsWith(github.ref_name, 'test') }}
 
 jobs:
+  # Fast semantic regression guard for the no-audio-crackle differentiator
+  # (BL-2213 / vibemis issue #239). Keeping this as an independent job makes
+  # the check visible and requireable without maintaining a second workflow.
+  # Do not weaken it without an on-device audio A/B.
+  audio-invariants:
+    name: Audio Invariants
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+      - name: Check BL-2213 audio invariants
+        run: bash scripts/check-audio-invariants.sh
+
   setup-version:
     name: Setup Version
     runs-on: ubuntu-latest
