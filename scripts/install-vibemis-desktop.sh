@@ -66,12 +66,36 @@ if command -v update-desktop-database >/dev/null 2>&1; then
     update-desktop-database "$DESKTOP_DIR" >/dev/null 2>&1 || true
 fi
 
+# Steam library artwork. A non-Steam shortcut has no art of its own, so Game Mode drew
+# Vibemis as a flat rectangle with its name in plain text -- the one entry in the library
+# that looked like a placeholder, sitting next to apps with full hero art. If the shortcut
+# already exists this installs the tile now; if not, the hint below covers it. Best-effort:
+# a missing python3 or an unreadable shortcuts.vdf must never fail the install.
+ART_INSTALLED=0
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if command -v python3 >/dev/null 2>&1 && [ -f "$SCRIPT_DIR/install-steam-artwork.py" ]; then
+    if python3 "$SCRIPT_DIR/install-steam-artwork.py" 2>/dev/null | grep -q "^Installed"; then
+        ART_INSTALLED=1
+    fi
+fi
+
 echo ""
 echo "Done. Vibemis is installed as a clean desktop entry named 'Vibemis'."
 echo ""
+if [ "$ART_INSTALLED" = 1 ]; then
+    echo "Steam library artwork installed for the existing 'Vibemis' shortcut."
+    echo "Restart Steam fully to see the new tile (it caches library art per session)."
+    echo ""
+fi
 echo "To add it to Steam with the right name:"
 echo "  1. In Steam (Desktop Mode): Games -> Add a Non-Steam Game to My Library"
 echo "  2. Tick 'Vibemis' in the list (it appears via the desktop entry), or Browse to:"
 echo "       $DEST"
 echo "  3. The shortcut will be named 'Vibemis' (not the AppImage filename)."
-echo "  4. Switch to Game Mode -> Vibemis appears under Non-Steam Games."
+if [ "$ART_INSTALLED" = 1 ]; then
+    echo "  4. Switch to Game Mode -> Vibemis appears under Non-Steam Games, with its tile."
+else
+    echo "  4. Then run:  $SCRIPT_DIR/install-steam-artwork.py"
+    echo "     to give it a proper library tile instead of the plain-text placeholder."
+    echo "  5. Switch to Game Mode -> Vibemis appears under Non-Steam Games."
+fi
