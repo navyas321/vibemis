@@ -127,14 +127,13 @@ Two ways to get that, in order of preference:
    Co-Authored-By: ...
    ```
 
-   ⚠ **The trailer must sit in the FINAL trailer block, with no blank line separating it
-   from the other trailers** (`Co-Authored-By:`, `Signed-off-by:`). Git only parses the last
-   paragraph as trailers — a blank line above `Co-Authored-By:` silently orphans `Changelog:`
-   and the release falls back to the subject. Verify before pushing:
-
-   ```bash
-   git log -1 --pretty=format:"%s|%(trailers:key=Changelog,valueonly)"
-   ```
+   The generator finds this by grepping the commit **body** for a `Changelog:` line, so
+   its position in the message does not matter — put it anywhere in the body/PR description.
+   (It used to read `%(trailers:key=Changelog)`, which requires the line to be in git's
+   strict final trailer block; `gh pr merge --squash` reformats the message — appends
+   GitHub's own `Co-authored-by:`, concatenates squashed commits — so the line almost never
+   lands there, and every squash-merged release fell back to raw subjects. That regression
+   stripped the human-readable notes from `0.5.0-beta.004`; the body grep fixes it.)
 
 Anything a user could notice — video, audio, input, UI, updates, pairing — needs one of the
 two. Pure plumbing (`ci:`, `chore:`, `build:`, `docs(auto):`) is auto-demoted into a collapsed
@@ -143,6 +142,18 @@ two. Pure plumbing (`ci:`, `chore:`, `build:`, `docs(auto):`) is auto-demoted in
 **When a release body still reads as jargon after the cut, fix it retroactively** with
 `gh release edit <tag> --notes-file <file>` — a Highlights section in plain language at the
 top. Release *bits* are immutable; the notes are documentation and may be improved.
+
+## ⚠ Never put `[skip ci]` on a code merge to `vibemis-main` (BL-2460)
+
+GitHub **natively** skips the `push` event for any commit whose subject contains `[skip ci]`
+or `[ci skip]` — no workflow runs, so **no beta is cut and the code gets no beta soak**. This
+is a GitHub platform behavior the workflow cannot override. It has already bitten: a Quick Menu
+rendering fix merged with `[skip ci]` (#272) produced no beta and went straight into stable
+`0.4.2` unverified. `[skip ci]` is legitimate **only** on the auto-generated `RELEASES.md`
+refresh merge (docs-only, and it deliberately must not cut a beta). For any commit that touches
+code, never add the marker. **Recommended hardening (repo setting, not in this file):** add a
+branch-protection ruleset on `vibemis-main` rejecting `[skip ci]`/`[ci skip]` in merge-commit
+subjects, with an allowlist for the `docs(auto): refresh RELEASES.md` bot subject.
 
 ## Stable release notes are CUMULATIVE — hotfixes included
 

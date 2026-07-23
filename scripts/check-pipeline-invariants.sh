@@ -31,6 +31,43 @@ if grep -q 'name: Refresh RELEASES.md build timeline' "$WF"; then
     || err "refresh merge subject lost [skip ci] — a docs refresh merge could now trigger a beta"
 fi
 
+# 3. BL-2459: the consolidated 'invariants' job must exist AND gate the release.
+#    A red semantic guard has to block publishing, not just merging.
+grep -qE '^\s+invariants:\s*$' "$WF" \
+  || err "the consolidated 'invariants:' job is gone — guards would stop running"
+grep -qF 'scripts/check-*-invariants.sh' "$WF" \
+  || err "the invariants job no longer globs scripts/check-*-invariants.sh"
+grep -qF 'bash "$s"' "$WF" \
+  || err "the invariants job no longer runs each globbed guard script"
+# create-dev-release must list invariants in needs so a failed guard skips the publish.
+crd=$(awk '/^  create-dev-release:/{f=1} f{print} f&&/^    runs-on:/{exit}' "$WF")
+printf '%s' "$crd" | grep -q 'needs:.*invariants' \
+  || err "create-dev-release no longer 'needs: invariants' — a red guard would still publish (BL-2459)"
+
+# 4. BL-2458: a bare stable must be minted ONLY by an explicit release_type=stable
+#    dispatch, never by a branch name — a push carries no dispatch inputs, so a
+#    ref-triggered stable bypasses the CONFIRM-STABLE + rc-before-stable gates.
+#    Extract the stable arm's guard condition (the first if-condition between the
+#    tier-default assignment and RELEASE_TIER="release") and assert it does not
+#    test BRANCH_NAME. Robust to single- or multi-line conditions.
+region=$(awk '/RELEASE_TIER="dev"/{f=1} f{print} /RELEASE_TIER="release"/{exit}' "$WF")
+stable_cond=$(printf '%s' "$region" | awk '/if \[\[/{c=1} c{print} /\]\]; then/{exit}')
+if [ -z "$stable_cond" ]; then
+  err "could not locate the stable tier-arm condition — this guard is not actually checking anything"
+elif printf '%s' "$stable_cond" | grep -q 'BRANCH_NAME'; then
+  err "the stable tier arm tests BRANCH_NAME — a push to release/**/main/master would cut an ungated stable (BL-2458)"
+fi
+
+# 5. Changelog generator must read the `Changelog:` note from the commit BODY, not
+#    via %(trailers). gh pr merge --squash reformats the message so the note is almost
+#    never in git's strict final trailer block; %(trailers) then misses it and the
+#    release falls back to raw subjects (that regression hit 0.5.0-beta.004).
+if grep -q 'trailers:key=Changelog' "$WF"; then
+  err "changelog generator still uses %(trailers:key=Changelog) — squash-merged commits lose the note (use a body grep)"
+fi
+grep -qE "grep -m1 -iE '\^\[\[:space:\]\]\*Changelog:'" "$WF" \
+  || err "changelog generator no longer greps the commit body for a Changelog: line"
+
 if [ "$fail" -ne 0 ]; then
   echo "One or more release-pipeline invariants failed." >&2
   exit 1

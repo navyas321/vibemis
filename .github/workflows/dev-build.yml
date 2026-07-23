@@ -86,12 +86,19 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'push' && startsWith(github.ref_name, 'test') }}
 
 jobs:
-  # Fast semantic regression guard for the no-audio-crackle differentiator
-  # (BL-2213 / vibemis issue #239). Keeping this as an independent job makes
-  # the check visible and requireable without maintaining a second workflow.
-  # Do not weaken it without an on-device audio A/B.
-  audio-invariants:
-    name: Audio Invariants
+  # ALL fast, grep-based semantic regression guards run here, in ONE job on ONE
+  # runner. Each check script is <1s; the cost was never the checks, it was
+  # spinning up a fresh runner (checkout + teardown) per guard. This job globs
+  # scripts/check-*-invariants.sh, so ADDING A GUARD IS ZERO WORKFLOW CHANGE —
+  # drop a new check-<x>-invariants.sh and it runs automatically. It runs every
+  # guard (not fail-fast) so all failures surface at once. It gates both the merge
+  # (required status check) and the release (create-dev-release lists it in needs),
+  # so a red guard blocks publishing (BL-2459). Do NOT weaken any guard without the
+  # on-device evidence its own header documents. Guards covered today: audio
+  # no-crackle (BL-2213), RFI default (BL-2408), auto-updater channel/no-GitHub
+  # (BL-2437/2438/2439), Quick Menu wiring (BL-2443), release pipeline (BL-2457/2461).
+  invariants:
+    name: Invariants
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -100,71 +107,24 @@ jobs:
         uses: actions/checkout@v5
         with:
           fetch-depth: 1
-      - name: Check BL-2213 audio invariants
-        run: bash scripts/check-audio-invariants.sh
-
-  # Guard for the RFI-enabled-by-default fix (BL-2408): the opt-out RFI latency
-  # workaround zeroed decoder caps on all AMD/Gallium devices (VRR stutter RCA).
-  rfi-invariants:
-    name: RFI Invariants
-    permissions:
-      contents: read
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 1
-      - name: Check BL-2408 RFI invariants
-        run: bash scripts/check-rfi-invariants.sh
-
-  # Guards the auto-updater's two hard rules (BL-2437/2438/2439): the update channel is
-  # always respected (a Stable user never receives a prerelease), and the updater
-  # always self-installs instead of sending the user to github.com.
-  updater-invariants:
-    name: Updater Invariants
-    permissions:
-      contents: read
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 1
-      - name: Check updater invariants
-        run: bash scripts/check-updater-invariants.sh
-
-  # A Quick Menu button is registered in TWO places (the QML action id and the
-  # executeAction dispatch arm). Miss the second and the button renders, focuses,
-  # clicks — and silently does nothing, with no warning anywhere. That is how the
-  # old Send Shift+Tab button shipped dead (BL-2443).
-  quickmenu-invariants:
-    name: Quick Menu Invariants
-    permissions:
-      contents: read
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 1
-      - name: Check Quick Menu invariants
-        run: bash scripts/check-quickmenu-invariants.sh
-
-  # Release-pipeline reliability (BL-2457 concurrency race, BL-2461 refresh merge).
-  # Both defects already shipped once; this keeps them fixed.
-  pipeline-invariants:
-    name: Pipeline Invariants
-    permissions:
-      contents: read
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 1
-      - name: Check release-pipeline invariants
-        run: bash scripts/check-pipeline-invariants.sh
+      - name: Run all invariant guards
+        run: |
+          set -u
+          shopt -s nullglob
+          rc=0
+          found=0
+          for s in scripts/check-*-invariants.sh; do
+            found=1
+            echo "::group::$s"
+            bash "$s" || rc=1
+            echo "::endgroup::"
+          done
+          if [ "$found" -eq 0 ]; then
+            echo "::error::No scripts/check-*-invariants.sh found — the guard set vanished."
+            exit 1
+          fi
+          [ "$rc" -eq 0 ] && echo "All invariant guards passed."
+          exit $rc
 
   setup-version:
     name: Setup Version
@@ -431,12 +391,18 @@ jobs:
           IS_PRERELEASE="true"
           RELEASE_TIER="dev"
 
-          if [[ "$BRANCH_NAME" =~ ^release/ || \
-                "${{ github.event.inputs.release_type }}" == "stable" || \
-                "$BRANCH_NAME" == "main" || \
-                "$BRANCH_NAME" == "master" ]]; then
+          if [[ "${{ github.event.inputs.release_type }}" == "stable" ]]; then
             # ✅ Production release — the bare next-stable version. Bump version.txt to
             # the following stable right after the cut. Hotfix patches via version_override.
+            #
+            # BL-2458: a bare stable is minted ONLY by an explicit release_type=stable
+            # DISPATCH, which is the one path the CONFIRM-STABLE + rc-before-stable gates
+            # (steps below, both keyed on release_type=='stable') actually protect. The
+            # old condition ALSO tripped on the ref alone (^release/, main, master), so a
+            # push to any of those branches produced a bare Latest stable with NO gate — a
+            # push event carries no dispatch inputs, so both gates were skipped. Those refs
+            # now fall through to the dev tier (channel-invisible prerelease, never Latest),
+            # closing the bypass. Dispatch is the only stable door.
             if [[ -n "${{ github.event.inputs.version_override }}" ]]; then
               VERSION="${{ github.event.inputs.version_override }}"
             else
@@ -1009,7 +975,9 @@ jobs:
     name: Create Development Release
     # build-linux-dev dropped from needs — the release attaches only the
     # AppImage, and on beta/alpha tiers that job is skipped entirely now.
-    needs: [setup-version, build-appimage-dev]
+    # `invariants` is REQUIRED here (BL-2459): a red semantic guard must block the
+    # publish, not just the merge — a dispatch/push cut doesn't go through a PR.
+    needs: [setup-version, build-appimage-dev, invariants]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -1087,20 +1055,29 @@ jobs:
         if [ -z "$PREV_TAG" ]; then
           SINCE_DATE=$(date -d '7 days ago' '+%Y-%m-%d')
           echo "No previous same-or-higher-tier release found. Getting commits since $SINCE_DATE"
-          COMMITS=$(git log --since="$SINCE_DATE" --pretty=format:"%h|%s|%(trailers:key=Changelog,valueonly,separator=%x20)" --no-merges)
+          COMMITS=$(git log --since="$SINCE_DATE" --pretty=format:"%h|%s" --no-merges)
         else
           echo "Getting commits since last same-or-higher-tier release: $PREV_TAG"
-          COMMITS=$(git log ${PREV_TAG}..$CURRENT_VERSION --pretty=format:"%h|%s|%(trailers:key=Changelog,valueonly,separator=%x20)" --no-merges)
+          COMMITS=$(git log ${PREV_TAG}..$CURRENT_VERSION --pretty=format:"%h|%s" --no-merges)
         fi
         FEATURES=""
         BUGFIXES=""
         IMPROVEMENTS=""
         OTHER=""
         INTERNAL=""
-        while IFS='|' read -r hash subject note; do
+        while IFS='|' read -r hash subject; do
           if [ -z "$hash" ]; then continue; fi
           subject=$(echo "$subject" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-          note=$(echo "$note" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+          # A `Changelog: <plain-language effect>` line in the commit BODY wins over the
+          # conventional-commit subject. Read it by grepping the full body, NOT via
+          # %(trailers) — `gh pr merge --squash` reformats the message (appends GitHub's
+          # own Co-authored-by, concatenates squashed commits) so the Changelog line is
+          # almost never in git's strict final trailer block, and %(trailers) misses it
+          # (that regression stripped the human-readable notes from 0.5.0-beta.004). The
+          # body grep is position-independent, so it survives any squash reformatting.
+          note=$(git log -1 --format='%b' "$hash" 2>/dev/null \
+                 | grep -m1 -iE '^[[:space:]]*Changelog:' \
+                 | sed -E 's/^[[:space:]]*[Cc]hangelog:[[:space:]]*//; s/[[:space:]]*$//')
           # CI markers are workflow plumbing, never user-facing changelog content.
           subject=$(echo "$subject" | sed -E 's/ *\[(skip ci|alpha|ci skip)\]//g; s/  +/ /g; s/ +$//')
           # BL-tag scrub: internal backlog ids (BL-NNNN) never reach the public changelog
