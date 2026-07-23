@@ -95,6 +95,21 @@ jobs:
       - name: Check BL-2213 audio invariants
         run: bash scripts/check-audio-invariants.sh
 
+  # Guard for the RFI-enabled-by-default fix (BL-2408): the opt-out RFI latency
+  # workaround zeroed decoder caps on all AMD/Gallium devices (VRR stutter RCA).
+  rfi-invariants:
+    name: RFI Invariants
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+      - name: Check BL-2408 RFI invariants
+        run: bash scripts/check-rfi-invariants.sh
+
   setup-version:
     name: Setup Version
     runs-on: ubuntu-latest

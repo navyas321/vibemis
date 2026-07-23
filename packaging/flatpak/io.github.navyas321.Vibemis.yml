@@ -55,7 +55,8 @@ finish-args:
   # handhelds).
   - --system-talk-name=org.freedesktop.RealtimeKit1
   # Renderer / decode environment (mirrors upstream Moonlight's known-good set).
-  - --env=IGNORE_RFI_LATENCY_BUG=1
+  # (IGNORE_RFI_LATENCY_BUG was dropped: the RFI latency workaround is now
+  # opt-in via HAS_RFI_LATENCY_BUG=1, mirroring upstream d3c23b55.)
   - --env=QT_QUICK_CONTROLS_STYLE=Material
   # Ported from Nonary b6c398ff: prefer the Vulkan (libplacebo) renderer by
   # default — the VRR cadence pacing being ported on the BL-2212 line lives
