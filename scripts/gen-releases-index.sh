@@ -21,8 +21,14 @@ echo "# Vibemis build timeline"
 echo
 echo "**Newest build first, by publish date** — the chronological view GitHub's Releases page"
 echo "can't show (it sorts by SemVer precedence, so alphas always sink below betas of the same"
-echo "version; see the README's Downloads section). Auto-generated on every release cut — do"
-echo "not edit by hand."
+echo "version; see the README's Downloads section)."
+echo
+echo "Regenerated in full and force-pushed to this \`releases-index\` branch on every release"
+echo "cut. **Do not edit by hand** — the next cut overwrites it. It lives on a branch rather"
+echo "than on \`vibemis-main\` because that branch is protected and the release job runs as"
+echo "\`github-actions[bot]\`; the bot-PR workaround could never satisfy branch protection"
+echo "(GitHub does not attribute \`workflow_dispatch\` check runs to a \`GITHUB_TOKEN\` PR), so it"
+echo "left an unmergeable PR after every cut. See \`RELEASES.md\` on \`vibemis-main\`."
 echo
 echo "| Published (UTC) | Build | Channel | Artifact |"
 echo "|---|---|---|---|"
