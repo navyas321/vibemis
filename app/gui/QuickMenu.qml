@@ -546,10 +546,10 @@ Rectangle {
             description: qsTr("Send the Escape key to the host")
         }
         ListElement {
-            text: qsTr("Send Shift+Tab")
+            text: qsTr("Send Alt+Tab")
             icon: "key"
-            action: "key_shift_tab"
-            description: qsTr("Reverse-tab focus on the host")
+            action: "key_alt_tab"
+            description: qsTr("Switch windows on the host")
         }
     }
     
