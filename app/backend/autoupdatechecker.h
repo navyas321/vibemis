@@ -16,8 +16,10 @@ class QNetworkReply;
 // it) is structurally impossible under this contract: whoever can see
 // `canInstall` true can call install(), full stop.
 //
-// Update feed: the GitHub releases list of navyas321/vibemis (all releases,
-// newest-first — never /releases/latest, which hides prereleases). A release
+// Update feed: the GitHub releases list of navyas321/vibemis (all releases —
+// never /releases/latest, which hides prereleases). The feed is ordered by
+// created_at, NOT by version, so selection takes the HIGHEST eligible version
+// rather than the first entry that matches. A release
 // is served to a channel by MINIMUM STABILITY: a channel accepts its own tier
 // and every tier above it (Alpha ⊇ Beta ⊇ RC ⊇ Stable), so an RC-channel
 // install graduates to the stable it was a candidate for instead of going
@@ -34,7 +36,9 @@ class AutoUpdateChecker : public QObject
     Q_PROPERTY(bool offerAvailable READ offerAvailable NOTIFY stateChanged)
     // Version string of the offered build ("" when offerAvailable is false).
     Q_PROPERTY(QString availableVersion READ availableVersion NOTIFY stateChanged)
-    // GitHub release page of the offered build (browser fallback target).
+    // GitHub release page of the offered build. Informational only — shown by
+    // the explicit "View release" button in Settings. The updater itself never
+    // navigates here; it always installs in place (BL-2439).
     Q_PROPERTY(QString releaseUrl READ releaseUrl NOTIFY stateChanged)
     // install() would work right now: an offer exists, it ships an .AppImage
     // asset, we run as an AppImage, and no install is already in flight.
@@ -63,8 +67,9 @@ public:
     // Download the offered .AppImage, swap it atomically over the running one
     // ($APPIMAGE, previous build kept as "<file>.old"), then relaunch. No-op
     // unless canInstall. Progress lands in statusMessage/installProgress;
-    // failure clears the offer's asset (so the next click falls back to the
-    // release page) and emits installFailed.
+    // failure clears the offer's asset and emits installFailed (the UI re-checks
+    // rather than sending the user to a browser). Re-asserts the offer's tier
+    // against the live channel floor before downloading.
     Q_INVOKABLE void install();
 
     // Settings calls this when the user picks a different update channel: the
@@ -138,6 +143,10 @@ private:
     QString m_OfferVersion;
     QString m_ReleaseUrl;
     QString m_AssetUrl;
+    // Stability tier of the release m_AssetUrl came from, re-asserted against the
+    // live channel floor in install() so a stale or mis-selected offer can never
+    // put a prerelease on a Stable-channel machine (BL-2437). -1 = no offer.
+    int m_OfferTier = -1;
 
     bool m_Installing;
     QString m_StatusMessage;

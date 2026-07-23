@@ -258,6 +258,7 @@ void AutoUpdateChecker::clearOffer()
     m_OfferVersion.clear();
     m_ReleaseUrl.clear();
     m_AssetUrl.clear();
+    m_OfferTier = -1;
 }
 
 void AutoUpdateChecker::setStatus(const QString& message)
@@ -296,7 +297,8 @@ void AutoUpdateChecker::performCheck(bool manual)
     }
     emit stateChanged();
 
-    // All releases including prereleases, newest-first. Never /releases/latest
+    // All releases including prereleases (ordered by created_at, not by version
+    // — the selection loop below sorts). Never /releases/latest
     // — it can't see prereleases, and the beta/alpha/rc channels live there.
     // per_page=100 (default 30): the newest build a channel serves — the
     // stable, after a dense prerelease cycle — can sit dozens of entries deep.
@@ -360,17 +362,27 @@ void AutoUpdateChecker::handleFeedReply(QNetworkReply* reply, bool manual)
         return;
     }
 
-    // The feed is newest-first: the first release at or above the channel's
-    // stability floor that actually ships an .AppImage wins. Assetless entries
-    // (historical catalog markers) must not shadow the newest real build.
+    // Pick the HIGHEST-VERSIONED release at or above the channel's stability floor
+    // that actually ships an .AppImage — never merely the first one listed.
+    // /releases is ordered by created_at, NOT by publish time or version: a hotfix
+    // cut from an older commit (the version_override flow) lands further down the
+    // feed than a newer prerelease, so "take the first match" could offer a Stable
+    // user an OLDER stable than the newest one. Assetless entries (historical
+    // catalog markers) are skipped so they can't shadow a real build.
     const QJsonArray releasesArray = jsonDoc.array();
     int floor = channelFloor(channel);
     QJsonObject releaseObj;
+    QString bestVersion;
     for (const QJsonValue& relVal : releasesArray) {
         QJsonObject candidate = relVal.toObject();
-        if (releaseTier(candidate) >= floor && !appImageAssetUrl(candidate).isEmpty()) {
+        if (releaseTier(candidate) < floor || appImageAssetUrl(candidate).isEmpty()) {
+            continue;
+        }
+        QString candTag = candidate["tag_name"].toString();
+        QString candVersion = candTag.startsWith('v') ? candTag.mid(1) : candTag;
+        if (releaseObj.isEmpty() || compareSemanticVersions(bestVersion, candVersion) < 0) {
             releaseObj = candidate;
-            break;
+            bestVersion = candVersion;
         }
     }
 
@@ -405,6 +417,7 @@ void AutoUpdateChecker::handleFeedReply(QNetworkReply* reply, bool manual)
     m_OfferVersion = different ? version : QString();
     m_ReleaseUrl = releaseObj["html_url"].toString();
     m_AssetUrl = different ? appImageAssetUrl(releaseObj) : QString();
+    m_OfferTier = different ? releaseTier(releaseObj) : -1;
 
     if (manual) {
         if (!different) {
@@ -430,6 +443,21 @@ void AutoUpdateChecker::handleFeedReply(QNetworkReply* reply, bool manual)
 void AutoUpdateChecker::install()
 {
     if (!canInstall()) {
+        return;
+    }
+
+    // Defense in depth: re-assert the offer against the LIVE channel floor right
+    // before downloading. "A Stable user must never receive a prerelease" is a
+    // hard requirement, so it is enforced at the point of no return too — not
+    // only where the offer was built. Catches a stale offer left over from a
+    // channel change and any future regression in the selection loop (BL-2437).
+    int liveFloor = channelFloor(StreamingPreferences::get()->updateChannel);
+    if (m_OfferTier < liveFloor) {
+        qWarning() << "Refusing to install tier" << m_OfferTier
+                   << "build below the current channel floor" << liveFloor;
+        clearOffer();
+        m_StatusMessage = tr("That build isn't on your update channel any more — check for updates again.");
+        emit stateChanged();
         return;
     }
 

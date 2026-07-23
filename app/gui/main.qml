@@ -564,23 +564,25 @@ ApplicationWindow {
                 // an install failure falls back to the release page on its own.
                 ToolTip.text: AutoUpdateChecker.installing
                               ? qsTr("Downloading update…")
-                              : AutoUpdateChecker.canInstall
-                                ? qsTr("Update available for Vibemis: Version %1").arg(AutoUpdateChecker.availableVersion)
-                                : qsTr("Update available: Version %1 — tap to open the release page").arg(AutoUpdateChecker.availableVersion)
+                              : qsTr("Update available for Vibemis: Version %1 — tap to install").arg(AutoUpdateChecker.availableVersion)
 
                 // Strictly-newer builds only (a channel-switch downgrade offer
                 // lives in Settings, not on the toolbar).
                 visible: AutoUpdateChecker.updateAvailable
 
                 onClicked: {
-                    // Prefer the in-place install (download the new AppImage,
-                    // swap it over the running one, relaunch); fall back to the
-                    // release page when installing isn't possible right now.
+                    // The updater ALWAYS installs in place (download the new AppImage,
+                    // swap it over the running one, relaunch). It must never bounce the
+                    // user out to github.com — a handheld in Game Mode has nowhere good
+                    // to put a browser, and "update" that opens a web page isn't an
+                    // update (BL-2438/BL-2439, maintainer directive). If installing genuinely
+                    // isn't possible the button re-checks; the reason surfaces in
+                    // Settings → Software updates.
                     if (AutoUpdateChecker.canInstall) {
                         AutoUpdateChecker.install()
                     }
-                    else if (SystemProperties.hasBrowser && AutoUpdateChecker.releaseUrl !== "") {
-                        SystemProperties.openUrl(AutoUpdateChecker.releaseUrl)
+                    else if (!AutoUpdateChecker.installing) {
+                        AutoUpdateChecker.checkNow()
                     }
                 }
 
