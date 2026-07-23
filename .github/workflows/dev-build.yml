@@ -126,6 +126,23 @@ jobs:
       - name: Check updater invariants
         run: bash scripts/check-updater-invariants.sh
 
+  # A Quick Menu button is registered in TWO places (the QML action id and the
+  # executeAction dispatch arm). Miss the second and the button renders, focuses,
+  # clicks — and silently does nothing, with no warning anywhere. That is how the
+  # old Send Shift+Tab button shipped dead (BL-2443).
+  quickmenu-invariants:
+    name: Quick Menu Invariants
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+      - name: Check Quick Menu invariants
+        run: bash scripts/check-quickmenu-invariants.sh
+
   setup-version:
     name: Setup Version
     runs-on: ubuntu-latest

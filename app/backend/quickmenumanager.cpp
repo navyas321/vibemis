@@ -504,8 +504,13 @@ void QuickMenuManager::executeAction(const QString &action)
         toggleKeyboardCapture();
     } else if (action == "toggle_fullscreen") {
         toggleFullscreen();
+    // EVERY key_* action in QuickMenu.qml must appear in this list or the button is
+    // silently DEAD — sendSpecialKey() is only reachable from here. "key_shift_tab"
+    // was missing, which is why the old Send Shift+Tab button never did anything
+    // (BL-2443). Guarded by scripts/check-quickmenu-invariants.sh.
     } else if (action == "key_ctrl_alt_del" || action == "key_super" ||
-               action == "key_alt_f4" || action == "key_esc") {
+               action == "key_alt_f4" || action == "key_esc" ||
+               action == "key_alt_tab") {
         sendSpecialKey(action);
     } else if (action == "paste_clipboard") {
         pasteClipboard();
@@ -641,21 +646,26 @@ void QuickMenuManager::sendSpecialKey(const QString &action)
     // (Vibepollo/Apollo) derive the held-modifier state from real VK_LSHIFT/VK_LCONTROL/
     // VK_LMENU key events, not from this bitfield (moonlight-common-c only synthesizes a
     // modifier from the keycode for non-Sunshine GFE — see the !IS_SUNSHINE() fixup in
-    // InputStream.c). So a chord that needs a modifier genuinely held (e.g. Shift+Tab)
+    // InputStream.c). So a chord that needs a modifier genuinely held (e.g. Alt+Tab)
     // must send a REAL modifier key DOWN/UP around the target key, exactly like the
-    // physical keyboard path does (keyboard.cpp sends keyCode 0xA0 for a Shift press).
-    if (action == "key_shift_tab") {
-        // Shift+Tab (reverse focus traversal) was a host NO-OP. The old code
-        // set MODIFIER_SHIFT only as a bitfield on the VK_TAB event and never pressed
-        // Shift, so the host had no Shift held and the modified Tab did nothing — not
-        // even a forward Tab. (A bare "Send Esc" from this same menu DOES close host
-        // dialogs, which proves the delivery path is fine; only the missing real Shift
-        // was the bug.) Fix: wrap VK_TAB in a real VK_LSHIFT press, mirroring the
-        // physical keyboard path.
-        LiSendKeyboardEvent(0xA0, KEY_ACTION_DOWN, MODIFIER_SHIFT);  // VK_LSHIFT down
-        LiSendKeyboardEvent(0x09, KEY_ACTION_DOWN, MODIFIER_SHIFT);  // VK_TAB down
-        LiSendKeyboardEvent(0x09, KEY_ACTION_UP,   MODIFIER_SHIFT);  // VK_TAB up
-        LiSendKeyboardEvent(0xA0, KEY_ACTION_UP,   0);               // VK_LSHIFT up (no modifier held)
+    // physical keyboard path does (keyboard.cpp:502 sends keyCode 0xA4 for a left-Alt
+    // press). The bitfield can never express a modifier held ACROSS two key events,
+    // which is exactly what Alt+Tab needs.
+    if (action == "key_alt_tab") {
+        // Alt+Tab (switch windows on the host). VK_TAB is wrapped in a REAL VK_LMENU
+        // press because Alt must stay held across the Tab down/up.
+        // 0xA4 = VK_LMENU (LEFT Alt) — deliberately not 0xA5/VK_RMENU, which injects
+        // as the extended scancode 0xE038 (AltGr) on Windows hosts, and not the
+        // generic VK_MENU (0x12), which the physical keyboard path never emits.
+        //
+        // NB: this row's predecessor, "Send Shift+Tab", never worked — and NOT for the
+        // modifier reason its old comment claimed. "key_shift_tab" was missing from the
+        // executeAction() dispatch chain, so this function was never reached at all and
+        // the whole branch was dead code (BL-2443).
+        LiSendKeyboardEvent(0xA4, KEY_ACTION_DOWN, MODIFIER_ALT);  // VK_LMENU down
+        LiSendKeyboardEvent(0x09, KEY_ACTION_DOWN, MODIFIER_ALT);  // VK_TAB down
+        LiSendKeyboardEvent(0x09, KEY_ACTION_UP,   MODIFIER_ALT);  // VK_TAB up
+        LiSendKeyboardEvent(0xA4, KEY_ACTION_UP,   0);             // VK_LMENU up (no modifier held)
         showToast(QStringLiteral("Sent key to host"));
         return;
     }
@@ -663,10 +673,11 @@ void QuickMenuManager::sendSpecialKey(const QString &action)
     short vk = 0;
     char modifiers = 0;
     if (action == "key_ctrl_alt_del") {
-        // NB: Ctrl+Alt+Del intentionally rides the modifier BITFIELD (no real Ctrl/Alt
-        // key events) — hosts special-case CAD and honor it from the bitfield, so it
-        // keeps working. Do NOT copy this shortcut for ordinary chords: any other
-        // modifier combo needs a real modifier key event (see key_shift_tab above).
+        // NB: Ctrl+Alt+Del rides the modifier BITFIELD (no real Ctrl/Alt key events)
+        // and works, because the host brackets a SINGLE key-DOWN with the synthesized
+        // modifiers — enough for a one-key chord. It is NOT enough for a chord that
+        // must hold a modifier across more than one key event; use the real
+        // modifier-key pattern for those (see key_alt_tab above).
         vk = 0x2E;                                 // VK_DELETE
         modifiers = MODIFIER_CTRL | MODIFIER_ALT;
     } else if (action == "key_super") {
