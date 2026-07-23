@@ -1,0 +1,15 @@
+# Shell scripts MUST check out with LF endings on every platform.
+#
+# With no rule here, a Windows clone using core.autocrlf=true materializes scripts/*.sh
+# with CRLF. Git normalizes them back to LF on commit, so CI never noticed -- but running
+# one of those working-tree copies under WSL, Docker or any Linux shell fails immediately
+# with `$'\r': command not found`, and the error points at a line that looks fine. The
+# release-note generator and the CI guards are all shell, so pin them.
+*.sh    text eol=lf
+*.bash  text eol=lf
+
+# The AppImage and other binaries must never be line-ending converted.
+*.png   binary
+*.jpg   binary
+*.ico   binary
+*.AppImage binary

@@ -56,6 +56,20 @@ tier_rank() {  # $1 = tag/version -> stability rank (higher = more stable)
   esac
 }
 
+# Only a real version tag may anchor a range. tier_rank() calls anything without a
+# pre-release infix "stable" (rank 4), which is right for `0.4.3` and catastrophically
+# wrong for `nightly`, `latest`, `backup-2026-07-01` or `pre-refactor`: each outranks a
+# beta, wins the previous-tag search, and silently truncates the range to whatever that
+# marker happens to point at. A repo with a `nightly` tag published a beta whose notes
+# listed 1 of its 3 commits, with nothing in the output hinting that two were missing.
+is_version_tag() {  # $1 = tag -> 0 if it parses as v?MAJOR.MINOR.PATCH...
+  case "$1" in
+    v[0-9]*|[0-9]*) ;;
+    *) return 1 ;;
+  esac
+  printf '%s' "$1" | grep -qE '^v?[0-9]+\.[0-9]+\.[0-9]+([-+.][0-9A-Za-z.-]+)?$'
+}
+
 PREV_TAG="$PREV_TAG_OVERRIDE"
 if [ -z "$PREV_TAG" ]; then
   CUR_RANK=$(tier_rank "$CURRENT_VERSION")
@@ -76,6 +90,7 @@ if [ -z "$PREV_TAG" ]; then
   while read -r t tdate; do
     [ -z "$t" ] && continue
     [ "$t" = "$CURRENT_VERSION" ] && continue
+    is_version_tag "$t" || continue
     [ -n "$CUR_DATE" ] && [ -n "$tdate" ] && [ "$tdate" -gt "$CUR_DATE" ] && continue
     if [ -n "$CUR_COMMIT" ]; then
       tc=$(git rev-parse -q --verify "${t}^{commit}" 2>/dev/null) || continue
@@ -99,7 +114,11 @@ fi
 if [ -z "$PREV_TAG" ]; then
   SINCE_DATE=$(date -d '7 days ago' '+%Y-%m-%d' 2>/dev/null || date -v-7d '+%Y-%m-%d')
   echo "No previous same-or-higher-tier release found; using commits since $SINCE_DATE" >&2
-  COMMITS=$(git log --since="$SINCE_DATE" --pretty=format:'%h|%s' --no-merges)
+  # Anchored on $RANGE_END, not an implicit HEAD. Without the revision argument this
+  # walked HEAD regardless of which tag was being generated, so commits made AFTER a tag
+  # were published in THAT tag's release notes -- the same after-the-fact-regeneration
+  # corruption the tagged path above was fixed for, left behind on the fallback path.
+  COMMITS=$(git log "$RANGE_END" --since="$SINCE_DATE" --pretty=format:'%h|%s' --no-merges)
 else
   echo "Range: ${PREV_TAG}..${RANGE_END}" >&2
   COMMITS=$(git log "${PREV_TAG}..${RANGE_END}" --pretty=format:'%h|%s' --no-merges)
@@ -130,11 +149,28 @@ sentence_case() {  # capitalize the first letter, leave ACRONYMS and the rest al
   esac
 }
 
-md_escape() {  # neutralize raw HTML so a bullet cannot escape its own section
-  # A subject or note containing `</details>` would close the collapsed Internal block
-  # early and spill every following plumbing entry onto the visible release page.
-  # GitHub renders &lt;/&gt; back to the literal characters, so nothing is lost.
-  printf '%s' "$1" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'
+md_escape() {  # make a bullet incapable of escaping its own line or section
+  # Four separate ways one commit message could rewrite the page around it:
+  #   </details>  closed the collapsed Internal block early, spilling every following
+  #               plumbing entry onto the visible release page (and `<!--` commented out
+  #               the entire rest of the body).
+  #   backtick    an ODD number of them pairs with the opener of the trailing (`hash`),
+  #               so the hash escapes its code span and renders as stray text.
+  #   leading - / # / >  starts a nested list, heading or blockquote inside the bullet.
+  #   C0 controls a bare CR is a line ending in CommonMark, so the bullet splits in two;
+  #               ESC/CSI sequences reach the terminal of anyone reading the raw body.
+  # GitHub renders the entities back to literal characters, so no meaning is lost.
+  printf '%s' "$1" \
+    | tr -d '\000-\010\013\014\016-\037\177' \
+    | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' \
+          -e 's/`/\&#96;/g'
+}
+
+strip_md_structure() {
+  # Runs BEFORE sentence_case, so "- nested item" becomes "Nested item" rather than
+  # keeping its lowercase initial. A note starting with `-`, `*`, `#` or `>` would
+  # otherwise open a nested list, heading or blockquote inside the bullet we wrap it in.
+  printf '%s' "$1" | sed -E 's/^[[:space:]]*([-*+>]|#{1,6})[[:space:]]+//; s/^[[:space:]]+//'
 }
 
 INTERNAL_SUBJECT_RE="$CHANGELOG_INTERNAL_SUBJECT_RE"
@@ -153,7 +189,12 @@ ships() {  # $1 = hash -> 0 if any changed file reaches a user
   # failed -- i.e. "nothing ships". A commit large enough to fill the 64 KiB pipe buffer
   # with its path list (~1200 files) would therefore be silently demoted to plumbing and
   # its note dropped from the release notes. Measured: 800 files fine, 1200 files broken.
-  changelog_any_ships <<< "$(git show --name-only --format='' "$1" 2>/dev/null)"
+  # -c core.quotepath=false: quotepath is ON by default, so `docs/café.md` comes back as
+  # the literal string "docs/cafÃ©.md" -- surrounding double quotes included. None
+  # of the denylist patterns (docs/*, *.md) match a string that starts with a quote, so
+  # every non-ASCII path fell through to "ships" and docs-only commits were published as
+  # user-facing changes.
+  changelog_any_ships <<< "$(git -c core.quotepath=false show --name-only --format='' "$1" 2>/dev/null)"
 }
 
 FEATURES=""; BUGFIXES=""; IMPROVEMENTS=""; OTHER=""; INTERNAL=""; WHATSNEW=""
@@ -172,19 +213,33 @@ while IFS='|' read -r hash subject; do
   # the human-readable notes from 0.5.0-beta.004. A body grep is position-independent
   # and survives any squash reformatting.
   body=$(git log -1 --format='%b' "$hash" 2>/dev/null || true)
-  note=$(changelog_extract_note "" <<< "$body" || true)
-
-  clean=$(clean_subject "$subject")
-  [ -z "$clean" ] && clean="$subject"
 
   # `Changelog!: <text>` is the opt-IN, for the rare change that ships real user-visible
   # behaviour while touching only build/docs paths (a packaging change that alters what
-  # the AppImage does on a user's device). The bang mirrors conventional-commits' `feat!:`
-  # and is the ONLY way to override the diff.
+  # the AppImage does on a user's device). The bang mirrors conventional-commits' `feat!:`.
+  #
+  # Looked up UNCONDITIONALLY and given priority. It used to run only `if [ -z "$note" ]`,
+  # so any plain `Changelog:` line elsewhere in the same body silently disabled the
+  # override -- and because the commit was then demoted on its diff, BOTH notes were
+  # dropped and the change vanished from the release notes entirely. The header called
+  # the bang "the ONLY way to override the diff" while a stray sibling line defeated it.
+  note_bang=$(changelog_extract_note "!" <<< "$body" || true)
+  note_plain=$(changelog_extract_note "" <<< "$body" || true)
   force_user_facing=false
-  if [ -z "$note" ]; then
-    note=$(changelog_extract_note "!" <<< "$body" || true)
-    [ -n "$note" ] && force_user_facing=true
+  if [ -n "$note_bang" ]; then
+    note="$note_bang"
+    force_user_facing=true
+  else
+    note="$note_plain"
+  fi
+
+  clean=$(clean_subject "$subject")
+  # A subject that is only a conventional-commit prefix (`feat:`) or only whitespace
+  # cleans to nothing. Falling back to the raw subject rendered "- Feat: (`hash`)" or an
+  # empty "-  (`hash`)" bullet; say plainly that there was no description instead.
+  if [ -z "$clean" ]; then
+    clean=$(printf '%s' "$subject" | sed -E 's/^[a-zA-Z]+(\([^)]*\))?!?:[[:space:]]*//; s/^[[:space:]]+//; s/[[:space:]]+$//')
+    [ -z "$clean" ] && clean="(no description)"
   fi
 
   # `Changelog: none` (or skip/internal/-) is the explicit opt-out for a change that
@@ -205,11 +260,11 @@ while IFS='|' read -r hash subject; do
   if [ "$force_internal" = true ] \
      || { [ "$force_user_facing" != true ] \
           && { printf '%s' "$subject" | grep -qiE "$INTERNAL_SUBJECT_RE" || ! ships "$hash"; }; }; then
-    INTERNAL="${INTERNAL}- $(md_escape "$(sentence_case "$clean")") (\`${hash}\`)"$'\n'
+    INTERNAL="${INTERNAL}- $(md_escape "$(sentence_case "$(strip_md_structure "$clean")")") (\`${hash}\`)"$'\n'
     continue
   fi
 
-  entry=$(md_escape "$(sentence_case "${note:-$clean}")")
+  entry=$(md_escape "$(sentence_case "$(strip_md_structure "${note:-$clean}")")")
 
   if [ -n "$note" ]; then
     # Dedupe: two commits carrying the same note render one hero bullet.

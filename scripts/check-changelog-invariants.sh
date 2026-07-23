@@ -222,10 +222,95 @@ grep -qxF -- "- Fixes the [beta] channel picker and * wildcards" <<<"$out" \
   || err "12: a note containing glob metacharacters was mangled or dropped"
 grep -qxF -- "- Pairing works again" <<<"$out" \
   || err "12: a later bullet was swallowed by a glob-pattern dedupe match"
-grep -qxF -- '- Handles a `backtick`, $(not-a-subshell) and "quotes"' <<<"$out" \
-  || err "12: shell metacharacters in a note were not passed through literally"
+grep -qxF -- '- Handles a &#96;backtick&#96;, $(not-a-subshell) and "quotes"' <<<"$out" \
+  || err "12: shell metacharacters in a note were not passed through literally (backticks entity-escaped)"
 grep -q "not-a-subshell" <<<"$out" || err "12: command substitution in a note was evaluated"
 [ "$fail" = "$t0" ] && ok "notes with glob and shell metacharacters survive intact"
+
+# --- 18. an ODD number of backticks would otherwise pair with the opener of the
+#         trailing (`hash`) code span, so the hash escapes and renders as stray text.
+mkrepo
+commit "fix: console" 'Changelog: Press ` to toggle the console'
+out=$(gen 0.1.0-beta.002)
+n=$(grep -c '`' <<<"$out")
+bad=$(awk '/^- /{c=gsub(/`/,"`"); if (c%2) print}' <<<"$out")
+[ -z "$bad" ] || err "18: a bullet has an odd number of backticks — the (\`hash\`) code span breaks: $bad"
+[ "$fail" = "$t0" ] && ok "odd backticks in a note cannot break the hash code span"
+
+# --- 19. a note or subject must not restructure the page: no nested list, heading,
+#         blockquote, or split bullet from an embedded carriage return.
+mkrepo
+commit "fix: a" "Changelog: - nested dash starts a sublist"
+commit "fix: b" "Changelog: ## fake heading in a bullet"
+out=$(gen 0.1.0-beta.002)
+grep -q "^- - " <<<"$out" && err "19: a note starting with '- ' created a nested sublist"
+grep -q "^- ## " <<<"$out" && err "19: a note starting with '## ' kept heading syntax inside a bullet"
+grep -qxF -- "- Nested dash starts a sublist" <<<"$out" || err "19: leading dash not normalized away"
+[ "$fail" = "$t0" ] && ok "markdown-structural note prefixes are neutralized"
+
+# --- 20. THE FUZZER'S M1: any casing of the key must be stripped, not published.
+mkrepo
+commit "fix: one"   "CHANGELOG: Fixes the audio crackle"
+commit "fix: two"   "ChangeLog: Fixes the pairing timeout"
+out=$(gen 0.1.0-beta.002)
+grep -qi "^- CHANGELOG:" <<<"$out" && err "20: the note KEY itself was published as the release note"
+grep -qi "^- ChangeLog:" <<<"$out" && err "20: the note KEY itself was published as the release note"
+grep -qxF -- "- Fixes the audio crackle" <<<"$out" || err "20: CHANGELOG: (upper) note not extracted"
+grep -qxF -- "- Fixes the pairing timeout" <<<"$out" || err "20: ChangeLog: (mixed) note not extracted"
+[ "$fail" = "$t0" ] && ok "any casing of the Changelog key is stripped, never published"
+
+# --- 21. THE FUZZER'S M2: a plain Changelog: elsewhere in the body must not disable
+#         the Changelog!: override (which silently dropped BOTH notes).
+mkrepo
+mkdir -p .github/workflows
+echo a > .github/workflows/x.yml
+git add -A
+git commit -q -m "build: packaging change" \
+  -m "Changelog!: The AppImage now runs on older distributions" \
+  -m "Changelog: some other line that must not win"
+out=$(gen 0.1.0-beta.002)
+grep -qxF -- "- The AppImage now runs on older distributions" <<<"$out" \
+  || err "21: a sibling plain Changelog: line defeated the Changelog!: override and dropped both notes"
+[ "$fail" = "$t0" ] && ok "Changelog!: wins over a sibling plain Changelog: line"
+
+# --- 22. THE FUZZER'S M3: a non-version tag (nightly/latest/backup-*) must never
+#         anchor the range — it ranks as "stable" and silently truncates it.
+mkrepo
+commit "feat: thing one" "Changelog: Thing one"
+git tag nightly
+commit "feat: thing two" "Changelog: Thing two"
+commit "feat: thing three" "Changelog: Thing three"
+out=$(gen 0.1.0-beta.002)
+for n in one two three; do
+  grep -qxF -- "- Thing $n" <<<"$out" || err "22: 'nightly' tag hijacked the range — 'Thing $n' silently vanished"
+done
+[ "$fail" = "$t0" ] && ok "non-version tags cannot hijack the range"
+
+# --- 23. THE FUZZER'S M4: with no previous version tag, the fallback must respect the
+#         target ref instead of walking HEAD, or post-tag commits get published in an
+#         earlier tag's notes.
+mkrepo
+git tag -d 0.1.0-beta.001 >/dev/null 2>&1
+commit "feat: in the release" "Changelog: In the release"
+git tag 0.1.0-beta.002
+commit "feat: after the tag" "Changelog: After the tag and must not appear"
+out=$(bash "$ROOT/$GEN" 0.1.0-beta.002 2>/dev/null)
+grep -q "After the tag" <<<"$out" && err "23: a commit made AFTER the tag was published in that tag's notes"
+grep -qxF -- "- In the release" <<<"$out" || err "23: the tagged commit is missing from its own notes"
+[ "$fail" = "$t0" ] && ok "no-previous-tag fallback respects the target ref"
+
+# --- 24. THE FUZZER'S M5: core.quotepath quotes non-ASCII paths, so the plumbing
+#         denylist never matched them and docs-only commits shipped as user-facing.
+mkrepo
+mkdir -p docs
+echo x > "docs/café.md"
+git add -A
+git commit -q -m "fix: unicode docs filename" -m "Changelog: Should not be user facing"
+out=$(gen 0.1.0-beta.002)
+grep -q "Should not be user facing" <<<"$out" \
+  && err "24: a docs-only commit with a non-ASCII path was published as user-facing (core.quotepath)"
+grep -q "🔩 Internal / build plumbing" <<<"$out" || err "24: non-ASCII docs-only commit not demoted"
+[ "$fail" = "$t0" ] && ok "non-ASCII docs paths are still recognized as plumbing"
 
 # --- 13. an INDENTED `Changelog:` is a markdown code block -- someone quoting an
 #         example, including the specimen note this repo's own PR-failure message
