@@ -34,6 +34,9 @@ on:
       - vibemis-main
       - 'test**'
       - 'release/**'
+  pull_request:
+    branches:
+      - vibemis-main
   workflow_dispatch:
     inputs:
       release_type:
@@ -127,6 +130,15 @@ jobs:
           #           contains non-docs changes. No [alpha] marker commit — the branch
           #           name IS the intent. Empty/no-op branches are skipped.
           #   docs-only pushes (only .md/.txt/non-workflow .yml/.yaml) never release.
+
+          # Pull requests must emit the two real branch-protection checks. A PR runs
+          # from refs/pull/<n>/merge, so it can never satisfy create-dev-release's
+          # refs/heads/* guard below and therefore cannot mint a tag or release.
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "should_build=true" >> $GITHUB_OUTPUT
+            echo "Building pull-request validation only (release job is ref-gated)"
+            exit 0
+          fi
 
           # Always build on true release branches and workflow_dispatch.
           if [[ "${{ github.ref_name }}" == "main" || \
@@ -420,9 +432,16 @@ jobs:
   compile-sanity:
     name: Compile Sanity (Linux)
     needs: setup-version
-    # Push-feedback only — dispatch releases already compile everything in the
-    # AppImage job, so running sanity there doubled ~10 min of build for zero signal.
-    if: needs.setup-version.outputs.should_build == 'true' && github.event_name == 'push'
+    # Normal pushes and pull requests get a real compile. The one workflow_dispatch
+    # exception is the trusted, generated RELEASES.md refresh branch: its bot-created
+    # PR cannot emit pull_request events, so the release job dispatches this workflow
+    # explicitly and waits for both real required checks before merging it.
+    if: >-
+      needs.setup-version.outputs.should_build == 'true' && (
+        github.event_name == 'push' ||
+        github.event_name == 'pull_request' ||
+        startsWith(github.ref_name, 'ci/releases-md-refresh-')
+      )
     runs-on: ubuntu-22.04
     timeout-minutes: 45
     steps:
@@ -906,9 +925,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      # pull-requests: write was needed only by the old PR-routed RELEASES.md refresh
-      # (BL-2232); BL-2394 pushes the timeline straight to vibemis-main with
-      # RELEASES_PAT, so the workflow token no longer needs PR scope at all.
+      actions: write
+      # The generated RELEASES.md change is checked and merged through branch
+      # protection using the built-in token; no PAT or repository secret is needed.
+      pull-requests: write
     # dry_run=true skips this job entirely — the pipeline builds and verifies but
     # mints no release/tag. Use it for validating CI changes; cut a real version
     # only when a release is intended.
@@ -1195,97 +1215,133 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     # Refresh the chronological build timeline (RELEASES.md) after every cut.
-    # GitHub's Releases page sorts by SemVer precedence (alphas sink below betas of
-    # the same base version), so RELEASES.md is the newest-first-by-date view for
-    # humans -- it is linked from the README's Downloads section.
+    # GitHub's Releases page sorts by SemVer precedence, so this root file is the
+    # README-linked newest-first view.
     #
-    # Mechanism (BL-2394): commit the regenerated file STRAIGHT to vibemis-main using
-    # RELEASES_PAT, a fine-grained PAT scoped to this repo with Contents:write.
-    # vibemis-main is branch-protected by 3 required checks, but enforce_admins is
-    # false, so an admin-owned token bypasses them. The workflow's own GITHUB_TOKEN
-    # can neither bypass those checks NOR trigger them (pushes made with GITHUB_TOKEN
-    # do not start workflows), which is why the previous mechanism (BL-2232) had to
-    # route through a bot PR that could never satisfy its own required checks: every
-    # cut left a permanently-BLOCKED PR plus a force-pushed ci/releases-md-refresh
-    # branch awaiting a MANUAL admin merge, so the README-linked timeline was only
-    # ever as fresh as the last time a human remembered to merge it (PR #273).
+    # The built-in GITHUB_TOKEN cannot push directly through vibemis-main protection,
+    # and events it creates do not normally start another workflow. workflow_dispatch
+    # is GitHub's explicit recursion exception, so this step creates a short-lived PR,
+    # dispatches this workflow in dry-run mode on its exact head, waits for the real
+    # Compile Sanity + AppImage checks, then squash-merges and deletes the branch.
+    # No PAT, secret, admin bypass, persistent branch, or human follow-up is required.
     #
-    # Two independent guards stop this push from ever minting a release:
-    #   1. [skip ci] in the commit subject -- GitHub creates no workflow run at all.
-    #   2. count_meaningful() in setup-version ignores .md, so even if a run were
-    #      created, a docs-only push to vibemis-main sets should_build=false.
-    #
-    # Token hygiene: auth comes from a 0600 credential file, never from a command
-    # line or a remote URL, so the token cannot surface in logs or in git's error
-    # output. The clone is fresh (not the job checkout) so it does not inherit
-    # actions/checkout's GITHUB_TOKEN http.extraheader, which would otherwise win
-    # over the PAT and get rejected by branch protection.
-    #
-    # Fail-soft: a refresh failure never fails a release -- the ERR trap turns any
-    # error into a ::notice + step-summary line and exits 0; continue-on-error is the
-    # backstop. A missing or expired RELEASES_PAT is a clean, loud skip, so this step
-    # is safe to land before the secret exists; the timeline catches up on the next cut.
+    # Release safety is layered: the validation dispatch sets dry_run=true, the merge
+    # subject carries [skip ci], and RELEASES.md is docs-only under count_meaningful().
+    # A failure closes the temporary PR and removes its branch before failing soft, so
+    # a release can never leave a permanently-blocked cleanup chore behind.
     - name: Refresh RELEASES.md build timeline
       continue-on-error: true
       env:
-        RELEASES_PAT: ${{ secrets.RELEASES_PAT }}
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         REPO: ${{ github.repository }}
         CUT_VERSION: ${{ needs.setup-version.outputs.version }}
+        REFRESH_BRANCH: ci/releases-md-refresh-${{ github.run_id }}
         BASE_BRANCH: vibemis-main
       run: |
         set -Eeuo pipefail
+        PR_URL=""
+        BRANCH_PUSHED=false
+
+        cleanup_refresh() {
+          set +e
+          if [ -n "$PR_URL" ]; then
+            gh pr close "$PR_URL" --repo "$REPO" --comment \
+              "Automated validation failed; closing this transient refresh PR. A later release will regenerate the complete timeline." \
+              >/dev/null 2>&1
+          fi
+          if [ "$BRANCH_PUSHED" = true ]; then
+            git push origin --delete "$REFRESH_BRANCH" >/dev/null 2>&1
+          fi
+          set -e
+        }
+
         fail_soft() {
+          cleanup_refresh
           echo "::notice title=RELEASES.md refresh deferred::non-fatal error near line $1 - the timeline catches up on the next cut (BL-2394)"
           echo "- WARNING: RELEASES.md timeline refresh hit a non-fatal error near line $1; it will catch up on the next cut" >> "$GITHUB_STEP_SUMMARY"
           exit 0
         }
         trap 'fail_soft $LINENO' ERR
 
-        if [ -z "${RELEASES_PAT:-}" ]; then
-          echo "::notice title=RELEASES.md refresh skipped::secret RELEASES_PAT is not set (BL-2394)"
-          echo "- RELEASES.md timeline refresh SKIPPED: repository secret \`RELEASES_PAT\` is not set" >> "$GITHUB_STEP_SUMMARY"
-          exit 0
-        fi
-        if [ ! -f "$GITHUB_WORKSPACE/scripts/gen-releases-index.sh" ]; then
+        if [ ! -f scripts/gen-releases-index.sh ]; then
           echo "::notice::gen-releases-index.sh not on this branch - skipping timeline refresh"
           exit 0
         fi
+        bash scripts/gen-releases-index.sh "$REPO" > /tmp/RELEASES.md
+        git fetch --no-tags origin "+refs/heads/$BASE_BRANCH:refs/remotes/origin/$BASE_BRANCH"
+        if git cat-file -e "refs/remotes/origin/$BASE_BRANCH:RELEASES.md" 2>/dev/null \
+           && git show "refs/remotes/origin/$BASE_BRANCH:RELEASES.md" | cmp -s - /tmp/RELEASES.md; then
+          echo "RELEASES.md already current on $BASE_BRANCH - nothing to refresh"
+          echo "- RELEASES.md timeline already current on $BASE_BRANCH" >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+        fi
 
-        # Credential file (0600), never a tokenized URL or command line.
-        ( umask 077; printf 'https://x-access-token:%s@github.com\n' "$RELEASES_PAT" > "$HOME/.git-credentials" )
-        trap 'rm -f "$HOME/.git-credentials"' EXIT
-        git config --global credential.helper store
-        git config --global user.name "github-actions[bot]"
-        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git worktree add --force -b "$REFRESH_BRANCH" /tmp/releases-refresh \
+          "refs/remotes/origin/$BASE_BRANCH"
+        cp /tmp/RELEASES.md /tmp/releases-refresh/RELEASES.md
+        git -C /tmp/releases-refresh config user.name "github-actions[bot]"
+        git -C /tmp/releases-refresh config user.email "github-actions[bot]@users.noreply.github.com"
+        git -C /tmp/releases-refresh add RELEASES.md
+        git -C /tmp/releases-refresh commit \
+          -m "docs(auto): refresh RELEASES.md build timeline for $CUT_VERSION"
+        HEAD_SHA=$(git -C /tmp/releases-refresh rev-parse HEAD)
+        git -C /tmp/releases-refresh push origin "$REFRESH_BRANCH"
+        BRANCH_PUSHED=true
 
-        # vibemis-main can move between clone and push under concurrent cuts, so
-        # regenerate + retry against a freshly-cloned tip rather than force-pushing.
-        for attempt in 1 2 3; do
-          rm -rf /tmp/releases-refresh
-          git clone --depth 1 --branch "$BASE_BRANCH" \
-            "https://github.com/${REPO}.git" /tmp/releases-refresh --quiet
+        cat > /tmp/releases-refresh-pr-body.md <<EOF
+        Auto-opened after cutting $CUT_VERSION and closed automatically in this same job.
 
-          bash "$GITHUB_WORKSPACE/scripts/gen-releases-index.sh" "$REPO" > /tmp/RELEASES.md
-          if cmp -s /tmp/releases-refresh/RELEASES.md /tmp/RELEASES.md; then
-            echo "RELEASES.md already current on $BASE_BRANCH - nothing to refresh"
-            echo "- RELEASES.md timeline already current on $BASE_BRANCH" >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
+        RELEASES.md is generated by scripts/gen-releases-index.sh. The job dispatches
+        a dry-run validation on this exact head, waits for the protected checks, squash-
+        merges with [skip ci], and deletes the transient branch. The dry run cannot mint
+        a tag or release, and the final docs-only merge cannot start a beta.
+        EOF
+        PR_URL=$(gh pr create --repo "$REPO" --head "$REFRESH_BRANCH" --base "$BASE_BRANCH" \
+          --title "docs(auto): refresh RELEASES.md build timeline" \
+          --body-file /tmp/releases-refresh-pr-body.md)
 
-          cp /tmp/RELEASES.md /tmp/releases-refresh/RELEASES.md
-          git -C /tmp/releases-refresh add RELEASES.md
-          git -C /tmp/releases-refresh commit \
-            -m "docs(auto): refresh RELEASES.md build timeline for $CUT_VERSION [skip ci]"
-          if git -C /tmp/releases-refresh push origin "HEAD:refs/heads/$BASE_BRANCH"; then
-            echo "RELEASES.md timeline updated on $BASE_BRANCH for $CUT_VERSION"
-            echo "- RELEASES.md timeline refreshed on $BASE_BRANCH for $CUT_VERSION" >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-          echo "push attempt $attempt/3 failed ($BASE_BRANCH likely moved) - retrying"
-          sleep $((attempt * 5))
+        # GITHUB_TOKEN-authored pull_request events are intentionally suppressed by
+        # GitHub, but workflow_dispatch is the documented exception. Dispatch the
+        # protected checks explicitly with dry_run=true, then find the exact run by SHA.
+        gh workflow run dev-build.yml --repo "$REPO" --ref "$REFRESH_BRANCH" -f dry_run=true
+        CHECK_RUN_ID=""
+        for attempt in $(seq 1 30); do
+          CHECK_RUN_ID=$(gh run list --repo "$REPO" --workflow dev-build.yml \
+            --branch "$REFRESH_BRANCH" --event workflow_dispatch --limit 20 \
+            --json databaseId,headSha \
+            --jq "map(select(.headSha == \"$HEAD_SHA\"))[0].databaseId // empty")
+          [ -n "$CHECK_RUN_ID" ] && break
+          sleep 2
         done
-        echo "::notice title=RELEASES.md refresh deferred::could not fast-forward $BASE_BRANCH after 3 attempts"
-        echo "- WARNING: RELEASES.md timeline refresh could not push after 3 attempts; it catches up on the next cut" >> "$GITHUB_STEP_SUMMARY"
+        if [ -z "$CHECK_RUN_ID" ]; then
+          echo "::error::Could not find the dispatched validation run for $HEAD_SHA"
+          false
+        fi
+        gh run watch "$CHECK_RUN_ID" --repo "$REPO" --exit-status
+
+        MERGED=false
+        for attempt in $(seq 1 12); do
+          if gh pr merge "$PR_URL" --repo "$REPO" --squash --delete-branch \
+            --subject "docs(auto): refresh RELEASES.md build timeline for $CUT_VERSION [skip ci]" \
+            --body "Generated by scripts/gen-releases-index.sh; dry-run checks passed in run $CHECK_RUN_ID."; then
+            MERGED=true
+            break
+          fi
+          sleep 5
+        done
+        if [ "$MERGED" != true ]; then
+          echo "::error::Protected checks passed but the refresh PR did not merge"
+          false
+        fi
+        # gh normally honors --delete-branch after an immediate merge; make the
+        # cleanup invariant explicit in case that behavior changes.
+        if git ls-remote --exit-code origin "refs/heads/$REFRESH_BRANCH" >/dev/null 2>&1; then
+          git push origin --delete "$REFRESH_BRANCH"
+        fi
+        BRANCH_PUSHED=false
+        PR_URL=""
+        echo "RELEASES.md timeline refreshed and transient branch deleted"
+        echo "- RELEASES.md timeline refreshed via checked PR (validation run $CHECK_RUN_ID)" >> "$GITHUB_STEP_SUMMARY"
 
     # ── Releases are PERMANENT, like tags ──
     # SemVer 2.0.0 §3: "Once a versioned package has been released, the contents of that
