@@ -106,6 +106,10 @@ Rectangle {
             clip: true
             spacing: 4
             boundsBehavior: Flickable.StopAtBounds
+            // Up from the top row wraps to the bottom, down from the bottom wraps to the
+            // top. incrementCurrentIndex()/decrementCurrentIndex() (called from the root
+            // Keys.onPressed below) honor this flag directly.
+            keyNavigationWraps: true
             // Keep the keyboard/gamepad-selected row scrolled into view.
             highlightMoveDuration: 0
             highlightRangeMode: ListView.ApplyRange
