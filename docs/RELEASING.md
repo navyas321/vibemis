@@ -49,8 +49,8 @@ the CI smart-build behavior, and the README-update rule.
   tags stay clean and the GitHub Releases/Tags pages
   keep their SemVer-precedence order** (alphas list after betas of the same base —
   spec §11.4; GitHub has no page-sort setting; an ordinal-first tag scheme fixed the
-  ordering but was reverted as too ugly). Chronological views: `RELEASES.md`
-  (auto-refreshed every cut), the releases Atom feed, the API, and the in-app
+  ordering but was reverted as too ugly). Chronological views: the build timeline on the
+  `releases-index` branch (republished every cut), the releases Atom feed, the API, and the in-app
   channels — all date-ordered. Don't reopen this trade-off without new options.
 - All suffixed builds are GitHub-prerelease; only bare stables are full releases.
 - **Releases are PERMANENT, like tags.** Every cut
@@ -110,13 +110,29 @@ Release bodies are auto-generated from commit subjects (`create-dev-release` in
 mechanism.** "enable RFI by default on AMD/Gallium (mirror upstream d3c23b55)" tells a user
 nothing; "fixes the stuttering/choppy video on AMD handhelds" tells them whether to update.
 
-Two ways to get that, in order of preference:
+### The `Changelog:` note is not optional — it is the whole hero section
+
+The release body opens with **`## 🎯 What's new for you`**, and that section is built
+**exclusively** from `Changelog:` lines written by a human. It never falls back to commit
+subjects. That is deliberate: a commit subject is written for other developers and reads
+like one. "CI consolidation + release gating + stable gate + changelog regression" is a
+perfectly true sentence and a completely useless release note.
+
+So the rule is simple: **anything a user could notice needs a `Changelog:` line.** CI
+enforces it — the `Changelog note` check fails a PR that changes shipping files without
+one (`scripts/check-pr-changelog-note.sh`). Plumbing-only PRs are exempt automatically.
+
+If nobody writes a note, the hero honestly says no highlights were flagged rather than
+promoting jargon into it. **Do not fix that after the fact with `gh release edit`.** That
+is what used to happen — `0.5.0-beta.001`, `0.4.3` and `0.5.0-beta.004` all had their
+hero sections pasted in by hand — and it does not persist to the next cut, which is why
+the format kept "not sticking". Write the note in the PR instead.
 
 1. **Write the commit subject user-first** — effect, then mechanism:
    `fix: stuttering video on AMD handhelds (enable RFI by default)`.
-2. **Add a `Changelog:` trailer** to the commit body when the subject must stay technical
-   (conventional-commit scope, upstream-mirror wording, etc.). The trailer **overrides** the
-   subject in the release body; the mechanism stays in the commit body and PR:
+2. **Add a `Changelog:` trailer** to the commit body (or the PR description — `gh pr merge
+   --squash` uses it as the commit body). Required for the hero; also **overrides** the
+   subject in the technical section, so the mechanism can stay in the subject:
 
    ```
    fix(BL-XXXX): enable RFI by default on AMD/Gallium (mirror upstream d3c23b55)
@@ -136,12 +152,45 @@ Two ways to get that, in order of preference:
    stripped the human-readable notes from `0.5.0-beta.004`; the body grep fixes it.)
 
 Anything a user could notice — video, audio, input, UI, updates, pairing — needs one of the
-two. Pure plumbing (`ci:`, `chore:`, `build:`, `docs(auto):`) is auto-demoted into a collapsed
-"Internal / build plumbing" section and needs neither.
+two.
 
-**When a release body still reads as jargon after the cut, fix it retroactively** with
-`gh release edit <tag> --notes-file <file>` — a Highlights section in plain language at the
-top. Release *bits* are immutable; the notes are documentation and may be improved.
+### How a change gets demoted to "Internal / build plumbing"
+
+Plumbing lands in a collapsed `<details>` section and needs no note. A change is plumbing
+when **either**:
+
+- its subject type is `ci:`, `chore:`, `build:`, `docs:`, `test:`, `style:`, or carries a
+  `(ci)`/`(build)`/`(release)`/`(deps)`/`(workflow)` scope; **or**
+- **its diff touches nothing that ships** — only `.github/`, `docs/`, `tests/`, `*.md`, or
+  the CI-side generator/guard scripts.
+
+The second rule is the important one, because subject types are a statement of intent and
+they are routinely wrong. `0.5.0-beta.005` presented this to users as its one Bug Fix:
+
+> Release notes stay human-readable through squash merges, a broken guard now blocks the
+> release, and a stray branch push can no longer cut an unapproved stable
+
+That came from a commit authored `fix:` with a confident note attached — whose entire diff
+was `dev-build.yml`, `docs/RELEASING.md` and a CI guard script. The old rule only demoted
+a commit when it had *no* note, so attaching one *promoted* plumbing into "Bug Fixes". The
+diff cannot lie about whether something ships, so the diff decides.
+
+Two explicit overrides exist for the genuine edge cases:
+
+| Trailer | Meaning |
+|---|---|
+| `Changelog: none` | Looks user-facing by type but is not (pure refactor, internal-only fix). Demotes it. |
+| `Changelog!: <text>` | Really is user-visible despite touching only build/docs paths (e.g. a packaging change that alters what the AppImage does on the device). Promotes it. |
+
+**Do not "fix" a jargon-y release body afterwards with `gh release edit`.** It does not
+persist to the next cut — that is precisely the loop that made this problem recur. Fix the
+generator or write the note; `scripts/check-changelog-invariants.sh` renders the real
+markdown against a synthetic repo, so you can verify a format change locally before cutting:
+
+```bash
+bash scripts/gen-changelog.sh 0.5.0-beta.005   # exactly what the release body will say
+bash scripts/check-changelog-invariants.sh     # the format contract
+```
 
 ## ⚠ Never put `[skip ci]` on a code merge to `vibemis-main` (BL-2460)
 
@@ -149,11 +198,14 @@ GitHub **natively** skips the `push` event for any commit whose subject contains
 or `[ci skip]` — no workflow runs, so **no beta is cut and the code gets no beta soak**. This
 is a GitHub platform behavior the workflow cannot override. It has already bitten: a Quick Menu
 rendering fix merged with `[skip ci]` (#272) produced no beta and went straight into stable
-`0.4.2` unverified. `[skip ci]` is legitimate **only** on the auto-generated `RELEASES.md`
-refresh merge (docs-only, and it deliberately must not cut a beta). For any commit that touches
-code, never add the marker. **Recommended hardening (repo setting, not in this file):** add a
-branch-protection ruleset on `vibemis-main` rejecting `[skip ci]`/`[ci skip]` in merge-commit
-subjects, with an allowlist for the `docs(auto): refresh RELEASES.md` bot subject.
+`0.4.2` unverified. Never add the marker to a commit that touches code.
+
+There is no longer any legitimate use of it on `vibemis-main`: the build timeline used to
+be merged in by a bot with `[skip ci]`, but it is now force-pushed to the unprotected
+`releases-index` branch, which matches no workflow trigger and so needs no marker at all.
+**Recommended hardening (repo setting, not in this file):** add a branch-protection ruleset
+on `vibemis-main` rejecting `[skip ci]`/`[ci skip]` in merge-commit subjects outright — no
+allowlist is needed any more.
 
 ## Stable release notes are CUMULATIVE — hotfixes included
 
