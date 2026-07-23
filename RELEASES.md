@@ -7,6 +7,9 @@ not edit by hand.
 
 | Published (UTC) | Build | Channel | Artifact |
 |---|---|---|---|
+| 2026-07-23 08:18:15Z | [`0.5.0-beta.002`](https://github.com/navyas321/vibemis/releases/tag/0.5.0-beta.002) | 🧪 Beta | [AppImage](https://github.com/navyas321/vibemis/releases/tag/0.5.0-beta.002) |
+| 2026-07-23 07:17:20Z | [`0.4.3`](https://github.com/navyas321/vibemis/releases/tag/0.4.3) | ✅ Stable | [AppImage](https://github.com/navyas321/vibemis/releases/tag/0.4.3) |
+| 2026-07-23 07:05:37Z | [`0.5.0-beta.001`](https://github.com/navyas321/vibemis/releases/tag/0.5.0-beta.001) | 🧪 Beta | [AppImage](https://github.com/navyas321/vibemis/releases/tag/0.5.0-beta.001) |
 | 2026-07-22 18:08:08Z | [`0.4.2`](https://github.com/navyas321/vibemis/releases/tag/0.4.2) | ✅ Stable | [AppImage](https://github.com/navyas321/vibemis/releases/tag/0.4.2) |
 | 2026-07-22 09:03:44Z | [`0.4.1`](https://github.com/navyas321/vibemis/releases/tag/0.4.1) | ✅ Stable | [AppImage](https://github.com/navyas321/vibemis/releases/tag/0.4.1) |
 | 2026-07-22 08:54:03Z | [`0.4.0`](https://github.com/navyas321/vibemis/releases/tag/0.4.0) | ✅ Stable | [AppImage](https://github.com/navyas321/vibemis/releases/tag/0.4.0) |
@@ -206,6 +209,7 @@ not edit by hand.
 | 2026-07-13 13:09:43Z | [`0.1.0-alpha.094`](https://github.com/navyas321/vibemis/releases/tag/0.1.0-alpha.094) | 🔬 Alpha | history marker |
 | 2026-07-13 13:09:41Z | [`0.1.0-alpha.093`](https://github.com/navyas321/vibemis/releases/tag/0.1.0-alpha.093) | 🔬 Alpha | history marker |
 | 2026-07-13 13:09:38Z | [`0.1.0-alpha.092`](https://github.com/navyas321/vibemis/releases/tag/0.1.0-alpha.092) | 🔬 Alpha | history marker |
+| 2026-07-13 13:09:37Z | [`0.1.0-alpha.091`](https://github.com/navyas321/vibemis/releases/tag/0.1.0-alpha.091) | 🔬 Alpha | history marker |
 | 2026-07-13 13:09:37Z | [`0.1.0-alpha.091`](https://github.com/navyas321/vibemis/releases/tag/0.1.0-alpha.091) | 🔬 Alpha | history marker |
 | 2026-07-13 13:09:36Z | [`0.1.0-alpha.090`](https://github.com/navyas321/vibemis/releases/tag/0.1.0-alpha.090) | 🔬 Alpha | history marker |
 | 2026-07-13 13:09:35Z | [`0.1.0-alpha.089`](https://github.com/navyas321/vibemis/releases/tag/0.1.0-alpha.089) | 🔬 Alpha | history marker |
