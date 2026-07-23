@@ -405,7 +405,8 @@ jobs:
           # DID make the GitHub Releases page chronological, but the names were judged too
           # ugly, so we accept the SemVer-precedence page order (alphas list after betas of
           # the same base — spec §11.4; GitHub offers no page sort setting). Chronological
-          # views that remain: RELEASES.md (auto-refreshed), the releases Atom feed, the API,
+          # views that remain: the build timeline republished to the `releases-index` branch
+          # on every cut (RELEASES.md here is a pointer to it), the releases Atom feed, the API,
           # and the in-app channels — all date-ordered. next_counter still scans BOTH tag
           # shapes so history with the one ordinal-era cut can never cause a counter reuse.
 

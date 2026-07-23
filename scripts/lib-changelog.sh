@@ -45,14 +45,27 @@ changelog_any_ships() {
 }
 
 # First `Changelog:` / `Changelog!:` note in the text on stdin, or empty.
+#
 # Read by grepping the whole body, NOT via %(trailers:key=Changelog): `gh pr merge
 # --squash` rewrites the message (appends GitHub's own Co-authored-by, concatenates
 # the squashed commits) so the line almost never survives inside git's strict final
 # trailer block, and %(trailers) then returns empty. That is precisely how
 # 0.5.0-beta.004 lost its human-readable notes and fell back to raw commit subjects.
 # A body grep is position-independent and survives any squash reformatting.
-changelog_extract_note() {  # $1 = "" for Changelog:, "!" for Changelog!:
+#
+# ANCHORED AT COLUMN 0, deliberately. Allowing leading whitespace made an INDENTED
+# occurrence match -- and a 4-space indent is markdown for "code block", which is
+# exactly how this trailer gets written when someone quotes an example. The failure
+# message in check-pr-changelog-note.sh prints an indented specimen note; pasting that
+# block into a PR description used to satisfy the guard AND become the release's hero
+# bullet, publishing "Fixes stuttering and choppy video on AMD handhelds" on a build
+# that did nothing of the kind. `grep -m1` takes the FIRST match, so the quoted example
+# even beat the real note further down. A real trailer is never indented.
+CHANGELOG_NOTE_RE='^Changelog:'
+CHANGELOG_BANG_NOTE_RE='^Changelog!:'
+
+changelog_extract_note() {  # $1 = "" for Changelog:, "!" for Changelog!:  (text on stdin)
   local bang="${1:-}"
-  grep -m1 -iE "^[[:space:]]*Changelog${bang}:" \
-    | sed -E "s/^[[:space:]]*[Cc]hangelog${bang}:[[:space:]]*//; s/[[:space:]]*\$//"
+  grep -m1 -iE "^Changelog${bang}:" \
+    | sed -E "s/^[Cc]hangelog${bang}:[[:space:]]*//; s/[[:space:]]*\$//"
 }

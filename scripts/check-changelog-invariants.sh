@@ -31,11 +31,16 @@ ok()  { echo "  ok: $*"; }
 [ -f "$GEN" ] || { echo "FAIL: $GEN is missing — the release body generator must stay a testable script, not an inline workflow run: block" >&2; exit 1; }
 
 # ── Static guards (cheap, catch a rewrite that reintroduces a known defect) ─────
-if grep -q 'trailers:key=Changelog' "$GEN" .github/workflows/dev-build.yml 2>/dev/null; then
+# Comment lines are stripped first: these files explain AT LENGTH why %(trailers) is
+# wrong, and a naive grep flags that prose as the defect it warns about.
+if cat "$GEN" scripts/lib-changelog.sh .github/workflows/dev-build.yml 2>/dev/null \
+   | grep -v '^[[:space:]]*#' | grep -q 'trailers:key=Changelog'; then
   err "generator uses %(trailers:key=Changelog) — squash-merged commits lose the note (grep the commit body instead)"
 fi
-grep -qE "grep -m1 -iE '\^\[\[:space:\]\]\*Changelog:'" "$GEN" \
-  || err "generator no longer greps the commit body for a Changelog: line"
+grep -qE "grep -m1 -iE \"\^Changelog\\\$\{bang\}:\"" scripts/lib-changelog.sh \
+  || err "note extraction no longer greps the commit body for a column-0 Changelog: line"
+grep -q "changelog_extract_note" "$GEN" \
+  || err "the generator no longer uses the shared changelog_extract_note — the PR guard and the release body would drift apart"
 grep -q "What's new for you" "$GEN" \
   || err "generator no longer emits the '🎯 What's new for you' hero section (that is the whole point — do not hand-edit releases instead)"
 grep -q 'gen-changelog.sh' .github/workflows/dev-build.yml \
@@ -43,10 +48,22 @@ grep -q 'gen-changelog.sh' .github/workflows/dev-build.yml \
 
 # ── Behavioural test against a synthetic repo ──────────────────────────────────
 TMP=$(mktemp -d)
+# Hard stop if the temp dir is not a real, absolute, empty-safe path. `cd ""` SUCCEEDS in
+# bash, so an empty $TMP would sail past every `cd` below and leave mkrepo running
+# `git init` / `git config user.name` / `git commit` / `git tag` in the developer's REAL
+# repository -- rewriting its identity config and leaving a stray commit and tag behind.
+case "$TMP" in
+  /*) ;;
+  *) echo "FAIL: mktemp -d did not return an absolute path ($TMP); refusing to run" >&2; exit 1 ;;
+esac
+[ -d "$TMP" ] || { echo "FAIL: temp dir $TMP does not exist; refusing to run" >&2; exit 1; }
 trap 'rm -rf "$TMP"' EXIT
 
 mkrepo() {
-  cd "$TMP"; rm -rf "$TMP/r"; mkdir -p "$TMP/r"; cd "$TMP/r"; t0=$fail
+  cd "$TMP" || { echo "FAIL: cannot cd to $TMP" >&2; exit 1; }
+  rm -rf "$TMP/r"; mkdir -p "$TMP/r"
+  cd "$TMP/r" || { echo "FAIL: cannot cd to $TMP/r" >&2; exit 1; }
+  t0=$fail
   git init -q -b main .
   git config user.name  "guard"
   git config user.email "guard@example.com"
@@ -209,6 +226,68 @@ grep -qxF -- '- Handles a `backtick`, $(not-a-subshell) and "quotes"' <<<"$out" 
   || err "12: shell metacharacters in a note were not passed through literally"
 grep -q "not-a-subshell" <<<"$out" || err "12: command substitution in a note was evaluated"
 [ "$fail" = "$t0" ] && ok "notes with glob and shell metacharacters survive intact"
+
+# --- 13. an INDENTED `Changelog:` is a markdown code block -- someone quoting an
+#         example, including the specimen note this repo's own PR-failure message
+#         prints. It must not be mistaken for a real note, and must not beat one.
+mkrepo
+commit "fix: real user change" \
+       "Here is how to write a note:" \
+       "    Changelog: Fixes stuttering and choppy video on AMD handhelds" \
+       "Changelog: The real note"
+out=$(gen 0.1.0-beta.002)
+grep -q "stuttering" <<<"$out" && err "13: an indented (code-block) Changelog: example was published as a release note"
+grep -qxF -- "- The real note" <<<"$out" || err "13: the genuine column-0 note lost to a quoted example"
+[ "$fail" = "$t0" ] && ok "indented Changelog: example ignored; real note wins"
+
+# --- 14. `Changelog!: none` must opt out like `Changelog: none`, not render "- None".
+mkrepo
+commit "build: tweak packaging" "Changelog!: none"
+out=$(gen 0.1.0-beta.002)
+grep -qi "^- None$" <<<"$out" && err "14: 'Changelog!: none' rendered a hero bullet reading 'None'"
+grep -q "🔩 Internal / build plumbing" <<<"$out" || err "14: 'Changelog!: none' did not demote"
+[ "$fail" = "$t0" ] && ok "'Changelog!: none' opts out instead of publishing 'None'"
+
+# --- 15. raw HTML in a subject must not close the collapsed Internal block early and
+#         spill the remaining plumbing entries onto the visible release page.
+mkrepo
+commit "ci: fix the </details> handling in the widget"
+commit "ci: a second plumbing entry that must stay inside the block"
+out=$(gen 0.1.0-beta.002)
+opens=$(grep -c '<details>' <<<"$out"); closes=$(grep -c '</details>' <<<"$out")
+[ "$opens" = "1" ] && [ "$closes" = "1" ] \
+  || err "15: unbalanced details block (opens=$opens closes=$closes) — a bullet escaped its section"
+[ "$fail" = "$t0" ] && ok "raw HTML in a subject cannot break out of the Internal block"
+
+# --- 16. non-ASCII must survive byte-intact. An emoji-leading note used to be corrupted
+#         by a byte-oriented uppercase of its first character, emitting invalid UTF-8
+#         into the release body and $GITHUB_OUTPUT.
+mkrepo
+commit "fix: controller" "Changelog: 🎮 Controller support with ünïcödé and 中文"
+out=$(gen 0.1.0-beta.002)
+grep -qxF -- "- 🎮 Controller support with ünïcödé and 中文" <<<"$out" \
+  || err "16: a non-ASCII note was mangled"
+printf '%s' "$out" | python -c 'import sys; sys.stdin.buffer.read().decode("utf-8")' 2>/dev/null \
+  || err "16: generator emitted invalid UTF-8"
+[ "$fail" = "$t0" ] && ok "emoji and non-ASCII notes survive byte-intact as valid UTF-8"
+
+# --- 17. a commit whose changed-path list is large enough to fill a pipe buffer must
+#         still be classified by its paths. Reading it across a pipe let the early
+#         return hand `git show` a SIGPIPE, which pipefail turned into "nothing ships"
+#         -- silently demoting a real user-facing change and dropping its note.
+mkrepo
+mkdir -p app docs
+echo x > app/main.cpp
+python -c "
+import os
+for i in range(1500): open('docs/f%05d.md' % i, 'w').write('x')
+" 2>/dev/null || for i in $(seq 1 1500); do echo x > "docs/f$i.md"; done
+git add -A
+git commit -q -m "fix: a real change alongside a very large docs drop" -m "Changelog: Something a user notices"
+out=$(gen 0.1.0-beta.002)
+grep -qxF -- "- Something a user notices" <<<"$out" \
+  || err "17: a shipping commit with a huge path list was demoted to plumbing (SIGPIPE/pipefail)"
+[ "$fail" = "$t0" ] && ok "huge-diff commit still classified by its paths"
 
 cd "$ROOT"
 if [ "$fail" = 0 ]; then

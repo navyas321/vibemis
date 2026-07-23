@@ -38,10 +38,26 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # commits that landed on the base branch to this PR. Ask git for the real fork point.
 BASE=$(git merge-base "$BASE" "$HEAD" 2>/dev/null || printf '%s' "$BASE")
 
-note_in() { printf '%s\n' "$1" | grep -qiE '^[[:space:]]*Changelog!?:[[:space:]]*[^[:space:]]'; }
+# Anchored at column 0 to match the generator: an indented `Changelog:` is a markdown
+# code block, i.e. someone quoting an example -- including the specimen note printed by
+# this script's own failure message. Accepting it would let a copy-pasted example both
+# satisfy this guard and become the release's hero bullet.
+note_in() { printf '%s\n' "$1" | grep -qiE '^Changelog!?:[[:space:]]*[^[:space:]]'; }
 
 # 1. Does this PR change anything a user receives?
-if ! git diff --name-only "$BASE" "$HEAD" | changelog_any_ships; then
+#
+# FAIL CLOSED. `git diff` writing "fatal: bad object" to stderr and nothing to stdout is
+# indistinguishable from "this PR changed no files" if you only look at the pipe -- so a
+# shallow checkout, a force-push between the event and the checkout, or a stale fork merge
+# ref would make this guard print OK and exit 0 on every PR forever. A check whose only
+# failure mode is "green" is not a check. Capture the status explicitly.
+if ! CHANGED=$(git diff --name-only "$BASE" "$HEAD" 2>&1); then
+  echo "FAIL: could not diff $BASE..$HEAD — refusing to pass by default." >&2
+  printf '%s\n' "$CHANGED" >&2
+  echo "(If this is a shallow checkout, the job needs fetch-depth: 0.)" >&2
+  exit 1
+fi
+if ! changelog_any_ships <<< "$CHANGED"; then
   echo "OK: this PR changes no shipping files (CI, docs and guards only) — no release note needed."
   echo "    It will appear in the collapsed '🔩 Internal / build plumbing' section."
   exit 0
@@ -67,7 +83,7 @@ while IFS= read -r h; do
 done < <(git log --format='%H' --no-merges "$BASE..$HEAD" 2>/dev/null)
 
 # 4. Nothing. Explain precisely what to write and where.
-FILES=$(git diff --name-only "$BASE" "$HEAD" | while IFS= read -r f; do changelog_path_ships "$f" && echo "  - $f"; done | head -10)
+FILES=$(while IFS= read -r f || [ -n "$f" ]; do changelog_path_ships "$f" && echo "  - $f"; done <<< "$CHANGED" | head -10)
 cat >&2 <<EOF
 FAIL: this PR changes files that reach users, but no 'Changelog:' note was written.
 
@@ -80,9 +96,11 @@ highlights were flagged — which is how release notes quietly rot back into com
 subjects. Commit subjects describe the mechanism to developers; this describes the
 effect to the person deciding whether to update.
 
-Fix it by adding ONE line to the PR description (it becomes the squash commit body):
+Fix it by adding ONE line to the PR description (it becomes the squash commit body).
+It must start at column 0 -- an indented line is a markdown code block, so a quoted
+example cannot masquerade as a real note:
 
-    Changelog: Fixes stuttering and choppy video on AMD handhelds (Legion Go S, Steam Deck)
+Changelog: Fixes stuttering and choppy video on AMD handhelds (Legion Go S, Steam Deck)
 
 Write the effect, not the mechanism. "Enable RFI by default on AMD/Gallium" is the
 mechanism; the line above is what actually changed for someone using the app.
