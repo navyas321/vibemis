@@ -66,6 +66,11 @@ CHANGELOG_BANG_NOTE_RE='^Changelog!:'
 
 changelog_extract_note() {  # $1 = "" for Changelog:, "!" for Changelog!:  (text on stdin)
   local bang="${1:-}"
+  # The grep is case-INsensitive but the sed that strips the key must be too. It used to
+  # allow case variation only on the first letter (`[Cc]hangelog`), so `CHANGELOG:` and
+  # `ChangeLog:` matched the grep, survived the sed, and published the key itself as the
+  # release note: a hero bullet reading "CHANGELOG: fixes the audio crackle". Both halves
+  # now accept the same spellings.
   grep -m1 -iE "^Changelog${bang}:" \
-    | sed -E "s/^[Cc]hangelog${bang}:[[:space:]]*//; s/[[:space:]]*\$//"
+    | sed -E "s/^[Cc][Hh][Aa][Nn][Gg][Ee][Ll][Oo][Gg]${bang}:[[:space:]]*//; s/[[:space:]]*\$//"
 }
