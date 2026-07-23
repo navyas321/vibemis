@@ -144,6 +144,32 @@ two. Pure plumbing (`ci:`, `chore:`, `build:`, `docs(auto):`) is auto-demoted in
 `gh release edit <tag> --notes-file <file>` — a Highlights section in plain language at the
 top. Release *bits* are immutable; the notes are documentation and may be improved.
 
+## Stable release notes are CUMULATIVE — hotfixes included
+
+**Every bare-semver stable release — `X.Y.0` *and* every `X.Y.Z` hotfix — must carry the full
+changelog for its whole minor line, not just the commits since the last tag.** (Maintainer
+directive, BL-2373, re-stated after 0.4.3 shipped without it.)
+
+Someone installing `0.4.3` may be coming from `0.3.x`, not from `0.4.2`. The auto-generated body
+only lists commits since the previous same-tier tag, so a hotfix's notes show one or two lines
+and hide everything the minor line actually delivers. Stable notes are the user's complete
+picture of what they are getting — not a diff.
+
+Required shape for a stable body:
+
+1. A short plain-language highlight of **this** cut (what changed for you).
+2. The auto-generated commit changelog for this cut.
+3. `## 🎉 What's new in X.Y (cumulative — everything in X.Y.0 … X.Y.Z-1 is included in this build)`
+   — the whole minor line's user-facing features. Carry the previous patch's cumulative section
+   forward and prepend the new fix; never rewrite it from scratch.
+4. Collapsed `<details>` blocks with the commit-level changelog of each earlier patch in the line
+   (`Full X.Y.0 detailed changelog`, `Full X.Y.1 …`), so nothing is lost.
+
+Prereleases (alpha/beta/rc) do **not** need this — they are for testers tracking a moving line.
+
+Until CI assembles this automatically, apply it right after the cut with
+`gh release edit <tag> --notes-file <file>` (this is how 0.4.2 and 0.4.3 were built).
+
 ## README update rule — required at every release
 
 After merging a feature to `vibemis-main`, update `README.md` before the release.
