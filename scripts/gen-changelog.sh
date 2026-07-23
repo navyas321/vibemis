@@ -87,13 +87,22 @@ if [ -z "$PREV_TAG" ]; then
   done < <(git for-each-ref --sort=-creatordate --format='%(refname:short) %(creatordate:unix)' refs/tags)
 fi
 
+# Previewing the NEXT cut ("what will the release body say if I cut now?") is the most
+# useful local invocation there is, and its tag by definition does not exist yet -- that
+# used to die with a raw `fatal: ambiguous argument`. Resolve to HEAD instead.
+RANGE_END="$CURRENT_VERSION"
+if ! git rev-parse -q --verify "${CURRENT_VERSION}^{commit}" >/dev/null 2>&1; then
+  RANGE_END="HEAD"
+  echo "Note: $CURRENT_VERSION is not a commit-ish yet; previewing against HEAD" >&2
+fi
+
 if [ -z "$PREV_TAG" ]; then
   SINCE_DATE=$(date -d '7 days ago' '+%Y-%m-%d' 2>/dev/null || date -v-7d '+%Y-%m-%d')
   echo "No previous same-or-higher-tier release found; using commits since $SINCE_DATE" >&2
   COMMITS=$(git log --since="$SINCE_DATE" --pretty=format:'%h|%s' --no-merges)
 else
-  echo "Range: ${PREV_TAG}..${CURRENT_VERSION}" >&2
-  COMMITS=$(git log "${PREV_TAG}..${CURRENT_VERSION}" --pretty=format:'%h|%s' --no-merges)
+  echo "Range: ${PREV_TAG}..${RANGE_END}" >&2
+  COMMITS=$(git log "${PREV_TAG}..${RANGE_END}" --pretty=format:'%h|%s' --no-merges)
 fi
 
 # ── Per-commit classification ──────────────────────────────────────────────────
@@ -108,7 +117,24 @@ clean_subject() {  # strip everything that is addressed to developers, not users
 }
 
 sentence_case() {  # capitalize the first letter, leave ACRONYMS and the rest alone
-  printf '%s' "$1" | sed -E 's/^(.)/\U\1/'
+  # Guarded to an ASCII lowercase first character on purpose. The obvious
+  # `sed -E 's/^(.)/\U\1/'` is both GNU-only and byte-oriented outside a UTF-8 locale:
+  # with LANG unset, `.` matches the single byte 0xF0 of a leading emoji and \U rewrites
+  # it to 0xD0, so a note like "🎮 Controller support" emits INVALID UTF-8 into the
+  # release body and $GITHUB_OUTPUT. There is nothing to capitalize in an emoji or an
+  # accented letter anyway, so simply leave any non-ASCII first character alone.
+  local s="$1"
+  case "$s" in
+    [a-z]*) printf '%s' "${s^}" ;;
+    *)      printf '%s' "$s" ;;
+  esac
+}
+
+md_escape() {  # neutralize raw HTML so a bullet cannot escape its own section
+  # A subject or note containing `</details>` would close the collapsed Internal block
+  # early and spill every following plumbing entry onto the visible release page.
+  # GitHub renders &lt;/&gt; back to the literal characters, so nothing is lost.
+  printf '%s' "$1" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'
 }
 
 INTERNAL_SUBJECT_RE="$CHANGELOG_INTERNAL_SUBJECT_RE"
@@ -121,7 +147,13 @@ INTERNAL_SUBJECT_RE="$CHANGELOG_INTERNAL_SUBJECT_RE"
 # The diff cannot lie about that, so the diff is the authority here: a commit that
 # changes no shipping file is plumbing no matter how it was authored or described.
 ships() {  # $1 = hash -> 0 if any changed file reaches a user
-  git show --name-only --format='' "$1" 2>/dev/null | changelog_any_ships
+  # A here-string, NOT a pipe. changelog_any_ships returns as soon as it sees the first
+  # shipping path; across a pipe that leaves `git show` still writing, so it takes
+  # SIGPIPE and exits 141, and `set -o pipefail` then reports the whole pipeline as
+  # failed -- i.e. "nothing ships". A commit large enough to fill the 64 KiB pipe buffer
+  # with its path list (~1200 files) would therefore be silently demoted to plumbing and
+  # its note dropped from the release notes. Measured: 800 files fine, 1200 files broken.
+  changelog_any_ships <<< "$(git show --name-only --format='' "$1" 2>/dev/null)"
 }
 
 FEATURES=""; BUGFIXES=""; IMPROVEMENTS=""; OTHER=""; INTERNAL=""; WHATSNEW=""
@@ -139,31 +171,29 @@ while IFS='|' read -r hash subject; do
   # trailer block, and %(trailers) silently returns empty -- that regression stripped
   # the human-readable notes from 0.5.0-beta.004. A body grep is position-independent
   # and survives any squash reformatting.
-  note=$(git log -1 --format='%b' "$hash" 2>/dev/null \
-         | grep -m1 -iE '^[[:space:]]*Changelog:' \
-         | sed -E 's/^[[:space:]]*[Cc]hangelog:[[:space:]]*//; s/[[:space:]]*$//' || true)
+  body=$(git log -1 --format='%b' "$hash" 2>/dev/null || true)
+  note=$(changelog_extract_note "" <<< "$body" || true)
 
   clean=$(clean_subject "$subject")
   [ -z "$clean" ] && clean="$subject"
 
-  # `Changelog: none` (or skip/internal/-) is the explicit opt-out for a change that
-  # looks user-facing by its type but genuinely isn't.
-  force_internal=false
-  case "$(printf '%s' "$note" | tr '[:upper:]' '[:lower:]')" in
-    none|skip|internal|n/a|-) force_internal=true; note="" ;;
-  esac
-
-  # `Changelog!: <text>` is the matching opt-IN, for the rare change that ships real
-  # user-visible behaviour while touching only build/docs paths (a compiler flag or
-  # packaging change that alters what the AppImage does on a user's device). The bang
-  # mirrors conventional-commits' `feat!:` and is the ONLY way to override the diff.
+  # `Changelog!: <text>` is the opt-IN, for the rare change that ships real user-visible
+  # behaviour while touching only build/docs paths (a packaging change that alters what
+  # the AppImage does on a user's device). The bang mirrors conventional-commits' `feat!:`
+  # and is the ONLY way to override the diff.
   force_user_facing=false
   if [ -z "$note" ]; then
-    note=$(git log -1 --format='%b' "$hash" 2>/dev/null \
-           | grep -m1 -iE '^[[:space:]]*Changelog!:' \
-           | sed -E 's/^[[:space:]]*[Cc]hangelog!:[[:space:]]*//; s/[[:space:]]*$//' || true)
+    note=$(changelog_extract_note "!" <<< "$body" || true)
     [ -n "$note" ] && force_user_facing=true
   fi
+
+  # `Changelog: none` (or skip/internal/-) is the explicit opt-out for a change that
+  # looks user-facing by its type but genuinely isn't. Checked AFTER the bang lookup so
+  # `Changelog!: none` opts out too, instead of rendering a hero bullet reading "None".
+  force_internal=false
+  case "$(printf '%s' "$note" | tr '[:upper:]' '[:lower:]')" in
+    none|skip|internal|n/a|-) force_internal=true; force_user_facing=false; note="" ;;
+  esac
 
   # Plumbing is decided by the SUBJECT TYPE and THE DIFF -- never by whether a note
   # exists. The old rule was `if no note AND subject is ci/chore/...`, so attaching a
@@ -175,11 +205,11 @@ while IFS='|' read -r hash subject; do
   if [ "$force_internal" = true ] \
      || { [ "$force_user_facing" != true ] \
           && { printf '%s' "$subject" | grep -qiE "$INTERNAL_SUBJECT_RE" || ! ships "$hash"; }; }; then
-    INTERNAL="${INTERNAL}- $(sentence_case "$clean") (\`${hash}\`)"$'\n'
+    INTERNAL="${INTERNAL}- $(md_escape "$(sentence_case "$clean")") (\`${hash}\`)"$'\n'
     continue
   fi
 
-  entry=$(sentence_case "${note:-$clean}")
+  entry=$(md_escape "$(sentence_case "${note:-$clean}")")
 
   if [ -n "$note" ]; then
     # Dedupe: two commits carrying the same note render one hero bullet.
@@ -188,7 +218,7 @@ while IFS='|' read -r hash subject; do
     # form is also correct, but only because a double-quoted expansion inside a case
     # pattern is matched literally -- a rule subtle enough that a later reader could
     # reasonably think it globs and "fix" it into something that does.)
-    if ! printf '%s' "$WHATSNEW" | grep -qxF -- "- ${entry}"; then
+    if ! grep -qxF -- "- ${entry}" <<< "$WHATSNEW"; then
       WHATSNEW="${WHATSNEW}- ${entry}"$'\n'
     fi
   fi

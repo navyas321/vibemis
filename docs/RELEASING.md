@@ -159,8 +159,8 @@ two.
 Plumbing lands in a collapsed `<details>` section and needs no note. A change is plumbing
 when **either**:
 
-- its subject type is `ci:`, `chore:`, `build:`, `docs:`, `test:`, `style:`, or carries a
-  `(ci)`/`(build)`/`(release)`/`(deps)`/`(workflow)` scope; **or**
+- its subject type is `ci:`, `chore:`, `build:`, `docs:`, `test:`/`tests:`, `style:` or
+  `meta:`, or carries a `(ci)`/`(build)`/`(release)`/`(deps)`/`(workflow)` scope; **or**
 - **its diff touches nothing that ships** — only `.github/`, `docs/`, `tests/`, `*.md`, or
   the CI-side generator/guard scripts.
 
@@ -181,6 +181,12 @@ Two explicit overrides exist for the genuine edge cases:
 |---|---|
 | `Changelog: none` | Looks user-facing by type but is not (pure refactor, internal-only fix). Demotes it. |
 | `Changelog!: <text>` | Really is user-visible despite touching only build/docs paths (e.g. a packaging change that alters what the AppImage does on the device). Promotes it. |
+
+**The trailer must start at column 0.** An indented line is a markdown code block — i.e.
+someone quoting an example — and is ignored on purpose. Before that rule existed, pasting
+the specimen note out of the CI failure message (which prints it indented) both satisfied
+the PR check and published *"Fixes stuttering and choppy video on AMD handhelds"* as the
+hero bullet of a build that did nothing of the kind.
 
 **Do not "fix" a jargon-y release body afterwards with `gh release edit`.** It does not
 persist to the next cut — that is precisely the loop that made this problem recur. Fix the

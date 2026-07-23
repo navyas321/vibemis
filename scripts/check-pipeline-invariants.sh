@@ -35,7 +35,13 @@ fi
 #    needs no PR at all. Re-introducing a bot PR here would resurrect the phantom-PR
 #    loop, so this asserts the release job stays PR-free.
 rel_job=$(awk '/^  create-dev-release:/{f=1} f&&/^  [a-z][a-z-]*:$/&&!/create-dev-release/{exit} f{print}' "$WF")
-if [ -n "$rel_job" ]; then
+if [ -z "$rel_job" ]; then
+  # Match guard #4's convention: a guard that quietly checks NOTHING when its anchor
+  # moves is worse than no guard, because the green tick still claims coverage. If the
+  # job is renamed (or gains an underscore, which the anchor pattern does not match),
+  # fail loudly so the guard gets re-pointed rather than silently skipped.
+  err "could not locate the create-dev-release job in $WF — this guard is not actually checking anything"
+else
   printf '%s' "$rel_job" | grep -qE 'gh pr (create|merge)' \
     && err "the release job opens or merges a pull request again — a GITHUB_TOKEN PR can never satisfy branch protection (its statusCheckRollup stays empty), so this leaves a phantom PR after every cut. Push the timeline to the unprotected releases-index branch instead."
   printf '%s' "$rel_job" | grep -q 'releases-index' \
