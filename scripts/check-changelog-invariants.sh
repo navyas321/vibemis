@@ -194,6 +194,22 @@ grep -q "^- Streams no longer drop when you resume from sleep$" <<<"$out" \
   || err "11: a commit touching real source was wrongly demoted because it also touched docs"
 [ "$fail" = "$t0" ] && ok "mixed source+docs commit stays user-facing"
 
+# --- 12. notes are arbitrary human text. Glob metacharacters must not be treated as
+#         patterns by the dedupe, and shell metacharacters must not be interpreted.
+mkrepo
+commit "fix: channel picker" "Changelog: Fixes the [beta] channel picker and * wildcards"
+commit "fix: pairing"        "Changelog: Pairing works again"
+commit "fix: quotes"         'Changelog: Handles a `backtick`, $(not-a-subshell) and "quotes"'
+out=$(gen 0.1.0-beta.002)
+grep -qxF -- "- Fixes the [beta] channel picker and * wildcards" <<<"$out" \
+  || err "12: a note containing glob metacharacters was mangled or dropped"
+grep -qxF -- "- Pairing works again" <<<"$out" \
+  || err "12: a later bullet was swallowed by a glob-pattern dedupe match"
+grep -qxF -- '- Handles a `backtick`, $(not-a-subshell) and "quotes"' <<<"$out" \
+  || err "12: shell metacharacters in a note were not passed through literally"
+grep -q "not-a-subshell" <<<"$out" || err "12: command substitution in a note was evaluated"
+[ "$fail" = "$t0" ] && ok "notes with glob and shell metacharacters survive intact"
+
 cd "$ROOT"
 if [ "$fail" = 0 ]; then
   echo "changelog invariants: OK"

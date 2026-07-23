@@ -183,10 +183,14 @@ while IFS='|' read -r hash subject; do
 
   if [ -n "$note" ]; then
     # Dedupe: two commits carrying the same note render one hero bullet.
-    case $'\n'"$WHATSNEW" in
-      *$'\n'"- ${entry}"$'\n'*) : ;;
-      *) WHATSNEW="${WHATSNEW}- ${entry}"$'\n' ;;
-    esac
+    # A note is arbitrary human text that can contain `*`, `?` and `[...]`. `grep -Fx`
+    # states "literal, whole line" outright. (A `case $'\n'"$W" in *$'\n'"- $entry"...`
+    # form is also correct, but only because a double-quoted expansion inside a case
+    # pattern is matched literally -- a rule subtle enough that a later reader could
+    # reasonably think it globs and "fix" it into something that does.)
+    if ! printf '%s' "$WHATSNEW" | grep -qxF -- "- ${entry}"; then
+      WHATSNEW="${WHATSNEW}- ${entry}"$'\n'
+    fi
   fi
 
   if printf '%s' "$subject" | grep -qiE '^(feat|feature|add|implement|new)[:(]'; then

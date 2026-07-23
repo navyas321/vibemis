@@ -35,7 +35,10 @@ changelog_path_ships() {
 # Does any path on stdin reach a user? Returns 0 (yes) / 1 (no).
 changelog_any_ships() {
   local f
-  while IFS= read -r f; do
+  # `|| [ -n "$f" ]` so a final line with no trailing newline is still examined --
+  # dropping it would silently mark a shipping commit as plumbing and hide it from
+  # the release notes, which is the exact failure this whole file exists to prevent.
+  while IFS= read -r f || [ -n "$f" ]; do
     changelog_path_ships "$f" && return 0
   done
   return 1
