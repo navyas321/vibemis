@@ -14,8 +14,9 @@
 #   4. fresh install fallback: ~/Applications/Vibemis.AppImage
 #
 # Usage:
-#   ./vibemis-update.sh                  # newest build INCLUDING betas (default)
-#   ./vibemis-update.sh --stable         # newest STABLE (non-prerelease) build only
+#   ./vibemis-update.sh                  # newest STABLE build (default - matches the in-app Stable channel)
+#   ./vibemis-update.sh --stable         # newest STABLE (non-prerelease) build only (same as the default)
+#   ./vibemis-update.sh --beta           # newest build INCLUDING betas/prereleases (explicit opt-in)
 #   ./vibemis-update.sh --check          # just print the version that would be installed
 #   ./vibemis-update.sh --launch         # after updating, launch Vibemis (Steam-shortcut friendly)
 #   ./vibemis-update.sh --path <file>    # update a specific AppImage path
@@ -33,7 +34,11 @@ set -euo pipefail
 
 REPO="navyas321/vibemis"
 
-CHANNEL_STABLE=0
+# BL-2437: the default is STABLE. It used to be "newest release including
+# prereleases", so a user on the in-app Stable channel who ran this script (or a
+# one-tap Steam "Update Vibemis" shortcut, or vibemis-setup.sh) was silently put
+# on a beta. Prereleases now require an explicit --beta.
+CHANNEL_STABLE=1
 CHANNEL_RC=0
 CHECK_ONLY=0
 LAUNCH_AFTER=0
@@ -42,6 +47,7 @@ DEST_OVERRIDE=""
 while [ $# -gt 0 ]; do
     case "$1" in
         --stable) CHANNEL_STABLE=1 ;;
+        --beta|--prerelease) CHANNEL_STABLE=0 ;;   # opt in to betas/prereleases
         --rc)     CHANNEL_RC=1 ;;    # newest release candidate (-rc.NNN, the proposed next stable)
         --check)  CHECK_ONLY=1 ;;
         --launch) LAUNCH_AFTER=1 ;;
@@ -94,7 +100,7 @@ if [ "$CHANNEL_STABLE" -eq 1 ]; then
 elif [ "$CHANNEL_RC" -eq 1 ]; then
     echo "Channel: release candidate"
 else
-    echo "Channel: latest (includes betas)"
+    echo "Channel: latest (includes betas) - explicit --beta"
 fi
 
 echo "Querying $REPO releases..."

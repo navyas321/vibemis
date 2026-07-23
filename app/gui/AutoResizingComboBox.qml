@@ -100,11 +100,22 @@ ComboBox {
         SdlGamepadKeyNavigation.setUiNavMode(true)
     }
 
-    Keys.onLeftPressed: {
-        decrementCurrentIndex()
+    // Same defect as the Up/Down guard above, and the one that actually bit users:
+    // decrement/incrementCurrentIndex() with the popup CLOSED goes through
+    // QQuickComboBoxPrivate::setCurrentIndex(..., Activate), which emits activated()
+    // and therefore RUNS the instance's onActivated — silently writing and persisting
+    // a new value. Unlike Up/Down, gamepad Left/Right is NOT translated by UiNavMode:
+    // SdlGamepadKeyNavigation sends raw Key_Left/Key_Right for the d-pad AND the left
+    // stick (auto-repeating), so a stick nudge on a focused combo changed the setting.
+    // That is how a Stable-channel user was silently moved onto Beta and auto-updated
+    // to a prerelease (BL-2437). Closed popup = arrows never edit; open it with A/Enter
+    // first, where the default arrow behavior still applies.
+    Keys.onLeftPressed: function(event) {
+        if (popup.visible) { event.accepted = false; return }
+        event.accepted = true
     }
-
-    Keys.onRightPressed: {
-        incrementCurrentIndex()
+    Keys.onRightPressed: function(event) {
+        if (popup.visible) { event.accepted = false; return }
+        event.accepted = true
     }
 }

@@ -110,6 +110,22 @@ jobs:
       - name: Check BL-2408 RFI invariants
         run: bash scripts/check-rfi-invariants.sh
 
+  # Guards the auto-updater's two hard rules (BL-2437/2438/2439): the update channel is
+  # always respected (a Stable user never receives a prerelease), and the updater
+  # always self-installs instead of sending the user to github.com.
+  updater-invariants:
+    name: Updater Invariants
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+      - name: Check updater invariants
+        run: bash scripts/check-updater-invariants.sh
+
   setup-version:
     name: Setup Version
     runs-on: ubuntu-latest
