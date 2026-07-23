@@ -103,6 +103,47 @@ and `create-dev-release` jobs are **skipped entirely** — no AppImage is produc
    manual dispatch on them builds a `dev`-tier CI artifact that is NOT published to
    Releases.
 
+## Changelog language — say what changed FOR THE USER
+
+Release bodies are auto-generated from commit subjects (`create-dev-release` in
+`dev-build.yml`). **A changelog entry must state the user-visible effect, not the internal
+mechanism.** "enable RFI by default on AMD/Gallium (mirror upstream d3c23b55)" tells a user
+nothing; "fixes the stuttering/choppy video on AMD handhelds" tells them whether to update.
+
+Two ways to get that, in order of preference:
+
+1. **Write the commit subject user-first** — effect, then mechanism:
+   `fix: stuttering video on AMD handhelds (enable RFI by default)`.
+2. **Add a `Changelog:` trailer** to the commit body when the subject must stay technical
+   (conventional-commit scope, upstream-mirror wording, etc.). The trailer **overrides** the
+   subject in the release body; the mechanism stays in the commit body and PR:
+
+   ```
+   fix(BL-XXXX): enable RFI by default on AMD/Gallium (mirror upstream d3c23b55)
+
+   <body explaining the mechanism, upstream refs, RCA links...>
+
+   Changelog: Fixes stuttering/choppy video on AMD handhelds (Legion Go S, Steam Deck)
+   Co-Authored-By: ...
+   ```
+
+   ⚠ **The trailer must sit in the FINAL trailer block, with no blank line separating it
+   from the other trailers** (`Co-Authored-By:`, `Signed-off-by:`). Git only parses the last
+   paragraph as trailers — a blank line above `Co-Authored-By:` silently orphans `Changelog:`
+   and the release falls back to the subject. Verify before pushing:
+
+   ```bash
+   git log -1 --pretty=format:"%s|%(trailers:key=Changelog,valueonly)"
+   ```
+
+Anything a user could notice — video, audio, input, UI, updates, pairing — needs one of the
+two. Pure plumbing (`ci:`, `chore:`, `build:`, `docs(auto):`) is auto-demoted into a collapsed
+"Internal / build plumbing" section and needs neither.
+
+**When a release body still reads as jargon after the cut, fix it retroactively** with
+`gh release edit <tag> --notes-file <file>` — a Highlights section in plain language at the
+top. Release *bits* are immutable; the notes are documentation and may be improved.
+
 ## README update rule — required at every release
 
 After merging a feature to `vibemis-main`, update `README.md` before the release.

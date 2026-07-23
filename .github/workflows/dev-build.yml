@@ -1031,29 +1031,45 @@ jobs:
         if [ -z "$PREV_TAG" ]; then
           SINCE_DATE=$(date -d '7 days ago' '+%Y-%m-%d')
           echo "No previous same-or-higher-tier release found. Getting commits since $SINCE_DATE"
-          COMMITS=$(git log --since="$SINCE_DATE" --pretty=format:"%h|%s|%an|%ad" --date=short --no-merges)
+          COMMITS=$(git log --since="$SINCE_DATE" --pretty=format:"%h|%s|%(trailers:key=Changelog,valueonly,separator=%x20)" --no-merges)
         else
           echo "Getting commits since last same-or-higher-tier release: $PREV_TAG"
-          COMMITS=$(git log ${PREV_TAG}..$CURRENT_VERSION --pretty=format:"%h|%s|%an|%ad" --date=short --no-merges)
+          COMMITS=$(git log ${PREV_TAG}..$CURRENT_VERSION --pretty=format:"%h|%s|%(trailers:key=Changelog,valueonly,separator=%x20)" --no-merges)
         fi
         FEATURES=""
         BUGFIXES=""
         IMPROVEMENTS=""
         OTHER=""
-        while IFS='|' read -r hash subject author date; do
+        INTERNAL=""
+        while IFS='|' read -r hash subject note; do
           if [ -z "$hash" ]; then continue; fi
           subject=$(echo "$subject" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+          note=$(echo "$note" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+          # CI markers are workflow plumbing, never user-facing changelog content.
+          subject=$(echo "$subject" | sed -E 's/ *\[(skip ci|alpha|ci skip)\]//g; s/  +/ /g; s/ +$//')
           # BL-tag scrub: internal backlog ids (BL-NNNN) never reach the public changelog
           # (release bodies were retro-scrubbed 2026-07-17; this keeps new cuts clean).
           subject=$(echo "$subject" | sed -E 's/ *\(((BL|LIT)-[0-9]+[,/ ]*)+\)//g; s/\[?(BL|LIT)-[0-9]+\]?[:]?[[:space:]]*//g; s/  +/ /g; s/ +$//')
-          if echo "$subject" | grep -iE "^(feat|feature|add|implement|new)[:|\s]" > /dev/null; then
-            FEATURES="${FEATURES}- ${subject} (${hash})\n"
-          elif echo "$subject" | grep -iE "^(fix|bug|resolve|correct)[:|\s]" > /dev/null; then
-            BUGFIXES="${BUGFIXES}- ${subject} (${hash})\n"
-          elif echo "$subject" | grep -iE "^(improve|enhance|update|optimize|refactor)[:|\s]" > /dev/null; then
-            IMPROVEMENTS="${IMPROVEMENTS}- ${subject} (${hash})\n"
+          # BL-2431 (user directive): the changelog must say what CHANGED FOR THE USER, not
+          # restate internal mechanism. A `Changelog: <plain-language effect>` trailer in the
+          # commit body wins over the conventional-commit subject when present; write one for
+          # anything a user would notice. The mechanism stays in the commit body / PR.
+          if [ -n "$note" ]; then
+            entry="$note"
           else
-            OTHER="${OTHER}- ${subject} (${hash})\n"
+            entry="$subject"
+          fi
+          # Pure plumbing (CI, chores, auto-docs) is demoted out of the user-facing sections.
+          if [ -z "$note" ] && echo "$subject" | grep -iE "^(ci|chore|build|docs\(auto\)|fix\(ci\))[:(]" > /dev/null; then
+            INTERNAL="${INTERNAL}- ${subject} (${hash})\n"
+          elif echo "$subject" | grep -iE "^(feat|feature|add|implement|new)[:|\s]" > /dev/null; then
+            FEATURES="${FEATURES}- ${entry} (${hash})\n"
+          elif echo "$subject" | grep -iE "^(fix|bug|resolve|correct)[:|\s]" > /dev/null; then
+            BUGFIXES="${BUGFIXES}- ${entry} (${hash})\n"
+          elif echo "$subject" | grep -iE "^(improve|enhance|update|optimize|refactor)[:|\s]" > /dev/null; then
+            IMPROVEMENTS="${IMPROVEMENTS}- ${entry} (${hash})\n"
+          else
+            OTHER="${OTHER}- ${entry} (${hash})\n"
           fi
         done <<< "$COMMITS"
         CHANGELOG="## 🚧 Development Build Changelog\n\n"
@@ -1061,9 +1077,12 @@ jobs:
         [ ! -z "$BUGFIXES" ] && CHANGELOG="${CHANGELOG}### 🐛 Bug Fixes\n${BUGFIXES}\n"
         [ ! -z "$IMPROVEMENTS" ] && CHANGELOG="${CHANGELOG}### 🔧 Improvements\n${IMPROVEMENTS}\n"
         [ ! -z "$OTHER" ] && CHANGELOG="${CHANGELOG}### 📝 Other Changes\n${OTHER}\n"
+        # Plumbing last and collapsed — present for traceability, out of the way of what a
+        # user actually gets from this build (BL-2431).
+        [ ! -z "$INTERNAL" ] && CHANGELOG="${CHANGELOG}<details><summary>🔩 Internal / build plumbing</summary>\n\n${INTERNAL}\n</details>\n"
         # Never render a bare header — a cut with no commits since the previous
         # tag (e.g. a re-dispatch on the same HEAD) says so instead of looking broken.
-        if [ -z "${FEATURES}${BUGFIXES}${IMPROVEMENTS}${OTHER}" ]; then
+        if [ -z "${FEATURES}${BUGFIXES}${IMPROVEMENTS}${OTHER}${INTERNAL}" ]; then
           CHANGELOG="${CHANGELOG}_No code changes since the previous release — this build was cut from the same source (CI re-run or infrastructure-only update)._\n"
         fi
         echo -e "$CHANGELOG" > changelog.md
