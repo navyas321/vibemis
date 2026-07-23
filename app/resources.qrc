@@ -1,5 +1,10 @@
 <RCC>
     <qresource prefix="/">
+        <file alias="res/steam/vibemis_p.png">res/steam/vibemis_p.png</file>
+        <file alias="res/steam/vibemis.png">res/steam/vibemis.png</file>
+        <file alias="res/steam/vibemis_hero.png">res/steam/vibemis_hero.png</file>
+        <file alias="res/steam/vibemis_logo.png">res/steam/vibemis_logo.png</file>
+        <file alias="res/steam/vibemis_icon.png">res/steam/vibemis_icon.png</file>
         <file alias="res/vibemis-mark-512.png">res/vibemis-mark-512.png</file>
         <file alias="res/vibemis-mark-256.png">res/vibemis-mark-256.png</file>
         <file alias="res/vibemis-mark-128.png">res/vibemis-mark-128.png</file>
