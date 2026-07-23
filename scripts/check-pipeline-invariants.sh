@@ -16,19 +16,39 @@ if grep -E '^\s*group:\s*dev-build-' "$WF" | grep -q 'event_name'; then
   err "concurrency group includes github.event_name — push+dispatch on a ref will race the version counter"
 fi
 
-# 2. BL-2461: the RELEASES.md refresh must use auto-merge. A plain 'gh pr merge' on the
-#    bot PR is blocked by branch protection (required checks show expected/pending on a
-#    GITHUB_TOKEN PR), so it always fail-closes and the timeline stops updating.
-if grep -q 'name: Refresh RELEASES.md build timeline' "$WF"; then
-  # Look at the refresh step region for the merge invocation.
-  refresh=$(awk '/name: Refresh RELEASES.md build timeline/{f=1} f{print} f&&/^  [a-z].*:$/&&!/Refresh RELEASES/{c++} c>1{exit}' "$WF")
-  printf '%s' "$refresh" | grep -q 'gh pr merge' \
-    || err "refresh step no longer calls 'gh pr merge' — cannot verify the merge path"
-  printf '%s' "$refresh" | grep 'gh pr merge' | grep -q -- '--auto' \
-    || err "refresh 'gh pr merge' is missing --auto — a plain merge is blocked by branch protection on the bot PR"
-  # The refresh merge must stay [skip ci] so the docs merge never cuts a beta.
-  printf '%s' "$refresh" | grep -q '\[skip ci\]' \
-    || err "refresh merge subject lost [skip ci] — a docs refresh merge could now trigger a beta"
+# 2. BL-2394/BL-2461/BL-2472: the release job must NEVER open a pull request.
+#
+#    This guard used to assert the opposite — that the RELEASES.md refresh called
+#    `gh pr merge --auto` — because the theory was that auto-merge would eventually
+#    satisfy branch protection. It cannot, and the evidence is unambiguous: on PR #290
+#    all three required contexts ("AppImage Build", "Compile Sanity (Linux)",
+#    "Invariants") completed GREEN as check runs on the PR's exact head SHA, and the
+#    PR's statusCheckRollup was still EMPTY. GitHub does not attribute
+#    workflow_dispatch check runs to a pull request, and a GITHUB_TOKEN-authored PR
+#    never emits the pull_request event that would create attributable ones. So
+#    protection saw its requirements as permanently "expected": a plain merge returned
+#    "base branch policy prohibits the merge" (#278, #279, #284, #285) and --auto simply
+#    never fired (#288, #290). Six bot PRs opened and closed after six consecutive cuts
+#    while RELEASES.md sat six releases stale.
+#
+#    The timeline is now force-pushed to the unprotected `releases-index` branch, which
+#    needs no PR at all. Re-introducing a bot PR here would resurrect the phantom-PR
+#    loop, so this asserts the release job stays PR-free.
+rel_job=$(awk '/^  create-dev-release:/{f=1} f&&/^  [a-z][a-z-]*:$/&&!/create-dev-release/{exit} f{print}' "$WF")
+if [ -n "$rel_job" ]; then
+  printf '%s' "$rel_job" | grep -qE 'gh pr (create|merge)' \
+    && err "the release job opens or merges a pull request again — a GITHUB_TOKEN PR can never satisfy branch protection (its statusCheckRollup stays empty), so this leaves a phantom PR after every cut. Push the timeline to the unprotected releases-index branch instead."
+  printf '%s' "$rel_job" | grep -q 'releases-index' \
+    || err "the release job no longer publishes the build timeline to the releases-index branch"
+  # The publish must stay off any branch that triggers a build, or the timeline push
+  # would cut a release of its own.
+  printf '%s' "$rel_job" | grep -qE 'push --force origin .*refs/heads/' \
+    || err "the timeline publish no longer force-pushes an explicit refs/heads/ ref"
+fi
+# The trigger list must not grow to include the index branch, or publishing the
+# timeline would start a build (and that build would publish a timeline, and so on).
+if awk '/^on:/{f=1} f&&/^[a-z]/&&!/^on:/{exit} f{print}' "$WF" | grep -q 'releases-index'; then
+  err "releases-index appears in the workflow triggers — publishing the timeline would start a build loop"
 fi
 
 # 3. BL-2459: the consolidated 'invariants' job must exist AND gate the release.
@@ -58,15 +78,18 @@ elif printf '%s' "$stable_cond" | grep -q 'BRANCH_NAME'; then
   err "the stable tier arm tests BRANCH_NAME — a push to release/**/main/master would cut an ungated stable (BL-2458)"
 fi
 
-# 5. Changelog generator must read the `Changelog:` note from the commit BODY, not
-#    via %(trailers). gh pr merge --squash reformats the message so the note is almost
-#    never in git's strict final trailer block; %(trailers) then misses it and the
-#    release falls back to raw subjects (that regression hit 0.5.0-beta.004).
-if grep -q 'trailers:key=Changelog' "$WF"; then
-  err "changelog generator still uses %(trailers:key=Changelog) — squash-merged commits lose the note (use a body grep)"
+# 5. Release-body CONTENT rules (the `Changelog:` body grep, the "What's new for you"
+#    hero, plumbing demotion) moved out of this file when the generator stopped being
+#    inline shell in the workflow. They now live in scripts/check-changelog-invariants.sh,
+#    which asserts the RENDERED MARKDOWN against a synthetic repo instead of grepping
+#    this YAML for an implementation detail. Both run in the same `invariants` job.
+#    What stays here is the structural half: the workflow must still delegate to the
+#    tested generator rather than growing a second copy inline.
+grep -q 'scripts/gen-changelog.sh' "$WF" \
+  || err "the release job no longer calls scripts/gen-changelog.sh — the body would come from untested inline shell again"
+if grep -qE '^\s+(FEATURES|BUGFIXES|INTERNAL)=' "$WF"; then
+  err "changelog assembly is inline in the workflow again — keep it in scripts/gen-changelog.sh where it is testable"
 fi
-grep -qE "grep -m1 -iE '\^\[\[:space:\]\]\*Changelog:'" "$WF" \
-  || err "changelog generator no longer greps the commit body for a Changelog: line"
 
 if [ "$fail" -ne 0 ]; then
   echo "One or more release-pipeline invariants failed." >&2
