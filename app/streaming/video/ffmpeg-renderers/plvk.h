@@ -58,8 +58,8 @@ private:
 
     void selectPresentationMode(PDECODER_PARAMETERS params);
     void selectLegacyPresentMode(PDECODER_PARAMETERS params);
-    bool acquirePendingSwapchainFrame();
-    bool acquireVrrSwapchainFrame();
+    bool acquirePendingSwapchainFrame(VrrPrepareResult* preparation = nullptr);
+    bool acquireVrrSwapchainFrame(VrrPrepareResult* preparation);
     bool submitPendingSwapchainFrame();
     bool cancelVrrFrame();
     void queueRenderDeviceReset();

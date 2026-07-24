@@ -105,6 +105,14 @@ struct VrrPrepareResult {
     // abandoned by submitting them. The worker owns any required wait.
     bool cancellationMaySubmit = false;
     VrrPresentFeedback feedback;
+
+    // Optional observation-only split of native preparation. Vulkan uses it
+    // to distinguish libplacebo's in-flight wait, swapchain image acquisition,
+    // and render submission. These values must never affect pacing policy.
+    bool nativePreparationTimingValid = false;
+    uint64_t swapWaitUs = 0;
+    uint64_t imageAcquireUs = 0;
+    uint64_t renderSubmitUs = 0;
 };
 
 class IVrrFramePresenter {

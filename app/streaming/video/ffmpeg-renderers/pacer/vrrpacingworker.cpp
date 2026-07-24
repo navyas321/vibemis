@@ -511,6 +511,11 @@ int VrrPacingWorker::run()
                 telemetry.preparationEndUs < decision.targetUs &&
                 targetWait.deadlineAlreadyElapsed;
             sample.submitErrorUs = telemetry.submitErrorUs;
+            sample.nativePreparationTimingValid =
+                preparation.nativePreparationTimingValid;
+            sample.swapWaitUs = preparation.swapWaitUs;
+            sample.imageAcquireUs = preparation.imageAcquireUs;
+            sample.renderSubmitUs = preparation.renderSubmitUs;
             sample.spacingCorrected = telemetry.spacingCorrected;
             sample.presented = feedback.presented;
             sample.cancelled = feedback.cancelled;
