@@ -47,6 +47,9 @@ typedef struct _VIDEO_STATS {
     int64_t vrrSubmitErrorP95Us;
     int64_t vrrSubmitErrorP99Us;
     int64_t vrrSubmitErrorMaxUs;
+    uint64_t vrrSwapWaitP95Us;
+    uint64_t vrrImageAcquireP95Us;
+    uint64_t vrrRenderSubmitP95Us;
     uint64_t vrrStateSequence;
     uint64_t vrrStateSampleTimeUs;
     int64_t vrrReadinessBudgetUs;

@@ -877,6 +877,9 @@ void FFmpegVideoDecoder::addVideoStats(VIDEO_STATS& src, VIDEO_STATS& dst)
         dst.vrrSubmitErrorP95Us = src.vrrSubmitErrorP95Us;
         dst.vrrSubmitErrorP99Us = src.vrrSubmitErrorP99Us;
         dst.vrrSubmitErrorMaxUs = src.vrrSubmitErrorMaxUs;
+        dst.vrrSwapWaitP95Us = src.vrrSwapWaitP95Us;
+        dst.vrrImageAcquireP95Us = src.vrrImageAcquireP95Us;
+        dst.vrrRenderSubmitP95Us = src.vrrRenderSubmitP95Us;
     }
     dst.totalReassemblyTime += src.totalReassemblyTime;
     dst.totalDecodeTime += src.totalDecodeTime;
@@ -1003,6 +1006,11 @@ void FFmpegVideoDecoder::syncPacerTelemetry()
             snapshot.vrrSubmitErrorP99Us;
         m_ActiveWndVideoStats.vrrSubmitErrorMaxUs =
             snapshot.vrrSubmitErrorMaxUs;
+        m_ActiveWndVideoStats.vrrSwapWaitP95Us = snapshot.vrrSwapWaitP95Us;
+        m_ActiveWndVideoStats.vrrImageAcquireP95Us =
+            snapshot.vrrImageAcquireP95Us;
+        m_ActiveWndVideoStats.vrrRenderSubmitP95Us =
+            snapshot.vrrRenderSubmitP95Us;
     }
 
     m_LastPacerTelemetry = snapshot;
@@ -1196,7 +1204,7 @@ void FFmpegVideoDecoder::stringifyVideoStats(VIDEO_STATS& stats, char* output, i
         ret = snprintf(&output[offset],
                        length - offset,
                        "Frames dropped by your network connection: %.2f%%\n"
-                       "Frames dropped due to network jitter: %.2f%%\n"
+                       "Frames dropped by frame pacing: %.2f%%\n"
                        "Average network latency: %s\n"
                        "Average decoding time: %.2f ms\n"
                        "Average frame queue delay: %.2f ms\n"
@@ -1243,6 +1251,7 @@ void FFmpegVideoDecoder::stringifyVideoStats(VIDEO_STATS& stats, char* output, i
                        "VRR eligible: %llu; prepare late %.2f%% (%llu, p50/p95/p99: %.2f/%.2f/%.2f ms)\n"
                        "VRR wait-entry late: %.2f%%; submit error p50/p95/p99/max: %+.2f/%+.2f/%+.2f/%+.2f ms\n"
                        "VRR failed/cancelled: %llu/%llu; drops/spacing: %llu/%llu\n"
+                       "VRR prepare p95 swap/acquire/render: %.2f/%.2f/%.2f ms\n"
                        "VRR decision readiness/timing reserve/guard: %.2f/%.2f/%.2f ms (sample %s)\n"
                        "VRR render lead/wake lead (render/target)/source: %.2f/%.2f/%.2f/%.2f ms\n",
                        static_cast<unsigned long long>(stats.vrrEligibleFrames),
@@ -1260,6 +1269,9 @@ void FFmpegVideoDecoder::stringifyVideoStats(VIDEO_STATS& stats, char* output, i
                        static_cast<unsigned long long>(stats.vrrPresentCancelledFrames),
                        static_cast<unsigned long long>(stats.vrrPacingDroppedFrames),
                        static_cast<unsigned long long>(stats.vrrSpacingCorrections),
+                       static_cast<double>(stats.vrrSwapWaitP95Us) / 1000.0,
+                       static_cast<double>(stats.vrrImageAcquireP95Us) / 1000.0,
+                       static_cast<double>(stats.vrrRenderSubmitP95Us) / 1000.0,
                        static_cast<double>(stats.vrrReadinessBudgetUs) / 1000.0,
                        static_cast<double>(stats.vrrTimingBudgetUs) / 1000.0,
                        static_cast<double>(stats.vrrGuardUs) / 1000.0,

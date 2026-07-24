@@ -181,6 +181,10 @@ void testTelemetrySnapshotsRemainCumulative()
             sample.prepareLate = (i % 2) == 0;
             sample.preparationLatenessUs = i;
             sample.submitErrorUs = static_cast<int64_t>(i) - 450;
+            sample.nativePreparationTimingValid = true;
+            sample.swapWaitUs = i;
+            sample.imageAcquireUs = i * 2;
+            sample.renderSubmitUs = i * 3;
             sample.spacingCorrected = (i % 8) == 0;
             sample.presented = true;
             sample.readinessBudgetUs = static_cast<int64_t>(i);
@@ -229,6 +233,9 @@ void testTelemetrySnapshotsRemainCumulative()
                finalSnapshot.vrrSubmitErrorP95Us == 56 &&
                finalSnapshot.vrrSubmitErrorP99Us == 61 &&
                finalSnapshot.vrrSubmitErrorMaxUs == 62 &&
+               finalSnapshot.vrrSwapWaitP95Us == 506 &&
+               finalSnapshot.vrrImageAcquireP95Us == 1012 &&
+               finalSnapshot.vrrRenderSubmitP95Us == 1518 &&
                finalSnapshot.vrrPresentFailedFrames == 1 &&
                finalSnapshot.vrrStateSequence == finalSnapshot.sequence,
            "telemetry must keep bounded timing distributions and output outcomes separate");

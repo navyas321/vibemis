@@ -37,6 +37,9 @@ struct PacerTelemetrySnapshot {
     int64_t vrrSubmitErrorP95Us = 0;
     int64_t vrrSubmitErrorP99Us = 0;
     int64_t vrrSubmitErrorMaxUs = 0;
+    uint64_t vrrSwapWaitP95Us = 0;
+    uint64_t vrrImageAcquireP95Us = 0;
+    uint64_t vrrRenderSubmitP95Us = 0;
 
     // These are a decision-time sample, not an aggregate or a proxy for the
     // target used by a different frame.
@@ -58,12 +61,16 @@ struct VrrTelemetrySample {
     uint64_t renderTimeUs = 0;
     uint64_t preparationLatenessUs = 0;
     int64_t submitErrorUs = 0;
+    uint64_t swapWaitUs = 0;
+    uint64_t imageAcquireUs = 0;
+    uint64_t renderSubmitUs = 0;
 
     bool prepareLate = false;
     bool targetWaitEntryLate = false;
     bool spacingCorrected = false;
     bool presented = false;
     bool cancelled = false;
+    bool nativePreparationTimingValid = false;
 
     int64_t readinessBudgetUs = 0;
     uint64_t timingBudgetUs = 0;
@@ -82,6 +89,7 @@ public:
         PacerTelemetrySnapshot snapshot = m_Snapshot;
         populatePrepareLatenessPercentilesLocked(snapshot);
         populateSubmitErrorPercentilesLocked(snapshot);
+        populateNativePreparationPercentilesLocked(snapshot);
         return snapshot;
     }
 
@@ -149,6 +157,9 @@ public:
         if (sample.spacingCorrected) {
             ++m_Snapshot.vrrSpacingCorrections;
         }
+        if (sample.nativePreparationTimingValid) {
+            addNativePreparationTimingLocked(sample);
+        }
         recordVrrOutcomeLocked(sample.presented, sample.cancelled);
         if (sample.presented && !sample.cancelled) {
             ++m_Snapshot.renderedFrames;
@@ -169,6 +180,7 @@ public:
 private:
     static constexpr size_t kPrepareLatenessSampleCount = 128;
     static constexpr size_t kSubmitErrorSampleCount = 128;
+    static constexpr size_t kNativePreparationSampleCount = 128;
 
     static size_t percentileIndex(size_t count, size_t percentile)
     {
@@ -250,6 +262,45 @@ private:
             m_SubmitErrorSampleSize - 1];
     }
 
+    void addNativePreparationTimingLocked(const VrrTelemetrySample& sample)
+    {
+        m_SwapWaitSamples[m_NextNativePreparationSample] = sample.swapWaitUs;
+        m_ImageAcquireSamples[m_NextNativePreparationSample] =
+            sample.imageAcquireUs;
+        m_RenderSubmitSamples[m_NextNativePreparationSample] =
+            sample.renderSubmitUs;
+        m_NextNativePreparationSample =
+            (m_NextNativePreparationSample + 1) %
+            kNativePreparationSampleCount;
+        m_NativePreparationSampleSize = std::min(
+            m_NativePreparationSampleSize + 1,
+            kNativePreparationSampleCount);
+    }
+
+    static uint64_t unsignedP95(
+        const std::array<uint64_t, kNativePreparationSampleCount>& samples,
+        size_t count)
+    {
+        std::array<uint64_t, kNativePreparationSampleCount> sorted = samples;
+        std::sort(sorted.begin(), sorted.begin() + count);
+        return sorted[percentileIndex(count, 95)];
+    }
+
+    void populateNativePreparationPercentilesLocked(
+        PacerTelemetrySnapshot& snapshot) const
+    {
+        if (m_NativePreparationSampleSize == 0) {
+            return;
+        }
+
+        snapshot.vrrSwapWaitP95Us = unsignedP95(
+            m_SwapWaitSamples, m_NativePreparationSampleSize);
+        snapshot.vrrImageAcquireP95Us = unsignedP95(
+            m_ImageAcquireSamples, m_NativePreparationSampleSize);
+        snapshot.vrrRenderSubmitP95Us = unsignedP95(
+            m_RenderSubmitSamples, m_NativePreparationSampleSize);
+    }
+
     mutable QMutex m_Lock;
     PacerTelemetrySnapshot m_Snapshot;
     std::array<uint64_t, kPrepareLatenessSampleCount> m_PrepareLatenessSamples {};
@@ -258,4 +309,9 @@ private:
     std::array<int64_t, kSubmitErrorSampleCount> m_SubmitErrorSamples {};
     size_t m_NextSubmitErrorSample = 0;
     size_t m_SubmitErrorSampleSize = 0;
+    std::array<uint64_t, kNativePreparationSampleCount> m_SwapWaitSamples {};
+    std::array<uint64_t, kNativePreparationSampleCount> m_ImageAcquireSamples {};
+    std::array<uint64_t, kNativePreparationSampleCount> m_RenderSubmitSamples {};
+    size_t m_NextNativePreparationSample = 0;
+    size_t m_NativePreparationSampleSize = 0;
 };

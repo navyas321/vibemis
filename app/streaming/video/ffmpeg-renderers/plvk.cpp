@@ -953,7 +953,7 @@ bool PlVkRenderer::submitPendingSwapchainFrame()
     return submitted;
 }
 
-bool PlVkRenderer::acquireVrrSwapchainFrame()
+bool PlVkRenderer::acquireVrrSwapchainFrame(VrrPrepareResult* preparation)
 {
     if (m_Vulkan == nullptr || m_Vulkan->gpu == nullptr ||
         m_Swapchain == nullptr || m_Window == nullptr) {
@@ -975,10 +975,10 @@ bool PlVkRenderer::acquireVrrSwapchainFrame()
         cancelVrrFrame();
     }
 
-    return acquirePendingSwapchainFrame();
+    return acquirePendingSwapchainFrame(preparation);
 }
 
-bool PlVkRenderer::acquirePendingSwapchainFrame()
+bool PlVkRenderer::acquirePendingSwapchainFrame(VrrPrepareResult* preparation)
 {
 #ifndef Q_OS_WIN32
     // With libplacebo's Vulkan backend, swap_buffers() waits for queued
@@ -988,8 +988,16 @@ bool PlVkRenderer::acquirePendingSwapchainFrame()
     // NB: This seems to cause performance problems with the Windows display
     // stack (particularly on Nvidia) so we will only do this for non-Windows
     // platforms.
+    const uint64_t swapWaitStartUs = preparation != nullptr ?
+        LiGetMicroseconds() : 0;
     pl_swapchain_swap_buffers(m_Swapchain);
+    if (preparation != nullptr) {
+        preparation->swapWaitUs = LiGetMicroseconds() - swapWaitStartUs;
+    }
 #endif
+
+    const uint64_t imageAcquireStartUs = preparation != nullptr ?
+        LiGetMicroseconds() : 0;
 
     // Handle the swapchain being resized
     int vkDrawableW;
@@ -1008,6 +1016,11 @@ bool PlVkRenderer::acquirePendingSwapchainFrame()
     // renderFrame() wasn't called after waitToRender().
     if (!pl_swapchain_start_frame(m_Swapchain, &m_SwapchainFrame)) {
         return false;
+    }
+
+    if (preparation != nullptr) {
+        preparation->imageAcquireUs =
+            LiGetMicroseconds() - imageAcquireStartUs;
     }
 
     m_HasPendingSwapchainFrame = true;
@@ -1082,7 +1095,8 @@ VrrPrepareResult PlVkRenderer::prepareFrame(AVFrame* frame)
     // generation before acquisition; a concurrent new callback remains set
     // and makes presentAdaptive() safely abandon this image.
     m_VrrWindowChangePending.exchange(false);
-    if (!acquireVrrSwapchainFrame()) {
+    result.nativePreparationTimingValid = true;
+    if (!acquireVrrSwapchainFrame(&result)) {
         return result;
     }
 
@@ -1091,6 +1105,7 @@ VrrPrepareResult PlVkRenderer::prepareFrame(AVFrame* frame)
         return result;
     }
 
+    const uint64_t renderSubmitStartUs = LiGetMicroseconds();
     m_VrrPreparingFrame = true;
     m_VrrRenderSucceeded = false;
     m_VrrPreparedFrame = nullptr;
@@ -1103,6 +1118,7 @@ VrrPrepareResult PlVkRenderer::prepareFrame(AVFrame* frame)
     if (m_VrrRenderSucceeded && m_Vulkan != nullptr && m_Vulkan->gpu != nullptr) {
         pl_gpu_flush(m_Vulkan->gpu);
     }
+    result.renderSubmitUs = LiGetMicroseconds() - renderSubmitStartUs;
 
     m_VrrPreparingFrame = false;
 
