@@ -859,10 +859,16 @@ jobs:
           libopus-dev libsdl2-dev libsdl2-ttf-dev \
           libssl-dev libavcodec-dev libavformat-dev libavutil-dev libswscale-dev \
           libxkbcommon-dev wayland-protocols libdrm-dev libgbm-dev \
-          libplacebo-dev libva-dev \
+          libva-dev \
           libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
           libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 \
-          librsvg2-bin fuse libfuse2
+          librsvg2-bin fuse libfuse2 \
+          python3-pip ninja-build
+        # NOTE: libplacebo-dev is deliberately NOT installed from apt. Jammy ships
+        # libplacebo 4.192 (2022, pre-maintenance1), which is the BL-2516 VRR-stutter
+        # root cause on the Legion Go S. A modern libplacebo is source-built below
+        # (mirroring Nonary v6.1.0-vrr9.1.1) so it is the only one on the pkg-config /
+        # linker path and gets bundled into the AppImage.
 
     - name: Download linuxdeploy + Qt plugin
       run: |
@@ -874,9 +880,52 @@ jobs:
         chmod +x $HOME/bin/linuxdeploy.AppImage $HOME/bin/linuxdeploy-plugin-qt.AppImage
         echo "$HOME/bin" >> $GITHUB_PATH
 
+    # BL-2516 — VRR ~1 Hz stutter fix (root cause: stale bundled libplacebo).
+    # See vibemis-agent-meta docs/engineering/claude_vrr_rca2.md. On the Legion Go S
+    # the active VRR presenter is PlVkRenderer (libplacebo/Vulkan), presenting FIFO
+    # depth-1 through gamescope's FROG WSI layer, which force-enables
+    # VK_EXT_swapchain_maintenance1. The jammy apt libplacebo 4.192 (2022) predates
+    # maintenance1: on any transient VK_SUBOPTIMAL_KHR the layer raises, it destroys
+    # and recreates the whole swapchain — a blocking hitch that lands as visible
+    # judder while the pacer still submits on schedule (so every submit-side VRR
+    # counter stays clean; the defect is invisible to them). Modern haasn libplacebo
+    # is maintenance1-cooperative. We source-build the EXACT pin Nonary ships and
+    # apply the same crash-guard patch, so the AppImage present path == Nonary's.
+    # This holds SDL, FFmpeg and all client source constant — a single-variable
+    # change, so an on-device A/B cleanly confirms or refutes the runtime-stack cause.
+    - name: Build modern libplacebo (BL-2516 VRR present-path fix)
+      run: |
+        set -euxo pipefail
+        # Modern Vulkan headers (>= 1.3.246 for VK_EXT_swapchain_maintenance1) + a
+        # GLSL compiler (glslang/shaderc). Jammy apt vulkan-headers are 1.3.204 and
+        # predate maintenance1, so the LunarG SDK is required (same as Nonary).
+        wget -qO - https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
+        sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.4.313-jammy.list \
+          https://packages.lunarg.com/vulkan/1.4.313/lunarg-vulkan-1.4.313-jammy.list
+        sudo apt-get update
+        sudo apt-get install -y vulkan-sdk
+        sudo pip3 install --upgrade meson
+        # Same libplacebo commit Nonary v6.1.0-vrr9.1.1 ships.
+        rm -rf deps/libplacebo
+        git clone https://github.com/haasn/libplacebo.git deps/libplacebo
+        git -C deps/libplacebo checkout 2d0979fb54e025e904c7372666fffbf5dae40f66
+        git -C deps/libplacebo submodule update --init --recursive
+        # Mirror Nonary: disable VK_KHR_internally_synchronized_queues — gamescope#2261
+        # Game-Mode startup-crash guard on Mesa 26.1+ (harmless on older Mesa).
+        git -C deps/libplacebo apply "$PWD/app/deploy/linux/appimage/libplacebo-disable-internally-synchronized-queues.patch"
+        ( cd deps/libplacebo && meson setup build -Dvulkan=enabled -Dopengl=disabled -Ddemos=false && ninja -C build && sudo ninja install -C build )
+        # Make the freshly-installed libplacebo the one pkg-config, the linker and
+        # linuxdeploy's ldd-walk resolve (there is no apt libplacebo to shadow it).
+        printf '/usr/local/lib\n/usr/local/lib/x86_64-linux-gnu\n' | sudo tee /etc/ld.so.conf.d/vibemis-local.conf
+        sudo ldconfig
+        echo "Bundled libplacebo: $(pkg-config --modversion libplacebo 2>/dev/null || echo '??')"
+
     - name: Build and install
       run: |
         export PATH="$QT_ROOT_DIR/bin:$PATH"
+        # Resolve the source-built modern libplacebo (BL-2516), not any apt copy.
+        export PKG_CONFIG_PATH="/usr/local/lib/x86_64-linux-gnu/pkgconfig:/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+        export LD_LIBRARY_PATH="/usr/local/lib/x86_64-linux-gnu:/usr/local/lib:${LD_LIBRARY_PATH:-}"
         DEPLOY=$PWD/deploy
         rm -rf "$DEPLOY" build/installer-release
         mkdir -p "$DEPLOY" build/installer-release

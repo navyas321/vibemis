@@ -8,6 +8,10 @@
 *.sh    text eol=lf
 *.bash  text eol=lf
 
+# Build-time patches are fed to `git apply` on the Linux CI runner; CRLF would
+# make the hunk context mismatch and the apply fail. Pin them to LF too.
+*.patch text eol=lf
+
 # The AppImage and other binaries must never be line-ending converted.
 *.png   binary
 *.jpg   binary
