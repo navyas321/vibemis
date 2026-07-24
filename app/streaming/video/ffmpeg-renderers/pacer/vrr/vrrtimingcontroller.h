@@ -125,6 +125,8 @@ private:
     uint64_t renderLeadFloorUs() const;
     uint64_t renderLeadCeilingUs() const;
     uint64_t readinessCeilingUs() const;
+    uint64_t maximumReadinessBudgetUs() const;
+    void enforceSourceIntervalBudget();
     uint64_t guardCeilingUs() const;
     static uint64_t periodForRate(int rateHz, uint64_t fallbackUs);
     static uint64_t periodForRateQ16(int rateHz, uint64_t fallbackQ16);

@@ -617,6 +617,7 @@ bool VrrTimingController::acceptSourcePeriodQ16(uint64_t periodUsQ16)
     m_GuardUs = clampUnsigned(m_GuardUs,
                               m_BaseGuardUs,
                               guardCeilingUs());
+    enforceSourceIntervalBudget();
     return !withinPercent(m_SourcePeriodUs, previousPeriodUs,
                           kMaterialRateChangePercent);
 }
@@ -693,8 +694,8 @@ void VrrTimingController::noteSubmission(bool submitted, bool cancelled,
                               m_Pending.preparationDurationUs,
                               kLearningSampleCount);
             }
-            updateReadinessModel();
             updateLearnedBudgets();
+            updateReadinessModel();
         }
     }
 
@@ -721,6 +722,12 @@ void VrrTimingController::updateLearnedBudgets()
             kMaximumTargetWakeLeadUs,
             percentile(m_TargetSchedulerDelays, 95));
     }
+
+    // A newly learned render lead changes how much of the source interval is
+    // still available to the readiness cushion. Clamp immediately instead of
+    // letting the 100 us/frame reserve-release ramp preserve an old,
+    // multi-frame scheduling budget after presentation backpressure appears.
+    enforceSourceIntervalBudget();
 }
 
 void VrrTimingController::updateReadinessModel()
@@ -784,7 +791,20 @@ void VrrTimingController::applyReadinessBudget(bool acquireReserve)
         effectiveDemandUs > usableHeadroomUs ?
             effectiveDemandUs - usableHeadroomUs : 0);
 
+    // Near the panel ceiling, presentation backpressure is part of the queue
+    // age that this reserve creates. Letting readiness consume a complete
+    // source interval before adding render lead turns that feedback into a
+    // standing multi-frame buffer: the worker reaches its bounded capacity,
+    // coalesces otherwise displayable frames, and reports the loss as a pacer
+    // drop. Keep the whole timing budget within one content interval, matching
+    // Nonary's near-ceiling queue target. This retains the learned burst
+    // cushion while preventing it from deepening the queue that caused it.
+    enforceSourceIntervalBudget();
+
     const int64_t ceilingUs = static_cast<int64_t>(readinessCeilingUs());
+    const int64_t maximumBudgetUs = static_cast<int64_t>(
+        std::min<uint64_t>(maximumReadinessBudgetUs(),
+                           static_cast<uint64_t>(ceilingUs)));
     const int64_t reserveUs = static_cast<int64_t>(
         std::min<uint64_t>(m_AppliedReadinessReserveUs,
                            static_cast<uint64_t>(ceilingUs)));
@@ -793,10 +813,10 @@ void VrrTimingController::applyReadinessBudget(bool acquireReserve)
         std::numeric_limits<int64_t>::max() :
         m_ReadinessPhaseUs + reserveUs;
     const int64_t clampedDesiredUs = std::max(
-        -ceilingUs, std::min(desiredUs, ceilingUs));
+        -ceilingUs, std::min(desiredUs, maximumBudgetUs));
     if (!acquireReserve) {
         m_ReadinessBudgetUs = std::max(
-            -ceilingUs, std::min(m_ReadinessPhaseUs, ceilingUs));
+            -ceilingUs, std::min(m_ReadinessPhaseUs, maximumBudgetUs));
     }
     else if (clampedDesiredUs > m_ReadinessBudgetUs) {
         m_ReadinessBudgetUs += std::min<int64_t>(
@@ -885,19 +905,43 @@ bool VrrTimingController::hasLastSubmission() const
 
 uint64_t VrrTimingController::renderLeadFloorUs() const
 {
-    return std::min(kRenderLeadFloorUs, m_SourcePeriodUs);
+    const uint64_t maximumLeadUs = m_SourcePeriodUs >
+            kPresentationSafetyUs ?
+        m_SourcePeriodUs - kPresentationSafetyUs : 0;
+    return std::min(kRenderLeadFloorUs, maximumLeadUs);
 }
 
 uint64_t VrrTimingController::renderLeadCeilingUs() const
 {
+    const uint64_t maximumLeadUs = m_SourcePeriodUs >
+            kPresentationSafetyUs ?
+        m_SourcePeriodUs - kPresentationSafetyUs : 0;
     const uint64_t ceilingUs = std::min(kRenderLeadCeilingUs,
-                                        m_SourcePeriodUs);
+                                         maximumLeadUs);
     return std::max(renderLeadFloorUs(), ceilingUs);
 }
 
 uint64_t VrrTimingController::readinessCeilingUs() const
 {
     return std::min(kReadinessCeilingUs, m_SourcePeriodUs);
+}
+
+uint64_t VrrTimingController::maximumReadinessBudgetUs() const
+{
+    const uint64_t nonReadinessBudgetUs = saturatingAdd(
+        m_RenderLeadUs, kPresentationSafetyUs);
+    return m_SourcePeriodUs > nonReadinessBudgetUs ?
+        m_SourcePeriodUs - nonReadinessBudgetUs : 0;
+}
+
+void VrrTimingController::enforceSourceIntervalBudget()
+{
+    const uint64_t maximumBudgetUs = maximumReadinessBudgetUs();
+    m_AppliedReadinessReserveUs = std::min(
+        m_AppliedReadinessReserveUs, maximumBudgetUs);
+    if (m_ReadinessBudgetUs > static_cast<int64_t>(maximumBudgetUs)) {
+        m_ReadinessBudgetUs = static_cast<int64_t>(maximumBudgetUs);
+    }
 }
 
 uint64_t VrrTimingController::guardCeilingUs() const
