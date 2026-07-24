@@ -797,8 +797,10 @@ void VrrTimingController::applyReadinessBudget(bool acquireReserve)
     // standing multi-frame buffer: the worker reaches its bounded capacity,
     // coalesces otherwise displayable frames, and reports the loss as a pacer
     // drop. Keep the whole timing budget within one content interval, matching
-    // Nonary's near-ceiling queue target. This retains the learned burst
-    // cushion while preventing it from deepening the queue that caused it.
+    // Nonary's near-ceiling queue target (latency branch 90e373ee/dfa50426),
+    // adapted here to vrr9's projected-source timing controller. This retains
+    // the learned burst cushion while preventing it from deepening the queue
+    // that caused it.
     enforceSourceIntervalBudget();
 
     const int64_t ceilingUs = static_cast<int64_t>(readinessCeilingUs());
