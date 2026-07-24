@@ -365,6 +365,116 @@ void testHeadroomAwareReadinessReserve()
            "near-ceiling cadence-following presentation must retain a real burst cushion");
 }
 
+void testNearCeilingBufferFitsOneSourceInterval()
+{
+    constexpr int streamRateHz = 116;
+    constexpr uint64_t epochUs = 1000000;
+    VrrTimingController controller(config(streamRateHz, 120), false);
+
+    VrrTimingDecision decision = controller.schedule(
+        frame(0, 0, true, epochUs), epochUs);
+    controller.noteSubmission(true, false, decision.targetUs);
+
+    // Train the readiness model with a severe but valid gap-then-burst arrival
+    // pattern. Before the near-ceiling cap, the learned reserve could consume
+    // a full source interval and render lead was added on top, creating a
+    // standing queue deeper than one frame and feeding present backpressure.
+    for (int i = 1; i <= 128; ++i) {
+        const uint32_t timestamp = static_cast<uint32_t>(
+            static_cast<uint64_t>(i) * 90000ULL / streamRateHz);
+        const uint64_t sourceUs = decodedTimeForRtp(epochUs, timestamp);
+        // Keep decoded time monotonic while still creating enough spread to
+        // reproduce the pre-fix reserve overflow.
+        const uint64_t arrivalTailUs = i % 4 == 0 ? 8000 : 0;
+        decision = controller.schedule(
+            frame(i, timestamp, true, sourceUs + arrivalTailUs),
+            sourceUs + arrivalTailUs);
+        const uint64_t scheduledReadinessUs =
+            decision.readinessBudgetUs > 0 ?
+                static_cast<uint64_t>(decision.readinessBudgetUs) : 0;
+        expect(scheduledReadinessUs + decision.renderLeadUs + 250 <=
+                   decision.sourcePeriodUs,
+               "burst-driven phase recovery must preserve the source-interval budget cap");
+        controller.notePreparationDuration(1000);
+        controller.noteSubmission(true, false, decision.targetUs);
+    }
+
+    if (controller.timingBudgetUs() > controller.sourcePeriodUs()) {
+        std::fprintf(stderr,
+                     "near-ceiling buffer: budget=%llu us source=%llu us\n",
+                     static_cast<unsigned long long>(controller.timingBudgetUs()),
+                     static_cast<unsigned long long>(controller.sourcePeriodUs()));
+    }
+    expect(controller.timingBudgetUs() <= controller.sourcePeriodUs(),
+           "near-ceiling readiness reserve plus render lead must fit inside one source interval");
+
+    // The scheduling target, not just telemetry, must obey the same bound.
+    const uint32_t cleanTimestamp = static_cast<uint32_t>(
+        129ULL * 90000ULL / streamRateHz);
+    const uint64_t cleanSourceUs = decodedTimeForRtp(epochUs, cleanTimestamp);
+    decision = controller.schedule(
+        frame(129, cleanTimestamp, true, cleanSourceUs), cleanSourceUs);
+    const uint64_t positiveReadinessUs = decision.readinessBudgetUs > 0 ?
+        static_cast<uint64_t>(decision.readinessBudgetUs) : 0;
+    expect(positiveReadinessUs + decision.renderLeadUs + 250 <=
+               decision.sourcePeriodUs,
+           "the actual near-ceiling scheduling budget must fit inside one source interval");
+}
+
+void testSourceIntervalCapTracksRenderLeadGrowth()
+{
+    constexpr int streamRateHz = 116;
+    constexpr uint64_t epochUs = 1000000;
+    VrrTimingController controller(config(streamRateHz, 120), false);
+
+    for (int i = 0; i <= 96; ++i) {
+        const uint32_t timestamp = static_cast<uint32_t>(
+            static_cast<uint64_t>(i) * 90000ULL / streamRateHz);
+        const uint64_t sourceUs = decodedTimeForRtp(epochUs, timestamp);
+        // Populate a real readiness reserve first, then remove the arrival
+        // tail as preparation cost rises. The cap must shrink immediately
+        // instead of preserving the old reserve through its slow release ramp.
+        const uint64_t arrivalTailUs =
+            i < 48 && i % 4 == 0 ? 8000 : 0;
+        VrrTimingDecision decision = controller.schedule(
+            frame(i, timestamp, true, sourceUs + arrivalTailUs),
+            sourceUs + arrivalTailUs);
+        controller.notePreparationDuration(i < 48 ? 1000 : 6000);
+        controller.noteSubmission(true, false, decision.targetUs);
+
+        const uint64_t positiveReadinessUs =
+            controller.readinessBudgetUs() > 0 ?
+                static_cast<uint64_t>(controller.readinessBudgetUs()) : 0;
+        expect(positiveReadinessUs + controller.renderLeadUs() + 250 <=
+                   controller.sourcePeriodUs(),
+               "a larger learned render lead must immediately shrink the scheduling reserve");
+        expect(controller.timingBudgetUs() <= controller.sourcePeriodUs(),
+               "a larger learned render lead must keep telemetry inside the source interval");
+    }
+}
+
+void testHighRateRenderLeadLeavesPresentationSafety()
+{
+    constexpr int streamRateHz = 480;
+    constexpr uint64_t epochUs = 1000000;
+    VrrTimingController controller(config(streamRateHz, 960), false);
+
+    for (int i = 0; i <= 64; ++i) {
+        const uint32_t timestamp = static_cast<uint32_t>(
+            static_cast<uint64_t>(i) * 90000ULL / streamRateHz);
+        const uint64_t sourceUs = decodedTimeForRtp(epochUs, timestamp);
+        VrrTimingDecision decision = controller.schedule(
+            frame(i, timestamp, true, sourceUs), sourceUs);
+        controller.notePreparationDuration(10000);
+        controller.noteSubmission(true, false, decision.targetUs);
+    }
+
+    expect(controller.renderLeadUs() + 250 <= controller.sourcePeriodUs(),
+           "high-rate render lead must leave room for presentation safety");
+    expect(controller.timingBudgetUs() <= controller.sourcePeriodUs(),
+           "high-rate timing budget must fit inside one source interval");
+}
+
 void testCadenceGapAndRateChange()
 {
     VrrTimingController controller(config(120, 120));
@@ -822,6 +932,9 @@ int main()
     testSpacingGuardFeedback();
     testNearRefreshRequestsLatchedPresentation();
     testHeadroomAwareReadinessReserve();
+    testNearCeilingBufferFitsOneSourceInterval();
+    testSourceIntervalCapTracksRenderLeadGrowth();
+    testHighRateRenderLeadLeavesPresentationSafety();
     testCadenceGapAndRateChange();
     testFutureSourceProjectionReseedsPhase();
     testDecodeTailAdaptation();
