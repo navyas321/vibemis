@@ -3883,55 +3883,6 @@ Item {
                     color: VbTokens.textTertiary
                 }
 
-                // BL-2356: read-only Wi-Fi power-save status. Wi-Fi power management
-                // throttles the client radio (SteamOS re-enables it every Game Mode
-                // session); this surfaces the live state in Settings. Auto-populates
-                // when this section loads; the button re-reads it on demand.
-                Label {
-                    width: parent.width
-                    text: qsTr("Wi-Fi power saving")
-                    font.pixelSize: VbTokens.sizeLabel
-                    font.family: VbTokens.fontBody
-                    font.weight: Font.DemiBold
-                    color: VbTokens.text
-                    topPadding: VbTokens.space3
-                }
-                // BL-2358: live toggle. Turns Wi-Fi power saving on/off (sudo iw
-                // if the one-time rule is installed, else nmcli). Initialized from
-                // the current state; re-syncs after so it reflects reality even if
-                // the write was overridden.
-                VbToggleRow {
-                    id: wifiPowerSaveToggle
-                    property bool ready: false
-                    text: qsTr("Wi-Fi power saving")
-                    onCheckedChanged: {
-                        if (!ready) return
-                        wifiPowerSaveLabel.text = SystemProperties.setWifiPowerSave(checked)
-                        ready = false
-                        checked = SystemProperties.isWifiPowerSaveOn()
-                        ready = true
-                    }
-                    Component.onCompleted: { checked = SystemProperties.isWifiPowerSaveOn(); ready = true }
-
-                    ToolTip.delay: 1000
-                    ToolTip.timeout: 6000
-                    ToolTip.visible: hovered
-                    ToolTip.text: qsTr("OFF is best for streaming. If turning it off does not stick, install the one-time sudo rule (see the status line) — SteamOS re-enables it every Game Mode session.")
-                }
-                Label {
-                    id: wifiPowerSaveLabel
-                    width: parent.width
-                    text: qsTr("Checking…")
-                    font.pixelSize: VbTokens.typeCaption
-                    font.family: VbTokens.fontBody
-                    wrapMode: Text.Wrap
-                    color: text.indexOf(" ON ") !== -1 ? VbTokens.statusWarning
-                           : text.indexOf(" OFF ") !== -1 ? VbTokens.statusSuccess
-                           : VbTokens.textSecondary
-                    topPadding: VbTokens.space1
-                    Component.onCompleted: text = SystemProperties.checkWifiPowerSaveStatus()
-                }
-
                 // Note about Server Commands
                 Label {
                     width: parent.width

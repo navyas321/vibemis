@@ -40,18 +40,6 @@
 #endif
 #endif
 
-#if defined(Q_OS_LINUX)
-// BL-2350: read-only Wi-Fi power-save status probe. Wi-Fi power management on
-// the client radio throttles the link (SteamOS re-enables it every Game Mode
-// session; it was the root cause of the 54 Mbps "delivery collapse"). vibemis
-// cannot CHANGE it (that needs root / the NetworkManager dispatcher), but a
-// stream-start diagnostic makes a stale/degraded state obvious in the log.
-#include <QProcess>
-#include <QDir>
-#include <QFile>
-#endif
-
-
 #define SDL_CODE_FLUSH_WINDOW_EVENT_BARRIER 100
 #define SDL_CODE_GAMECONTROLLER_RUMBLE 101
 #define SDL_CODE_GAMECONTROLLER_RUMBLE_TRIGGERS 102
@@ -2188,71 +2176,6 @@ public:
     Session* m_Session;
 };
 
-// BL-2350: log the client Wi-Fi power-save state at stream start (Linux only).
-// Read-only status check — NOT a toggle: the device-side fix (config knob + the
-// NetworkManager dispatcher watcher) owns turning it off; the toggle alone was
-// device-proven not to hold, so this just surfaces the live state in the log so
-// a regression (SteamOS re-enabling it) is visible without a separate probe.
-static void logWifiPowerSaveStatus()
-{
-#if defined(Q_OS_LINUX)
-    // Find a wireless interface: /sys/class/net/<iface>/wireless exists for 802.11 devices.
-    QString iface;
-    const QDir netDir("/sys/class/net");
-    const auto entries = netDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
-    for (const QString& name : entries) {
-        if (QDir(QString("/sys/class/net/%1/wireless").arg(name)).exists()) {
-            iface = name;
-            break;
-        }
-    }
-    if (iface.isEmpty()) {
-        // No wireless interface (wired/Ethernet path) — power-save is irrelevant.
-        return;
-    }
-
-    // `iw dev <iface> get power_save` is the canonical query. AppImages don't
-    // bundle it, so resolve it from the system; degrade gracefully if absent.
-    QString iwPath;
-    for (const char* cand : {"/usr/sbin/iw", "/sbin/iw", "/usr/bin/iw"}) {
-        if (QFile::exists(QString::fromLatin1(cand))) { iwPath = QString::fromLatin1(cand); break; }
-    }
-    if (iwPath.isEmpty()) {
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                    "Wi-Fi power-save status: undetermined on %s (iw not found)",
-                    iface.toUtf8().constData());
-        return;
-    }
-
-    QProcess iw;
-    iw.start(iwPath, {"dev", iface, "get", "power_save"});
-    if (!iw.waitForFinished(2000) || iw.exitStatus() != QProcess::NormalExit) {
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                    "Wi-Fi power-save status: undetermined on %s (iw query failed)",
-                    iface.toUtf8().constData());
-        return;
-    }
-    const QString out = QString::fromUtf8(iw.readAllStandardOutput()).trimmed();
-    if (out.contains("Power save: off", Qt::CaseInsensitive)) {
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                    "Wi-Fi power-save status: OFF on %s (good for streaming)",
-                    iface.toUtf8().constData());
-    }
-    else if (out.contains("Power save: on", Qt::CaseInsensitive)) {
-        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                    "Wi-Fi power-save status: ON on %s - this can throttle the link and cause stream "
-                    "stutter/collapse. Disable it (SteamOS: Settings > System > Wi-Fi Power Management, "
-                    "or a NetworkManager dispatcher that re-asserts it off on every connect/resume).",
-                    iface.toUtf8().constData());
-    }
-    else {
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                    "Wi-Fi power-save status: undetermined on %s (unrecognized iw output)",
-                    iface.toUtf8().constData());
-    }
-#endif
-}
-
 // Called in a non-main thread
 bool Session::startConnectionAsync()
 {
@@ -2383,9 +2306,6 @@ bool Session::startConnectionAsync()
                                                                          m_StreamConfig.fps,
                                                                          false);
     }
-
-    // BL-2350: surface the client Wi-Fi power-save state in the stream-start log.
-    logWifiPowerSaveStatus();
 
     int err = LiStartConnection(&hostInfo, &m_StreamConfig, &k_ConnCallbacks,
                                 &m_VideoCallbacks, &m_AudioCallbacks,
