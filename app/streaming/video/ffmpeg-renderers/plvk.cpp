@@ -1,5 +1,7 @@
 #include "plvk.h"
 
+#include "vrrswapchainpolicy.h"
+
 #include "streaming/session.h"
 #include "streaming/streamutils.h"
 #include "streaming/video/overlayplacement.h"
@@ -561,8 +563,17 @@ bool PlVkRenderer::initialize(PDECODER_PARAMETERS params)
     // explicitly requested for this session. (BL-2212)
     selectPresentationMode(params);
 
-    // Start with a swapchain that is double-buffered for lowest display latency
-    if (!createSwapchain(1)) {
+    // The paced path needs one additional in-flight image. In particular,
+    // Gamescope exposes FIFO to the application and libplacebo's
+    // swap_buffers() waits for queued presents; depth 1 therefore serializes
+    // each prepare behind the previous display completion. At 116-on-120 that
+    // measured 10-13 ms per frame and forced sustained queue drops. The worker
+    // already owns presentation timing, so depth 2 adds pipeline headroom
+    // without adding an application-side standing queue.
+    const int swapchainDepth = VrrSwapchainPolicy::depthForSession(
+        m_VrrRequested,
+        m_VrrFallbackReason == VrrFallbackReason::NoFallback);
+    if (!createSwapchain(swapchainDepth)) {
         return false;
     }
 

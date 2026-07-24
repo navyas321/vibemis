@@ -19,9 +19,13 @@ ratepolicy_standalone.file = $$PWD/ratepolicy_standalone.pro
 # v6.1.0-vrr9.1 refreshMayHaveChanged guard).
 refreshguard_standalone.file = $$PWD/refreshguard_standalone.pro
 
+# Regression coverage for the Gamescope FIFO swapchain-depth selection.
+swapchainpolicy_standalone.file = $$PWD/swapchainpolicy_standalone.pro
+
 SUBDIRS += \
     timingcontroller \
     ratepolicy \
     ratepolicy_standalone \
     refreshguard_standalone \
+    swapchainpolicy_standalone \
     pacingworker
