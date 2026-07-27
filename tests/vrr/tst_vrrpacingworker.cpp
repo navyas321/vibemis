@@ -164,6 +164,51 @@ void testLatePreparedFramePresentsImmediately()
     }
 }
 
+// BL-2531/BL-2522 (Nonary 3bf0dfca hunk 2): a queued frame that has aged past
+// one source interval while a fresher successor waits is stale CONTENT, not a
+// pacing deadline to honor -- presenting it paints an old image on a fast pan,
+// which reads as ghosting on the device. The worker must skip it before the
+// render wait (schedule() clamps overdue targets, so the post-wait
+// target-relative check cannot see queue age) and must do so WITHOUT
+// re-anchoring the timing model, so the successor preserves cadence.
+void testQueuedStaleFrameYieldsToFreshSuccessor()
+{
+    resetFakeClock();
+    FakeVrrFramePresenter backend;
+    backend.blockPreparation();
+    PacerTelemetry telemetry;
+    TrackedFrameLifetime first;
+    TrackedFrameLifetime stale;
+    TrackedFrameLifetime fresh;
+
+    {
+        VrrPacingWorker worker(&backend, enabledConfig(), &telemetry);
+        expect(worker.start(), "worker must start for queued-stale recovery");
+        worker.submit(frame(1, first));
+        expect(backend.waitForPrepareCount(1),
+               "active frame must enter preparation before queueing successors");
+
+        worker.submit(frame(2, stale));
+        worker.submit(frame(3, fresh));
+        // Frame 2 is now older than its 60 FPS source period while frame 3 is
+        // available. It is stale content, not a pacing deadline to honor.
+        std::this_thread::sleep_for(std::chrono::milliseconds(35));
+        backend.releasePreparation();
+
+        expect(backend.waitForPresentCount(2),
+               "the active frame and freshest successor must present");
+        expect(waitFor([&telemetry] {
+                   return telemetryStats(telemetry).vrrPacingDroppedFrames >= 1;
+               }),
+               "an obsolete queued frame must count as a pacing drop");
+
+        const std::vector<int> presentedFrames = backend.presentedFrames();
+        expect(presentedFrames.size() >= 2 && presentedFrames[0] == 1 &&
+                   presentedFrames[1] == 3,
+               "a stale queued frame must yield to its fresher successor");
+    }
+}
+
 void testTelemetrySnapshotsRemainCumulative()
 {
     PacerTelemetry telemetry;
@@ -627,6 +672,7 @@ int main()
     testCapabilityRejection();
     testQueueCapacityAndDrops();
     testLatePreparedFramePresentsImmediately();
+    testQueuedStaleFrameYieldsToFreshSuccessor();
     testTelemetrySnapshotsRemainCumulative();
     testSuspendDiscardAndFreshFrame();
     testDeferredSurfaceLifetime();

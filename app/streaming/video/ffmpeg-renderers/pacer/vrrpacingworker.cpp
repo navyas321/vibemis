@@ -281,6 +281,46 @@ int VrrPacingWorker::run()
         VrrTimingDecision decision = m_TimingController->schedule(
             frame, decisionTimeUs);
         FrameTelemetry telemetry;
+
+        // BL-2531/BL-2522 (Nonary 3bf0dfca hunk 2): pre-wait stale-queue skip.
+        //
+        // schedule() deliberately clamps an overdue target to the current
+        // one-slot deadline. That is right for the newest frame, but it makes
+        // the post-wait target-relative stale check below unable to see time
+        // already spent waiting in this worker's own queue. If a fresher
+        // successor exists, skip a frame that is already more than one source
+        // interval old before rendering it: it is stale CONTENT (an old image
+        // on screen reads as ghosting on a fast pan), not a pacing deadline to
+        // honor.
+        //
+        // Reconciliation with the post-wait check (BL-2522's open question) --
+        // the two checks own DISJOINT windows and their recoveries differ on
+        // purpose:
+        //   - This check owns queue age BEFORE the render wait. Recovery is
+        //     noteSubmission(false, false, 0): the timing model is not wrong,
+        //     the frame is merely old, so the successor keeps the learned
+        //     cadence and no phase step is injected.
+        //   - The post-wait check owns lateness accrued DURING the wait (OS
+        //     wake overshoot, scheduler stalls). Recovery is rebase(): a wait
+        //     that overshot the target by more than the tolerance means the
+        //     anchor itself no longer matches what the OS can deliver.
+        // A frame skipped here never reaches the post-wait check, and a frame
+        // that passes here is younger than one source interval at schedule
+        // time, so any staleness the post-wait check then sees really did
+        // accrue in the wait -- the window rebase() was designed for.
+        const uint64_t scheduleNowUs = LiGetMicroseconds();
+        const uint64_t scheduleAgeUs = scheduleNowUs >=
+                frame.decodeCompleteUs() ?
+            scheduleNowUs - frame.decodeCompleteUs() : 0;
+        if (decision.sourcePeriodUs != 0 &&
+            scheduleAgeUs > decision.sourcePeriodUs && hasQueuedFrame()) {
+            writeTrace(frame, decision, VrrPresentFeedback {}, telemetry,
+                       queuedFrameCount(), true);
+            noteDrop();
+            m_TimingController->noteSubmission(false, false, 0);
+            continue;
+        }
+
         const VrrTargetWaitResult renderWait =
             m_TargetWaiter->waitUntil(decision.renderStartUs);
         // A deadline that was already in the past is not an OS wake delay.
@@ -314,7 +354,11 @@ int VrrPacingWorker::run()
 
         // A frame can become stale while the worker waits for its render
         // start. Leave the surface unprepared and let the next iteration start
-        // fresh rather than rendering an avoidably old image.
+        // fresh rather than rendering an avoidably old image. This is the
+        // post-wait half of the stale policy: it owns lateness accrued DURING
+        // the wait, and rebases because such lateness means the anchor no
+        // longer matches OS wake behavior (see the pre-wait skip above for
+        // the queue-age half and why that one must NOT rebase).
         uint64_t nowUs = LiGetMicroseconds();
         const uint64_t staleHorizonAfterWaitUs = staleToleranceUs(decision);
         if (staleHorizonAfterWaitUs != 0 &&
