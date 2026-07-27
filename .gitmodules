@@ -1,6 +1,7 @@
 [submodule "moonlight-common-c/moonlight-common-c"]
 	path = moonlight-common-c/moonlight-common-c
 	url = https://github.com/navyas321/moonlight-common-c.git
+	branch = vibemis-rtp-timestamp
 [submodule "qmdnsengine/qmdnsengine"]
 	path = qmdnsengine/qmdnsengine
 	url = https://github.com/cgutman/qmdnsengine.git

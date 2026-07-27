@@ -295,6 +295,7 @@ ffmpeg {
         streaming/video/ffmpeg-renderers/pacer/pacertelemetry.h \
         streaming/video/ffmpeg-renderers/pacer/vrrpacingworker.h \
         streaming/video/ffmpeg-renderers/pacer/vrr/vrrtypes.h \
+        streaming/video/ffmpeg-renderers/pacer/vrr/vrrpacingmode.h \
         streaming/video/ffmpeg-renderers/pacer/vrr/vrrtargetwaiter.h \
         streaming/video/ffmpeg-renderers/pacer/vrr/vrrtimingcontroller.h
 }

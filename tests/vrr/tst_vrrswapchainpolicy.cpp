@@ -43,7 +43,16 @@ int main()
 
     // The one case that earns the extra in-flight image: a qualified adaptive
     // session presenting through an application-facing FIFO swapchain.
-    CHECK(VrrSwapchainPolicy::depthForSession(true, true, true) == 2);
+    // BL-2528: three, not two. The Gamescope WSI layer pins minImageCount to 3,
+    // so depth 1 and 2 both yield three images there and are indistinguishable;
+    // three images cannot sustain 113 FPS against ~2-display-period compositor
+    // holds. Depth 3 asks for the fourth image that the simulation showed is
+    // the difference between 80 FPS with 30% drops and 115 FPS with none.
+    CHECK(VrrSwapchainPolicy::depthForSession(true, true, true) ==
+          kVrrFifoSwapchainDepth);
+    CHECK(kVrrFifoSwapchainDepth == 3);
+    // Every non-FIFO path keeps upstream's lowest-latency depth.
+    CHECK(VrrSwapchainPolicy::depthForSession(true, true, false) == 1);
 
     std::printf("test_vrrswapchainpolicy: %d checks, %d failure(s)\n",
                 g_Checks, g_Failures);

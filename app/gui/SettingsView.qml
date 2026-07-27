@@ -1942,6 +1942,13 @@ Item {
 
                 // Redesign toggle-row. Extra setting beyond the mock — same visual
                 // language as V-Sync above for consistency.
+                //
+                // BL-2529: this row sits between V-Sync and Enable VRR on purpose —
+                // the same order Nonary shows, and the order the three settings
+                // depend on each other in. It is the switch that decides whether the
+                // VRR pacing worker runs at all, so its sublabel names VRR directly
+                // rather than leaving a user to guess that "frame pacing" and
+                // "VRR pacing" are the same knob.
                 CheckBox {
                     id: framePacingCheck
                     width: parent.width
@@ -1949,9 +1956,30 @@ Item {
                     hoverEnabled: true
                     enabled: StreamingPreferences.enableVsync
                     opacity: enabled ? 1.0 : 0.5
-                    checked: StreamingPreferences.enableVsync && StreamingPreferences.framePacing
+                    // BL-2529: bind to the preference alone. The old
+                    // "enableVsync && framePacing" binding meant turning V-Sync off
+                    // drove `checked` to false, and onCheckedChanged then wrote that
+                    // false back — silently destroying a stored "on" that the user
+                    // never touched. `enabled` above already conveys that the row is
+                    // inactive without V-Sync.
+                    checked: StreamingPreferences.framePacing
                     onCheckedChanged: {
-                        StreamingPreferences.framePacing = checked
+                        if (checked !== StreamingPreferences.framePacing) {
+                            StreamingPreferences.framePacing = checked
+                        }
+                    }
+
+                    // The first user click assigns `checked` imperatively, which
+                    // destroys the declarative binding above — after that the row
+                    // would ignore the low-latency preset and the display presets,
+                    // both of which write framePacing directly. Re-sync from the
+                    // NOTIFY signal so the switch never disagrees with the value the
+                    // stream will actually use.
+                    Connections {
+                        target: StreamingPreferences
+                        function onFramePacingChanged() {
+                            framePacingCheck.checked = StreamingPreferences.framePacing
+                        }
                     }
 
                     indicator: Item {}
@@ -1977,7 +2005,9 @@ Item {
                             }
                             Text {
                                 width: parent.width
-                                text: qsTr("Reduces micro-stutter by delaying early frames")
+                                text: StreamingPreferences.enableVrr
+                                      ? qsTr("Delays early frames. Also runs VRR's pacing worker — off is usually smoother with VRR")
+                                      : qsTr("Reduces micro-stutter by delaying early frames")
                                 font.family: VbTokens.fontBody
                                 font.pixelSize: VbTokens.sizeLabel
                                 color: VbTokens.textDim
@@ -2000,9 +2030,9 @@ Item {
                     }
 
                     ToolTip.delay: 1000
-                    ToolTip.timeout: 5000
+                    ToolTip.timeout: 8000
                     ToolTip.visible: hovered
-                    ToolTip.text: qsTr("Frame pacing reduces micro-stutter by delaying frames that come in too early")
+                    ToolTip.text: qsTr("Holds each frame back until its display slot instead of showing it as soon as it decodes. Smooths micro-stutter at the cost of a little latency. With VRR enabled this same switch controls VRR's own pacing worker: turn it off and VRR still presents adaptively, just without the extra wait. Off is the default, and is often the faster choice on a VRR display.")
                 }
 
                 // Vibemis (BL-2212): VRR pacing toggle (vendored from Nonary
@@ -2049,7 +2079,7 @@ Item {
                             }
                             Text {
                                 width: parent.width
-                                text: qsTr("Adaptive-sync frame pacing; turns on V-Sync automatically")
+                                text: qsTr("Adaptive-sync presentation; turns on V-Sync automatically")
                                 font.family: VbTokens.fontBody
                                 font.pixelSize: VbTokens.sizeLabel
                                 color: VbTokens.textDim
@@ -2074,7 +2104,7 @@ Item {
                     ToolTip.delay: 1000
                     ToolTip.timeout: 5000
                     ToolTip.visible: hovered
-                    ToolTip.text: qsTr("VRR presents each frame at a learned margin on adaptive-sync displays for smoother pacing. Requires V-Sync (enabled automatically). Sessions without enough refresh-rate headroom fall back to fixed V-Sync pacing, and borderless fullscreen is used while VRR is active.")
+                    ToolTip.text: qsTr("VRR presents each frame as soon as the display can accept it on adaptive-sync displays. Requires V-Sync (enabled automatically). The Frame pacing switch above decides whether VRR also holds frames back to a learned margin; leaving it off is the default. Sessions without enough refresh-rate headroom fall back to fixed V-Sync pacing, and borderless fullscreen is used while VRR is active.")
                 }
 
                 // Vibemis: one-tap low-latency / "competitive" preset. Frame pacing delays

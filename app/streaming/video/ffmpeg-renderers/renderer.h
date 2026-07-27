@@ -226,6 +226,23 @@ public:
         return nullptr;
     }
 
+    // Vibemis (BL-2529): the presentation mode this renderer selected for the
+    // session, or nullptr if the concept does not apply.
+    //
+    // On Vulkan the present mode is immutable for the swapchain's lifetime and
+    // is chosen from DECODER_PARAMETERS::enableVrr before Pacer exists, so it
+    // is the single fact that says whether a session got adaptive presentation
+    // at all. Nothing surfaced it, which left "is VRR actually doing anything?"
+    // unanswerable from a screenshot -- the state every VRR investigation
+    // starts from. This only describes the swapchain's queue behavior; it makes
+    // no claim about the display's physical adaptive-sync state.
+    //
+    // Same contract as getVendorString(): the pointer must outlive the
+    // renderer and the call must be cheap.
+    virtual const char* getPresentationModeName() {
+        return nullptr;
+    }
+
     virtual int getDecoderColorspace() {
         // Rec 601 is default
         return COLORSPACE_REC_601;

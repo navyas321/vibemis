@@ -22,10 +22,15 @@ refreshguard_standalone.file = $$PWD/refreshguard_standalone.pro
 # Regression coverage for the Gamescope FIFO swapchain-depth selection.
 swapchainpolicy_standalone.file = $$PWD/swapchainpolicy_standalone.pro
 
+# Vibemis (BL-2529): the frame-pacing gate on the VRR path -- which pacing
+# mode a session builds, and that an explicit "off" survives a VRR rejection.
+pacingmode_standalone.file = $$PWD/pacingmode_standalone.pro
+
 SUBDIRS += \
     timingcontroller \
     ratepolicy \
     ratepolicy_standalone \
     refreshguard_standalone \
     swapchainpolicy_standalone \
+    pacingmode_standalone \
     pacingworker

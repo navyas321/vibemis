@@ -1,5 +1,6 @@
 #include "pacer.h"
 #include "vrrpacingworker.h"
+#include "vrr/vrrpacingmode.h"
 #include "../ivrrframepresenter.h"
 #include "streaming/streamutils.h"
 #include "streaming/vrrratepolicy.h"
@@ -300,72 +301,83 @@ bool Pacer::initialize(SDL_Window* window, int maxVideoFps,
     // VRR is deliberately a third pacing mode. It is selected once, before
     // any legacy V-sync source or render thread can be created, and every
     // rejection continues through the original fixed path below.
-    if (enableVrr) {
+    //
+    // BL-2529: the selection now consults the frame-pacing preference. See
+    // vrr/vrrpacingmode.h for the three modes and why "VRR + pacing off"
+    // keeps the renderer's adaptive presentation instead of undoing it.
+    IVrrFramePresenter* presenter = enableVrr ?
+        m_VsyncRenderer->getVrrFramePresenter() : nullptr;
+    const VrrPacingSelection selection = VrrPacingPolicy::select(
+        enableVrr, enablePacing, enableVsync,
+        maxVideoFps, vrrDisplayRefreshHz, presenter);
+
+    if (selection.restoreFixedPresentationFailed) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                     "VRR pacing lacks adaptive-refresh headroom and the presenter cannot restore fixed presentation");
+        return false;
+    }
+
+    VrrFallbackReason fallbackReason = selection.fallbackReason;
+    m_PacingMode = selection.mode;
+
+    if (selection.createWorker) {
         VrrSessionConfig config;
-        VrrFallbackReason fallbackReason = VrrFallbackReason::NoFallback;
         config.streamRateHz = maxVideoFps;
         config.displayRefreshHz = vrrDisplayRefreshHz;
 
-        if (!enableVsync) {
-            fallbackReason = VrrFallbackReason::IneffectiveVsync;
+        m_VrrWorker = std::make_unique<VrrPacingWorker>(
+            presenter, config, &m_Telemetry);
+        if (m_VrrWorker->start()) {
+            m_DisplayFps = config.displayRefreshHz;
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                        "VRR pacing: target %d Hz with %d FPS stream",
+                        m_DisplayFps, m_MaxVideoFps);
+            return true;
         }
-        else if (config.displayRefreshHz <= 0) {
-            fallbackReason = VrrFallbackReason::InvalidRefresh;
+
+        fallbackReason = VrrFallbackReason::InitializationFailed;
+        m_PacingMode = VrrPacingMode::Fixed;
+        if (!presenter->restoreFixedPresentation(fallbackReason)) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                         "VRR pacing worker failed to start and the presenter cannot restore fixed presentation");
+            m_VrrWorker.reset();
+            return false;
         }
-        else if (!VrrRatePolicy::hasAdaptiveHeadroom(config.streamRateHz,
-                                                     config.displayRefreshHz)) {
-            fallbackReason = VrrFallbackReason::InsufficientHeadroom;
-            IVrrFramePresenter* presenter =
-                m_VsyncRenderer->getVrrFramePresenter();
-            if (presenter != nullptr &&
-                    presenter->checkSupport() == VrrFallbackReason::NoFallback &&
-                    !presenter->restoreFixedPresentation(fallbackReason)) {
-                SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                             "VRR pacing lacks adaptive-refresh headroom and the presenter cannot restore fixed presentation");
-                return false;
-            }
+
+        m_VrrWorker.reset();
+    }
+
+    if (enableVrr) {
+        if (m_PacingMode == VrrPacingMode::AdaptiveUnpaced) {
+            // Not a fallback and not a downgrade: the renderer keeps the
+            // adaptive present mode and swapchain depth it selected for this
+            // session, and the render thread started below drives it. Only the
+            // pacing layer -- target wait, readiness budget, worker queue --
+            // is absent, which is what the preference names.
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                        "VRR pacing worker disabled by the frame-pacing preference; "
+                        "the render thread drives adaptive presentation unpaced");
         }
         else {
-            IVrrFramePresenter* presenter =
-                m_VsyncRenderer->getVrrFramePresenter();
-            if (presenter == nullptr) {
-                fallbackReason = VrrFallbackReason::UnsupportedRenderer;
-            }
-            else {
-                fallbackReason = presenter->checkSupport();
-                if (fallbackReason == VrrFallbackReason::NoFallback) {
-                    m_VrrWorker = std::make_unique<VrrPacingWorker>(
-                        presenter, config, &m_Telemetry);
-                    if (m_VrrWorker->start()) {
-                        m_DisplayFps = config.displayRefreshHz;
-                        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                                    "VRR pacing: target %d Hz with %d FPS stream",
-                                    m_DisplayFps, m_MaxVideoFps);
-                        return true;
-                    }
-
-                    fallbackReason = VrrFallbackReason::InitializationFailed;
-                    if (!presenter->restoreFixedPresentation(fallbackReason)) {
-                        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                                     "VRR pacing worker failed to start and the presenter cannot restore fixed presentation");
-                        m_VrrWorker.reset();
-                        return false;
-                    }
-
-                    m_VrrWorker.reset();
-                }
-            }
+            // Name the pacing the fallback actually gets. It used to be forced
+            // on here, so "falling back to fixed V-sync pacing" was always
+            // true; now it follows the preference and the log has to say which.
+            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                        "VRR pacing unavailable: %s; falling back to fixed presentation with frame pacing %s",
+                        vrrFallbackReasonName(fallbackReason),
+                        selection.fixedPacing ? "on" : "off");
         }
-
-        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                    "VRR pacing unavailable: %s; falling back to fixed V-sync pacing",
-                    vrrFallbackReasonName(fallbackReason));
-
-        // VRR requires V-sync at the session boundary, so its rejection still
-        // has a valid fixed-pacing fallback even if the user did not select
-        // the older frame-pacing checkbox.
-        enablePacing = enablePacing || enableVsync;
     }
+
+    // BL-2529: this used to be `enablePacing || enableVsync` inside the VRR
+    // rejection path. VRR requires V-sync, so that expression forced pacing on
+    // for every VRR user regardless of their preference -- including the ones
+    // who deliberately turned it off. A rejected VRR session now gets exactly
+    // the fixed path a non-VRR session with the same settings would get.
+    // Renderers that genuinely cannot run unpaced are still covered: the
+    // decoder ORs RENDERER_ATTRIBUTE_FORCE_PACING into this argument before
+    // Pacer ever sees it (see FFmpegVideoDecoder::completeInitialization).
+    enablePacing = selection.fixedPacing;
 
     // The VRR success path uses its strict session refresh snapshot and
     // returned above. Keep the legacy fallback query out of that path so it
@@ -549,4 +561,22 @@ void Pacer::submitFrame(PacedFrame&& frame)
 bool Pacer::isVrrActive() const
 {
     return m_VrrWorker != nullptr;
+}
+
+const char* Pacer::pacingModeName() const
+{
+    // Reported from the objects that actually exist rather than from the
+    // requested configuration. On platforms with no IVsyncSource (X11) an
+    // "enabled" frame-pacing preference builds no pacing at all, and the
+    // overlay has to say so -- that discrepancy is exactly the kind of thing
+    // this line exists to expose.
+    if (m_VrrWorker != nullptr) {
+        return "vrr-worker";
+    }
+
+    if (m_PacingMode == VrrPacingMode::AdaptiveUnpaced) {
+        return "vrr-unpaced";
+    }
+
+    return m_VsyncSource != nullptr ? "vsync" : "none";
 }

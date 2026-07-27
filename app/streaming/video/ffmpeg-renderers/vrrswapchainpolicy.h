@@ -16,6 +16,28 @@
 // so they were never throughput-limited at depth 1 and must stay there: an
 // extra in-flight image would only add up to one present of latency to a path
 // that had no problem to fix.
+// BL-2528: depth 2 is NOT enough on Gamescope, and the reason is image count,
+// not the swap wait. The FROG WSI layer pins minImageCount to 3 regardless of
+// what we request, so depth 1 and depth 2 are indistinguishable there -- which
+// is why raising 1 -> 2 changed nothing on the Legion Go S. Three images cannot
+// sustain 113 FPS when the compositor holds each buffer for roughly two display
+// periods (composite rather than direct scanout): the tokens simply do not
+// recycle fast enough, and the client starves regardless of when it asks.
+//
+// A simulation driving the byte-exact rc.001 timing controller against that
+// compositor model reproduced the device almost exactly at three images
+// (80.0 vs 84.5 FPS rendered, 30.6% vs 25.0% pacer drops, 23.06 vs 23.03 ms
+// queue delay, render lead pinned at 6.50 ms in both) and was completely cured
+// by a fourth (115.2 FPS, 0 drops, acquire p95 0.06 ms). Acquiring earlier --
+// the intuitive fix -- changed nothing at all, because the limit is token-bound
+// rather than phase-bound.
+//
+// Upstream corroborates the direction: Nonary carries
+// PLVK_USE_DYNAMIC_SWAPCHAIN_DEPTH for exactly this reason on macOS, where
+// direct-to-display scanout "block[s] us from getting a new drawable while the
+// current one is getting scanned out".
+constexpr int kVrrFifoSwapchainDepth = 3;
+
 class VrrSwapchainPolicy
 {
 public:
@@ -25,6 +47,6 @@ public:
     {
         return vrrRequested && adaptivePresentationAvailable &&
                        applicationFacingFifo ?
-            2 : 1;
+            kVrrFifoSwapchainDepth : 1;
     }
 };

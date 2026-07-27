@@ -194,6 +194,8 @@ jobs:
       # whatever happens to be executable would let a target silently drop out of
       # vrr.pro and leave this job green while covering less — which is the exact
       # shape of the problem this job exists to fix.
+      #
+      # BL-2529 added test_vrrpacingmode (the frame-pacing gate on the VRR path).
       - name: Run the VRR test suite
         run: |
           set -Eeuo pipefail
@@ -203,7 +205,8 @@ jobs:
           export QT_QPA_PLATFORM=offscreen
           rc=0
           for t in tst_vrrtimingcontroller tst_vrrratepolicy test_vrrratepolicy \
-                   test_vrrrefreshguard test_vrrswapchainpolicy tst_vrrpacingworker; do
+                   test_vrrrefreshguard test_vrrswapchainpolicy test_vrrpacingmode \
+                   tst_vrrpacingworker; do
             # Searched from the workspace root, not the build dir: a subdirs template
             # whose entries carry an absolute .file can emit its targets next to the
             # sources instead of into the shadow tree, and which one happens today is
@@ -227,8 +230,8 @@ jobs:
             echo "- VRR test suite FAILED" >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
-          echo "All six VRR test binaries passed."
-          echo "- VRR test suite: all six binaries passed" >> "$GITHUB_STEP_SUMMARY"
+          echo "All seven VRR test binaries passed."
+          echo "- VRR test suite: all seven binaries passed" >> "$GITHUB_STEP_SUMMARY"
 
       # tests/overlay sat in exactly the same hole tests/vrr was just pulled out of:
       # written, passing locally, and built by no job — so its coverage could never

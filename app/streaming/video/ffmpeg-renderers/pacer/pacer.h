@@ -3,6 +3,7 @@
 #include "../../decoder.h"
 #include "../renderer.h"
 #include "pacertelemetry.h"
+#include "vrr/vrrpacingmode.h"
 #include "vrr/vrrtypes.h"
 
 #include <QQueue>
@@ -54,6 +55,16 @@ public:
 
     bool isVrrActive() const;
 
+    // BL-2529: terse, screen-sized name of the pacing path this session
+    // actually built, for the performance overlay. Resolved after
+    // initialize(); "none" before it runs.
+    //
+    //   "vrr-worker"  the VRR pacing worker owns presentation timing
+    //   "vrr-unpaced" adaptive presentation retained, no pacing layer
+    //   "vsync"       legacy V-sync source is pacing the render queue
+    //   "none"        frames go straight to the renderer as they decode
+    const char* pacingModeName() const;
+
     bool initialize(SDL_Window* window, int maxVideoFps,
                     bool enablePacing, bool enableVsync,
                     bool enableVrr, int vrrDisplayRefreshHz);
@@ -97,5 +108,6 @@ private:
     int m_DisplayFps;
     int m_RendererAttributes;
     PacerTelemetry m_Telemetry;
+    VrrPacingMode m_PacingMode = VrrPacingMode::Fixed;
     std::unique_ptr<VrrPacingWorker> m_VrrWorker;
 };
