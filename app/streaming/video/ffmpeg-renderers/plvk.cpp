@@ -766,11 +766,35 @@ void PlVkRenderer::selectPresentationMode(PDECODER_PARAMETERS params)
             return;
         }
 
+        // BL-2531: on Gamescope WSI, prefer Mailbox over application-facing
+        // FIFO. The VRR-off legacy path already runs Mailbox on this exact
+        // surface, and the on-device matched A/B (test146, valid arms with
+        // host frame-generation disabled) measured Mailbox at 115.07/115.33
+        // rendered (0.22% drop) vs stock FIFO's 112.56/114.90 (2.03%) -- a
+        // real but modest +2.2% of source frames recovered. (An earlier
+        // ~21.5% attribution to this path was an artifact of host-side
+        // Lossless Scaling frame generation and is withdrawn; see BL-2531.)
+        // Mailbox does not block in swap_buffers, so the worker's target wait
+        // stays the only pacing authority and the swapchain depth policy
+        // correctly drops to the lowest-latency depth 1
+        // (applicationFacingFifo=false).
+        if (gamescopeWsi &&
+                isPresentModeSupportedByPhysicalDevice(m_Vulkan->phys_device,
+                                                       VK_PRESENT_MODE_MAILBOX_KHR)) {
+            m_VkPresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
+            m_VrrFallbackReason = VrrFallbackReason::NoFallback;
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                        "Gamescope WSI: using Mailbox presentation for VRR pacing (BL-2531)");
+            return;
+        }
+
         // Gamescope WSI intentionally does not expose Immediate on current
         // SteamOS. The known-good vrr8 Linux path kept cadence pacing active
         // with an application-facing FIFO swapchain here; the WSI layer maps
         // it onto Gamescope's non-blocking driver swapchain. Falling back to
-        // the fixed-vsync worker instead pins the OSD near 120 Hz.
+        // the fixed-vsync worker instead pins the OSD near 120 Hz. (Since
+        // BL-2531 this is the fallback when Mailbox is unavailable; the
+        // BL-2528 depth-4 policy still covers exactly this case.)
         if (gamescopeWsi) {
             m_VkPresentMode = VK_PRESENT_MODE_FIFO_KHR;
             m_VrrFallbackReason = VrrFallbackReason::NoFallback;
