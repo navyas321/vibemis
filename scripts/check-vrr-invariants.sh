@@ -84,6 +84,22 @@ if [ "$fail" -eq 0 ]; then
     err "Session forces frame pacing on when a VRR request is rejected again"
   fi
 
+  # ---- BL-2529 review: adaptive presentation vs the worker ----------------
+  #
+  # Session's refresh-drift guard (BL-2296/BL-2337) and its VRR-fallback
+  # notice must key on whether the session HOLDS adaptive presentation, not on
+  # whether the pacing worker runs: with frame pacing off the worker never
+  # runs, but the presentation is still adaptive, its qualified rate can still
+  # go stale, and a real VRR rejection still deserves the notice.
+  if grep -A6 'vrrRefreshSwitchNeedsProbe(' "$session_source" | grep -q 'isVrrActive()'; then
+    err "the VRR refresh-drift guard keys on the pacing worker again (inert for unpaced VRR sessions)"
+  fi
+  grep -qF 'isAdaptivePresentationActive()' "$session_source" ||
+    err "Session no longer consults adaptive-presentation state"
+  if grep -B8 'm_VrrFallbackNotified' "$session_source" | grep -qE 'enableFramePacing[[:space:]]*&&'; then
+    err "the VRR-fallback notice is gated on the pacing preference again (silent VRR loss for unpaced users)"
+  fi
+
   # ---- BL-2529: overlay diagnostics ---------------------------------------
   #
   # Whether the VRR worker is running and which present mode the swapchain got

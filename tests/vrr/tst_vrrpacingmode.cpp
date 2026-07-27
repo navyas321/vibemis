@@ -332,6 +332,25 @@ void testPacingGateIsEvaluatedAfterPresenterSupport()
            "the presenter's rejection reason must survive the pacing gate");
 }
 
+// Both adaptive modes hold adaptive presentation; Fixed does not. Session's
+// refresh-drift guard and its VRR-fallback notice consult this through
+// Pacer::isAdaptivePresentationActive() -- keying either on the worker instead
+// makes both wrong for exactly the unpaced sessions BL-2529 made reachable:
+// the guard goes inert (stale qualified rate is never requalified) and the
+// notice can no longer tell a healthy unpaced session from a real rejection.
+//
+// Mutation: return `mode == VrrPacingMode::AdaptivePaced` (the worker-only
+// reading) and the second check fails.
+void testAdaptivePresentationCoversBothAdaptiveModes()
+{
+    expect(vrrPacingModeHoldsAdaptivePresentation(VrrPacingMode::AdaptivePaced),
+           "a worker-paced session holds adaptive presentation");
+    expect(vrrPacingModeHoldsAdaptivePresentation(VrrPacingMode::AdaptiveUnpaced),
+           "an unpaced VRR session still holds adaptive presentation");
+    expect(!vrrPacingModeHoldsAdaptivePresentation(VrrPacingMode::Fixed),
+           "a fixed session holds no adaptive presentation");
+}
+
 // The mode names end up on a handheld screen via the overlay; keep them
 // distinct and non-empty.
 void testModeNamesAreDistinct()
@@ -367,6 +386,7 @@ int main()
     testFailedRestoreIsReportedToTheCaller();
     testHeadroomRejectionSkipsRestoreForAnUnsupportedPresenter();
     testPacingGateIsEvaluatedAfterPresenterSupport();
+    testAdaptivePresentationCoversBothAdaptiveModes();
     testModeNamesAreDistinct();
 
     std::fprintf(stderr, "test_vrrpacingmode: %d checks, %d failure(s)\n",

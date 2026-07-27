@@ -48,14 +48,21 @@ public:
     // without SDL linkage.
     //
     // Phase 1 - cheap gate before touching SDL display state: only probe the
-    // refresh when a VRR session is actually pacing adaptively and the window
-    // event could have changed the display refresh.
+    // refresh when a VRR session actually holds adaptive presentation and the
+    // window event could have changed the display refresh.
+    //
+    // BL-2529: the second input is isAdaptivePresentationActive(), NOT
+    // isVrrActive(). An unpaced VRR session (frame pacing off) runs no worker
+    // but still presents on an adaptive swapchain qualified at a specific
+    // refresh rate; gating on the worker made this guard inert for exactly
+    // those sessions.
     static
     bool vrrRefreshSwitchNeedsProbe(int qualifiedRefreshHz,
-                                    bool vrrPacingActive,
+                                    bool adaptivePresentationActive,
                                     bool refreshMayHaveChanged)
     {
-        return qualifiedRefreshHz > 0 && vrrPacingActive && refreshMayHaveChanged;
+        return qualifiedRefreshHz > 0 && adaptivePresentationActive &&
+               refreshMayHaveChanged;
     }
 
     // Phase 2 - the requalification decision from the probe result: an

@@ -609,7 +609,7 @@ void Session::checkVrrRefreshDrift()
     m_LastVrrDriftCheckMs = now;
 
     if (!StreamUtils::vrrRefreshSwitchNeedsProbe(m_ActiveVrrRefreshHz,
-                                                 m_VideoDecoder->isVrrActive(),
+                                                 m_VideoDecoder->isAdaptivePresentationActive(),
                                                  true /* poll always probes */)) {
         return;
     }
@@ -2928,8 +2928,13 @@ void Session::execInternal()
                 refreshMayHaveChanged = refreshMayHaveChanged ||
                     event.window.event == SDL_WINDOWEVENT_DISPLAY_CHANGED;
 #endif
+                // BL-2529: keyed on adaptive presentation, not the worker. An
+                // AdaptiveUnpaced session (VRR on, frame pacing off) has no
+                // worker but still holds an adaptive swapchain qualified at
+                // m_ActiveVrrRefreshHz, and a refresh switch makes that
+                // qualification just as stale as it does for the paced mode.
                 if (StreamUtils::vrrRefreshSwitchNeedsProbe(m_ActiveVrrRefreshHz,
-                                                            m_VideoDecoder->isVrrActive(),
+                                                            m_VideoDecoder->isAdaptivePresentationActive(),
                                                             refreshMayHaveChanged)) {
                     int currentRefreshHz = 0;
                     const bool refreshReadable =
@@ -3101,24 +3106,25 @@ void Session::execInternal()
                 }
 
                 // Never a silent downgrade (BL-2212): if the user asked for VRR
-                // but this decoder ended up on fixed pacing (non-Vulkan renderer,
-                // presenter rejection, or worker startup failure), surface a
-                // visible one-time notice.
+                // but this decoder ended up on fixed presentation (non-Vulkan
+                // renderer, presenter rejection, or worker startup failure),
+                // surface a visible one-time notice.
                 //
-                // BL-2529: isVrrActive() reports whether the VRR pacing WORKER
-                // is running, so with frame pacing off it is false by
-                // construction and carries no information about whether VRR
-                // presentation was available. Warning there would tell every
-                // user of the V-Sync-on/pacing-off/VRR-on combination that
-                // something failed when nothing did. The performance overlay's
-                // "Pacing:" line reports what actually got built.
-                if (m_Preferences->enableVrr && enableFramePacing &&
-                        !m_VideoDecoder->isVrrActive() &&
+                // BL-2529: keyed on adaptive presentation, not the worker. An
+                // AdaptiveUnpaced session (frame pacing off) runs no worker by
+                // construction, so isVrrActive() would flag every user of the
+                // V-Sync-on/pacing-off/VRR-on combination when nothing failed.
+                // isAdaptivePresentationActive() is true for both adaptive
+                // modes, so the notice fires exactly when VRR was requested
+                // and the session genuinely fell back to fixed presentation --
+                // for every pacing preference.
+                if (m_Preferences->enableVrr &&
+                        !m_VideoDecoder->isAdaptivePresentationActive() &&
                         !m_VrrFallbackNotified) {
                     m_VrrFallbackNotified = true;
                     SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                                "VRR requested but not active; notifying user of fixed-pacing fallback");
-                    emit displayLaunchWarning(tr("VRR unavailable: falling back to fixed frame pacing"));
+                                "VRR requested but not active; notifying user of fixed-presentation fallback");
+                    emit displayLaunchWarning(tr("VRR unavailable: falling back to fixed presentation"));
                 }
 
                 // As of SDL 2.0.12, SDL_RecreateWindow() doesn't carry over mouse capture

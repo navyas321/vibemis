@@ -138,6 +138,11 @@ bool FFmpegVideoDecoder::isVrrActive()
     return m_Pacer != nullptr && m_Pacer->isVrrActive();
 }
 
+bool FFmpegVideoDecoder::isAdaptivePresentationActive()
+{
+    return m_Pacer != nullptr && m_Pacer->isAdaptivePresentationActive();
+}
+
 int FFmpegVideoDecoder::getDecoderCapabilities()
 {
     bool ok;
