@@ -30,6 +30,7 @@ version-less and free of any issues/limitations tables.
 | Feature | Status |
 |---|---|
 | **Microphone passthrough** | Not possible yet in any Moonlight-family client: it requires host-side protocol support that Apollo/Vibepollo does not ship (tracked upstream — Apollo discussion #591). |
+| **Ghosting on some LCD panels while VRR is active** | Panel-level, not a client bug (BL-2531, root-caused 2026-07-27): budget VRR LCDs (confirmed: the Legion Go S internal 8-inch IPS) tune pixel overdrive for their fixed maximum refresh, so when adaptive refresh is actually engaged the panel smears/double-images on fast motion. It reproduces in native games at sub-max refresh — no streaming involved — and disappears the moment VRR is off (presentation then runs pinned at max refresh). Device-confirmed by bisection: pacing mode, stream FPS, virtual display, and every client-side presentation change have no effect; only the VRR toggle does. **Workaround: turn Enable VRR off when playing on such a panel; keep VRR for external adaptive-sync displays (e.g. OLED TVs), where it works as designed.** |
 
 ## Experimental / not yet validated
 
