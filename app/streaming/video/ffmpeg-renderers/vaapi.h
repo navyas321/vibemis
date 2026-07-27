@@ -2,6 +2,8 @@
 
 #include "renderer.h"
 
+#include <QByteArray>
+
 // Avoid X11 if SDL was built without it
 #if !defined(SDL_VIDEO_DRIVER_X11) && defined(HAVE_LIBVA_X11)
 #warning Unable to use libva-x11 without SDL X11 backend
@@ -65,6 +67,7 @@ public:
     virtual bool isDirectRenderingSupported() override;
     virtual int getDecoderColorspace() override;
     virtual int getDecoderCapabilities() override;
+    virtual const char* getVendorString() override;
     virtual void notifyOverlayUpdated(Overlay::OverlayType) override;
     virtual bool notifyWindowChanged(PWINDOW_STATE_CHANGE_INFO) override;
 
@@ -96,6 +99,11 @@ private:
     AVBufferRef* m_HwContext;
     bool m_BlacklistedForDirectRendering;
     bool m_HasRfiLatencyBug;
+    // Vibemis (BL-2417): vaQueryVendorString() result, captured during
+    // initialize() and retained for the performance overlay. Held as a
+    // QByteArray because the libva-owned pointer's lifetime is tied to the
+    // VADisplay, which the overlay must not depend on.
+    QByteArray m_VendorString;
     bool m_RequiresExplicitPixelFormat;
 
     SDL_mutex* m_OverlayMutex;

@@ -1374,6 +1374,15 @@ bool DrmRenderer::isDirectRenderingSupported()
     return m_SupportsDirectRendering;
 }
 
+const char* DrmRenderer::getVendorString()
+{
+    // Vibemis (BL-2417): the DRM driver name ("amdgpu", "i915", "nvidia-drm",
+    // ...) for the performance overlay. Already retained from drmGetVersion()
+    // in initialize(); freed with m_Version in the destructor, so it outlives
+    // every overlay refresh.
+    return m_Version != nullptr ? m_Version->name : nullptr;
+}
+
 int DrmRenderer::getDecoderColorspace()
 {
     if (m_ColorEncodingProp != nullptr) {

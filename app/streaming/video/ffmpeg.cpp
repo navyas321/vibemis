@@ -8,9 +8,15 @@
 
 #include <h264_stream.h>
 
+#include "decoderstatus.h"
+
 extern "C" {
 #include <libavutil/mastering_display_metadata.h>
 #include <libavutil/pixdesc.h>
+// Vibemis (BL-2417): av_hwdevice_get_type_name() for the overlay's
+// decoder-capability line. Reachable transitively via libavcodec/codec.h, but
+// name the dependency we actually use.
+#include <libavutil/hwcontext.h>
 }
 
 #include "ffmpeg-renderers/sdlvid.h"
@@ -832,7 +838,47 @@ bool FFmpegVideoDecoder::completeInitialization(const AVCodec* decoder, enum AVP
         }
     }
 
+    cacheDecoderIdentity();
+
     return true;
+}
+
+void FFmpegVideoDecoder::cacheDecoderIdentity()
+{
+    // Vibemis (BL-2417): snapshot the decoder identity for the overlay's
+    // decoder-capability line. See the member declarations in ffmpeg.h for why
+    // these are cached here rather than read live in stringifyVideoStats().
+    if (m_VideoDecoderCtx != nullptr && m_VideoDecoderCtx->codec != nullptr &&
+            m_VideoDecoderCtx->codec->name != nullptr) {
+        m_DecoderIdName = QByteArray(m_VideoDecoderCtx->codec->name);
+    }
+
+    // The hwaccel device type ("vaapi", "d3d11va", "vulkan", ...). Null for
+    // software decoding and for non-hwaccel hardware decoders (h264_rkmpp,
+    // h264_v4l2m2m and friends) — those already name their hardware in
+    // codec->name, so the line reads "Decoder: h264_rkmpp via ..." with no
+    // redundant parenthetical.
+    if (m_HwDecodeCfg != nullptr) {
+        const char* hwName = av_hwdevice_get_type_name(m_HwDecodeCfg->device_type);
+        if (hwName != nullptr) {
+            m_DecoderHwTypeName = QByteArray(hwName);
+        }
+    }
+
+    // Name the BACKEND renderer, not the frontend. The backend is what supplies
+    // getDecoderCapabilities() (see FFmpegVideoDecoder::getDecoderCapabilities()),
+    // so it is the half that decides the client's RFI capability — and in
+    // BL-2408 it was a VAAPI backend zeroing that capability while a different
+    // frontend drew the screen. Naming the frontend would point a triager at
+    // the wrong component.
+    if (m_BackendRenderer != nullptr) {
+        m_DecoderRendererName = QByteArray(m_BackendRenderer->getRendererName());
+
+        const char* vendor = m_BackendRenderer->getVendorString();
+        if (vendor != nullptr) {
+            m_DecoderVendorName = QByteArray(vendor);
+        }
+    }
 }
 
 void FFmpegVideoDecoder::addVideoStats(VIDEO_STATS& src, VIDEO_STATS& dst)
@@ -1175,6 +1221,33 @@ void FFmpegVideoDecoder::stringifyVideoStats(VIDEO_STATS& stats, char* output, i
 
         offset += ret;
     }
+
+    // Vibemis (BL-2417): decoder-capability line — active decoder, driver
+    // vendor, and the FINAL reference-frame-invalidation state.
+    //
+    // BL-2408 (RFI silently disabled on every AMD/Gallium device) survived for
+    // months because none of this was ever displayed. The RFI value here comes
+    // from VibemisGetRfiState(), which reads moonlight-common-c's internal
+    // isReferenceFrameInvalidationEnabled() — the AND of the server's SDP
+    // capability and the capability the client actually sent. It is emphatically
+    // NOT re-derived from the live renderer: the capabilities that reach the
+    // host come from the throwaway test decoder in
+    // Session::populateDecoderProperties(), so a renderer-derived value would
+    // have cheerfully printed "on" for the whole duration of the defect this
+    // line exists to expose.
+    ret = DecoderStatus::formatLine(&output[offset],
+                                    length - offset,
+                                    m_DecoderIdName.constData(),
+                                    m_DecoderHwTypeName.constData(),
+                                    m_DecoderRendererName.constData(),
+                                    m_DecoderVendorName.constData(),
+                                    VibemisGetRfiState());
+    if (ret < 0 || ret >= length - offset) {
+        SDL_assert(false);
+        return;
+    }
+
+    offset += ret;
 
     if (stats.framesWithHostProcessingLatency > 0) {
         ret = snprintf(&output[offset],

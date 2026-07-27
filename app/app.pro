@@ -259,6 +259,7 @@ HEADERS += \
     gui/uisoundmanager.h \
     streaming/video/overlaymanager.h \
     streaming/video/overlayplacement.h \
+    streaming/video/decoderstatus.h \
     backend/systemproperties.h \
     backend/clipboardmanager.h \
     backend/servercommandmanager.h \

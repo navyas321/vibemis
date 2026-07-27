@@ -41,6 +41,10 @@ private:
 
     void stringifyVideoStats(VIDEO_STATS& stats, char* output, int length);
 
+    // Vibemis (BL-2417): snapshot the decoder/renderer/driver identity for the
+    // overlay's decoder-capability line.
+    void cacheDecoderIdentity();
+
     void logVideoStats(VIDEO_STATS& stats, const char* title);
 
     void addVideoStats(VIDEO_STATS& src, VIDEO_STATS& dst);
@@ -103,6 +107,20 @@ private:
     IFFmpegRenderer* m_BackendRenderer;
     IFFmpegRenderer* m_FrontendRenderer;
     int m_ConsecutiveFailedDecodes;
+
+    // Vibemis (BL-2417): decoder identity captured once at initialization for
+    // the overlay's decoder-capability line.
+    //
+    // These are cached, not read live, because reset() frees m_VideoDecoderCtx
+    // and both renderers BEFORE calling logVideoStats() -> stringifyVideoStats()
+    // for the "Global video stats" summary. Reading them live would either
+    // crash there or print "unknown" in the one log a user is most likely to
+    // attach to a bug report.
+    QByteArray m_DecoderIdName;
+    QByteArray m_DecoderHwTypeName;
+    QByteArray m_DecoderRendererName;
+    QByteArray m_DecoderVendorName;
+
     Pacer* m_Pacer;
     PacerTelemetrySnapshot m_LastPacerTelemetry;
     VIDEO_STATS m_ActiveWndVideoStats;

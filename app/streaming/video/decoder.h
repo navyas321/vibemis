@@ -14,6 +14,19 @@
 extern "C" {
 #endif
 uint64_t LiGetMicroseconds(void);
+
+// Vibemis (BL-2417): the final negotiated reference-frame-invalidation state,
+// read from moonlight-common-c's internal isReferenceFrameInvalidationEnabled()
+// (server SDP capability AND test-decoder capability). Returns 1 = on,
+// 0 = off, -1 = not yet negotiated. Implemented in the wrapper static lib
+// (moonlight-common-c/limelight_compat.c), which is the only place with access
+// to Limelight-internal.h. Values match DecoderStatus::RfiState.
+//
+// Do NOT re-derive this from the live renderer's getDecoderCapabilities(): the
+// capabilities actually sent to the host come from the throwaway test decoder
+// in Session::populateDecoderProperties(), and the server half is not visible
+// app-side at all. See BL-2408.
+int VibemisGetRfiState(void);
 #ifdef __cplusplus
 }
 #endif

@@ -208,6 +208,24 @@ public:
         return 0;
     }
 
+    // Vibemis (BL-2417): human-readable driver/vendor string for the
+    // performance overlay's decoder-capability line, or nullptr if this
+    // renderer cannot identify its driver.
+    //
+    // Every renderer already queries something like this during initialize()
+    // (vaQueryVendorString, drmGetVersion, VkPhysicalDeviceProperties,
+    // DXGI_ADAPTER_DESC1, MTLDevice.name) and then throws it away. Only the
+    // ones where the string is already retained or trivially retainable
+    // override this; the rest fall back to the renderer name alone, which the
+    // overlay always prints.
+    //
+    // The returned pointer must remain valid for the renderer's lifetime and
+    // the call must be cheap -- the overlay refreshes about once a second, so
+    // no driver round-trips here.
+    virtual const char* getVendorString() {
+        return nullptr;
+    }
+
     virtual int getDecoderColorspace() {
         // Rec 601 is default
         return COLORSPACE_REC_601;
