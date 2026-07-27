@@ -2098,20 +2098,25 @@ void FFmpegVideoDecoder::decoderThreadProc()
                             // Snapshot without moving the legacy dequeue point.
                             const DECODE_UNIT& du = m_FrameInfoQueue.head();
                             pacedFrameNumber = du.frameNumber;
-                            // BL-2336: our common-c fork now exposes the raw
-                            // 90 kHz RTP timestamp on DECODE_UNIT (submodule
-                            // patch bf826ee8). Prefer it - the old ms-quantized
-                            // reconstruction (presentationTimeMs * 90) fed the
-                            // cadence learner alternating 8/9 ms intervals and
-                            // produced a device-measured +9.5 ms submit-error
-                            // p99 tail (visible ~1 Hz judder) vs Nonary's ~+1 ms
-                            // with raw timestamps on the same panel. Keep the
-                            // reconstruction only for the synthetic-PTS path
-                            // (rtpTimestamp == 0: host sent no valid clock).
-                            pacedRtpTimestamp = (du.rtpTimestamp != 0)
-                                ? du.rtpTimestamp
-                                : (uint32_t)(du.presentationTimeMs * 90u);
-                            pacedTimestampValid = true;
+                            // BL-2336: our common-c fork exposes the raw 90 kHz
+                            // RTP timestamp on DECODE_UNIT. Prefer it - the old
+                            // ms-quantized reconstruction (presentationTimeMs *
+                            // 90) fed the cadence learner alternating 8/9 ms
+                            // intervals and produced a device-measured +9.5 ms
+                            // submit-error p99 tail (visible ~1 Hz judder) vs
+                            // Nonary's ~+1 ms with raw timestamps on the same
+                            // panel.
+                            //
+                            // BL-2415: RTP timestamp 0 is a legitimate value, so
+                            // validity is represented separately rather than
+                            // inferred from the raw value. Carry the host flag
+                            // through verbatim - when the host sends no PTS the
+                            // controller takes its documented frame-number
+                            // cadence fallback, which is strictly better than
+                            // fabricating a ms-quantized 90 kHz clock that would
+                            // make the cadence model chase a phantom rate.
+                            pacedRtpTimestamp = du.rtpTimestamp;
+                            pacedTimestampValid = du.rtpTimestampValid;
                         }
                     }
 
