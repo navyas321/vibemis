@@ -563,6 +563,15 @@ bool Pacer::isVrrActive() const
     return m_VrrWorker != nullptr;
 }
 
+bool Pacer::isAdaptivePresentationActive() const
+{
+    // m_PacingMode is reset to Fixed on every path that restores fixed
+    // presentation (including a worker start failure), so the mode alone is
+    // authoritative: AdaptivePaced means the worker is pacing an adaptive
+    // swapchain, AdaptiveUnpaced means the render thread is driving one.
+    return vrrPacingModeHoldsAdaptivePresentation(m_PacingMode);
+}
+
 const char* Pacer::pacingModeName() const
 {
     // Reported from the objects that actually exist rather than from the

@@ -143,9 +143,18 @@ public:
     virtual bool notifyWindowChanged(PWINDOW_STATE_CHANGE_INFO info) = 0;
 
     // True when the decoder's Pacer is running the VRR pacing worker
-    // (BL-2212). Lets Session surface a visible fallback notice when a
-    // requested VRR session ended up on fixed pacing.
+    // (BL-2212).
     virtual bool isVrrActive() {
         return false;
+    }
+
+    // BL-2529: true when the session holds adaptive presentation at all --
+    // worker-paced or unpaced. This, not isVrrActive(), is what Session's
+    // refresh-drift guard and VRR-fallback notice consult: with frame pacing
+    // off the worker never runs, but the presentation is still adaptive and
+    // its qualified refresh rate can still go stale. Defaults to isVrrActive()
+    // because decoders without the unpaced mode have no gap between the two.
+    virtual bool isAdaptivePresentationActive() {
+        return isVrrActive();
     }
 };

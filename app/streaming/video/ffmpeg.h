@@ -29,6 +29,7 @@ public:
     virtual void setHdrMode(bool enabled) override;
     virtual bool notifyWindowChanged(PWINDOW_STATE_CHANGE_INFO info) override;
     virtual bool isVrrActive() override;
+    virtual bool isAdaptivePresentationActive() override;
 
     virtual IFFmpegRenderer* getBackendRenderer();
 

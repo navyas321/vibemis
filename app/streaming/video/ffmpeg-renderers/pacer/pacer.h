@@ -55,6 +55,13 @@ public:
 
     bool isVrrActive() const;
 
+    // BL-2529: true when this session holds ADAPTIVE PRESENTATION -- the VRR
+    // worker pacing it, or the render thread driving it unpaced. Distinct from
+    // isVrrActive(), which reports only the worker: the refresh-drift guard
+    // and the session's fallback notice care about the presentation, and
+    // keying them on the worker made both wrong for unpaced VRR sessions.
+    bool isAdaptivePresentationActive() const;
+
     // BL-2529: terse, screen-sized name of the pacing path this session
     // actually built, for the performance overlay. Resolved after
     // initialize(); "none" before it runs.

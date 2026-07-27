@@ -63,6 +63,17 @@ enum class VrrPacingMode {
     Fixed,
 };
 
+// Whether a session in this mode HOLDS adaptive presentation, as opposed to
+// whether the pacing worker runs. The two adaptive modes both keep the
+// renderer's adaptive present mode and qualified refresh snapshot, so both
+// need the refresh-drift guard (BL-2296/BL-2337) and neither should raise the
+// VRR-fallback notice. Keying either of those on the worker instead would make
+// them wrong for exactly the AdaptiveUnpaced sessions BL-2529 made reachable.
+inline bool vrrPacingModeHoldsAdaptivePresentation(VrrPacingMode mode)
+{
+    return mode != VrrPacingMode::Fixed;
+}
+
 inline const char* vrrPacingModeName(VrrPacingMode mode)
 {
     switch (mode) {

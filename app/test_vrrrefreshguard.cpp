@@ -33,11 +33,12 @@ static int g_Checks = 0;
         } \
     } while (0)
 
-// Phase 1: only probe SDL display state when a VRR session is actually pacing
-// adaptively AND the window event could have changed the display refresh.
+// Phase 1: only probe SDL display state when a VRR session actually holds
+// adaptive presentation (paced or unpaced -- BL-2529) AND the window event
+// could have changed the display refresh.
 static void testNeedsProbe()
 {
-    // Qualified, adaptively pacing, and the event may have changed the
+    // Qualified, presenting adaptively, and the event may have changed the
     // refresh: probe.
     CHECK(StreamUtils::vrrRefreshSwitchNeedsProbe(120, true, true));
     CHECK(StreamUtils::vrrRefreshSwitchNeedsProbe(144, true, true));
@@ -46,9 +47,9 @@ static void testNeedsProbe()
     // worker is on fixed pacing with no qualified rate to go stale.
     CHECK(!StreamUtils::vrrRefreshSwitchNeedsProbe(0, true, true));
 
-    // Qualified at session level but the renderer fell back to fixed pacing
-    // (non-Vulkan renderer, presenter rejection, worker startup failure):
-    // retain upstream's window-event behavior untouched.
+    // Qualified at session level but the renderer fell back to fixed
+    // presentation (non-Vulkan renderer, presenter rejection, worker startup
+    // failure): retain upstream's window-event behavior untouched.
     CHECK(!StreamUtils::vrrRefreshSwitchNeedsProbe(120, false, true));
 
     // Window event that cannot have changed the display refresh.
@@ -91,7 +92,7 @@ static void testGuardScenarios()
     struct Scenario {
         const char* name;
         int qualifiedHz;        // m_ActiveVrrRefreshHz
-        bool pacingActive;      // m_VideoDecoder->isVrrActive()
+        bool adaptiveActive;    // m_VideoDecoder->isAdaptivePresentationActive()
         bool mayHaveChanged;    // refreshMayHaveChanged from the window event
         bool refreshReadable;   // StreamUtils::tryGetDisplayRefreshRate result
         int currentHz;          // probed rate
@@ -102,6 +103,13 @@ static void testGuardScenarios()
         { "borderless resize event, rate unchanged",
           120, true, true, true, 120, false },
         { "same-display mode switch 120 -> 90 via SIZE_CHANGED",
+          120, true, true, true, 90, true },
+        // BL-2529: an unpaced VRR session (frame pacing off) reports
+        // adaptiveActive=true with no worker running, and its qualified rate
+        // goes stale exactly like the paced mode's. This row pins the session
+        // wiring: feed the guard isAdaptivePresentationActive(), never
+        // isVrrActive(), or this scenario's input cannot be produced.
+        { "adaptive UNPACED session, mode switch 120 -> 90",
           120, true, true, true, 90, true },
         { "same-display mode switch 120 -> 144 via DISPLAY_CHANGED",
           120, true, true, true, 144, true },
@@ -118,7 +126,7 @@ static void testGuardScenarios()
     for (const Scenario& s : scenarios) {
         bool recreation = false;
         if (StreamUtils::vrrRefreshSwitchNeedsProbe(s.qualifiedHz,
-                                                    s.pacingActive,
+                                                    s.adaptiveActive,
                                                     s.mayHaveChanged)) {
             recreation = StreamUtils::vrrRefreshSwitchRequiresRequalification(
                 s.qualifiedHz, s.refreshReadable, s.currentHz);
