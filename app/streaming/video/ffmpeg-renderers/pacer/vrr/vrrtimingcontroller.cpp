@@ -345,7 +345,16 @@ VrrTimingDecision VrrTimingController::schedule(const PacedFrame& frame,
         m_LatchedPresentation = false;
     }
     else if (m_LatchedPresentation) {
-        if (learnedHeadroomUs >= kLatchedPresentationExitHeadroomUs) {
+        // A temporary spacing correction can take a cadence just below the
+        // entry threshold and correctly select the conservative path. Once
+        // that guard has completely decayed, however, retaining the wider
+        // hysteresis band would make an otherwise safe 100 FPS / 120 Hz
+        // stream stay latched indefinitely. Keep hysteresis while protection
+        // is still elevated, then restore immediate presentation at the
+        // normal eligibility boundary. (Ported from Nonary 3bf0dfca.)
+        if (learnedHeadroomUs >= kLatchedPresentationExitHeadroomUs ||
+            (m_GuardUs == m_BaseGuardUs &&
+             learnedHeadroomUs >= kLatchedPresentationHeadroomUs)) {
             m_LatchedPresentation = false;
         }
     }
