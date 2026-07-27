@@ -100,6 +100,20 @@ if [ "$fail" -eq 0 ]; then
     err "the VRR-fallback notice is gated on the pacing preference again (silent VRR loss for unpaced users)"
   fi
 
+  # ---- BL-2531/BL-2522: pre-wait stale-queue skip -------------------------
+  #
+  # A queued frame older than one source interval with a fresher successor is
+  # stale content and must be skipped BEFORE the render wait, recovering with
+  # noteSubmission(false, false, 0) -- never rebase() -- so the successor keeps
+  # the learned cadence (Nonary 3bf0dfca hunk 2; regression test
+  # testQueuedStaleFrameYieldsToFreshSuccessor). Removing it re-paints stale
+  # frames on fast pans, which the device shows as ghosting.
+  grep -qF 'scheduleAgeUs > decision.sourcePeriodUs && hasQueuedFrame()' "$pacer_source" ||
+    err "the pre-wait stale-queue skip is gone from the VRR worker"
+  if ! grep -A6 'scheduleAgeUs > decision.sourcePeriodUs' "$pacer_source" | grep -qF 'noteSubmission(false, false, 0)'; then
+    err "the pre-wait stale skip no longer recovers with noteSubmission(false,false,0) (cadence-preserving, no re-anchor)"
+  fi
+
   # ---- BL-2529: overlay diagnostics ---------------------------------------
   #
   # Whether the VRR worker is running and which present mode the swapchain got
