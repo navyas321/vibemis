@@ -51,6 +51,12 @@ public:
     }
     const char* vrrSelectedPresentModeName() const;
 
+    // Vibemis (BL-2529): same value, exposed through the renderer interface so
+    // the performance overlay can print it without knowing about Vulkan.
+    virtual const char* getPresentationModeName() override {
+        return vrrSelectedPresentModeName();
+    }
+
 private:
     static void lockQueue(AVHWDeviceContext *dev_ctx, uint32_t queue_family, uint32_t index);
     static void unlockQueue(AVHWDeviceContext *dev_ctx, uint32_t queue_family, uint32_t index);

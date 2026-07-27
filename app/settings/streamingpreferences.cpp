@@ -518,7 +518,13 @@ void StreamingPreferences::applyPreset(int preset)
     videoCodecConfig = VCC_FORCE_HEVC;
     videoDecoderSelection = VDS_FORCE_HARDWARE;
     enableYUV444 = false;
-    framePacing = true;
+    // BL-2529: legacy frame pacing is the right handheld default only when VRR
+    // is off. With VRR on, this same flag decides whether the VRR pacing worker
+    // runs, and a preset must not quietly switch that on -- on-device testing
+    // found VRR performs best unpaced, and the stored default is already off.
+    if (!enableVrr) {
+        framePacing = true;
+    }
     enableVsync = true;
 
     // Recompute the recommended bitrate for the new mode and let it auto-track.

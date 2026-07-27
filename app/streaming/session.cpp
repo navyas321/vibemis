@@ -3065,14 +3065,22 @@ void Session::execInternal()
                 // it (BL-2296). 0 = this decoder is not VRR-qualified.
                 m_ActiveVrrRefreshHz = enableVrr ? vrrDisplayRefreshHz : 0;
 
-                // A rejected VRR request still uses the seamless fixed-V-sync
-                // fallback. Keep that fallback paced even when the separate
-                // frame-pacing preference is off, matching renderer-level VRR
-                // rejection later in initialization.
+                // BL-2529: the frame-pacing preference is the only input here.
+                //
+                // This used to force pacing on whenever VRR was requested and
+                // rejected, mirroring the same override inside Pacer. Both are
+                // gone: VRR requires V-sync, so "requested and rejected" is a
+                // configuration every VRR user can land in, and silently
+                // re-enabling pacing there made the user's explicit "off"
+                // unreachable. A rejected VRR session now gets exactly the
+                // fixed path a non-VRR session with these settings would get,
+                // and the rejection is still surfaced by the notice below.
+                //
+                // Renderers that cannot run unpaced are unaffected:
+                // FFmpegVideoDecoder::completeInitialization() ORs
+                // RENDERER_ATTRIBUTE_FORCE_PACING into the pacing argument
+                // independently of this value.
                 bool enableFramePacing = enableVsync && m_Preferences->framePacing;
-                if (m_Preferences->enableVrr && !enableVrr && enableVsync) {
-                    enableFramePacing = true;
-                }
 
                 // Choose a new decoder (hopefully the same one, but possibly
                 // not if a GPU was removed or something).
@@ -3096,7 +3104,16 @@ void Session::execInternal()
                 // but this decoder ended up on fixed pacing (non-Vulkan renderer,
                 // presenter rejection, or worker startup failure), surface a
                 // visible one-time notice.
-                if (m_Preferences->enableVrr && !m_VideoDecoder->isVrrActive() &&
+                //
+                // BL-2529: isVrrActive() reports whether the VRR pacing WORKER
+                // is running, so with frame pacing off it is false by
+                // construction and carries no information about whether VRR
+                // presentation was available. Warning there would tell every
+                // user of the V-Sync-on/pacing-off/VRR-on combination that
+                // something failed when nothing did. The performance overlay's
+                // "Pacing:" line reports what actually got built.
+                if (m_Preferences->enableVrr && enableFramePacing &&
+                        !m_VideoDecoder->isVrrActive() &&
                         !m_VrrFallbackNotified) {
                     m_VrrFallbackNotified = true;
                     SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,

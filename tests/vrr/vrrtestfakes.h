@@ -142,6 +142,37 @@ public:
         m_Condition.notify_all();
     }
 
+    // BL-2529: the base class default returns false, which the pacer treats as
+    // a fatal "the presenter cannot go back to fixed presentation". Model a
+    // presenter that CAN, and count the calls, so a test can assert both that a
+    // rejection restores fixed presentation and that a deliberately-unpaced VRR
+    // session leaves the adaptive presentation alone.
+    bool restoreFixedPresentation(VrrFallbackReason reason) override
+    {
+        std::lock_guard<std::mutex> lock(m_Mutex);
+        ++m_RestoreCount;
+        m_LastRestoreReason = reason;
+        return m_RestoreSucceeds;
+    }
+
+    void setRestoreSucceeds(bool succeeds)
+    {
+        std::lock_guard<std::mutex> lock(m_Mutex);
+        m_RestoreSucceeds = succeeds;
+    }
+
+    size_t restoreCount() const
+    {
+        std::lock_guard<std::mutex> lock(m_Mutex);
+        return m_RestoreCount;
+    }
+
+    VrrFallbackReason lastRestoreReason() const
+    {
+        std::lock_guard<std::mutex> lock(m_Mutex);
+        return m_LastRestoreReason;
+    }
+
     void setSupport(VrrFallbackReason support)
     {
         std::lock_guard<std::mutex> lock(m_Mutex);
@@ -287,6 +318,9 @@ private:
     mutable std::mutex m_Mutex;
     std::condition_variable m_Condition;
     VrrFallbackReason m_Support = VrrFallbackReason::NoFallback;
+    bool m_RestoreSucceeds = true;
+    size_t m_RestoreCount = 0;
+    VrrFallbackReason m_LastRestoreReason = VrrFallbackReason::NoFallback;
     bool m_PreparationSucceeds = true;
     bool m_CancellationMaySubmit = false;
     bool m_CancelSubmits = false;

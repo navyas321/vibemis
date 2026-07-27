@@ -121,6 +121,15 @@ private:
     QByteArray m_DecoderRendererName;
     QByteArray m_DecoderVendorName;
 
+    // Vibemis (BL-2529): the pacing path and presentation mode this decoder
+    // actually built, for the overlay's pacing line. Cached for the same
+    // reason as the identity fields above -- reset() destroys m_Pacer and the
+    // renderers before the final stats log -- and safe to cache because both
+    // are decided once during completeInitialization() and never change for
+    // the life of the decoder.
+    QByteArray m_PacingModeName;
+    QByteArray m_PresentModeName;
+
     Pacer* m_Pacer;
     PacerTelemetrySnapshot m_LastPacerTelemetry;
     VIDEO_STATS m_ActiveWndVideoStats;

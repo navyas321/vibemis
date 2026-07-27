@@ -879,6 +879,23 @@ void FFmpegVideoDecoder::cacheDecoderIdentity()
             m_DecoderVendorName = QByteArray(vendor);
         }
     }
+
+    // Vibemis (BL-2529): pacing path and presentation mode.
+    //
+    // The FRONTEND renderer owns presentation here, unlike the identity fields
+    // above: it is the renderer Pacer was constructed with, so its swapchain
+    // is the one whose present mode decided whether this session could use
+    // adaptive presentation at all.
+    if (m_Pacer != nullptr) {
+        m_PacingModeName = QByteArray(m_Pacer->pacingModeName());
+    }
+
+    if (m_FrontendRenderer != nullptr) {
+        const char* presentMode = m_FrontendRenderer->getPresentationModeName();
+        if (presentMode != nullptr) {
+            m_PresentModeName = QByteArray(presentMode);
+        }
+    }
 }
 
 void FFmpegVideoDecoder::addVideoStats(VIDEO_STATS& src, VIDEO_STATS& dst)
@@ -1242,6 +1259,21 @@ void FFmpegVideoDecoder::stringifyVideoStats(VIDEO_STATS& stats, char* output, i
                                     m_DecoderRendererName.constData(),
                                     m_DecoderVendorName.constData(),
                                     VibemisGetRfiState());
+    if (ret < 0 || ret >= length - offset) {
+        SDL_assert(false);
+        return;
+    }
+
+    offset += ret;
+
+    // Vibemis (BL-2529): which pacing path this session actually built, and the
+    // presentation mode its swapchain got. Both are decided once at decoder
+    // creation and were previously invisible, which is how the frame-pacing
+    // preference could be inert under VRR without anyone being able to tell.
+    ret = DecoderStatus::formatPacingLine(&output[offset],
+                                          length - offset,
+                                          m_PacingModeName.constData(),
+                                          m_PresentModeName.constData());
     if (ret < 0 || ret >= length - offset) {
         SDL_assert(false);
         return;
