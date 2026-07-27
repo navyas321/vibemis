@@ -114,6 +114,17 @@ if [ "$fail" -eq 0 ]; then
     err "the pre-wait stale skip no longer recovers with noteSubmission(false,false,0) (cadence-preserving, no re-anchor)"
   fi
 
+  # ---- BL-2531: Gamescope VRR prefers Mailbox -----------------------------
+  #
+  # The device A/B (test146, host frame-generation off) measured Mailbox at
+  # 0.22% paced-drop vs stock FIFO's 2.03% on the Gamescope WSI path (+2.2%
+  # of source frames recovered); the VRR-off legacy path already ran Mailbox
+  # on the same surface. The VRR branch must try Mailbox first and keep FIFO
+  # only as the unsupported-Mailbox fallback.
+  if ! grep -B6 'Gamescope WSI: using Mailbox presentation' "$vulkan_source" | grep -qF 'm_VkPresentMode = VK_PRESENT_MODE_MAILBOX_KHR'; then
+    err "the Gamescope VRR branch no longer prefers Mailbox (re-introduces the FIFO rendered-FPS cost)"
+  fi
+
   # ---- BL-2529: overlay diagnostics ---------------------------------------
   #
   # Whether the VRR worker is running and which present mode the swapchain got
