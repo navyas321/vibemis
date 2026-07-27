@@ -41,9 +41,19 @@ grep -qF 'url = https://github.com/navyas321/moonlight-common-c.git' .gitmodules
 # 6. common-c gitlink pin frozen (classic reedsolomon audio FEC, pre-nanors de364b6).
 #    An intentional bump MUST update this hash in the same PR and cite why it is
 #    audio-neutral (an on-device audio A/B, or proof the diff touches no audio
-#    code). Current pin = BL-2336 fork bf826ee8 (= ad329b24 + video-only RTP
-#    timestamp plumbing; audio FEC path byte-identical to the classic pin).
-PIN="bf826ee8d53173a79361c5f4d2c49663553f4e0c"
+#    code). Current pin = BL-2415 fork f0e742ca (= bf826ee8 + explicit RTP
+#    timestamp validity), discharged by the second condition:
+#      $ git -C moonlight-common-c/moonlight-common-c diff --stat bf826ee8 f0e742ca
+#       src/Limelight.h         | 18 ++++++++++++++----
+#       src/VideoDepacketizer.c | 14 +++++++++++---
+#      $ git ... diff bf826ee8 f0e742ca | grep -iE 'audio|opus|AUDIO_|SAMPLE|CHANNEL'
+#      (no matches)
+#    Two video files; the Limelight.h hunk only APPENDS DECODE_UNIT.rtpTimestampValid
+#    and rewrites two comments. No audio struct, no FEC path, no decoder callback
+#    signature changed -- the audio runtime is byte-identical to the bf826ee8 pin,
+#    which was itself byte-identical to the classic ad329b24 pin on this axis.
+#    Prior pin: bf826ee8d53173a79361c5f4d2c49663553f4e0c (BL-2336).
+PIN="f0e742ca69eec93eba286fab62a57eef2006496c"
 ACTUAL=$(git ls-tree HEAD moonlight-common-c/moonlight-common-c | awk '{print $3}')
 [ "$ACTUAL" = "$PIN" ] \
   || err "moonlight-common-c gitlink moved: ${ACTUAL:-<none>} (expected $PIN)"
