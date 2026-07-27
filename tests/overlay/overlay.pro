@@ -1,10 +1,17 @@
-TEMPLATE = app
-TARGET = tst_overlayplacement
+# The overlay suite holds two independent binaries, so it is a subdirs project
+# in the same shape as tests/vrr/vrr.pro. Keeping each test file single-purpose
+# matters here: the decoder-status test must build with no FFmpeg/SDL/Qt-GUI
+# headers at all, which is the constraint that keeps decoderstatus.h a pure,
+# dependency-free header.
+TEMPLATE = subdirs
+CONFIG += ordered
 
-QT += testlib
-QT -= gui
-CONFIG += console testcase c++17
-CONFIG -= app_bundle
+overlayplacement.file = $$PWD/overlayplacement.pro
 
-SOURCES += \
-    $$PWD/tst_overlayplacement.cpp
+# Vibemis (BL-2417): coverage for the debug overlay's decoder-capability line
+# (active decoder, driver vendor, negotiated RFI state).
+decoderstatus.file = $$PWD/decoderstatus.pro
+
+SUBDIRS += \
+    overlayplacement \
+    decoderstatus

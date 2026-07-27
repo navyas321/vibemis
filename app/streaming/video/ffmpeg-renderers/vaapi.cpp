@@ -386,6 +386,11 @@ VAAPIRenderer::initialize(PDECODER_PARAMETERS params)
                 "Driver: %s",
                 vendorString ? vendorString : "<unknown>");
 
+    // Vibemis (BL-2417): retain the driver string for the performance overlay.
+    // Copy it -- the libva-owned buffer belongs to the VADisplay, and the
+    // overlay reads this long after initialize() returns.
+    m_VendorString = vendorString != nullptr ? QByteArray(vendorString) : QByteArray();
+
     // This is the libva-vdpau-driver which is not supported by our VAAPI renderer.
     if (vendorStr.contains("Splitted-Desktop Systems VDPAU backend for VA-API")) {
         // Fail and let our VDPAU renderer pick this up
@@ -628,6 +633,14 @@ int VAAPIRenderer::getDecoderCapabilities()
     }
 
     return caps;
+}
+
+const char* VAAPIRenderer::getVendorString()
+{
+    // BL-2417: this is the driver whose "Gallium" substring gates
+    // m_HasRfiLatencyBug above, so it is exactly the value a triager needs
+    // beside the overlay's RFI state.
+    return m_VendorString.isEmpty() ? nullptr : m_VendorString.constData();
 }
 
 void VAAPIRenderer::notifyOverlayUpdated(Overlay::OverlayType type)

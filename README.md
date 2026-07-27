@@ -146,7 +146,9 @@ AppImage to a stable path with a clean `Vibemis` desktop entry, ready to Add to 
   Settings → Advanced → "Software updates", check for updates on demand, and (when running as
   an AppImage) install the new build in place with one tap — no browser or terminal needed
 - **Performance overlay controls** — corner anchoring, text size, optional wall clock, and a
-  data-usage estimate next to the bitrate slider
+  data-usage estimate next to the bitrate slider. The overlay also reports the active decoder,
+  the graphics driver, and whether reference frame invalidation is in use, so a single
+  screenshot is enough to diagnose a decoder-capability problem
 - **Handheld quality-of-life** — battery-saver bitrate, controller-rumble suppression, motion
   (gyro) capability detection, host software version & per-client permission surfacing, AV1 and
   native-resolution guidance, an HDR display-capability gate, and an HDR-to-SDR tone-map toggle

@@ -4,7 +4,9 @@
 // zero-initialized pl_overlay_part left dst at (0,0). plvk now routes them
 // through OverlayPlacement::centered(); these tests pin the centering math.
 //
-// Build (see tests/tests.pro, opt-in):
+// Build (see tests/tests.pro, opt-in; tests/overlay became a subdirs project
+// in BL-2417 when the decoder-status binary was added, but both binaries still
+// build into the same output directory):
 //   qmake6 tests/tests.pro CONFIG+=tests && make && ./overlay/tst_overlayplacement
 
 #include <QtTest/QtTest>

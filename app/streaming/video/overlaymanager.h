@@ -94,6 +94,16 @@ private:
         // diagnosed, which is exactly when the block is being read.
         // stringifyVideoStats() truncates rather than growing, so an overflow
         // silently cuts the telemetry mid-number. 1536 restores real headroom.
+        //
+        // BL-2417 budget, measured against the verbatim format strings with
+        // pessimistic-but-reachable values (7680x4320, 9999.99 rates, saturated
+        // VRR counters): existing sections total 1083 bytes, leaving 452 of
+        // slack. The decoder-capability line is width-bounded by construction
+        // at DecoderStatus::MaxLineChars = 185 (every field is capped with a
+        // %.*s precision — see decoderstatus.h), so worst case is 1268 with
+        // 267 bytes still free. Unlike the VRR fields, this line cannot widen
+        // at runtime. Keep it that way: any new field here must carry its own
+        // cap, and tests/overlay/decoderstatus pins the bound.
         char text[1536];
 
         TTF_Font* font;
