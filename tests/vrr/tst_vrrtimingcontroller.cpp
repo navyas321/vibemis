@@ -98,6 +98,95 @@ void testRtpWrapResetAndFallback()
            "fallback movement beyond one second must rebase");
 }
 
+// BL-2415: DECODE_UNIT carries the raw 90 kHz RTP timestamp alongside an
+// explicit validity flag, and the ffmpeg.cpp decoder->pacer handoff forwards
+// both verbatim. Two properties are locked in here:
+//
+//   1. An RTP timestamp of 0 is a legitimate 90 kHz value. Validity must come
+//      from the flag, never be inferred from `rtpTimestamp != 0`.
+//   2. When the host sends no PTS the flag is false and the controller takes
+//      its rational frame-number cadence. The client must not substitute a
+//      fabricated `presentationTimeMs * 90` clock: that value is
+//      millisecond-quantized, so it feeds the cadence learner alternating
+//      17/17/16 ms atoms and makes the model chase a phantom rate.
+void testZeroTimestampIsValidAndAbsentTimestampFallsBack()
+{
+    // A valid timestamp that happens to be 0 must seed the RTP timeline. Were
+    // it mistaken for "absent", the next frame would have no valid predecessor
+    // and would report the frame-number fallback instead.
+    VrrTimingController zeroSeeded(config(60, 120));
+    zeroSeeded.schedule(frame(1, 0, true, 100000), 100000);
+    VrrTimingDecision afterZero = zeroSeeded.schedule(
+        frame(2, 1500, true, 116666), 116666);
+    expect(afterZero.usedRtpTimestamp,
+           "a valid RTP timestamp of 0 must seed the RTP timeline");
+    expect(afterZero.sourceIntervalUs == 16666,
+           "the interval after a valid zero timestamp must convert at 90 kHz");
+
+    // Treating 0 as valid must not weaken the backward-movement reset: a valid
+    // 0 arriving after a larger timestamp is still a wrap/reset, not an
+    // interval.
+    VrrTimingController backward(config(60, 120));
+    backward.schedule(frame(1, 4500, true, 100000), 100000);
+    expect(backward.schedule(frame(2, 0, true, 116666), 116666).rebased,
+           "a valid zero timestamp arriving backward must still rebase");
+
+    // Host omits PTS. `honest` receives what the fixed client forwards (the
+    // carried timestamp plus validity == false); `fabricated` receives what the
+    // pre-fix client synthesized (presentationTimeMs * 90, asserted valid).
+    VrrTimingController honest(config(60, 120));
+    VrrTimingController fabricated(config(60, 120));
+    constexpr uint64_t nominalIntervalUs = 16666;
+    uint64_t worstHonestErrorUs = 0;
+    uint64_t worstFabricatedErrorUs = 0;
+    bool fabricatedClaimedRtpCadence = false;
+    bool honestClaimedRtpCadence = false;
+    for (int number = 1; number <= 60; ++number) {
+        const uint64_t decodedUs = idealDecodedTime(100000, number, 60);
+        // presentationTimeMs as the synthetic-PTS path produces it: the source
+        // clock truncated to whole milliseconds.
+        const uint32_t presentationTimeMs = static_cast<uint32_t>(
+            (static_cast<uint64_t>(number) * 1000ULL) / 60ULL);
+
+        VrrTimingDecision honestDecision =
+            honest.schedule(frame(number, 0, false, decodedUs), decodedUs);
+        VrrTimingDecision fabricatedDecision = fabricated.schedule(
+            frame(number, presentationTimeMs * 90u, true, decodedUs),
+            decodedUs);
+
+        if (number == 1) {
+            continue;
+        }
+
+        honestClaimedRtpCadence =
+            honestClaimedRtpCadence || honestDecision.usedRtpTimestamp;
+        fabricatedClaimedRtpCadence =
+            fabricatedClaimedRtpCadence || fabricatedDecision.usedRtpTimestamp;
+
+        const uint64_t honestErrorUs =
+            honestDecision.sourceIntervalUs > nominalIntervalUs ?
+                honestDecision.sourceIntervalUs - nominalIntervalUs :
+                nominalIntervalUs - honestDecision.sourceIntervalUs;
+        const uint64_t fabricatedErrorUs =
+            fabricatedDecision.sourceIntervalUs > nominalIntervalUs ?
+                fabricatedDecision.sourceIntervalUs - nominalIntervalUs :
+                nominalIntervalUs - fabricatedDecision.sourceIntervalUs;
+        worstHonestErrorUs = std::max(worstHonestErrorUs, honestErrorUs);
+        worstFabricatedErrorUs = std::max(worstFabricatedErrorUs,
+                                          fabricatedErrorUs);
+    }
+
+    expect(!honestClaimedRtpCadence,
+           "an absent timestamp must never be reported as an RTP interval");
+    expect(worstHonestErrorUs <= 1,
+           "the documented fallback must produce exact rational 60 FPS atoms");
+    expect(fabricatedClaimedRtpCadence,
+           "the pre-fix fabricated clock was indistinguishable from a real one");
+    expect(worstFabricatedErrorUs >= 300,
+           "a ms-quantized fabricated clock misreports the source cadence, "
+           "which is why the fallback must be taken instead");
+}
+
 void testTimingFormulaeAndReserveCap()
 {
     VrrTimingController controller(config(60, 120));
@@ -1031,6 +1120,7 @@ void testTargetWaiterBoundaries()
 int main()
 {
     testRtpWrapResetAndFallback();
+    testZeroTimestampIsValidAndAbsentTimestampFallsBack();
     testTimingFormulaeAndReserveCap();
     testLongRunNearRefreshRtpCadence();
     testQuantizedCadenceDoesNotOscillate();
