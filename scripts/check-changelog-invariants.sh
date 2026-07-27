@@ -33,9 +33,17 @@ ok()  { echo "  ok: $*"; }
 # `python` alias exists: it does not on a stock Ubuntu/WSL or Debian image, and
 # the resulting exit 127 used to be reported as "generator emitted invalid
 # UTF-8" -- a guard failure that blamed the generator for a missing interpreter.
+#
+# `command -v` PRESENCE IS NOT ENOUGH. On Windows, %LOCALAPPDATA%\Microsoft\WindowsApps
+# ships an "App execution alias" stub named python3.exe that is on PATH, resolves fine,
+# and then exits 49 printing "Python was not found; run without arguments to install
+# from the Microsoft Store". That is the same failure the paragraph above describes,
+# arriving through a different door -- the guard failed with "16: generator emitted
+# invalid UTF-8" on a perfectly good generator. Probe that the interpreter actually
+# RUNS, and take the first one that does.
 PY=""
 for _py in python3 python; do
-  if command -v "$_py" >/dev/null 2>&1; then PY="$_py"; break; fi
+  if command -v "$_py" >/dev/null 2>&1 && "$_py" -c 'pass' >/dev/null 2>&1; then PY="$_py"; break; fi
 done
 
 [ -f "$GEN" ] || { echo "FAIL: $GEN is missing — the release body generator must stay a testable script, not an inline workflow run: block" >&2; exit 1; }
@@ -47,8 +55,19 @@ if cat "$GEN" scripts/lib-changelog.sh .github/workflows/dev-build.yml 2>/dev/nu
    | grep -v '^[[:space:]]*#' | grep -q 'trailers:key=Changelog'; then
   err "generator uses %(trailers:key=Changelog) — squash-merged commits lose the note (grep the commit body instead)"
 fi
-grep -qE "grep -m1 -iE \"\^Changelog\\\$\{bang\}:\"" scripts/lib-changelog.sh \
-  || err "note extraction no longer greps the commit body for a column-0 Changelog: line"
+# This used to pin the extractor's literal implementation (`grep -m1 -iE "^Changelog…"`),
+# which made it impossible to fix the wrapped-note truncation without editing the guard
+# that was supposedly protecting the behaviour. Pin the PROPERTY instead: the note is
+# read from the commit body handed to it on stdin, never from git metadata --
+# %(trailers)/`git interpret-trailers` only see git's strict final trailer block, and
+# `gh pr merge --squash` rewrites the message so the note is usually outside it (the
+# 0.5.0-beta.004 regression). Cases 5, 13, 20, 21 and 25 assert the actual behaviour.
+extractor=$(awk '/^changelog_extract_note\(\)/{f=1} f{print} f&&/^}$/{exit}' scripts/lib-changelog.sh)
+if [ -z "$extractor" ]; then
+  err "could not locate changelog_extract_note() in scripts/lib-changelog.sh — this static guard is not actually checking anything"
+elif printf '%s' "$extractor" | grep -v '^[[:space:]]*#' | grep -qE '\bgit\b'; then
+  err "changelog_extract_note now shells out to git — it must read the commit body from stdin, or a squash-rewritten message loses its note"
+fi
 grep -q "changelog_extract_note" "$GEN" \
   || err "the generator no longer uses the shared changelog_extract_note — the PR guard and the release body would drift apart"
 grep -q "What's new for you" "$GEN" \
@@ -363,8 +382,12 @@ out=$(gen 0.1.0-beta.002)
 grep -qxF -- "- 🎮 Controller support with ünïcödé and 中文" <<<"$out" \
   || err "16: a non-ASCII note was mangled"
 if [ -n "$PY" ]; then
-  printf '%s' "$out" | "$PY" -c 'import sys; sys.stdin.buffer.read().decode("utf-8")' 2>/dev/null \
-    || err "16: generator emitted invalid UTF-8"
+  # Keep the interpreter's own stderr and print it on failure. Discarding it is what
+  # made a broken/stub interpreter indistinguishable from a genuinely corrupt release
+  # body, and the guard then accused the generator.
+  if ! pyerr=$(printf '%s' "$out" | "$PY" -c 'import sys; sys.stdin.buffer.read().decode("utf-8")' 2>&1); then
+    err "16: generator emitted invalid UTF-8 (decoder said: ${pyerr:-<no output>})"
+  fi
 else
   echo "  note: no python interpreter; skipping the UTF-8 decode assertion" >&2
 fi
@@ -387,6 +410,40 @@ out=$(gen 0.1.0-beta.002)
 grep -qxF -- "- Something a user notices" <<<"$out" \
   || err "17: a shipping commit with a huge path list was demoted to plumbing (SIGPIPE/pipefail)"
 [ "$fail" = "$t0" ] && ok "huge-diff commit still classified by its paths"
+
+# --- 25. A WRAPPED NOTE IS PUBLISHED WHOLE. Shipped on 0.5.0-beta.017: the extractor
+#         read exactly one LINE, so two notes that wrapped in the commit body appeared
+#         on the release page cut off mid-thought --
+#           "- Fixes VRR streams staying on the slower, more conservative"
+#           "- Fixes up to one frame of extra latency added to Wayland and X11 VRR"
+#         -- on the most user-facing surface the project has. Wrapping a sentence at 72
+#         columns is the normal way to write a commit body (git's own convention), so
+#         the answer is to absorb the continuation, not to demand one-line notes.
+#         A note therefore runs until a BLANK LINE or the NEXT TRAILER KEY, and the
+#         wrap collapses to a single space. Both stop conditions are asserted here:
+#         swallowing them would append a Co-authored-by address, or an entire following
+#         paragraph of developer prose, onto the hero bullet.
+mkrepo
+commit "fix(vrr): release the presentation latch once the spacing guard recovers" \
+       "A transient spacing correction inflates the adaptive guard." \
+       "Changelog: Fixes VRR streams staying on the slower, more conservative
+presentation path long after the hiccup that triggered it had passed.
+Co-authored-by: Someone <s@example.com>"
+commit "fix(vrr): scope the depth-2 swapchain to Gamescope FIFO" \
+       "Changelog: Fixes up to one frame of extra latency added to Wayland and X11 VRR
+streaming by the Gamescope frame-rate fix, which was being applied to
+every display path instead of just Gamescope." \
+       "Verified: tests/vrr all six binaries pass."
+out=$(gen 0.1.0-beta.002)
+grep -qxF -- "- Fixes VRR streams staying on the slower, more conservative presentation path long after the hiccup that triggered it had passed." <<<"$out" \
+  || err "25: a two-line Changelog: note was truncated at its first line (the 0.5.0-beta.017 regression)"
+grep -qxF -- "- Fixes up to one frame of extra latency added to Wayland and X11 VRR streaming by the Gamescope frame-rate fix, which was being applied to every display path instead of just Gamescope." <<<"$out" \
+  || err "25: a three-line Changelog: note was truncated"
+grep -qi "Co-authored-by\|s@example.com" <<<"$out" \
+  && err "25: the note absorbed the following trailer — a continuation must stop at the next trailer key"
+grep -q "all six binaries" <<<"$out" \
+  && err "25: the note absorbed the following paragraph — a continuation must stop at a blank line"
+[ "$fail" = "$t0" ] && ok "wrapped Changelog: notes are published whole, stopping at a blank line or the next trailer"
 
 cd "$ROOT"
 if [ "$fail" = 0 ]; then

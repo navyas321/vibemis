@@ -126,6 +126,110 @@ jobs:
           [ "$rc" -eq 0 ] && echo "All invariant guards passed."
           exit $rc
 
+  # ── The VRR regression suite, which until now CI never built or ran ───────────────
+  #
+  # tests/vrr holds six binaries covering the timing controller, the rate policy, the
+  # refresh guard, the Gamescope swapchain-depth policy and the pacing worker — the
+  # exact code paths behind every VRR regression this project has shipped (beta.013
+  # through beta.017 were almost entirely VRR fixes). Not one line of it was executed
+  # by any job: `grep -rn tests .github/workflows/` returned nothing. The suite was
+  # dead weight, passing locally on whichever machine last remembered to run it.
+  #
+  # It gates the release the same way `invariants` does (create-dev-release lists it in
+  # `needs`), so a red test blocks the publish and not merely the merge — a dispatch or
+  # a direct push never goes through a PR, so a merge-only gate would not cover a cut.
+  #
+  # System Qt 6 (Ubuntu's qt6-base-dev, currently 6.4.2) rather than the
+  # install-qt-action the compile jobs use: these are console programs with no GUI, no
+  # QML scenegraph and no multimedia, so the ~2 minutes of aqt download buys nothing.
+  # 6.4.2 is also the version the suite is verified against on the dev box.
+  vrr-tests:
+    name: VRR Tests
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+        with:
+          # REQUIRED, not defensive: pacingworker.pro puts
+          # moonlight-common-c/moonlight-common-c/src on the include path and
+          # vrrpacingworker.cpp does `#include <Limelight.h>`, which exists ONLY in that
+          # submodule (verified: it is the single copy in the tree). Without this the
+          # build dies on the last of the six targets and the job never runs a test.
+          submodules: 'recursive'
+          fetch-depth: 1
+
+      # Same mitigation as the compile jobs: azure.archive.ubuntu.com stalls for tens
+      # of seconds per package often enough to dominate a job this short.
+      - name: Harden apt against flaky mirrors
+        run: |
+          printf 'Acquire::Retries "3";\nAcquire::http::Timeout "30";\nAcquire::https::Timeout "30";\n' \
+            | sudo tee /etc/apt/apt.conf.d/99-vibemis-ci-retries
+
+      - name: Install test dependencies
+        run: |
+          sudo apt-get update
+          # qt6-base-dev-tools provides qmake6; qt6-declarative-dev provides QtQml,
+          # which pacingworker.pro needs (QT += core qml). libavutil/libsdl2 are
+          # pulled in through pkg-config by the timing and pacing tests.
+          sudo apt-get install -y \
+            build-essential pkg-config \
+            qt6-base-dev qt6-base-dev-tools qt6-declarative-dev \
+            libavutil-dev libsdl2-dev
+
+      # tests/tests.pro is opt-in (it only descends into its SUBDIRS when qmake is
+      # given CONFIG+=tests), so point qmake straight at tests/vrr/vrr.pro instead —
+      # one less flag to forget, and it builds nothing this job does not run.
+      - name: Build the VRR test suite
+        run: |
+          set -Eeuo pipefail
+          mkdir -p build-vrr-tests
+          cd build-vrr-tests
+          qmake6 "$GITHUB_WORKSPACE/tests/vrr/vrr.pro"
+          make -j"$(nproc)"
+
+      # Every binary is named explicitly and its absence is a FAILURE. Globbing
+      # whatever happens to be executable would let a target silently drop out of
+      # vrr.pro and leave this job green while covering less — which is the exact
+      # shape of the problem this job exists to fix.
+      - name: Run the VRR test suite
+        run: |
+          set -Eeuo pipefail
+          cd build-vrr-tests
+          # The console tests print nothing on success and communicate purely through
+          # their exit status; only the QtTest one (tst_vrrratepolicy) prints PASS lines.
+          export QT_QPA_PLATFORM=offscreen
+          rc=0
+          for t in tst_vrrtimingcontroller tst_vrrratepolicy test_vrrratepolicy \
+                   test_vrrrefreshguard test_vrrswapchainpolicy tst_vrrpacingworker; do
+            # Searched from the workspace root, not the build dir: a subdirs template
+            # whose entries carry an absolute .file can emit its targets next to the
+            # sources instead of into the shadow tree, and which one happens today is
+            # not worth pinning a job on.
+            bin=$(find "$GITHUB_WORKSPACE" -type f -name "$t" -perm -u+x -print -quit)
+            if [ -z "$bin" ]; then
+              echo "::error title=VRR test binary missing::$t was not built — did it drop out of tests/vrr/vrr.pro?"
+              rc=1
+              continue
+            fi
+            echo "::group::$t"
+            if "$bin"; then
+              echo "$t: PASS"
+            else
+              echo "::error title=VRR test failed::$t exited non-zero"
+              rc=1
+            fi
+            echo "::endgroup::"
+          done
+          if [ "$rc" -ne 0 ]; then
+            echo "- VRR test suite FAILED" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "All six VRR test binaries passed."
+          echo "- VRR test suite: all six binaries passed" >> "$GITHUB_STEP_SUMMARY"
+
   # A change a user can notice must ship with a sentence a user can read.
   #
   # The release body's "🎯 What's new for you" section is built EXCLUSIVELY from
@@ -160,6 +264,183 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: bash scripts/check-pr-changelog-note.sh "$BASE_SHA" "$HEAD_SHA"
+
+  # ── BL-2460: a merge subject must never be able to suppress the beta ──────────────
+  #
+  # GitHub skips the `push` and `pull_request` EVENTS entirely when the head commit
+  # message contains [skip ci] / [ci skip] / [no ci] / [skip actions] / [actions skip],
+  # or a `skip-checks: true` trailer. The workflow never starts, so no beta is cut and
+  # the code ships with zero soak. It has already happened four times on vibemis-main:
+  # 970cfb94 (#272 — a Quick Menu rendering fix that went straight into stable 0.4.2
+  # with no beta at all), f2fb187b (#274), 02fff5aa (#275) and 80b2e731 (#276).
+  #
+  # This job is the only place the marker can actually be caught, and it splits the
+  # problem in two because the two halves have different levers:
+  #
+  #   pull_request → REJECT. `gh pr merge --squash` defaults the merge subject to the
+  #     PR TITLE, which is exactly where all four incidents got their marker, and a PR
+  #     title is not a commit message so GitHub's native skip does not see it. Failing
+  #     here is the one moment the marker can still be removed. (If a marker is in the
+  #     PR's head COMMIT instead, GitHub suppresses the pull_request event, this job
+  #     never runs, and — per GitHub's own docs — the required checks stay "Pending",
+  #     which blocks the merge. Add "Skip-CI Guard" to the required contexts on
+  #     vibemis-main and that hole is closed structurally too.)
+  #
+  #   push → AUDIT. The merge subject is typed at merge time, so a maintainer can still
+  #     paste a marker into the squash title after this check has passed; that push is
+  #     then dropped before any workflow exists to notice. Nothing can run during the
+  #     skipped event, so this looks BACKWARDS instead: the next push that does run
+  #     inspects every commit since the last release tag — a superset of its own range,
+  #     precisely because the skipped push's commits are missing from event.before..HEAD
+  #     — and fails loudly naming the commits that cut no build. That turns a silent
+  #     omission into a red run. It is deliberately NOT in create-dev-release's `needs`:
+  #     the beta that heals the gap still publishes. One red run per incident, and it
+  #     cannot repeat, because the next range starts at the tag this cut creates.
+  skip-ci-guard:
+    name: Skip-CI Guard
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+        with:
+          # Tags + history: the push audit anchors its range on the last release tag.
+          fetch-depth: 0
+
+      - name: Reject a merge subject that would skip CI
+        if: github.event_name == 'pull_request'
+        # The title goes through the environment, never string-interpolated into the
+        # script — it is attacker-controlled text on a fork PR.
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -uo pipefail
+          # Every string GitHub honours, matched case-insensitively (a [SKIP CI] is a
+          # mistake whether or not the platform would act on it).
+          MARKERS='\[(skip ci|ci skip|no ci|skip actions|actions skip)\]'
+          fail=0
+
+          if printf '%s' "$PR_TITLE" | grep -qEi "$MARKERS"; then
+            echo "::error title=Merge subject would skip the beta::PR title contains a CI-skip marker: $PR_TITLE"
+            fail=1
+          fi
+          # A `skip-checks: true` TRAILER is the other documented form. Anchored at
+          # column 0 so prose or a quoted example in a description cannot trip it.
+          if printf '%s\n' "$PR_TITLE" | grep -qEi '^skip-checks:[[:space:]]*true[[:space:]]*$'; then
+            echo "::error title=Merge subject would skip the beta::PR title contains a skip-checks trailer"
+            fail=1
+          fi
+
+          # Rebase-merge replays the branch's own commits, and a single-commit squash
+          # defaults its subject to that commit's subject — so the commit subjects are
+          # candidate merge subjects too. The PR BODY is deliberately NOT scanned: it
+          # would flag any PR that documents this very behaviour, and a marker in the
+          # head commit is already handled by GitHub leaving the checks Pending.
+          BASE=$(git merge-base "$BASE_SHA" "$HEAD_SHA" 2>/dev/null || printf '%s' "$BASE_SHA")
+          while IFS= read -r line; do
+            if [ -z "$line" ]; then continue; fi
+            if printf '%s' "${line#* }" | grep -qEi "$MARKERS"; then
+              echo "::error title=Commit subject would skip the beta::$line"
+              fail=1
+            fi
+          done < <(git log --format='%H %s' --no-merges "$BASE..$HEAD_SHA" 2>/dev/null)
+
+          if [ "$fail" -ne 0 ]; then
+            cat >&2 <<'EOF'
+          FAIL: this PR would merge with a CI-skip marker in the subject.
+
+          GitHub skips the push event for such a commit, so NO WORKFLOW RUNS: no beta is
+          cut, the AppImage is never built, the invariant guards never run, and the code
+          reaches stable with no soak. That is not a theoretical risk — #272 shipped a
+          Quick Menu rendering fix straight into stable 0.4.2 that way.
+
+          Remove [skip ci] / [ci skip] / [no ci] / [skip actions] / [actions skip] (and any
+          `skip-checks: true` trailer) from the PR title and from every commit subject,
+          then re-run. A docs-only change needs no marker: the build already skips itself
+          by CONTENT (see the check-changes step), and that path still records a run.
+          EOF
+            exit 1
+          fi
+          echo "OK: no CI-skip marker in the PR title or any commit subject."
+
+      - name: Audit for pushes that silently cut no build
+        if: github.event_name == 'push'
+        # Through the environment, not ${{ }} inside the script: a `test**`/`release/**`
+        # branch name is user-supplied text and would otherwise be pasted into the shell.
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          # set -e is on (GitHub runs `bash -e`), so every conditional below is written as
+          # an `if`, never as `cmd && var=...` — a failing grep in an AND-list is fine but
+          # the idiom is one edit away from aborting the whole audit silently.
+          set -uo pipefail
+          MARKERS='\[(skip ci|ci skip|no ci|skip actions|actions skip)\]'
+
+          # Anchor on the closest release tag that is an ANCESTOR of HEAD — i.e. the last
+          # commit that actually got a cut. event.before is useless here by construction:
+          # a skipped push still advances the ref, so the next push's before..HEAD range
+          # excludes exactly the commits that went unbuilt. Bare-semver match only, so an
+          # upstream marker tag (v6.1.0-vrr10) can never anchor the range.
+          LAST_TAG=$(git describe --tags --abbrev=0 --match '[0-9]*.[0-9]*' HEAD 2>/dev/null || true)
+          if [ -n "$LAST_TAG" ]; then
+            RANGE="${LAST_TAG}..HEAD"
+          elif git rev-parse -q --verify HEAD~50 >/dev/null 2>&1; then
+            RANGE="HEAD~50..HEAD"
+          else
+            RANGE="HEAD"
+          fi
+          echo "Auditing $RANGE for commits whose subject suppressed their own build."
+
+          # Only code matters. A docs-only commit cuts no beta anyway (the check-changes
+          # step decides by content), so a marker on one costs nothing and flagging it
+          # would just teach people to ignore this job. Mirrors count_meaningful().
+          touches_code() {  # $1 = commit -> 0 if it changes a non-docs path
+            local files
+            # A root commit has no first parent; treat an unknown diff as code (fail loud).
+            files=$(git diff --name-only "$1^1" "$1" 2>/dev/null) || return 0
+            if printf '%s\n' "$files" | grep -vE '(\.md|\.txt|\.yml|\.yaml)$' | grep -q .; then
+              return 0
+            fi
+            printf '%s\n' "$files" | grep -qE '^\.github/workflows/.*\.(yml|yaml)$'
+          }
+
+          flagged=""
+          while IFS= read -r c; do
+            if [ -z "$c" ]; then continue; fi
+            subj=$(git log -1 --format='%s' "$c")
+            hit=""
+            if printf '%s' "$subj" | grep -qEi "$MARKERS"; then
+              hit="subject marker"
+            elif git log -1 --format='%b' "$c" | grep -qEi '^skip-checks:[[:space:]]*true[[:space:]]*$'; then
+              hit="skip-checks trailer"
+            fi
+            if [ -z "$hit" ]; then continue; fi
+            if ! touches_code "$c"; then continue; fi
+            flagged="${flagged}- \`${c}\` (${hit}): ${subj}"$'\n'
+          done < <(git rev-list "$RANGE" 2>/dev/null)
+
+          if [ -z "$flagged" ]; then
+            echo "OK: every code commit in $RANGE was able to trigger a run."
+            exit 0
+          fi
+
+          echo "::error title=A push was silently dropped::code landed on ${REF_NAME} with a CI-skip marker, so it cut no build"
+          {
+            echo "### ⚠ Commits that suppressed their own build"
+            echo
+            echo "These landed on \`${REF_NAME}\` since \`${LAST_TAG:-the last 50 commits}\` carrying a"
+            echo "CI-skip marker, so GitHub dropped their push event: no build, no guards, no beta."
+            echo
+            printf '%s\n' "$flagged"
+            echo "This cut covers them, so nothing is lost — but they got no beta of their own and no"
+            echo "soak. Nothing to clean up: the next audit range starts at the tag this run creates."
+          } >> "$GITHUB_STEP_SUMMARY"
+          printf '%s\n' "$flagged" >&2
+          exit 1
 
   setup-version:
     name: Setup Version
@@ -200,11 +481,6 @@ jobs:
 
       - name: Check for meaningful changes
         id: check-changes
-        env:
-          # Pass the commit message via env, NOT inline ${{ }} interpolation. A commit body with
-          # backticks/parens/quotes injected directly into the shell caused a parse error here and
-          # failed the whole job. Reading it from an env var is injection-safe.
-          HEAD_COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
           # ── Release-cut rules (BL-2270, 2026-07-21) — deterministic + content-based ──
           #   beta  : ANY push to vibemis-main whose CONTENT changes non-docs paths.
@@ -270,12 +546,12 @@ jobs:
             exit 0
           fi
 
-          # Explicit [skip ci]/[ci skip] escape hatch (GitHub also skips these natively).
-          if echo "$HEAD_COMMIT_MSG" | grep -E "\[(skip ci|ci skip)\]" > /dev/null; then
-            echo "should_build=false" >> $GITHUB_OUTPUT
-            echo "Build skipped due to [skip ci] in commit message"
-            exit 0
-          fi
+          # NOTE (BL-2460): there is deliberately NO [skip ci] handling here. GitHub skips the
+          # push/pull_request EVENT itself when the head commit carries [skip ci]/[ci skip]/
+          # [no ci]/[skip actions]/[actions skip] or a `skip-checks: true` trailer, so the run
+          # never starts and an in-YAML guard can never execute — the one that used to sit here
+          # was unreachable code that read as protection. The real handling is the `skip-ci-guard`
+          # job (PR-time rejection + post-hoc audit of pushes that silently cut no beta).
 
           # test** (alpha channel): ANY push builds a 🔬 alpha when the branch's diff vs
           # the merge-base with vibemis-main contains meaningful (non-docs) changes.
@@ -1062,7 +1338,10 @@ jobs:
     # AppImage, and on beta/alpha tiers that job is skipped entirely now.
     # `invariants` is REQUIRED here (BL-2459): a red semantic guard must block the
     # publish, not just the merge — a dispatch/push cut doesn't go through a PR.
-    needs: [setup-version, build-appimage-dev, invariants]
+    # `vrr-tests` is required for the same reason: the VRR regression suite covers the
+    # code path behind nearly every fix in the beta.013..beta.017 wave, and a cut that
+    # publishes over a red one is exactly the soak-free ship this pipeline must prevent.
+    needs: [setup-version, build-appimage-dev, invariants, vrr-tests]
     runs-on: ubuntu-latest
     permissions:
       # `contents: write` publishes the release and force-pushes the build timeline to
