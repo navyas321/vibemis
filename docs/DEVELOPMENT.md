@@ -10,7 +10,7 @@ vibemis/
 │   ├── settings/           # StreamingPreferences (streamingpreferences.h/.cpp)
 │   ├── streaming/          # Session, video pipeline, renderers (session.cpp, etc.)
 │   └── deploy/linux/       # .desktop file, .appdata.xml
-├── moonlight-common-c/     # Submodule — ClassicOldSong Apollo-lineage fork
+├── moonlight-common-c/     # Submodule — navyas321 fork of the ClassicOldSong Apollo lineage
 ├── qmdnsengine/            # Submodule — mDNS discovery
 ├── scripts/
 │   └── build-appimage.sh   # AppImage bundler (linuxdeploy-based)
