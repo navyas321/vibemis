@@ -100,6 +100,11 @@ private:
     // HTTP-based server command execution (Apollo server approach)
     bool sendHttpServerCommand(const QString &commandId);
 
+    // BL-2539: real execution for the free-text custom-command dialog.
+    // Sends the named command to Apollo's /actions/server endpoint over the
+    // paired HTTPS connection and propagates the REAL result.
+    void sendHttpCustomCommand(const QString &command);
+
 private:
     // Builtin commands (matches Android implementation)
     static const QList<ServerCommand> BUILTIN_COMMANDS;
