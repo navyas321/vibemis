@@ -28,6 +28,16 @@ fail=0
 err() { echo "FAIL: $*" >&2; fail=1; }
 ok()  { echo "  ok: $*"; }
 
+# Two checks below use Python as a helper (a UTF-8 decode assertion and a bulk
+# file-creation shortcut). Resolve the interpreter instead of assuming the bare
+# `python` alias exists: it does not on a stock Ubuntu/WSL or Debian image, and
+# the resulting exit 127 used to be reported as "generator emitted invalid
+# UTF-8" -- a guard failure that blamed the generator for a missing interpreter.
+PY=""
+for _py in python3 python; do
+  if command -v "$_py" >/dev/null 2>&1; then PY="$_py"; break; fi
+done
+
 [ -f "$GEN" ] || { echo "FAIL: $GEN is missing — the release body generator must stay a testable script, not an inline workflow run: block" >&2; exit 1; }
 
 # ── Static guards (cheap, catch a rewrite that reintroduces a known defect) ─────
@@ -352,8 +362,12 @@ commit "fix: controller" "Changelog: 🎮 Controller support with ünïcödé an
 out=$(gen 0.1.0-beta.002)
 grep -qxF -- "- 🎮 Controller support with ünïcödé and 中文" <<<"$out" \
   || err "16: a non-ASCII note was mangled"
-printf '%s' "$out" | python -c 'import sys; sys.stdin.buffer.read().decode("utf-8")' 2>/dev/null \
-  || err "16: generator emitted invalid UTF-8"
+if [ -n "$PY" ]; then
+  printf '%s' "$out" | "$PY" -c 'import sys; sys.stdin.buffer.read().decode("utf-8")' 2>/dev/null \
+    || err "16: generator emitted invalid UTF-8"
+else
+  echo "  note: no python interpreter; skipping the UTF-8 decode assertion" >&2
+fi
 [ "$fail" = "$t0" ] && ok "emoji and non-ASCII notes survive byte-intact as valid UTF-8"
 
 # --- 17. a commit whose changed-path list is large enough to fill a pipe buffer must
@@ -363,10 +377,10 @@ printf '%s' "$out" | python -c 'import sys; sys.stdin.buffer.read().decode("utf-
 mkrepo
 mkdir -p app docs
 echo x > app/main.cpp
-python -c "
+{ [ -n "$PY" ] && "$PY" -c "
 import os
 for i in range(1500): open('docs/f%05d.md' % i, 'w').write('x')
-" 2>/dev/null || for i in $(seq 1 1500); do echo x > "docs/f$i.md"; done
+" 2>/dev/null; } || for i in $(seq 1 1500); do echo x > "docs/f$i.md"; done
 git add -A
 git commit -q -m "fix: a real change alongside a very large docs drop" -m "Changelog: Something a user notices"
 out=$(gen 0.1.0-beta.002)
