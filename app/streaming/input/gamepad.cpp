@@ -454,6 +454,21 @@ void SdlInputHandler::handleControllerButtonEvent(SDL_ControllerButtonEvent* eve
         return;
     }
 
+    // BL-2538: a button already physically held when this controller attached
+    // belongs to the UI interaction that launched the stream (the app-grid A
+    // press), not to the game. Swallow it -- press events (some SDL backends
+    // synthesize the initial down after attach) and its first release alike --
+    // so the host only ever sees presses that began inside the session. After
+    // the first release the bit clears and the button behaves normally. The
+    // near-miss this guards: a forwarded launch press landing on a game
+    // startup prompt whose destructive default is the confirm button.
+    if (state->buttonsHeldAtAttach & k_ButtonMap[event->button]) {
+        if (event->state == SDL_RELEASED) {
+            state->buttonsHeldAtAttach &= ~k_ButtonMap[event->button];
+        }
+        return;
+    }
+
     if (event->state == SDL_PRESSED) {
         state->buttons |= k_ButtonMap[event->button];
 
@@ -939,6 +954,24 @@ void SdlInputHandler::handleControllerDeviceEvent(SDL_ControllerDeviceEvent* eve
         default:
             type = LI_CTYPE_UNKNOWN;
             break;
+        }
+
+        // BL-2538: snapshot buttons that are physically down RIGHT NOW, before
+        // any button event from this controller is processed. These belong to
+        // the interaction that launched the stream (typically the app-grid A
+        // press still under the user's finger); handleControllerButtonEvent
+        // swallows them until their first release so the launch press can
+        // never be replayed into the game session.
+        for (int i = 0; i < (int)SDL_arraysize(k_ButtonMap); i++) {
+            if (SDL_GameControllerGetButton(state->controller,
+                                            (SDL_GameControllerButton)i)) {
+                state->buttonsHeldAtAttach |= k_ButtonMap[i];
+            }
+        }
+        if (state->buttonsHeldAtAttach != 0) {
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                        "Gamepad %d attached with buttons held (0x%x); suppressing them until first release (BL-2538)",
+                        state->index, state->buttonsHeldAtAttach);
         }
 
         // If this is a PlayStation controller that doesn't have a touchpad button mapped,
