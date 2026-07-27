@@ -5,4 +5,6 @@ QT -= core gui
 CONFIG += console c++17
 CONFIG -= app_bundle qt
 
-SOURCES += $$PWD/../../app/test_vrrswapchainpolicy.cpp
+INCLUDEPATH += $$PWD/../../app
+
+SOURCES += $$PWD/tst_vrrswapchainpolicy.cpp

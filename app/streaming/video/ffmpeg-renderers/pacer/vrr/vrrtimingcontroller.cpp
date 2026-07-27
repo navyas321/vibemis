@@ -153,6 +153,13 @@ void VrrTimingController::clearTimeline(bool retainLearnedBudgets)
         m_TargetWakeLeadUs = 0;
         m_GuardUs = m_BaseGuardUs;
     }
+
+    // The cold-start reserve above is a fixed constant, so on a short source
+    // period (a high-rate stream) it can exceed what one source interval has
+    // left after render lead and presentation safety. Apply the same cap every
+    // other write path applies, so the budget never reports a state the
+    // scheduler would not actually use.
+    enforceSourceIntervalBudget();
 }
 
 void VrrTimingController::initializeTimeline(const PacedFrame& frame)

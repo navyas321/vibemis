@@ -385,7 +385,8 @@ libplacebo {
         streaming/video/ffmpeg-renderers/pl_libav_shim.c
     HEADERS += \
         streaming/video/ffmpeg-renderers/plvk.h \
-        streaming/video/ffmpeg-renderers/pl_libav_shim.h
+        streaming/video/ffmpeg-renderers/pl_libav_shim.h \
+        streaming/video/ffmpeg-renderers/vrrswapchainpolicy.h
 }
 config_EGL {
     message(EGL renderer selected)

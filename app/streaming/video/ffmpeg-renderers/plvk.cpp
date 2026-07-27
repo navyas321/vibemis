@@ -563,16 +563,20 @@ bool PlVkRenderer::initialize(PDECODER_PARAMETERS params)
     // explicitly requested for this session. (BL-2212)
     selectPresentationMode(params);
 
-    // The paced path needs one additional in-flight image. In particular,
-    // Gamescope exposes FIFO to the application and libplacebo's
-    // swap_buffers() waits for queued presents; depth 1 therefore serializes
-    // each prepare behind the previous display completion. At 116-on-120 that
-    // measured 10-13 ms per frame and forced sustained queue drops. The worker
-    // already owns presentation timing, so depth 2 adds pipeline headroom
-    // without adding an application-side standing queue.
+    // Depth 1 ("No queued frames") is upstream moonlight-qt's deliberate
+    // setting and stays the default here. The paced path needs one additional
+    // in-flight image only when the application faces a FIFO swapchain, which
+    // today means the Gamescope WSI branch below: libplacebo's swap_buffers()
+    // waits for the queued present there, so depth 1 serializes each prepare
+    // behind the previous display completion. At 116-on-120 that measured
+    // 10-13 ms per frame and forced sustained queue drops. Mailbox and
+    // Immediate do not block in swap_buffers, so they keep depth 1 and its
+    // lower latency. The present mode is already immutable at this point, so
+    // it is the authoritative input -- do not re-query the video driver.
     const int swapchainDepth = VrrSwapchainPolicy::depthForSession(
         m_VrrRequested,
-        m_VrrFallbackReason == VrrFallbackReason::NoFallback);
+        m_VrrFallbackReason == VrrFallbackReason::NoFallback,
+        m_VkPresentMode == VK_PRESENT_MODE_FIFO_KHR);
     if (!createSwapchain(swapchainDepth)) {
         return false;
     }
