@@ -1491,15 +1491,13 @@ UnmapExit:
 bool PlVkRenderer::testRenderFrame(AVFrame *frame)
 {
 #if PL_API_VER < 360
-    {
-        // Add a check for unrecognized pixel formats on older libplacebo
-        // versions which will dereference a null pointer in this case.
-        // See #1409 for details.
-        pl_frame out;
-        pl_frame_from_avframe(&out, frame);
-        if (out.num_planes == 0) {
-            return false;
-        }
+    // Add a check for unrecognized pixel formats on older libplacebo
+    // versions which will dereference a null pointer in this case.
+    // See #1409 for details. Upstream calls pl_frame_from_avframe() inline;
+    // this fork routes it through pl_libav_shim.c because
+    // <libplacebo/utils/libav.h> is deliberately kept out of this C++ TU.
+    if (pl_frame_plane_count_from_avframe(frame) == 0) {
+        return false;
     }
 #endif
 
