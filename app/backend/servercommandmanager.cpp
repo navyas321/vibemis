@@ -5,6 +5,7 @@
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QNetworkRequest>
+#include <QUrl>
 #include <QXmlStreamReader>
 #include <QEventLoop>
 #include <QDebug>
@@ -202,17 +203,74 @@ void ServerCommandManager::executeCustomCommand(const QString &command)
     m_isExecuting = true;
     m_currentExecutingCommand = "custom";
     emit executionStateChanged();
-    
+
     qDebug() << "ServerCommandManager: Executing custom command:" << command;
-    
-    // TODO: Implement actual custom command execution via HTTP
-    // For now, just simulate success with a delay
-    QTimer::singleShot(1500, this, [this, command]() {
+
+    // BL-2539: this used to be a stub -- a 1.5 s QTimer that emitted
+    // commandExecuted(..., true, ...) without sending ANYTHING to the host,
+    // so every custom command showed a success toast over a silent no-op
+    // (found on-device when a test agent tried to trigger the host's
+    // "Bubbles" command and nothing happened).
+    //
+    // Real execution, two routes:
+    //  1. If the text names a command from the HOST's own list and a stream
+    //     is active, use the same ENet index path the menu uses
+    //     (LiSendExecServerCmd) -- identical semantics to tapping the entry.
+    //  2. Otherwise send it to Apollo's /actions/server HTTP endpoint over
+    //     the paired HTTPS connection and report the host's actual answer.
+    //     An unknown command surfaces as a FAILURE, never a fake success.
+    if (m_computer->serverCommands.contains(command) &&
+            isStreamingSessionActive()) {
+        sendCommandExecution(command);
+        return;
+    }
+
+    sendHttpCustomCommand(command);
+}
+
+void ServerCommandManager::sendHttpCustomCommand(const QString &command)
+{
+    // Same endpoint and transport as sendHttpServerCommand() uses for the
+    // built-ins; the command name is percent-encoded because it is free text.
+    try {
+        QString arguments = "command=" +
+            QString::fromUtf8(QUrl::toPercentEncoding(command));
+        QString response = m_http->openConnectionToString(m_http->m_BaseUrlHttps,
+                                                          "actions/server",
+                                                          arguments.toUtf8().constData(),
+                                                          10000,
+                                                          NvHTTP::NVLL_VERBOSE);
+
         m_isExecuting = false;
         m_currentExecutingCommand.clear();
         emit executionStateChanged();
-        emit commandExecuted("custom", true, QString("Custom command '%1' executed successfully").arg(command));
-    });
+
+        if (response.contains("success", Qt::CaseInsensitive) ||
+                response.contains("200") ||
+                response.contains("OK")) {
+            qDebug() << "ServerCommandManager: Custom command executed via HTTP:" << command;
+            emit commandExecuted("custom", true,
+                                 QString("Command '%1' executed").arg(command));
+        }
+        else {
+            qWarning() << "ServerCommandManager: Custom command rejected by host:" << command
+                       << "response:" << response;
+            emit commandFailed("custom",
+                               QString("Host rejected command '%1': %2").arg(command, response));
+        }
+    } catch (const GfeHttpResponseException& e) {
+        m_isExecuting = false;
+        m_currentExecutingCommand.clear();
+        emit executionStateChanged();
+        emit commandFailed("custom",
+                           QString("Command '%1' failed: %2").arg(command, e.toQString()));
+    } catch (const QtNetworkReplyException& e) {
+        m_isExecuting = false;
+        m_currentExecutingCommand.clear();
+        emit executionStateChanged();
+        emit commandFailed("custom",
+                           QString("Command '%1' failed: %2").arg(command, e.toQString()));
+    }
 }
 
 QStringList ServerCommandManager::getAvailableCommands() const

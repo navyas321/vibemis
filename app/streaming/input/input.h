@@ -25,6 +25,14 @@ struct GamepadState {
     // releases in emulation mode).
     int buttonsConsumedByMenu;
 
+    // BL-2538: buttons that were already PHYSICALLY HELD when this controller
+    // attached to the stream's input handler. That press belongs to whatever
+    // launched the stream (the app-grid A press), not to the game -- forwarding
+    // it nearly confirmed a save-overwrite prompt on the host (default = Yes).
+    // Each bit is swallowed (press and release) until SDL reports the first
+    // RELEASE, after which the button behaves normally.
+    int buttonsHeldAtAttach;
+
     // While the Quick Menu is open, the left stick drives navigation like the d-pad.
     // Axis events fire continuously, so we remember the last stick-derived direction (a Qt::Key
     // value, or 0 for centered) and only emit on CHANGE (edges) — the menu handles auto-repeat.
