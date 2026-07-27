@@ -2104,7 +2104,7 @@ Item {
                     ToolTip.delay: 1000
                     ToolTip.timeout: 5000
                     ToolTip.visible: hovered
-                    ToolTip.text: qsTr("VRR presents each frame as soon as the display can accept it on adaptive-sync displays. Requires V-Sync (enabled automatically). The Frame pacing switch above decides whether VRR also holds frames back to a learned margin; leaving it off is the default. Sessions without enough refresh-rate headroom fall back to fixed V-Sync pacing, and borderless fullscreen is used while VRR is active. Note: some LCD panels (including some handheld screens) show ghosting or smearing on fast motion whenever variable refresh is engaged — that is the panel's overdrive, not the stream. If you see trails, turn VRR off; presentation then runs at the display's full fixed refresh rate.")
+                    ToolTip.text: qsTr("VRR presents each frame as soon as the display can accept it on adaptive-sync displays. Requires V-Sync (enabled automatically). The Frame pacing switch above decides whether VRR also holds frames back to a learned margin; leaving it off is the default. Sessions without enough refresh-rate headroom fall back to fixed V-Sync pacing, and borderless fullscreen is used while VRR is active. If you see ghosting or double-images on fast motion, check the HOST first: frame generation (e.g. Lossless Scaling) on the host bakes interpolation artifacts and duplicated frames into the stream that no client setting can remove.")
                 }
 
                 // Vibemis: one-tap low-latency / "competitive" preset. Frame pacing delays
