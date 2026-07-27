@@ -324,6 +324,31 @@ void testNearRefreshRequestsLatchedPresentation()
            "an immutable cadence-following backend must not be classified as fixed-vsync latched");
 }
 
+void testLatchedPresentationRecoversAfterGuardDecay()
+{
+    // At 100 FPS on a 120 Hz panel, the base guard leaves just over the
+    // immediate-presentation threshold. A single spacing correction should
+    // select latching while it is needed, but must not make that cadence stay
+    // latched after the guard has returned to its normal value.
+    VrrTimingController controller(config(100, 120));
+    VrrTimingDecision decision = controller.schedule(
+        frame(1, 0, true, 100000), 100000);
+    expect(!decision.latchedPresentation,
+           "100 FPS must begin in immediate mode with its base guard");
+
+    controller.noteSpacingDeficit(50);
+    decision = controller.schedule(frame(2, 900, true, 110000), 110000);
+    expect(decision.latchedPresentation,
+           "a transient guard increase must select the safe latched path");
+
+    for (int i = 0; i < 120; ++i) {
+        controller.noteSpacingDeficit(0);
+    }
+    decision = controller.schedule(frame(3, 1800, true, 120000), 120000);
+    expect(!decision.latchedPresentation,
+           "a fully recovered guard must restore immediate 100 FPS pacing");
+}
+
 void testHeadroomAwareReadinessReserve()
 {
     constexpr uint64_t epochUs = 1000000;
@@ -473,6 +498,87 @@ void testHighRateRenderLeadLeavesPresentationSafety()
            "high-rate render lead must leave room for presentation safety");
     expect(controller.timingBudgetUs() <= controller.sourcePeriodUs(),
            "high-rate timing budget must fit inside one source interval");
+}
+
+void testColdStartBudgetRespectsSourceInterval()
+{
+    // The cold-start readiness reserve is a fixed constant, so on a short
+    // source period it can exceed what one interval has left after render lead
+    // and presentation safety. The cap must already hold at construction, not
+    // only after the first schedule() repairs it -- telemetry and the public
+    // getters are readable before any frame arrives.
+    const struct { int streamRateHz; int displayRefreshHz; } cases[] = {
+        { 480, 960 }, { 360, 360 }, { 240, 240 }, { 144, 144 },
+        { 120, 120 }, { 116, 120 }, { 60, 120 }, { 30, 60 },
+    };
+
+    for (const auto& c : cases) {
+        VrrTimingController controller(config(c.streamRateHz,
+                                              c.displayRefreshHz), false);
+        if (controller.timingBudgetUs() > controller.sourcePeriodUs()) {
+            std::fprintf(stderr,
+                         "cold start %d-on-%d: budget=%llu us source=%llu us\n",
+                         c.streamRateHz, c.displayRefreshHz,
+                         static_cast<unsigned long long>(controller.timingBudgetUs()),
+                         static_cast<unsigned long long>(controller.sourcePeriodUs()));
+        }
+        expect(controller.timingBudgetUs() <= controller.sourcePeriodUs(),
+               "a freshly constructed controller must already fit its timing "
+               "budget inside one source interval");
+    }
+}
+
+void testLateArrivalPhaseKeepsBudgetInsideSourceInterval()
+{
+    constexpr int streamRateHz = 116;
+    constexpr uint64_t epochUs = 1000000;
+    VrrTimingController controller(config(streamRateHz, 120), false);
+
+    // Anchor on an on-time frame, then hold every later frame consistently
+    // behind the projected source clock but under the re-anchor ceiling. The
+    // learned readiness phase is then strongly positive, which is the only
+    // regime where the desired-budget clamp - rather than the reserve clamp
+    // that the other near-ceiling tests exercise - is what keeps readiness
+    // plus render lead inside one source interval.
+    VrrTimingDecision decision = controller.schedule(
+        frame(0, 0, true, epochUs), epochUs);
+    controller.notePreparationDuration(1000);
+    controller.noteSubmission(true, false, decision.targetUs);
+
+    for (int i = 1; i <= 160; ++i) {
+        const uint32_t timestamp = static_cast<uint32_t>(
+            static_cast<uint64_t>(i) * 90000ULL / streamRateHz);
+        // Sustained late phase plus a real arrival spread, so the learned
+        // reserve is non-trivial on top of the positive phase.
+        const uint64_t latenessUs = 5000 + (i % 4 == 0 ? 3000 : 0);
+        const uint64_t arrivalUs =
+            decodedTimeForRtp(epochUs, timestamp) + latenessUs;
+        decision = controller.schedule(
+            frame(i, timestamp, true, arrivalUs), arrivalUs);
+        controller.notePreparationDuration(1000);
+        controller.noteSubmission(true, false, decision.targetUs);
+
+        // Check after the submission: this is where the reserve-acquire ramp
+        // runs, and where an unclamped desired budget overshoots the cap by a
+        // ramp step before the next schedule clamps it back.
+        const uint64_t positiveReadinessUs =
+            controller.readinessBudgetUs() > 0 ?
+                static_cast<uint64_t>(controller.readinessBudgetUs()) : 0;
+        expect(positiveReadinessUs + controller.renderLeadUs() + 250 <=
+                   controller.sourcePeriodUs(),
+               "a positive readiness phase must not let the reserve ramp push "
+               "the budget past one source interval");
+    }
+
+    if (controller.timingBudgetUs() > controller.sourcePeriodUs()) {
+        std::fprintf(stderr,
+                     "late-arrival phase: budget=%llu us source=%llu us\n",
+                     static_cast<unsigned long long>(controller.timingBudgetUs()),
+                     static_cast<unsigned long long>(controller.sourcePeriodUs()));
+    }
+    expect(controller.timingBudgetUs() <= controller.sourcePeriodUs(),
+           "a positive readiness phase must keep the timing budget inside one "
+           "source interval");
 }
 
 void testCadenceGapAndRateChange()
@@ -931,10 +1037,13 @@ int main()
     testNegotiatedRateCeiling();
     testSpacingGuardFeedback();
     testNearRefreshRequestsLatchedPresentation();
+    testLatchedPresentationRecoversAfterGuardDecay();
     testHeadroomAwareReadinessReserve();
     testNearCeilingBufferFitsOneSourceInterval();
     testSourceIntervalCapTracksRenderLeadGrowth();
     testHighRateRenderLeadLeavesPresentationSafety();
+    testColdStartBudgetRespectsSourceInterval();
+    testLateArrivalPhaseKeepsBudgetInsideSourceInterval();
     testCadenceGapAndRateChange();
     testFutureSourceProjectionReseedsPhase();
     testDecodeTailAdaptation();

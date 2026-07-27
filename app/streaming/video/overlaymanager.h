@@ -85,11 +85,16 @@ private:
         bool enabled;
         int fontSize;
         SDL_Color color;
-        // 1024 matches Nonary v6.1.0-vrr9.1 (BL-2229): the debug overlay's
-        // base video stats (~500 chars) plus the five VRR pacing telemetry
-        // lines (~375 chars) exceed the historical 512-byte buffer, and
-        // stringifyVideoStats() drops any section that would overflow.
-        char text[1024];
+        // BL-2229 raised this from 512 to 1024 for the base video stats
+        // (~500 chars) plus five VRR pacing telemetry lines (~375 chars).
+        // The native-preparation p95 line added a sixth (~55 chars), leaving
+        // only ~85 bytes of slack -- and the VRR fields are not width-bounded:
+        // "sample %s" carries a cumulative sequence number that grows to 6-7
+        // digits within an hour, and every %.2f widens while a stall is being
+        // diagnosed, which is exactly when the block is being read.
+        // stringifyVideoStats() truncates rather than growing, so an overflow
+        // silently cuts the telemetry mid-number. 1536 restores real headroom.
+        char text[1536];
 
         TTF_Font* font;
         SDL_Surface* surface;

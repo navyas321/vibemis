@@ -6,7 +6,7 @@ set -u
 fail=0
 err() { echo "VRR-INVARIANT FAIL: $1" >&2; fail=1; }
 
-policy_test="app/test_vrrswapchainpolicy.cpp"
+policy_test="tests/vrr/tst_vrrswapchainpolicy.cpp"
 policy_header="app/streaming/video/ffmpeg-renderers/vrrswapchainpolicy.h"
 stats_source="app/streaming/video/ffmpeg.cpp"
 vulkan_source="app/streaming/video/ffmpeg-renderers/plvk.cpp"
@@ -18,13 +18,20 @@ for path in "$policy_test" "$policy_header" "$stats_source" \
 done
 
 if [ "$fail" -eq 0 ]; then
-  temp_bin="${TMPDIR:-/tmp}/vibemis-vrrswapchainpolicy-$$"
-  if ! g++ -std=c++17 -Iapp "$policy_test" -o "$temp_bin"; then
-    err "swapchain policy regression test did not compile"
-  elif ! "$temp_bin"; then
-    err "swapchain policy regression test failed"
+  # A missing toolchain is not a broken invariant. CI always has g++; a
+  # developer running this on a bare Windows/Git-Bash checkout does not, and
+  # reporting that as an invariant failure hides the real greps below.
+  if command -v g++ >/dev/null 2>&1; then
+    temp_bin="${TMPDIR:-/tmp}/vibemis-vrrswapchainpolicy-$$"
+    if ! g++ -std=c++17 -Iapp "$policy_test" -o "$temp_bin"; then
+      err "swapchain policy regression test did not compile"
+    elif ! "$temp_bin"; then
+      err "swapchain policy regression test failed"
+    fi
+    rm -f "$temp_bin"
+  else
+    echo "note: g++ not found; skipping the swapchain policy compile+run check" >&2
   fi
-  rm -f "$temp_bin"
 
   grep -qF 'Frames dropped by frame pacing:' "$stats_source" ||
     err "performance overlay no longer identifies local frame-pacing drops"
@@ -35,6 +42,10 @@ if [ "$fail" -eq 0 ]; then
     err "Vulkan production path bypasses the tested swapchain-depth policy"
   grep -qF 'createSwapchain(swapchainDepth)' "$vulkan_source" ||
     err "Vulkan production path does not apply the selected swapchain depth"
+  # The extra in-flight image is only justified for an application-facing FIFO
+  # swapchain (Gamescope WSI). Mailbox/Immediate must stay at upstream depth 1.
+  grep -qF 'm_VkPresentMode == VK_PRESENT_MODE_FIFO_KHR' "$vulkan_source" ||
+    err "swapchain depth is no longer gated on application-facing FIFO presentation"
   grep -qF 'preparation.nativePreparationTimingValid' "$pacer_source" ||
     err "VRR worker no longer publishes native preparation-stage timing"
   grep -qF 'VRR prepare p95 swap/acquire/render:' "$stats_source" ||

@@ -281,6 +281,12 @@ private:
         const std::array<uint64_t, kNativePreparationSampleCount>& samples,
         size_t count)
     {
+        // percentileIndex() underflows to SIZE_MAX at count == 0, so guard it
+        // here rather than relying on every caller, as the two sibling
+        // percentile helpers do.
+        if (count == 0) {
+            return 0;
+        }
         std::array<uint64_t, kNativePreparationSampleCount> sorted = samples;
         std::sort(sorted.begin(), sorted.begin() + count);
         return sorted[percentileIndex(count, 95)];

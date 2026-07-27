@@ -563,16 +563,20 @@ bool PlVkRenderer::initialize(PDECODER_PARAMETERS params)
     // explicitly requested for this session. (BL-2212)
     selectPresentationMode(params);
 
-    // The paced path needs one additional in-flight image. In particular,
-    // Gamescope exposes FIFO to the application and libplacebo's
-    // swap_buffers() waits for queued presents; depth 1 therefore serializes
-    // each prepare behind the previous display completion. At 116-on-120 that
-    // measured 10-13 ms per frame and forced sustained queue drops. The worker
-    // already owns presentation timing, so depth 2 adds pipeline headroom
-    // without adding an application-side standing queue.
+    // Depth 1 ("No queued frames") is upstream moonlight-qt's deliberate
+    // setting and stays the default here. The paced path needs one additional
+    // in-flight image only when the application faces a FIFO swapchain, which
+    // today means the Gamescope WSI branch below: libplacebo's swap_buffers()
+    // waits for the queued present there, so depth 1 serializes each prepare
+    // behind the previous display completion. At 116-on-120 that measured
+    // 10-13 ms per frame and forced sustained queue drops. Mailbox and
+    // Immediate do not block in swap_buffers, so they keep depth 1 and its
+    // lower latency. The present mode is already immutable at this point, so
+    // it is the authoritative input -- do not re-query the video driver.
     const int swapchainDepth = VrrSwapchainPolicy::depthForSession(
         m_VrrRequested,
-        m_VrrFallbackReason == VrrFallbackReason::NoFallback);
+        m_VrrFallbackReason == VrrFallbackReason::NoFallback,
+        m_VkPresentMode == VK_PRESENT_MODE_FIFO_KHR);
     if (!createSwapchain(swapchainDepth)) {
         return false;
     }
@@ -619,7 +623,7 @@ bool PlVkRenderer::initialize(PDECODER_PARAMETERS params)
         vkDeviceContext->nb_enabled_inst_extensions = m_PlVkInstance->num_extensions;
         vkDeviceContext->enabled_dev_extensions = m_Vulkan->extensions;
         vkDeviceContext->nb_enabled_dev_extensions = m_Vulkan->num_extensions;
-#if LIBAVUTIL_VERSION_INT > AV_VERSION_INT(58, 9, 100)
+#if LIBAVUTIL_VERSION_INT > AV_VERSION_INT(58, 9, 100) && LIBAVUTIL_VERSION_MAJOR < 62
         vkDeviceContext->lock_queue = lockQueue;
         vkDeviceContext->unlock_queue = unlockQueue;
 #endif
@@ -1327,6 +1331,7 @@ void PlVkRenderer::renderFrame(AVFrame *frame)
         // If we have an overlay but it's been disabled, free the overlay texture
         if (m_Overlays[i].hasOverlay && !Session::get()->getOverlayManager().isOverlayEnabled((Overlay::OverlayType)i)) {
             texturesToDestroy.push_back(m_Overlays[i].overlay.tex);
+            SDL_zero(m_Overlays[i].overlay);
             m_Overlays[i].hasOverlay = false;
         }
 
@@ -1476,7 +1481,7 @@ void PlVkRenderer::renderFrame(AVFrame *frame)
 
 UnmapExit:
     // Delete any textures that need to be destroyed
-    for (pl_tex texture : texturesToDestroy) {
+    for (pl_tex& texture : texturesToDestroy) {
         pl_tex_destroy(m_Vulkan->gpu, &texture);
     }
 
@@ -1485,6 +1490,17 @@ UnmapExit:
 
 bool PlVkRenderer::testRenderFrame(AVFrame *frame)
 {
+#if PL_API_VER < 360
+    // Add a check for unrecognized pixel formats on older libplacebo
+    // versions which will dereference a null pointer in this case.
+    // See #1409 for details. Upstream calls pl_frame_from_avframe() inline;
+    // this fork routes it through pl_libav_shim.c because
+    // <libplacebo/utils/libav.h> is deliberately kept out of this C++ TU.
+    if (pl_frame_plane_count_from_avframe(frame) == 0) {
+        return false;
+    }
+#endif
+
     // Test if the frame can be mapped to libplacebo
     pl_frame mappedFrame;
     if (!mapAvFrameToPlacebo(frame, &mappedFrame)) {

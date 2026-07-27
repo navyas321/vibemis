@@ -81,9 +81,11 @@ SystemProperties::SystemProperties()
     // and cache the results to speed up future queries on this data.
     querySdlVideoInfo();
 
-    Q_ASSERT(!monitorRefreshRates.isEmpty());
-    Q_ASSERT(!monitorNativeResolutions.isEmpty());
-    Q_ASSERT(!monitorSafeAreaResolutions.isEmpty());
+    // No emptiness asserts on the monitor lists here. Empty is a legitimate
+    // outcome: SDL may report no usable displays (headless/no video driver), or
+    // every attached display may have been skipped for being over 8K. The
+    // getters below already return default-constructed values out of bounds,
+    // and the QML consumers stop at the first empty entry.
 }
 
 QRect SystemProperties::getNativeResolution(int displayIndex)
@@ -323,6 +325,8 @@ void SystemProperties::refreshDisplaysInternal()
     }
 
     monitorNativeResolutions.clear();
+    monitorSafeAreaResolutions.clear();
+    monitorRefreshRates.clear();
 
     SDL_DisplayMode bestMode;
     for (int displayIndex = 0; displayIndex < SDL_GetNumVideoDisplays(); displayIndex++) {
@@ -331,13 +335,22 @@ void SystemProperties::refreshDisplaysInternal()
 
         if (StreamUtils::getNativeDesktopMode(displayIndex, &desktopMode, &safeArea)) {
             if (desktopMode.w <= 8192 && desktopMode.h <= 8192) {
-                monitorNativeResolutions.insert(displayIndex, QRect(0, 0, desktopMode.w, desktopMode.h));
-                monitorSafeAreaResolutions.insert(displayIndex, QRect(0, 0, safeArea.w, safeArea.h));
+                // Keep these lists compact because their QML consumers iterate until
+                // the first empty entry. Inserting by SDL display index is invalid if
+                // an earlier display was skipped (for example, a >8K virtual display).
+                monitorNativeResolutions.append(QRect(0, 0, desktopMode.w, desktopMode.h));
+                monitorSafeAreaResolutions.append(QRect(0, 0, safeArea.w, safeArea.h));
             }
             else {
                 SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
                             "Skipping resolution over 8K: %dx%d",
                             desktopMode.w, desktopMode.h);
+
+                // Skip this display's refresh rate too. All three monitor lists are
+                // parallel and positional, so appending a rate for a display that
+                // contributed no resolution would shift every later entry out of
+                // alignment.
+                continue;
             }
 
             // Start at desktop mode and work our way up
