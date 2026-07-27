@@ -58,6 +58,11 @@ public:
     }
 
 private:
+    // BL-2531 diagnostic instrument (see vrrpresentoverride.h): applies
+    // VIBEMIS_PRESENT_MODE_OVERRIDE to the already-selected present mode.
+    // Support-checked and VRR-state-neutral by contract (CI-guarded).
+    void applyPresentModeOverride();
+
     static void lockQueue(AVHWDeviceContext *dev_ctx, uint32_t queue_family, uint32_t index);
     static void unlockQueue(AVHWDeviceContext *dev_ctx, uint32_t queue_family, uint32_t index);
     static void overlayUploadComplete(void* opaque);

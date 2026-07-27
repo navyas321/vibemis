@@ -1,5 +1,6 @@
 #include "plvk.h"
 
+#include "vrrpresentoverride.h"
 #include "vrrswapchainpolicy.h"
 
 #include "streaming/session.h"
@@ -563,6 +564,13 @@ bool PlVkRenderer::initialize(PDECODER_PARAMETERS params)
     // explicitly requested for this session. (BL-2212)
     selectPresentationMode(params);
 
+    // BL-2531 diagnostic instrument: the on-device A/B needs the present mode
+    // varied independently of the VRR flag (the toggle otherwise swaps
+    // Mailbox <-> FIFO along with the pacing path, confounding the two).
+    // Applied BEFORE the depth policy below so the swapchain depth follows
+    // the mode that will actually be created.
+    applyPresentModeOverride();
+
     // Depth 1 ("No queued frames") is upstream moonlight-qt's deliberate
     // setting and stays the default here. The paced path needs one additional
     // in-flight image only when the application faces a FIFO swapchain, which
@@ -785,6 +793,64 @@ void PlVkRenderer::selectPresentationMode(PDECODER_PARAMETERS params)
     m_VkPresentMode = VK_PRESENT_MODE_FIFO_KHR;
     m_VrrFallbackReason = VrrFallbackReason::AdaptivePresentationUnavailable;
 #endif
+}
+
+void PlVkRenderer::applyPresentModeOverride()
+{
+    // BL-2531: diagnostic-only (test agent instrument, like
+    // MOONLIGHT_VRR_TRACE). Contract, CI-guarded by check-vrr-invariants.sh:
+    // support-checked (a typo or unsupported mode is ignored loudly, never
+    // creates an invalid swapchain) and VRR-state-neutral (m_VrrFallbackReason
+    // is never touched here -- the experiment varies ONLY the present mode
+    // while the session's pacing path stays whatever selection produced).
+    const QByteArray overrideValue = qgetenv("VIBEMIS_PRESENT_MODE_OVERRIDE");
+    const PresentModeOverride requested =
+        parsePresentModeOverride(overrideValue.constData());
+
+    if (requested == PresentModeOverride::Unset) {
+        return;
+    }
+
+    if (requested == PresentModeOverride::Unknown) {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "[BL-2531] VIBEMIS_PRESENT_MODE_OVERRIDE='%s' not recognized (mailbox|fifo|fifo_relaxed|immediate); ignoring",
+                    overrideValue.constData());
+        return;
+    }
+
+    VkPresentModeKHR mode;
+    switch (requested) {
+    case PresentModeOverride::Mailbox:
+        mode = VK_PRESENT_MODE_MAILBOX_KHR;
+        break;
+    case PresentModeOverride::FifoRelaxed:
+        mode = VK_PRESENT_MODE_FIFO_RELAXED_KHR;
+        break;
+    case PresentModeOverride::Immediate:
+        mode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+        break;
+    case PresentModeOverride::Fifo:
+    default:
+        // FIFO support is guaranteed by the Vulkan spec.
+        mode = VK_PRESENT_MODE_FIFO_KHR;
+        break;
+    }
+
+    if (mode != VK_PRESENT_MODE_FIFO_KHR &&
+        !isPresentModeSupportedByPhysicalDevice(m_Vulkan->phys_device, mode)) {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "[BL-2531] VIBEMIS_PRESENT_MODE_OVERRIDE=%s is not supported by this Vulkan surface; keeping %s",
+                    presentModeOverrideName(requested),
+                    vulkanPresentModeName(m_VkPresentMode));
+        return;
+    }
+
+    SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                "[BL-2531] present-mode override active (diagnostic only): %s -> %s; VRR pacing state unchanged (%s)",
+                vulkanPresentModeName(m_VkPresentMode),
+                presentModeOverrideName(requested),
+                vrrFallbackReasonName(m_VrrFallbackReason));
+    m_VkPresentMode = mode;
 }
 
 bool PlVkRenderer::createSwapchain(int depth)

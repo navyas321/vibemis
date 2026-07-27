@@ -114,6 +114,22 @@ if [ "$fail" -eq 0 ]; then
     err "the pre-wait stale skip no longer recovers with noteSubmission(false,false,0) (cadence-preserving, no re-anchor)"
   fi
 
+  # ---- BL-2531: present-mode override (diagnostic instrument) -------------
+  #
+  # VIBEMIS_PRESENT_MODE_OVERRIDE exists so the on-device A/B can vary the
+  # present mode independently of the VRR flag. Two contract properties:
+  # support-checked (never creates an invalid swapchain from a typo) and
+  # VRR-state-neutral (never touches m_VrrFallbackReason -- otherwise the
+  # experiment's control variable moves with its independent variable).
+  grep -qF 'applyPresentModeOverride' "$vulkan_source" ||
+    err "the present-mode override hook is gone from the Vulkan renderer"
+  if ! sed -n '/void PlVkRenderer::applyPresentModeOverride/,/^}/p' "$vulkan_source" | grep -qF 'isPresentModeSupportedByPhysicalDevice'; then
+    err "the present-mode override no longer support-checks the requested mode"
+  fi
+  if sed -n '/void PlVkRenderer::applyPresentModeOverride/,/^}/p' "$vulkan_source" | grep -qE 'm_VrrFallbackReason[[:space:]]*='; then
+    err "the present-mode override mutates VRR state (must stay VRR-state-neutral)"
+  fi
+
   # ---- BL-2529: overlay diagnostics ---------------------------------------
   #
   # Whether the VRR worker is running and which present mode the swapchain got
