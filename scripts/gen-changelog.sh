@@ -70,6 +70,26 @@ is_version_tag() {  # $1 = tag -> 0 if it parses as v?MAJOR.MINOR.PATCH...
   printf '%s' "$1" | grep -qE '^v?[0-9]+\.[0-9]+\.[0-9]+([-+.][0-9A-Za-z.-]+)?$'
 }
 
+# Previewing the NEXT cut ("what will the release body say if I cut now?") is the most
+# useful local invocation there is, and its tag by definition does not exist yet -- that
+# used to die with a raw `fatal: ambiguous argument`. Resolve to HEAD instead.
+#
+# RESOLVED BEFORE the previous-tag search, not after. The search filters candidates by
+# "is an ancestor of the tag being generated", and it read that commit from
+# $CURRENT_VERSION -- which on the preview path resolves to nothing, so the filter was
+# skipped entirely and the newest version-SHAPED tag in the repo won regardless of
+# whether HEAD descends from it. In this repo that is the upstream fork marker
+# `v6.1.0-vrr10`: `gen-changelog.sh 0.5.0-beta.018` selected it (tier_rank calls any tag
+# without a pre-release infix "stable", so it outranks every beta), and since it is NOT
+# an ancestor of HEAD the range walked thousands of unrelated commits instead of the ten
+# since 0.5.0-beta.017. Anchoring on RANGE_END makes the preview use the same ancestry
+# rule as a real cut.
+RANGE_END="$CURRENT_VERSION"
+if ! git rev-parse -q --verify "${CURRENT_VERSION}^{commit}" >/dev/null 2>&1; then
+  RANGE_END="HEAD"
+  echo "Note: $CURRENT_VERSION is not a commit-ish yet; previewing against HEAD" >&2
+fi
+
 PREV_TAG="$PREV_TAG_OVERRIDE"
 if [ -z "$PREV_TAG" ]; then
   CUR_RANK=$(tier_rank "$CURRENT_VERSION")
@@ -85,7 +105,7 @@ if [ -z "$PREV_TAG" ]; then
   # (b) is the real relation being asked for -- "the previous release this one descends
   # from" -- and it also settles ties that (c) alone cannot, since two tags cut in the
   # same second (or two tags on the same commit) compare equal by date.
-  CUR_COMMIT=$(git rev-parse -q --verify "${CURRENT_VERSION}^{commit}" 2>/dev/null || true)
+  CUR_COMMIT=$(git rev-parse -q --verify "${RANGE_END}^{commit}" 2>/dev/null || true)
   CUR_DATE=$(git for-each-ref --format='%(creatordate:unix)' "refs/tags/${CURRENT_VERSION}" 2>/dev/null | head -1)
   while read -r t tdate; do
     [ -z "$t" ] && continue
@@ -100,15 +120,6 @@ if [ -z "$PREV_TAG" ]; then
     PREV_TAG="$t"
     break
   done < <(git for-each-ref --sort=-creatordate --format='%(refname:short) %(creatordate:unix)' refs/tags)
-fi
-
-# Previewing the NEXT cut ("what will the release body say if I cut now?") is the most
-# useful local invocation there is, and its tag by definition does not exist yet -- that
-# used to die with a raw `fatal: ambiguous argument`. Resolve to HEAD instead.
-RANGE_END="$CURRENT_VERSION"
-if ! git rev-parse -q --verify "${CURRENT_VERSION}^{commit}" >/dev/null 2>&1; then
-  RANGE_END="HEAD"
-  echo "Note: $CURRENT_VERSION is not a commit-ish yet; previewing against HEAD" >&2
 fi
 
 if [ -z "$PREV_TAG" ]; then

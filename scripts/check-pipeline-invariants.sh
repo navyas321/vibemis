@@ -97,6 +97,58 @@ if grep -qE '^\s+(FEATURES|BUGFIXES|INTERNAL)=' "$WF"; then
   err "changelog assembly is inline in the workflow again — keep it in scripts/gen-changelog.sh where it is testable"
 fi
 
+# 6. BL-2460: a CI-skip marker in a merge subject must not be able to suppress the beta.
+#
+#    GitHub skips the push/pull_request EVENT ITSELF when the head commit carries
+#    [skip ci] / [ci skip] / [no ci] / [skip actions] / [actions skip] or a
+#    `skip-checks: true` trailer. The workflow never starts, so no beta is cut and the
+#    code ships with no soak: 970cfb94 (#272) went straight into stable 0.4.2 that way,
+#    and f2fb187b (#274), 02fff5aa (#275) and 80b2e731 (#276) cut nothing either.
+#
+#    The `setup-version` job used to carry its own `[skip ci]` arm. It was DEAD CODE
+#    that read as protection — if the marker is present the run does not exist, so no
+#    step in it can execute. Anything that looks like it is back gets flagged: an
+#    in-YAML guard for this cannot be made to work, and believing otherwise is what
+#    left the hole open. Prevention lives in the skip-ci-guard job instead.
+sv_job=$(awk '/^  setup-version:/{f=1} f&&/^  [a-z][a-z-]*:$/&&!/setup-version/{exit} f{print}' "$WF")
+if [ -z "$sv_job" ]; then
+  err "could not locate the setup-version job in $WF — this guard is not actually checking anything"
+elif printf '%s' "$sv_job" | grep -v '^[[:space:]]*#' | grep -qiE 'skip[ _-]ci|ci[ _-]skip'; then
+  err "an in-YAML [skip ci] arm is back in setup-version — GitHub drops the event before any job starts, so that code can never run; catch it at PR time in skip-ci-guard instead"
+fi
+sg_job=$(awk '/^  skip-ci-guard:/{f=1} f&&/^  [a-z][a-z-]*:$/&&!/skip-ci-guard/{exit} f{print}' "$WF")
+if [ -z "$sg_job" ]; then
+  err "the skip-ci-guard job is gone — a merge subject carrying [skip ci] would silently cut no beta again (BL-2460)"
+else
+  printf '%s' "$sg_job" | grep -q "event_name == 'pull_request'" \
+    || err "skip-ci-guard no longer rejects at PR time — that is the only moment the marker can still be removed"
+  printf '%s' "$sg_job" | grep -q "event_name == 'push'" \
+    || err "skip-ci-guard no longer audits pushes — a marker typed into the squash subject at merge time would go unnoticed"
+fi
+
+# 7. The VRR regression suite must actually RUN, and must gate the publish.
+#
+#    tests/vrr existed for months without a single workflow building it — `grep -rn
+#    tests .github/workflows/` returned nothing — while beta.013..beta.017 were almost
+#    entirely VRR fixes. A test suite nothing executes is not coverage, it is a file.
+vrr_job=$(awk '/^  vrr-tests:/{f=1} f&&/^  [a-z][a-z-]*:$/&&!/vrr-tests/{exit} f{print}' "$WF")
+if [ -z "$vrr_job" ]; then
+  err "the vrr-tests job is gone — the VRR regression suite would stop running (it already sat unrun in CI for months)"
+else
+  printf '%s' "$vrr_job" | grep -q 'tests/vrr/vrr.pro' \
+    || err "vrr-tests no longer builds tests/vrr/vrr.pro"
+  printf '%s' "$vrr_job" | grep -q 'tst_vrrtimingcontroller' \
+    || err "vrr-tests no longer executes the test binaries — building them proves nothing"
+  # pacingworker.pro puts moonlight-common-c/moonlight-common-c/src on the include path
+  # and vrrpacingworker.cpp does `#include <Limelight.h>`, which exists nowhere else in
+  # the tree. A plain checkout compiles five of the six targets and then dies, so the
+  # job fails before it has run a single test — a red build that says nothing about VRR.
+  printf '%s' "$vrr_job" | grep -q 'submodules:' \
+    || err "vrr-tests checks out without submodules — <Limelight.h> is only in moonlight-common-c, so the pacing-worker target cannot compile"
+fi
+printf '%s' "$crd" | grep -q 'needs:.*vrr-tests' \
+  || err "create-dev-release no longer 'needs: vrr-tests' — a red VRR test would still publish a release"
+
 if [ "$fail" -ne 0 ]; then
   echo "One or more release-pipeline invariants failed." >&2
   exit 1

@@ -200,18 +200,112 @@ bash scripts/check-changelog-invariants.sh     # the format contract
 
 ## ⚠ Never put `[skip ci]` on a code merge to `vibemis-main` (BL-2460)
 
-GitHub **natively** skips the `push` event for any commit whose subject contains `[skip ci]`
-or `[ci skip]` — no workflow runs, so **no beta is cut and the code gets no beta soak**. This
-is a GitHub platform behavior the workflow cannot override. It has already bitten: a Quick Menu
-rendering fix merged with `[skip ci]` (#272) produced no beta and went straight into stable
-`0.4.2` unverified. Never add the marker to a commit that touches code.
+GitHub **natively** skips the `push` and `pull_request` events for any commit whose message
+contains one of its documented markers — no workflow runs, so **no beta is cut and the code
+gets no beta soak**. The full set GitHub honours is:
 
-There is no longer any legitimate use of it on `vibemis-main`: the build timeline used to
-be merged in by a bot with `[skip ci]`, but it is now force-pushed to the unprotected
-`releases-index` branch, which matches no workflow trigger and so needs no marker at all.
-**Recommended hardening (repo setting, not in this file):** add a branch-protection ruleset
-on `vibemis-main` rejecting `[skip ci]`/`[ci skip]` in merge-commit subjects outright — no
-allowlist is needed any more.
+```
+[skip ci]  [ci skip]  [no ci]  [skip actions]  [actions skip]
+```
+
+plus a `skip-checks: true` trailer at the end of the message. This is platform behaviour,
+decided **before** any workflow is selected. It has already bitten four times on
+`vibemis-main`: `970cfb94` (#272 — a Quick Menu rendering fix that then went straight into
+stable `0.4.2` with no beta at all), `f2fb187b` (#274), `02fff5aa` (#275) and `80b2e731`
+(#276). Never put a marker on a commit that touches code.
+
+### Why there is no in-YAML guard for this
+
+`setup-version` used to carry its own `[skip ci]` arm. It was **dead code**: if the marker is
+present, the run does not exist, so nothing inside it can execute. It was deleted, and
+`scripts/check-pipeline-invariants.sh` guard #6 now fails the build if anything shaped like it
+reappears — a guard that cannot run is worse than none, because the green tick still claims
+coverage.
+
+### What catches it instead — the `skip-ci-guard` job
+
+| when | what it does |
+| --- | --- |
+| `pull_request` | **Rejects.** `gh pr merge --squash` defaults the merge subject to the **PR title**, and a PR title is not a commit message, so GitHub's native skip does not see it — this is the one moment the marker can still be removed. It scans the PR title and every commit subject on the branch. The PR body is deliberately *not* scanned, or every PR documenting this behaviour (including the one that added the job) would fail itself. |
+| `push` | **Audits.** The merge subject is typed at merge time, after the PR check has passed, and the resulting push is dropped before any workflow exists to notice. So the *next* push that does run looks backwards over every commit since the last release tag — a superset of its own `event.before..HEAD` range, precisely because the skipped push's commits are missing from it — and fails loudly naming the commits that cut no build. It is **not** in `create-dev-release`'s `needs`, so the beta that heals the gap still publishes. |
+
+The audit only flags commits that touch code: a docs-only commit cuts no beta anyway (the
+build decides by content), so flagging one would just teach people to ignore the job.
+
+### The remaining hole, and the lever that closes it
+
+If the marker is in the PR's **head commit** rather than the title, GitHub suppresses the
+`pull_request` event too — `skip-ci-guard` never runs, so it cannot report. That is not silent
+failure, it is the opposite: **a required check that never reports leaves the PR's merge box
+permanently "Expected — Waiting for status to be reported"**, which blocks the merge. Use it:
+
+> **Repo setting (must be done in the GitHub UI, not in this file):** add **`Skip-CI Guard`**
+> to the required status checks on `vibemis-main`, alongside `AppImage Build`,
+> `Compile Sanity (Linux)`, `Invariants` and `VRR Tests`.
+
+The same signature identifies an already-merged incident: a commit on `vibemis-main` with **no
+checks at all** against it (not red — *absent*) is a push GitHub dropped.
+
+There is no longer any legitimate use of a skip marker on `vibemis-main`. The build timeline
+used to be merged in by a bot with `[skip ci]`, but it is now force-pushed to the unprotected
+`releases-index` branch, which matches no workflow trigger and so needs no marker — and
+therefore **no bot allowlist is needed anywhere in this pipeline.**
+
+## Tests that gate a release
+
+Two jobs must be green before `create-dev-release` will publish, and both are in its `needs`
+so they gate the **cut**, not just the merge — a `workflow_dispatch` or a direct push never
+goes through a PR, so a merge-only gate would not cover it:
+
+- **`Invariants`** — every `scripts/check-*-invariants.sh`, globbed. Adding a guard is zero
+  workflow change: drop in a new `check-<x>-invariants.sh` and it runs.
+- **`VRR Tests`** — builds `tests/vrr/vrr.pro` against system Qt 6 and runs all six binaries
+  (`tst_vrrtimingcontroller`, `tst_vrrratepolicy`, `test_vrrratepolicy`,
+  `test_vrrrefreshguard`, `test_vrrswapchainpolicy`, `tst_vrrpacingworker`). Each is named
+  explicitly and a **missing** binary fails the job — globbing whatever happens to be
+  executable would let a target drop out of `vrr.pro` and leave the job green while covering
+  less. That matters here: this suite existed for months without any workflow building it,
+  through a run of releases that were almost entirely VRR fixes.
+
+`tests/tests.pro` is opt-in — it only descends into its `SUBDIRS` when qmake is given
+`CONFIG+=tests` — so the job points qmake straight at `tests/vrr/vrr.pro`. To run it locally:
+
+```bash
+mkdir -p build-vrr-tests && cd build-vrr-tests
+qmake6 ../tests/vrr/vrr.pro && make -j"$(nproc)"
+./tst_vrrtimingcontroller && ./tst_vrrratepolicy && ./test_vrrratepolicy \
+  && ./test_vrrrefreshguard && ./test_vrrswapchainpolicy && ./tst_vrrpacingworker
+```
+
+Needs `qt6-base-dev qt6-base-dev-tools qt6-declarative-dev libavutil-dev libsdl2-dev` and a
+C++17 compiler, **plus the `moonlight-common-c` submodule checked out** — `pacingworker.pro`
+puts it on the include path and `vrrpacingworker.cpp` does `#include <Limelight.h>`, which
+exists nowhere else in the tree, so a submodule-less checkout builds five of the six targets
+and then dies. The console tests print **nothing** on success and communicate purely through
+their exit status; only `tst_vrrratepolicy` (QtTest) prints `PASS` lines.
+
+## The RELEASES.md timeline never opens a pull request (BL-2394/BL-2461/BL-2472)
+
+Do not "fix" the build-timeline publish by making it open a bot PR and merge it with
+`gh pr merge --auto`. That recommendation is written down in more than one place and it is
+**wrong** — enabling `--auto` and exiting 0 would leave the PR open forever, which is the
+complaint it was meant to solve. The measurement that settles it: on PR **#290** all three
+required contexts (`AppImage Build`, `Compile Sanity (Linux)`, `Invariants`) completed green
+on the PR's exact head SHA and its `statusCheckRollup` was still **empty** — GitHub does not
+attribute `workflow_dispatch` check runs to a pull request, and a `GITHUB_TOKEN`-authored PR
+never emits the `pull_request` event that would create attributable ones. Branch protection
+therefore saw its requirements as permanently *expected*: plain merge returned "base branch
+policy prohibits the merge" (#278, #279, #284, #285) and `--auto` never fired (#288, #290).
+Six cuts produced six phantom PRs while `RELEASES.md` sat six releases stale.
+
+The timeline is instead a single-file **orphan commit force-pushed to the unprotected
+`releases-index` branch** (`git hash-object` → `git mktree` → `git commit-tree` →
+`git push --force`). No PR, no protection to fight, no PAT, no `[skip ci]` marker, and the
+branch matches no workflow trigger so it starts nothing. It is idempotent — each cut
+republishes the whole timeline, so a skipped run self-heals. The release job's token no
+longer has `pull-requests: write`, so it *cannot* open one, and
+`check-pipeline-invariants.sh` guard #2 fails the build if `gh pr create`/`gh pr merge`
+reappears in that job.
 
 ## Stable release notes are CUMULATIVE — hotfixes included
 
