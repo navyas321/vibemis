@@ -230,6 +230,48 @@ jobs:
           echo "All six VRR test binaries passed."
           echo "- VRR test suite: all six binaries passed" >> "$GITHUB_STEP_SUMMARY"
 
+      # tests/overlay sat in exactly the same hole tests/vrr was just pulled out of:
+      # written, passing locally, and built by no job — so its coverage could never
+      # fail a build. Found while adding the BL-2417 decoder-status line, whose 18
+      # cases would otherwise have been decorative.
+      - name: Build the overlay test suite
+        run: |
+          set -Eeuo pipefail
+          mkdir -p build-overlay-tests
+          cd build-overlay-tests
+          qmake6 "$GITHUB_WORKSPACE/tests/overlay/overlay.pro"
+          make -j"$(nproc)"
+
+      - name: Run the overlay test suite
+        run: |
+          set -Eeuo pipefail
+          cd build-overlay-tests
+          export QT_QPA_PLATFORM=offscreen
+          rc=0
+          # Named explicitly for the same reason as the VRR list above: a target
+          # dropping out of overlay.pro must fail the job, not silently shrink it.
+          for t in tst_decoderstatus tst_overlayplacement; do
+            bin=$(find "$GITHUB_WORKSPACE" -type f -name "$t" -perm -u+x -print -quit)
+            if [ -z "$bin" ]; then
+              echo "::error title=Overlay test binary missing::$t was not built — did it drop out of tests/overlay/overlay.pro?"
+              rc=1
+              continue
+            fi
+            echo "::group::$t"
+            if "$bin"; then
+              echo "$t: PASS"
+            else
+              echo "::error title=Overlay test failed::$t exited non-zero"
+              rc=1
+            fi
+            echo "::endgroup::"
+          done
+          if [ "$rc" -ne 0 ]; then
+            echo "- Overlay test suite FAILED" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "- Overlay test suite: both binaries passed" >> "$GITHUB_STEP_SUMMARY"
+
   # A change a user can notice must ship with a sentence a user can read.
   #
   # The release body's "🎯 What's new for you" section is built EXCLUSIVELY from
