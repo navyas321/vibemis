@@ -208,6 +208,15 @@ private:
     uint64_t renderLeadFloorUs() const;
     uint64_t renderLeadCeilingUs() const;
     uint64_t readinessCeilingUs() const;
+
+    // BL-2541 (vibemis local fix, re-applied on top of the upstream vendor):
+    // the largest readiness budget that still fits inside one source interval
+    // once render lead and presentation safety are paid. Upstream lets the
+    // reserve ramp grow the budget past a source interval, which deepens the
+    // queue beyond one frame and feeds present backpressure -- the exact
+    // standing-queue behaviour our burst tests pin.
+    uint64_t maximumReadinessBudgetUs() const;
+    void enforceSourceIntervalBudget();
     uint64_t guardCeilingUs() const;
     uint64_t latchedPresentationHeadroomUs() const;
     uint64_t latchedPresentationExitHeadroomUs() const;
