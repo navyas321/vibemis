@@ -114,6 +114,21 @@ if [ "$fail" -eq 0 ]; then
     err "the pre-wait stale skip no longer recovers with noteSubmission(false,false,0) (cadence-preserving, no re-anchor)"
   fi
 
+  # ---- BL-2541: every frame discard must be counted -----------------------
+  #
+  # dropFrameForEnqueue() freed frames with no telemetry call. It is the path
+  # taken whenever there is no VsyncSource and no VRR worker -- i.e. the
+  # DEFAULT on X11/Gamescope (SteamOS Game Mode) with frame pacing off -- so
+  # ~15% of the stream could vanish while the overlay reported ~5% drops. An
+  # uncounted discard is worse than a bug: it hides bugs. If a new discard
+  # path appears, it counts, or this guard fails.
+  # Comment lines are stripped first: the function documents WHY it records,
+  # and a guard that its own explanation satisfies proves nothing (this guard
+  # failed exactly that way on first write).
+  if ! sed -n '/void Pacer::dropFrameForEnqueue/,/^}/p' "$pacer_init_source" | grep -v '^[[:space:]]*//' | grep -qF 'recordLegacyDrop'; then
+    err "Pacer::dropFrameForEnqueue drops frames without recording them (invisible loss)"
+  fi
+
   # ---- BL-2531: Gamescope VRR prefers Mailbox -----------------------------
   #
   # The device A/B (test146, host frame-generation off) measured Mailbox at

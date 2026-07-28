@@ -527,6 +527,26 @@ void Pacer::dropFrameForEnqueue(QQueue<AVFrame*>& queue)
     if (queue.size() == MAX_QUEUED_FRAMES) {
         AVFrame* frame = queue.dequeue();
         av_frame_free(&frame);
+
+        // BL-2541: this drop MUST be counted. It was the only frame-discard
+        // path in Pacer that freed a frame without telling telemetry, and the
+        // omission is why a whole day of investigation could not see the
+        // loss it causes.
+        //
+        // Where it bites: with no VsyncSource (every non-Wayland, non-Windows
+        // platform -- including X11 under Gamescope, i.e. SteamOS Game Mode)
+        // and no VRR worker, submitFrame() routes straight here. Frames then
+        // arrive faster than the render thread drains them, this queue hits
+        // MAX_QUEUED_FRAMES, and the oldest frame is silently freed. On device
+        // (test146, host frame-gen on) the unpaced path rendered 92.03 of
+        // 114.92 incoming while reporting only 4.88% pacer drops -- ~15% of
+        // the stream vanished with no counter naming it, which is exactly the
+        // "ghosting nothing measures" the maintainer reported.
+        //
+        // recordLegacyDrop() feeds pacerDroppedFrames, the same counter the
+        // overlay's "Frames dropped by frame pacing" line reports, so an
+        // overflowing queue is now visible instead of invisible.
+        m_Telemetry.recordLegacyDrop(LiGetMicroseconds());
     }
 }
 
