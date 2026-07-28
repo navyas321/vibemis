@@ -20,6 +20,12 @@ struct PacerTelemetrySnapshot {
     uint64_t pacerDroppedFrames = 0;
     uint64_t totalPacerTimeUs = 0;
     uint64_t totalRenderTimeUs = 0;
+    // BL-2543: the queue-delay average must divide by the frames that
+    // actually contributed a delay sample, not by renderedFrames. A frame
+    // with an invalid timestamp is presented and counted as rendered but
+    // contributes no sample, and a divisor that silently includes it is how
+    // the legacy "Average frame queue delay" printed garbage.
+    uint64_t pacerTimeSampledFrames = 0;
 
     bool vrrActive = false;
     uint64_t vrrPacingDroppedFrames = 0;
@@ -108,11 +114,18 @@ public:
     }
 
     void recordLegacyFrame(uint64_t pacerTimeUs,
+                           bool pacerTimeValid,
                            uint64_t renderTimeUs,
                            uint64_t sampleTimeUs)
     {
         QMutexLocker lock(&m_Lock);
-        m_Snapshot.totalPacerTimeUs += pacerTimeUs;
+        // BL-2543: a frame whose queue-delay measurement is invalid still
+        // rendered, but it must not poison the delay accumulator or inflate
+        // the sample count the average divides by.
+        if (pacerTimeValid) {
+            m_Snapshot.totalPacerTimeUs += pacerTimeUs;
+            ++m_Snapshot.pacerTimeSampledFrames;
+        }
         m_Snapshot.totalRenderTimeUs += renderTimeUs;
         ++m_Snapshot.renderedFrames;
         touchLocked(sampleTimeUs);
@@ -141,6 +154,7 @@ public:
 
         ++m_Snapshot.vrrEligibleFrames;
         m_Snapshot.totalPacerTimeUs += sample.pacerTimeUs;
+        ++m_Snapshot.pacerTimeSampledFrames;
         m_Snapshot.totalRenderTimeUs += sample.renderTimeUs;
         if (sample.prepareLate) {
             ++m_Snapshot.vrrPrepareLateFrames;

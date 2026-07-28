@@ -184,6 +184,25 @@ if [ "$fail" -eq 0 ]; then
   if ! grep -v '^[[:space:]]*//' "$pacer_init_source" | grep -qF 'queue %llu'; then
     err "the sampler line no longer reports render-queue depth"
   fi
+
+  # ---- BL-2543: the queue-delay statistic must be un-poisonable -----------
+  #
+  # The legacy path printed 40838.61 ms / 16175.61 ms on identically
+  # configured arms: an unguarded (beforeRender - pkt_dts) wraps a uint64 by
+  # ~1.8e19 us on one bad stamp and the narrowing ms cast scrambles it into a
+  # stable-looking number. Queue delay is the statistic that cracked BL-2541;
+  # a garbage value there misdirects the next investigation. The source must
+  # validate the stamp, and the report must divide by the delay-sample count
+  # -- never by renderedFrames, which includes sampleless frames.
+  if ! grep -v '^[[:space:]]*//' "$pacer_init_source" | grep -qF 'pacerTimeValid'; then
+    err "Pacer::renderFrame feeds the queue-delay accumulator without validating the decode stamp"
+  fi
+  if ! grep -v '^[[:space:]]*//' "$stats_source" | grep -qF 'stats.pacerTimeSampledFrames != 0'; then
+    err "the queue-delay report is no longer gated on having any delay samples"
+  fi
+  if grep -v '^[[:space:]]*//' "$stats_source" | grep -qF 'stats.totalPacerTime / stats.renderedFrames'; then
+    err "the queue-delay average divides by renderedFrames again (includes sampleless frames)"
+  fi
 fi
 
 if [ "$fail" -ne 0 ]; then

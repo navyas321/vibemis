@@ -4,6 +4,7 @@
 #include "backend/systemproperties.h"
 #include "settings/streamingpreferences.h"
 
+#include <algorithm>
 #include <ctime>
 
 #include <h264_stream.h>
@@ -952,6 +953,7 @@ void FFmpegVideoDecoder::addVideoStats(VIDEO_STATS& src, VIDEO_STATS& dst)
     dst.totalReassemblyTime += src.totalReassemblyTime;
     dst.totalDecodeTime += src.totalDecodeTime;
     dst.totalPacerTime += src.totalPacerTime;
+    dst.pacerTimeSampledFrames += src.pacerTimeSampledFrames;
     dst.totalRenderTime += src.totalRenderTime;
 
     if (dst.minHostProcessingLatency == 0) {
@@ -1015,12 +1017,22 @@ void FFmpegVideoDecoder::syncPacerTelemetry()
               m_LastPacerTelemetry.pacerDroppedFrames));
     // NB: The vendored Pacer publishes microsecond totals; vibemis's
     // VIDEO_STATS keeps its historical millisecond fields, so convert here.
-    m_ActiveWndVideoStats.totalPacerTime += static_cast<uint32_t>(
-        delta(snapshot.totalPacerTimeUs,
-              m_LastPacerTelemetry.totalPacerTimeUs) / 1000);
-    m_ActiveWndVideoStats.totalRenderTime += static_cast<uint32_t>(
-        delta(snapshot.totalRenderTimeUs,
-              m_LastPacerTelemetry.totalRenderTimeUs) / 1000);
+    // BL-2543: saturate instead of truncating -- a narrowing cast that wraps
+    // turns one anomalous interval into a permanently poisoned average, and
+    // uint32 milliseconds is only ~49 days, so saturation is the honest
+    // failure mode.
+    const auto millisDelta = [&delta](uint64_t current, uint64_t previous) {
+        const uint64_t deltaMs = delta(current, previous) / 1000;
+        return static_cast<uint32_t>(
+            std::min<uint64_t>(deltaMs, UINT32_MAX));
+    };
+    m_ActiveWndVideoStats.totalPacerTime += millisDelta(
+        snapshot.totalPacerTimeUs, m_LastPacerTelemetry.totalPacerTimeUs);
+    m_ActiveWndVideoStats.pacerTimeSampledFrames += static_cast<uint32_t>(
+        delta(snapshot.pacerTimeSampledFrames,
+              m_LastPacerTelemetry.pacerTimeSampledFrames));
+    m_ActiveWndVideoStats.totalRenderTime += millisDelta(
+        snapshot.totalRenderTimeUs, m_LastPacerTelemetry.totalRenderTimeUs);
 
     m_ActiveWndVideoStats.vrrTelemetryActive =
         m_ActiveWndVideoStats.vrrTelemetryActive || snapshot.vrrActive;
@@ -1311,19 +1323,35 @@ void FFmpegVideoDecoder::stringifyVideoStats(VIDEO_STATS& stats, char* output, i
             snprintf(rttString, sizeof(rttString), "N/A");
         }
 
+        // BL-2543: the queue-delay average divides by the frames that
+        // actually contributed a delay sample, and prints N/A rather than a
+        // fabricated number when there are none. This statistic is what
+        // cracked the BL-2541 investigation; a garbage value here misdirects
+        // the next one.
+        char queueDelayString[32];
+        if (stats.pacerTimeSampledFrames != 0) {
+            snprintf(queueDelayString, sizeof(queueDelayString), "%.2f ms",
+                     (float)stats.totalPacerTime /
+                         stats.pacerTimeSampledFrames);
+        }
+        else {
+            snprintf(queueDelayString, sizeof(queueDelayString),
+                     "N/A (no samples)");
+        }
+
         ret = snprintf(&output[offset],
                        length - offset,
                        "Frames dropped by your network connection: %.2f%%\n"
                        "Frames dropped by frame pacing: %.2f%%\n"
                        "Average network latency: %s\n"
                        "Average decoding time: %.2f ms\n"
-                       "Average frame queue delay: %.2f ms\n"
+                       "Average frame queue delay: %s\n"
                        "Average rendering time (including monitor V-sync latency): %.2f ms\n",
                        (float)stats.networkDroppedFrames / stats.totalFrames * 100,
                        (float)stats.pacerDroppedFrames / stats.decodedFrames * 100,
                        rttString,
                        (float)stats.totalDecodeTime / stats.decodedFrames,
-                       (float)stats.totalPacerTime / stats.renderedFrames,
+                       queueDelayString,
                        (float)stats.totalRenderTime / stats.renderedFrames);
         if (ret < 0 || ret >= length - offset) {
             SDL_assert(false);

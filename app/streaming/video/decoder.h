@@ -79,6 +79,10 @@ typedef struct _VIDEO_STATS {
     uint32_t totalReassemblyTime;
     uint32_t totalDecodeTime;
     uint32_t totalPacerTime;
+    // BL-2543: divisor for the queue-delay average. Frames whose delay
+    // measurement was invalid render without contributing a sample, so
+    // dividing totalPacerTime by renderedFrames misattributes them.
+    uint32_t pacerTimeSampledFrames;
     uint32_t totalRenderTime;
     uint32_t lastRtt;
     uint32_t lastRttVariance;

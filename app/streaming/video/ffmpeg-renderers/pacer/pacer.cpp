@@ -648,8 +648,20 @@ void Pacer::renderFrame(AVFrame* frame)
                      pacingModeName());
     }
 
+    // BL-2543: pkt_dts carries the decoder's LiGetMicroseconds() stamp, but
+    // treat it as untrusted: an unstamped, stale, or non-monotonic value
+    // subtracted unguarded wraps a uint64 by ~1.8e19 us and one such frame
+    // poisons the queue-delay average for the whole session -- which is how
+    // the legacy path printed 40838.61 ms on one arm and 16175.61 ms on an
+    // identically configured one. The worker path already saturates its
+    // equivalent computation; mirror that here and drop the sample entirely
+    // when the stamp cannot be a time this clock produced before now.
+    const int64_t decodeStamp = frame->pkt_dts;
+    const bool pacerTimeValid = decodeStamp > 0 &&
+        beforeRender >= static_cast<uint64_t>(decodeStamp);
     m_Telemetry.recordLegacyFrame(
-        beforeRender - static_cast<uint64_t>(frame->pkt_dts),
+        pacerTimeValid ? beforeRender - static_cast<uint64_t>(decodeStamp) : 0,
+        pacerTimeValid,
         afterRender - beforeRender,
         afterRender);
 
