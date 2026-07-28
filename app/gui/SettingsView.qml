@@ -2104,7 +2104,7 @@ Item {
                     ToolTip.delay: 1000
                     ToolTip.timeout: 5000
                     ToolTip.visible: hovered
-                    ToolTip.text: qsTr("VRR presents each frame as soon as the display can accept it on adaptive-sync displays. Requires V-Sync (enabled automatically). The Frame pacing switch above decides whether VRR also holds frames back to a learned margin; leaving it off is the default. Sessions without enough refresh-rate headroom fall back to fixed V-Sync pacing, and borderless fullscreen is used while VRR is active. If you see ghosting or double-images on fast motion, check the HOST first: frame generation (e.g. Lossless Scaling) on the host bakes interpolation artifacts and duplicated frames into the stream that no client setting can remove.")
+                    ToolTip.text: qsTr("VRR presents each frame as soon as the display can accept it on adaptive-sync displays. Requires V-Sync (enabled automatically). The Frame pacing switch above decides whether VRR also holds frames back to a learned margin; leaving it off is the default. Sessions without enough refresh-rate headroom fall back to fixed V-Sync pacing, and borderless fullscreen is used while VRR is active. Known issue (BL-2541): on SteamOS handhelds this VRR path currently delivers fewer frames than leaving VRR off — measured at 92 vs 115 fps on the same device and content — and shows visible ghosting on fast motion. If you see trails or stutter, turn this off; a fix is in progress.")
                 }
 
                 // Vibemis: one-tap low-latency / "competitive" preset. Frame pacing delays
