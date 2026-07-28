@@ -33,6 +33,21 @@ if grep -rn 'IGNORE_RFI_LATENCY_BUG=' packaging/ .github/workflows/ >/dev/null 2
   err "packaging/workflows: retired IGNORE_RFI_LATENCY_BUG env var still set"
 fi
 
+# 5. BL-2419: packaging must not OPT IN to the workaround either. The opt-in
+#    form (HAS_RFI_LATENCY_BUG=1) disables RFI just as effectively as the old
+#    opt-out did -- it is meant to be a user's deliberate choice on affected
+#    hardware, never something the AppImage/Flatpak exports for everyone. The
+#    on-device confirmation (BL-2419: 87 invalidate-requests, 75 RFI waits,
+#    "RFI: on") had to be verified BY HAND because nothing checked this; a
+#    point-in-time report is not a regression guard, so here it is.
+#    Assignments only, and only OUTSIDE comments: the `^[^#]*` prefix means a
+#    line whose assignment is preceded by a `#` cannot match, so documenting
+#    the flag (as dev-build.yml's AppRun hook now does) is fine while an actual
+#    export is not.
+if grep -rnE '^[^#]*(export[[:space:]]+)?HAS_RFI_LATENCY_BUG=' packaging/ .github/workflows/ >/dev/null 2>&1; then
+  err "packaging/workflows: HAS_RFI_LATENCY_BUG is exported (silently disables RFI for every user)"
+fi
+
 if [ "$fail" -ne 0 ]; then
   echo "One or more BL-2408 RFI invariants failed." >&2
   echo "See vibemis-agent-meta docs/engineering/claude_vrr_rca.md before changing anything." >&2
