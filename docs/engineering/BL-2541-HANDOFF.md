@@ -137,6 +137,27 @@ the env vars to set (`VIBEMIS_PRESENT_TRACE`, and `MOONLIGHT_VRR_TRACE` on worke
 reminder that **hitch percentage — not CV — is the discriminator** (CV misranks on small 2-refresh
 samples; that mistake was made and corrected this session).
 
+## 9a. What measurement data survived, and what must be re-captured
+
+Checked 2026-07-28 — better than "start from scratch":
+
+**PRESERVED** in `vibemis-agent-meta` under `testing/bl2531-rc004-vrr-ghosting/evidence/` (26 files):
+the full six-arm matrix `A1..A6` session logs, `A1`/`A2` `trace.csv.gz`, and **the analysis harness
+itself** — `a-matrix.sh`, `bl2531-matrix.sh`, `matrix-lib.sh`, `bl2531-analyze.py`.
+
+That last part matters most: the *methodology* survived, so a re-run is directly comparable to §10
+rather than an incompatible fresh baseline. **Reuse those scripts; do not write new analysis.**
+
+**GONE** (device-only, never committed): the `D1/D2/D3` instrumented runs and both 10–15 min soaks,
+including the trace behind the 67.5 s collapse (BL-2545).
+
+**Consequence:** re-capture D1/D2/D3 and at least one 10-minute VRR-on soak **on the current pre-fix
+alpha first**, using the preserved harness, so the after-picture compares like with like. Budget for
+that before concluding anything about whether the re-vendor helped.
+
+**Also:** the 67.5 s collapse has been observed exactly once. Reproducing it is a task in its own
+right, not something a single post-fix soak will incidentally settle.
+
 ## 10. Reference numbers (all same host, content, settings; host frame-gen ON)
 
 | arm | incoming → rendered | efficiency | reported drops | hitches ≥25 ms | queue delay |
