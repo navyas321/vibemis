@@ -153,6 +153,37 @@ if [ "$fail" -eq 0 ]; then
     err "the Vulkan renderer no longer exposes its selected present mode to the overlay"
   grep -qF 'Decoder: %.*s%s via %.*s; RFI: %s' "$decoder_status_header" ||
     err "the overlay decoder line no longer keeps the driver string off it"
+
+  # ---- BL-2546: the pipeline sampler must cover EVERY pacing path ---------
+  #
+  # A mid-session stall could not be attributed client-vs-host (a finding had
+  # to be withdrawn over exactly this), so the sampler emits per-second deltas
+  # for every pipeline stage from its own thread. These guards pin the parts
+  # that die silently: the worker path's early return in initialize() (losing
+  # it makes vrr-worker sessions -- the ones under investigation -- the only
+  # unsampled mode), the decoder-side stage ticks, the shutdown-before-
+  # teardown ordering, and the five per-line signals. All greps strip //
+  # comments first; a guard a comment can satisfy proves nothing.
+  sampler_calls=$(grep -v '^[[:space:]]*//' "$pacer_init_source" |
+    grep -cF 'startPipelineSamplerIfRequested();')
+  if [ "${sampler_calls:-0}" -lt 2 ]; then
+    err "the pipeline sampler no longer starts on both Pacer::initialize() paths (worker early-return + legacy)"
+  fi
+  grep -v '^[[:space:]]*//' app/streaming/video/ffmpeg.cpp |
+    grep -qF 'noteFrameReceived();' ||
+    err "the decoder no longer ticks frame arrivals for the pipeline sampler"
+  grep -v '^[[:space:]]*//' app/streaming/video/ffmpeg.cpp |
+    grep -qF 'noteFrameDecoded();' ||
+    err "the decoder no longer ticks decodes for the pipeline sampler"
+  if ! sed -n '/m_Shutdown = true;/,/m_Stopping = true;/p' "$pacer_init_source" | grep -v '^[[:space:]]*//' | grep -qF 'stopPipelineSampler();'; then
+    err "Pacer::shutdown no longer stops the sampler before tearing down what it reads"
+  fi
+  if ! grep -v '^[[:space:]]*//' "$pacer_init_source" | grep -qF 'recv +%llu dec +%llu pres +%llu'; then
+    err "the sampler line lost its per-stage deltas (stall attribution needs recv/dec/pres together)"
+  fi
+  if ! grep -v '^[[:space:]]*//' "$pacer_init_source" | grep -qF 'queue %llu'; then
+    err "the sampler line no longer reports render-queue depth"
+  fi
 fi
 
 if [ "$fail" -ne 0 ]; then

@@ -620,6 +620,11 @@ size_t VrrPacingWorker::queuedFrameCount()
     return m_FrameQueue.size();
 }
 
+size_t VrrPacingWorker::queueDepth()
+{
+    return queuedFrameCount();
+}
+
 void VrrPacingWorker::discardQueuedFrames(bool countDrops)
 {
     std::deque<PacedFrame> discardedFrames;

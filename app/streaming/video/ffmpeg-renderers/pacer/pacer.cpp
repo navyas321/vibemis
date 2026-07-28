@@ -61,6 +61,9 @@ void Pacer::shutdown()
     }
     m_Shutdown = true;
 
+    // BL-2546: stop the sampler before anything it reads is torn down.
+    stopPipelineSampler();
+
     // BL-2541: commit the buffered present-trace tail before the threads that
     // write it are torn down below.
     closePresentTrace();
@@ -336,6 +339,10 @@ bool Pacer::initialize(SDL_Window* window, int maxVideoFps,
             SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                         "VRR pacing: target %d Hz with %d FPS stream",
                         m_DisplayFps, m_MaxVideoFps);
+            // BL-2546: the worker path returns before the legacy setup below,
+            // so the sampler must start here or vrr-worker sessions -- the
+            // paths under investigation -- would be the only ones without it.
+            startPipelineSamplerIfRequested();
             return true;
         }
 
@@ -444,6 +451,10 @@ bool Pacer::initialize(SDL_Window* window, int maxVideoFps,
     // so its header records which mode actually got built.
     openPresentTraceIfRequested();
 
+    // BL-2546: same placement rationale -- the sampler labels every line with
+    // the pacing mode this session actually built.
+    startPipelineSamplerIfRequested();
+
     if (m_VsyncRenderer->isRenderThreadSupported()) {
         m_RenderThread = SDL_CreateThread(Pacer::renderThread, "PacerRender", this);
     }
@@ -502,6 +513,122 @@ void Pacer::closePresentTrace()
     if (m_PresentTraceFile != nullptr) {
         std::fclose(m_PresentTraceFile);
         m_PresentTraceFile = nullptr;
+    }
+}
+
+void Pacer::noteFrameReceived()
+{
+    m_ReceivedFrameTicks.fetch_add(1, std::memory_order_relaxed);
+}
+
+void Pacer::noteFrameDecoded()
+{
+    m_DecodedFrameTicks.fetch_add(1, std::memory_order_relaxed);
+}
+
+size_t Pacer::pipelineQueueDepth()
+{
+    if (m_VrrWorker != nullptr) {
+        return m_VrrWorker->queueDepth();
+    }
+
+    QMutexLocker lock(&m_FrameQueueLock);
+    return static_cast<size_t>(m_PacingQueue.count() + m_RenderQueue.count());
+}
+
+void Pacer::startPipelineSamplerIfRequested()
+{
+    const char* enabled = SDL_getenv("VIBEMIS_PIPELINE_SAMPLER");
+    if (enabled == nullptr || enabled[0] == '\0' || m_SamplerThread != nullptr) {
+        return;
+    }
+
+    m_SamplerStopping = false;
+    m_SamplerThread = SDL_CreateThread(Pacer::samplerThread,
+                                       "PacerSampler", this);
+    if (m_SamplerThread == nullptr) {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "Unable to start the pipeline sampler thread: %s",
+                    SDL_GetError());
+        return;
+    }
+
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "[BL-2546] pipeline sampler active, pacing: %s",
+                pacingModeName());
+}
+
+void Pacer::stopPipelineSampler()
+{
+    if (m_SamplerThread == nullptr) {
+        return;
+    }
+
+    m_SamplerStopping = true;
+    SDL_WaitThread(m_SamplerThread, nullptr);
+    m_SamplerThread = nullptr;
+}
+
+int Pacer::samplerThread(void* context)
+{
+    reinterpret_cast<Pacer*>(context)->runPipelineSampler();
+    return 0;
+}
+
+void Pacer::runPipelineSampler()
+{
+    uint64_t lastReceived = 0;
+    uint64_t lastDecoded = 0;
+    uint64_t lastPresented = 0;
+    uint64_t lastDropped = 0;
+    uint64_t lastSampleUs = LiGetMicroseconds();
+
+    for (;;) {
+        // ~1 s cadence with a prompt shutdown response. The emission below is
+        // a few counter reads and one log line, so the sampler never contends
+        // with the pacing threads for more than the brief queue-depth lock.
+        for (int i = 0; i < 10 && !m_SamplerStopping; ++i) {
+            SDL_Delay(100);
+        }
+        if (m_SamplerStopping) {
+            return;
+        }
+
+        const uint64_t nowUs = LiGetMicroseconds();
+        const uint64_t received =
+            m_ReceivedFrameTicks.load(std::memory_order_relaxed);
+        const uint64_t decoded =
+            m_DecodedFrameTicks.load(std::memory_order_relaxed);
+        const PacerTelemetrySnapshot telemetry = m_Telemetry.snapshot();
+        const size_t queueDepth = pipelineQueueDepth();
+
+        // A "+0" delta at one stage while the previous stage still moves is
+        // the attribution signal this sampler exists to produce; keep every
+        // stage on one line so a single grep reconstructs the timeline.
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "[BL-2546] pipeline +%ums: recv +%llu dec +%llu pres +%llu "
+                    "drop +%llu queue %llu | totals recv %llu dec %llu "
+                    "pres %llu drop %llu | mode %s",
+                    static_cast<unsigned int>((nowUs - lastSampleUs) / 1000),
+                    static_cast<unsigned long long>(received - lastReceived),
+                    static_cast<unsigned long long>(decoded - lastDecoded),
+                    static_cast<unsigned long long>(
+                        telemetry.renderedFrames - lastPresented),
+                    static_cast<unsigned long long>(
+                        telemetry.pacerDroppedFrames - lastDropped),
+                    static_cast<unsigned long long>(queueDepth),
+                    static_cast<unsigned long long>(received),
+                    static_cast<unsigned long long>(decoded),
+                    static_cast<unsigned long long>(telemetry.renderedFrames),
+                    static_cast<unsigned long long>(
+                        telemetry.pacerDroppedFrames),
+                    pacingModeName());
+
+        lastReceived = received;
+        lastDecoded = decoded;
+        lastPresented = telemetry.renderedFrames;
+        lastDropped = telemetry.pacerDroppedFrames;
+        lastSampleUs = nowUs;
     }
 }
 

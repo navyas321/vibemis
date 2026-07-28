@@ -2290,6 +2290,9 @@ void FFmpegVideoDecoder::decoderThreadProc()
 
                     m_ActiveWndVideoStats.decodedFrames++;
 
+                    // BL-2546: cumulative decode tick for the pipeline sampler.
+                    m_Pacer->noteFrameDecoded();
+
                     // Queue the frame for rendering (or render now if pacer is disabled)
                     if (vrrActive) {
                         m_Pacer->submitFrame(PacedFrame(frame,
@@ -2432,6 +2435,12 @@ int FFmpegVideoDecoder::submitDecodeUnit(PDECODE_UNIT du)
 
     m_ActiveWndVideoStats.receivedFrames++;
     m_ActiveWndVideoStats.totalFrames++;
+
+    // BL-2546: cumulative arrival tick for the pipeline sampler. The windowed
+    // counter above resets every second, so the sampler keeps its own.
+    if (m_Pacer != nullptr) {
+        m_Pacer->noteFrameReceived();
+    }
 
     int requiredBufferSize = du->fullLength;
     if (du->frameType == FRAME_TYPE_IDR) {
