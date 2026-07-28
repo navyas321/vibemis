@@ -1290,17 +1290,35 @@ jobs:
                 fi
             done
         fi
-        # When host VAAPI drivers are available, force Moonlight to use them.
-        # Without this, the upstream moonlight-qt code deprioritises VAAPI on
-        # Mesa Gallium drivers (AMD/Intel) — causing it to fall through to
-        # hevc_cuvid, which then crashes (SEGV) when libnvcuvid.so.1 is absent
-        # on non-NVIDIA hardware. FORCE_VAAPI=1 bypasses that deprioritisation.
-        # Safe: if VAAPI subsequently fails (e.g. no hardware support), Moonlight
-        # still falls through to software decoding — the flag only prevents the
-        # premature Gallium bail-out in vaapi.cpp:407.
+        # BL-2416: FORCE_VAAPI bypasses the Gallium deprioritisation in
+        # VAAPIRenderer::initialize(). That bail-out sends the session to
+        # VDPAU (NOT to hevc_cuvid — the earlier comment here named the wrong
+        # fallback, and a future reader would have judged the hook's safety on
+        # it), and it only fires when
+        #     (VAAPI major == 0) || (HAS_RFI_LATENCY_BUG=1 && !10-bit)
+        # on a Gallium driver. On any modern Mesa (libva 1.x) with no opt-in
+        # RFI-bug flag, that condition is structurally unreachable, so
+        # exporting the override there is a no-op — device-verified on
+        # Rembrandt/radeonsi/Mesa 26.1.2 (libva 1.22): stock and FORCE_VAAPI=0
+        # produced an identical decode path (VAAPI renderer, hevc(vaapi), no
+        # cuvid attempt, ~115 FPS both).
+        #
+        # So gate the export on the case it actually protects — libva 0.x —
+        # instead of exporting on every launch that has host DRI drivers. Users
+        # who deliberately set HAS_RFI_LATENCY_BUG=1 still hit the bail-out by
+        # choice, which is the point of that opt-in. An explicit FORCE_VAAPI
+        # from the environment is always honoured and never overridden here.
         if [ -z "$FORCE_VAAPI" ] && [ -n "$LIBVA_DRIVERS_PATH" ]; then
-            export FORCE_VAAPI=1
-            echo "[vibemis-apprun] FORCE_VAAPI=1 (host DRI: $LIBVA_DRIVERS_PATH)" 1>&2
+            _va_major=""
+            if command -v vainfo >/dev/null 2>&1; then
+                _va_major=$(vainfo 2>/dev/null | sed -n 's/.*VA-API version[: ]*\([0-9]\+\).*/\1/p' | head -1)
+            fi
+            if [ "$_va_major" = "0" ]; then
+                export FORCE_VAAPI=1
+                echo "[vibemis-apprun] FORCE_VAAPI=1 (libva 0.x on host DRI: $LIBVA_DRIVERS_PATH)" 1>&2
+            else
+                echo "[vibemis-apprun] FORCE_VAAPI not needed (libva major='${_va_major:-unknown}'; Gallium bail-out unreachable)" 1>&2
+            fi
         fi
         if [ -z "$VDPAU_DRIVER_PATH" ]; then
             for _d in /usr/lib/x86_64-linux-gnu/vdpau /usr/lib64/vdpau /usr/lib/vdpau; do
