@@ -38,6 +38,10 @@ public:
     // backend notifications are delivered by the worker itself.
     void notifyWindowChanged(PWINDOW_STATE_CHANGE_INFO info);
 
+    // BL-2546: the pipeline sampler reads the worker's queue depth from its
+    // own thread; the lock inside makes this safe against the pacing thread.
+    size_t queueDepth();
+
 private:
     struct FrameTelemetry {
         uint64_t renderWaitOvershootUs = 0;

@@ -10,6 +10,7 @@
 #include <QMutex>
 #include <QWaitCondition>
 
+#include <atomic>
 #include <memory>
 
 class VrrPacingWorker;
@@ -62,6 +63,19 @@ public:
     // keying them on the worker made both wrong for unpaced VRR sessions.
     bool isAdaptivePresentationActive() const;
 
+    // BL-2541: present-timestamp trace for the NON-worker paths.
+    //
+    // MOONLIGHT_VRR_TRACE is opened by VrrPacingWorker, so only worker
+    // sessions could ever be measured for cadence. That made the unpaced and
+    // VRR-off paths -- including the default on every platform without a
+    // VsyncSource -- structurally unmeasurable for judder, which is the one
+    // property that decides whether a viewer sees ghosting. VIBEMIS_PRESENT_TRACE
+    // writes one microsecond timestamp per presented frame from
+    // Pacer::renderFrame(), which every non-worker path funnels through.
+    // Diagnostic only, flag-gated, no effect when unset.
+    void openPresentTraceIfRequested();
+    void closePresentTrace();
+
     // BL-2529: terse, screen-sized name of the pacing path this session
     // actually built, for the performance overlay. Resolved after
     // initialize(); "none" before it runs.
@@ -71,6 +85,11 @@ public:
     //   "vsync"       legacy V-sync source is pacing the render queue
     //   "none"        frames go straight to the renderer as they decode
     const char* pacingModeName() const;
+
+    // BL-2546: cumulative pipeline-stage tick marks for the sampler below.
+    // The decoder calls these from its thread; they are lock-free.
+    void noteFrameReceived();
+    void noteFrameDecoded();
 
     bool initialize(SDL_Window* window, int maxVideoFps,
                     bool enablePacing, bool enableVsync,
@@ -95,6 +114,25 @@ private:
 
     void dropFrameForEnqueue(QQueue<AVFrame*>& queue);
 
+    // BL-2546: flag-gated ~1s pipeline sampler, active on EVERY pacing path.
+    //
+    // A mid-session stall could not previously be attributed: incoming,
+    // decode, and render rates exist only as end-of-session aggregates, and
+    // both trace facilities record per-frame events -- which go silent
+    // exactly when the pipeline does. This sampler runs on its own thread,
+    // so during a total stall it keeps emitting "+0" deltas per stage, and
+    // the first stage whose delta is zero names the culprit: recv +0 means
+    // frames stopped arriving (host/network), recv >0 dec +0 means decode,
+    // dec >0 pres +0 with a standing queue means presentation.
+    //
+    // Gated on VIBEMIS_PIPELINE_SAMPLER; one SDL_LogInfo line per second.
+    // Diagnostic only, no effect when unset.
+    void startPipelineSamplerIfRequested();
+    void stopPipelineSampler();
+    size_t pipelineQueueDepth();
+    static int samplerThread(void* context);
+    void runPipelineSampler();
+
     QQueue<AVFrame*> m_RenderQueue;
     QQueue<AVFrame*> m_PacingQueue;
     QQueue<int> m_PacingQueueHistory;
@@ -117,4 +155,15 @@ private:
     PacerTelemetry m_Telemetry;
     VrrPacingMode m_PacingMode = VrrPacingMode::Fixed;
     std::unique_ptr<VrrPacingWorker> m_VrrWorker;
+
+    // BL-2541: see openPresentTraceIfRequested(). Written only from the render
+    // thread inside renderFrame(); null unless VIBEMIS_PRESENT_TRACE is set.
+    std::FILE* m_PresentTraceFile = nullptr;
+
+    // BL-2546: see startPipelineSamplerIfRequested(). The counters are
+    // cumulative for the whole session; the sampler thread computes deltas.
+    std::atomic<uint64_t> m_ReceivedFrameTicks { 0 };
+    std::atomic<uint64_t> m_DecodedFrameTicks { 0 };
+    SDL_Thread* m_SamplerThread = nullptr;
+    std::atomic_bool m_SamplerStopping { false };
 };

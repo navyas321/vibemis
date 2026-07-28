@@ -61,6 +61,13 @@ void Pacer::shutdown()
     }
     m_Shutdown = true;
 
+    // BL-2546: stop the sampler before anything it reads is torn down.
+    stopPipelineSampler();
+
+    // BL-2541: commit the buffered present-trace tail before the threads that
+    // write it are torn down below.
+    closePresentTrace();
+
     if (m_VrrWorker != nullptr) {
         // The VRR worker owns the renderer context and releases it from its
         // own thread after cancelling any prepared frame.
@@ -332,6 +339,10 @@ bool Pacer::initialize(SDL_Window* window, int maxVideoFps,
             SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                         "VRR pacing: target %d Hz with %d FPS stream",
                         m_DisplayFps, m_MaxVideoFps);
+            // BL-2546: the worker path returns before the legacy setup below,
+            // so the sampler must start here or vrr-worker sessions -- the
+            // paths under investigation -- would be the only ones without it.
+            startPipelineSamplerIfRequested();
             return true;
         }
 
@@ -436,6 +447,14 @@ bool Pacer::initialize(SDL_Window* window, int maxVideoFps,
         m_VsyncThread = SDL_CreateThread(Pacer::vsyncThread, "PacerVsync", this);
     }
 
+    // BL-2541: open the present trace once the pacing path is fully resolved,
+    // so its header records which mode actually got built.
+    openPresentTraceIfRequested();
+
+    // BL-2546: same placement rationale -- the sampler labels every line with
+    // the pacing mode this session actually built.
+    startPipelineSamplerIfRequested();
+
     if (m_VsyncRenderer->isRenderThreadSupported()) {
         m_RenderThread = SDL_CreateThread(Pacer::renderThread, "PacerRender", this);
     }
@@ -459,6 +478,160 @@ void Pacer::notifyWindowChanged(PWINDOW_STATE_CHANGE_INFO info)
     // overrides this path to discard stale work on suspension/minimize.
 }
 
+void Pacer::openPresentTraceIfRequested()
+{
+    // BL-2541: cadence diagnostics for the paths MOONLIGHT_VRR_TRACE cannot
+    // see (unpaced adaptive, legacy V-sync, and the no-VsyncSource default).
+    // One timestamp per presented frame is all the judder metrics need:
+    // inter-present intervals, the repeat-beat regularity, and hitch counts.
+    const char* tracePath = SDL_getenv("VIBEMIS_PRESENT_TRACE");
+    if (tracePath == nullptr || tracePath[0] == '\0') {
+        return;
+    }
+
+#ifdef _WIN32
+    if (fopen_s(&m_PresentTraceFile, tracePath, "w") != 0) {
+        m_PresentTraceFile = nullptr;
+    }
+#else
+    m_PresentTraceFile = std::fopen(tracePath, "w");
+#endif
+    if (m_PresentTraceFile == nullptr) {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "Unable to open VIBEMIS_PRESENT_TRACE file: %s", tracePath);
+        return;
+    }
+
+    std::fprintf(m_PresentTraceFile, "present_us,pacing_mode\n");
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "[BL-2541] present trace active (%s), pacing: %s",
+                tracePath, pacingModeName());
+}
+
+void Pacer::closePresentTrace()
+{
+    if (m_PresentTraceFile != nullptr) {
+        std::fclose(m_PresentTraceFile);
+        m_PresentTraceFile = nullptr;
+    }
+}
+
+void Pacer::noteFrameReceived()
+{
+    m_ReceivedFrameTicks.fetch_add(1, std::memory_order_relaxed);
+}
+
+void Pacer::noteFrameDecoded()
+{
+    m_DecodedFrameTicks.fetch_add(1, std::memory_order_relaxed);
+}
+
+size_t Pacer::pipelineQueueDepth()
+{
+    if (m_VrrWorker != nullptr) {
+        return m_VrrWorker->queueDepth();
+    }
+
+    QMutexLocker lock(&m_FrameQueueLock);
+    return static_cast<size_t>(m_PacingQueue.count() + m_RenderQueue.count());
+}
+
+void Pacer::startPipelineSamplerIfRequested()
+{
+    const char* enabled = SDL_getenv("VIBEMIS_PIPELINE_SAMPLER");
+    if (enabled == nullptr || enabled[0] == '\0' || m_SamplerThread != nullptr) {
+        return;
+    }
+
+    m_SamplerStopping = false;
+    m_SamplerThread = SDL_CreateThread(Pacer::samplerThread,
+                                       "PacerSampler", this);
+    if (m_SamplerThread == nullptr) {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "Unable to start the pipeline sampler thread: %s",
+                    SDL_GetError());
+        return;
+    }
+
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "[BL-2546] pipeline sampler active, pacing: %s",
+                pacingModeName());
+}
+
+void Pacer::stopPipelineSampler()
+{
+    if (m_SamplerThread == nullptr) {
+        return;
+    }
+
+    m_SamplerStopping = true;
+    SDL_WaitThread(m_SamplerThread, nullptr);
+    m_SamplerThread = nullptr;
+}
+
+int Pacer::samplerThread(void* context)
+{
+    reinterpret_cast<Pacer*>(context)->runPipelineSampler();
+    return 0;
+}
+
+void Pacer::runPipelineSampler()
+{
+    uint64_t lastReceived = 0;
+    uint64_t lastDecoded = 0;
+    uint64_t lastPresented = 0;
+    uint64_t lastDropped = 0;
+    uint64_t lastSampleUs = LiGetMicroseconds();
+
+    for (;;) {
+        // ~1 s cadence with a prompt shutdown response. The emission below is
+        // a few counter reads and one log line, so the sampler never contends
+        // with the pacing threads for more than the brief queue-depth lock.
+        for (int i = 0; i < 10 && !m_SamplerStopping; ++i) {
+            SDL_Delay(100);
+        }
+        if (m_SamplerStopping) {
+            return;
+        }
+
+        const uint64_t nowUs = LiGetMicroseconds();
+        const uint64_t received =
+            m_ReceivedFrameTicks.load(std::memory_order_relaxed);
+        const uint64_t decoded =
+            m_DecodedFrameTicks.load(std::memory_order_relaxed);
+        const PacerTelemetrySnapshot telemetry = m_Telemetry.snapshot();
+        const size_t queueDepth = pipelineQueueDepth();
+
+        // A "+0" delta at one stage while the previous stage still moves is
+        // the attribution signal this sampler exists to produce; keep every
+        // stage on one line so a single grep reconstructs the timeline.
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "[BL-2546] pipeline +%ums: recv +%llu dec +%llu pres +%llu "
+                    "drop +%llu queue %llu | totals recv %llu dec %llu "
+                    "pres %llu drop %llu | mode %s",
+                    static_cast<unsigned int>((nowUs - lastSampleUs) / 1000),
+                    static_cast<unsigned long long>(received - lastReceived),
+                    static_cast<unsigned long long>(decoded - lastDecoded),
+                    static_cast<unsigned long long>(
+                        telemetry.renderedFrames - lastPresented),
+                    static_cast<unsigned long long>(
+                        telemetry.pacerDroppedFrames - lastDropped),
+                    static_cast<unsigned long long>(queueDepth),
+                    static_cast<unsigned long long>(received),
+                    static_cast<unsigned long long>(decoded),
+                    static_cast<unsigned long long>(telemetry.renderedFrames),
+                    static_cast<unsigned long long>(
+                        telemetry.pacerDroppedFrames),
+                    pacingModeName());
+
+        lastReceived = received;
+        lastDecoded = decoded;
+        lastPresented = telemetry.renderedFrames;
+        lastDropped = telemetry.pacerDroppedFrames;
+        lastSampleUs = nowUs;
+    }
+}
+
 void Pacer::renderFrame(AVFrame* frame)
 {
     // Count time spent in Pacer's queues
@@ -467,8 +640,28 @@ void Pacer::renderFrame(AVFrame* frame)
     m_VsyncRenderer->renderFrame(frame);
     uint64_t afterRender = LiGetMicroseconds();
 
+    // BL-2541: one line per presented frame when tracing is enabled. Buffered,
+    // so this stays off the critical path; fclose() commits the tail.
+    if (m_PresentTraceFile != nullptr) {
+        std::fprintf(m_PresentTraceFile, "%llu,%s\n",
+                     static_cast<unsigned long long>(afterRender),
+                     pacingModeName());
+    }
+
+    // BL-2543: pkt_dts carries the decoder's LiGetMicroseconds() stamp, but
+    // treat it as untrusted: an unstamped, stale, or non-monotonic value
+    // subtracted unguarded wraps a uint64 by ~1.8e19 us and one such frame
+    // poisons the queue-delay average for the whole session -- which is how
+    // the legacy path printed 40838.61 ms on one arm and 16175.61 ms on an
+    // identically configured one. The worker path already saturates its
+    // equivalent computation; mirror that here and drop the sample entirely
+    // when the stamp cannot be a time this clock produced before now.
+    const int64_t decodeStamp = frame->pkt_dts;
+    const bool pacerTimeValid = decodeStamp > 0 &&
+        beforeRender >= static_cast<uint64_t>(decodeStamp);
     m_Telemetry.recordLegacyFrame(
-        beforeRender - static_cast<uint64_t>(frame->pkt_dts),
+        pacerTimeValid ? beforeRender - static_cast<uint64_t>(decodeStamp) : 0,
+        pacerTimeValid,
         afterRender - beforeRender,
         afterRender);
 
@@ -527,6 +720,26 @@ void Pacer::dropFrameForEnqueue(QQueue<AVFrame*>& queue)
     if (queue.size() == MAX_QUEUED_FRAMES) {
         AVFrame* frame = queue.dequeue();
         av_frame_free(&frame);
+
+        // BL-2541: this drop MUST be counted. It was the only frame-discard
+        // path in Pacer that freed a frame without telling telemetry, and the
+        // omission is why a whole day of investigation could not see the
+        // loss it causes.
+        //
+        // Where it bites: with no VsyncSource (every non-Wayland, non-Windows
+        // platform -- including X11 under Gamescope, i.e. SteamOS Game Mode)
+        // and no VRR worker, submitFrame() routes straight here. Frames then
+        // arrive faster than the render thread drains them, this queue hits
+        // MAX_QUEUED_FRAMES, and the oldest frame is silently freed. On device
+        // (test146, host frame-gen on) the unpaced path rendered 92.03 of
+        // 114.92 incoming while reporting only 4.88% pacer drops -- ~15% of
+        // the stream vanished with no counter naming it, which is exactly the
+        // "ghosting nothing measures" the maintainer reported.
+        //
+        // recordLegacyDrop() feeds pacerDroppedFrames, the same counter the
+        // overlay's "Frames dropped by frame pacing" line reports, so an
+        // overflowing queue is now visible instead of invisible.
+        m_Telemetry.recordLegacyDrop(LiGetMicroseconds());
     }
 }
 

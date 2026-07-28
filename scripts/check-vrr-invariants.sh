@@ -114,6 +114,21 @@ if [ "$fail" -eq 0 ]; then
     err "the pre-wait stale skip no longer recovers with noteSubmission(false,false,0) (cadence-preserving, no re-anchor)"
   fi
 
+  # ---- BL-2541: every frame discard must be counted -----------------------
+  #
+  # dropFrameForEnqueue() freed frames with no telemetry call. It is the path
+  # taken whenever there is no VsyncSource and no VRR worker -- i.e. the
+  # DEFAULT on X11/Gamescope (SteamOS Game Mode) with frame pacing off -- so
+  # ~15% of the stream could vanish while the overlay reported ~5% drops. An
+  # uncounted discard is worse than a bug: it hides bugs. If a new discard
+  # path appears, it counts, or this guard fails.
+  # Comment lines are stripped first: the function documents WHY it records,
+  # and a guard that its own explanation satisfies proves nothing (this guard
+  # failed exactly that way on first write).
+  if ! sed -n '/void Pacer::dropFrameForEnqueue/,/^}/p' "$pacer_init_source" | grep -v '^[[:space:]]*//' | grep -qF 'recordLegacyDrop'; then
+    err "Pacer::dropFrameForEnqueue drops frames without recording them (invisible loss)"
+  fi
+
   # ---- BL-2531: Gamescope VRR prefers Mailbox -----------------------------
   #
   # The device A/B (test146, host frame-generation off) measured Mailbox at
@@ -138,6 +153,56 @@ if [ "$fail" -eq 0 ]; then
     err "the Vulkan renderer no longer exposes its selected present mode to the overlay"
   grep -qF 'Decoder: %.*s%s via %.*s; RFI: %s' "$decoder_status_header" ||
     err "the overlay decoder line no longer keeps the driver string off it"
+
+  # ---- BL-2546: the pipeline sampler must cover EVERY pacing path ---------
+  #
+  # A mid-session stall could not be attributed client-vs-host (a finding had
+  # to be withdrawn over exactly this), so the sampler emits per-second deltas
+  # for every pipeline stage from its own thread. These guards pin the parts
+  # that die silently: the worker path's early return in initialize() (losing
+  # it makes vrr-worker sessions -- the ones under investigation -- the only
+  # unsampled mode), the decoder-side stage ticks, the shutdown-before-
+  # teardown ordering, and the five per-line signals. All greps strip //
+  # comments first; a guard a comment can satisfy proves nothing.
+  sampler_calls=$(grep -v '^[[:space:]]*//' "$pacer_init_source" |
+    grep -cF 'startPipelineSamplerIfRequested();')
+  if [ "${sampler_calls:-0}" -lt 2 ]; then
+    err "the pipeline sampler no longer starts on both Pacer::initialize() paths (worker early-return + legacy)"
+  fi
+  grep -v '^[[:space:]]*//' app/streaming/video/ffmpeg.cpp |
+    grep -qF 'noteFrameReceived();' ||
+    err "the decoder no longer ticks frame arrivals for the pipeline sampler"
+  grep -v '^[[:space:]]*//' app/streaming/video/ffmpeg.cpp |
+    grep -qF 'noteFrameDecoded();' ||
+    err "the decoder no longer ticks decodes for the pipeline sampler"
+  if ! sed -n '/m_Shutdown = true;/,/m_Stopping = true;/p' "$pacer_init_source" | grep -v '^[[:space:]]*//' | grep -qF 'stopPipelineSampler();'; then
+    err "Pacer::shutdown no longer stops the sampler before tearing down what it reads"
+  fi
+  if ! grep -v '^[[:space:]]*//' "$pacer_init_source" | grep -qF 'recv +%llu dec +%llu pres +%llu'; then
+    err "the sampler line lost its per-stage deltas (stall attribution needs recv/dec/pres together)"
+  fi
+  if ! grep -v '^[[:space:]]*//' "$pacer_init_source" | grep -qF 'queue %llu'; then
+    err "the sampler line no longer reports render-queue depth"
+  fi
+
+  # ---- BL-2543: the queue-delay statistic must be un-poisonable -----------
+  #
+  # The legacy path printed 40838.61 ms / 16175.61 ms on identically
+  # configured arms: an unguarded (beforeRender - pkt_dts) wraps a uint64 by
+  # ~1.8e19 us on one bad stamp and the narrowing ms cast scrambles it into a
+  # stable-looking number. Queue delay is the statistic that cracked BL-2541;
+  # a garbage value there misdirects the next investigation. The source must
+  # validate the stamp, and the report must divide by the delay-sample count
+  # -- never by renderedFrames, which includes sampleless frames.
+  if ! grep -v '^[[:space:]]*//' "$pacer_init_source" | grep -qF 'pacerTimeValid'; then
+    err "Pacer::renderFrame feeds the queue-delay accumulator without validating the decode stamp"
+  fi
+  if ! grep -v '^[[:space:]]*//' "$stats_source" | grep -qF 'stats.pacerTimeSampledFrames != 0'; then
+    err "the queue-delay report is no longer gated on having any delay samples"
+  fi
+  if grep -v '^[[:space:]]*//' "$stats_source" | grep -qF 'stats.totalPacerTime / stats.renderedFrames'; then
+    err "the queue-delay average divides by renderedFrames again (includes sampleless frames)"
+  fi
 fi
 
 if [ "$fail" -ne 0 ]; then
