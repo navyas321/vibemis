@@ -13,13 +13,13 @@ constexpr uint64_t kQ16Half = kQ16One >> 1;
 constexpr uint64_t kMaximumForwardMovementUs = kMicrosecondsPerSecond;
 constexpr uint64_t kRenderLeadFloorUs = 1000ULL;
 constexpr uint64_t kRenderLeadCeilingUs = 6500ULL;
-constexpr uint64_t kRenderLeadSlackUs = 500ULL;
-constexpr uint64_t kPresentationSafetyUs = 250ULL;
+constexpr uint64_t kRenderLeadSlackUs = 0ULL;
+constexpr uint64_t kPresentationSafetyUs = 0ULL;
 constexpr uint64_t kReadinessCeilingUs = 10000ULL;
 constexpr uint64_t kMinimumReadinessReserveUs = 500ULL;
 constexpr uint64_t kColdStartReadinessDemandUs = 1500ULL;
-constexpr uint64_t kArrivalSpreadGuardUs = 250ULL;
-constexpr uint64_t kReadinessAcquireStepUs = 100ULL;
+constexpr uint64_t kArrivalSpreadGuardUs = 900ULL;
+constexpr uint64_t kReadinessAcquireStepUs = 1000ULL;
 constexpr uint64_t kMaximumWakeLeadUs = 2000ULL;
 constexpr uint64_t kMaximumTargetWakeLeadUs = 500ULL;
 constexpr uint64_t kMinimumGuardUs = 100ULL;
@@ -40,7 +40,7 @@ constexpr size_t kMinimumCadenceSamples = 6;
 // reaches 480 FPS, so retain one anchor plus every frame in that window.
 constexpr size_t kMaximumCadenceSamples = 512;
 constexpr size_t kRateCandidateSampleCount = 3;
-constexpr uint64_t kLooseCadenceWindowUs = 500000ULL;
+constexpr uint64_t kLooseCadenceWindowUs = 350000ULL;
 constexpr uint64_t kTightCadenceWindowUs = 1000000ULL;
 // Raw timestamp atoms may legitimately dither by nearly 2:1. Only a much
 // larger one-frame departure starts the provisional fast-recovery path.
