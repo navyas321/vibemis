@@ -61,6 +61,10 @@ void Pacer::shutdown()
     }
     m_Shutdown = true;
 
+    // BL-2541: commit the buffered present-trace tail before the threads that
+    // write it are torn down below.
+    closePresentTrace();
+
     if (m_VrrWorker != nullptr) {
         // The VRR worker owns the renderer context and releases it from its
         // own thread after cancelling any prepared frame.
@@ -436,6 +440,10 @@ bool Pacer::initialize(SDL_Window* window, int maxVideoFps,
         m_VsyncThread = SDL_CreateThread(Pacer::vsyncThread, "PacerVsync", this);
     }
 
+    // BL-2541: open the present trace once the pacing path is fully resolved,
+    // so its header records which mode actually got built.
+    openPresentTraceIfRequested();
+
     if (m_VsyncRenderer->isRenderThreadSupported()) {
         m_RenderThread = SDL_CreateThread(Pacer::renderThread, "PacerRender", this);
     }
@@ -459,6 +467,44 @@ void Pacer::notifyWindowChanged(PWINDOW_STATE_CHANGE_INFO info)
     // overrides this path to discard stale work on suspension/minimize.
 }
 
+void Pacer::openPresentTraceIfRequested()
+{
+    // BL-2541: cadence diagnostics for the paths MOONLIGHT_VRR_TRACE cannot
+    // see (unpaced adaptive, legacy V-sync, and the no-VsyncSource default).
+    // One timestamp per presented frame is all the judder metrics need:
+    // inter-present intervals, the repeat-beat regularity, and hitch counts.
+    const char* tracePath = SDL_getenv("VIBEMIS_PRESENT_TRACE");
+    if (tracePath == nullptr || tracePath[0] == '\0') {
+        return;
+    }
+
+#ifdef _WIN32
+    if (fopen_s(&m_PresentTraceFile, tracePath, "w") != 0) {
+        m_PresentTraceFile = nullptr;
+    }
+#else
+    m_PresentTraceFile = std::fopen(tracePath, "w");
+#endif
+    if (m_PresentTraceFile == nullptr) {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "Unable to open VIBEMIS_PRESENT_TRACE file: %s", tracePath);
+        return;
+    }
+
+    std::fprintf(m_PresentTraceFile, "present_us,pacing_mode\n");
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "[BL-2541] present trace active (%s), pacing: %s",
+                tracePath, pacingModeName());
+}
+
+void Pacer::closePresentTrace()
+{
+    if (m_PresentTraceFile != nullptr) {
+        std::fclose(m_PresentTraceFile);
+        m_PresentTraceFile = nullptr;
+    }
+}
+
 void Pacer::renderFrame(AVFrame* frame)
 {
     // Count time spent in Pacer's queues
@@ -466,6 +512,14 @@ void Pacer::renderFrame(AVFrame* frame)
     // Render it
     m_VsyncRenderer->renderFrame(frame);
     uint64_t afterRender = LiGetMicroseconds();
+
+    // BL-2541: one line per presented frame when tracing is enabled. Buffered,
+    // so this stays off the critical path; fclose() commits the tail.
+    if (m_PresentTraceFile != nullptr) {
+        std::fprintf(m_PresentTraceFile, "%llu,%s\n",
+                     static_cast<unsigned long long>(afterRender),
+                     pacingModeName());
+    }
 
     m_Telemetry.recordLegacyFrame(
         beforeRender - static_cast<uint64_t>(frame->pkt_dts),

@@ -62,6 +62,19 @@ public:
     // keying them on the worker made both wrong for unpaced VRR sessions.
     bool isAdaptivePresentationActive() const;
 
+    // BL-2541: present-timestamp trace for the NON-worker paths.
+    //
+    // MOONLIGHT_VRR_TRACE is opened by VrrPacingWorker, so only worker
+    // sessions could ever be measured for cadence. That made the unpaced and
+    // VRR-off paths -- including the default on every platform without a
+    // VsyncSource -- structurally unmeasurable for judder, which is the one
+    // property that decides whether a viewer sees ghosting. VIBEMIS_PRESENT_TRACE
+    // writes one microsecond timestamp per presented frame from
+    // Pacer::renderFrame(), which every non-worker path funnels through.
+    // Diagnostic only, flag-gated, no effect when unset.
+    void openPresentTraceIfRequested();
+    void closePresentTrace();
+
     // BL-2529: terse, screen-sized name of the pacing path this session
     // actually built, for the performance overlay. Resolved after
     // initialize(); "none" before it runs.
@@ -117,4 +130,8 @@ private:
     PacerTelemetry m_Telemetry;
     VrrPacingMode m_PacingMode = VrrPacingMode::Fixed;
     std::unique_ptr<VrrPacingWorker> m_VrrWorker;
+
+    // BL-2541: see openPresentTraceIfRequested(). Written only from the render
+    // thread inside renderFrame(); null unless VIBEMIS_PRESENT_TRACE is set.
+    std::FILE* m_PresentTraceFile = nullptr;
 };
