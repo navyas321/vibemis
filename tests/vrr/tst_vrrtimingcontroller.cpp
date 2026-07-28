@@ -192,8 +192,9 @@ void testTimingFormulaeAndReserveCap()
     VrrTimingController controller(config(60, 120));
     VrrTimingDecision first = controller.schedule(
         frame(1, 0, true, 100000), 100000);
-    expect(first.guardUs == 130, "display guard must be displayPeriod / 64");
-    expect(first.headroomUs == 8204,
+    expect(first.guardUs == 100,
+           "display guard must be displayPeriod / 96 clamped to the minimum guard");
+    expect(first.headroomUs == 8234,
            "headroom must subtract one display period and the guard");
     expect(first.targetUs == 101250 && first.renderStartUs == 100250,
            "target must include render lead and presentation safety");
@@ -201,7 +202,7 @@ void testTimingFormulaeAndReserveCap()
     controller.noteSubmission(true, false, first.targetUs);
     VrrTimingDecision second = controller.schedule(
         frame(2, 1500, true, 116666), 116666);
-    expect(second.targetUs >= first.targetUs + 8333 + 130,
+    expect(second.targetUs >= first.targetUs + 8333 + 100,
            "target must honor the prior presentation floor and guard");
 
     VrrTimingController capped(config(360, 120));
@@ -378,18 +379,18 @@ void testSpacingGuardFeedback()
         frame(1, 0, true, 100000), 100000);
     controller.noteSubmission(true, false, first.targetUs);
     controller.noteSpacingDeficit(300);
-    expect(controller.guardUs() == 430,
+    expect(controller.guardUs() == 400,
            "a spacing deficit must raise the bounded guard directly");
 
     VrrTimingDecision second = controller.schedule(
         frame(2, 1500, true, 116666), 116666);
-    expect(second.targetUs >= first.targetUs + 8333 + 430,
+    expect(second.targetUs >= first.targetUs + 8333 + 400,
            "the raised guard must affect the next display-spacing floor");
 
     for (int i = 0; i < 120; ++i) {
         controller.noteSpacingDeficit(0);
     }
-    expect(controller.guardUs() == 380,
+    expect(controller.guardUs() == 350,
            "a clean run must decay the guard by one small step");
 }
 
@@ -415,22 +416,24 @@ void testNearRefreshRequestsLatchedPresentation()
 
 void testLatchedPresentationRecoversAfterGuardDecay()
 {
-    // At 100 FPS on a 120 Hz panel, the base guard leaves just over the
-    // immediate-presentation threshold. A single spacing correction should
-    // select latching while it is needed, but must not make that cadence stay
-    // latched after the guard has returned to its normal value.
+    // At 100 FPS on a 120 Hz panel, the base guard (100 us via the /96
+    // divisor and minimum-guard clamp) leaves 1567 us of headroom, just over
+    // the 1500 us immediate-presentation threshold. A spacing correction that
+    // pushes the guard past 167 us should select latching while it is needed,
+    // but must not make that cadence stay latched after the guard has decayed
+    // back to its base value.
     VrrTimingController controller(config(100, 120));
     VrrTimingDecision decision = controller.schedule(
         frame(1, 0, true, 100000), 100000);
     expect(!decision.latchedPresentation,
            "100 FPS must begin in immediate mode with its base guard");
 
-    controller.noteSpacingDeficit(50);
+    controller.noteSpacingDeficit(70);
     decision = controller.schedule(frame(2, 900, true, 110000), 110000);
     expect(decision.latchedPresentation,
            "a transient guard increase must select the safe latched path");
 
-    for (int i = 0; i < 120; ++i) {
+    for (int i = 0; i < 240; ++i) {
         controller.noteSpacingDeficit(0);
     }
     decision = controller.schedule(frame(3, 1800, true, 120000), 120000);
@@ -742,10 +745,19 @@ void testDecodeTailAdaptation()
         controller.noteSubmission(true, false, decision.targetUs);
     }
 
-    expect(controller.renderLeadUs() >= 1500,
-           "preparation duration must include render slack");
-    expect(controller.timingBudgetUs() > 1750,
-           "positive readiness tail must grow the timing budget");
+    // Upstream's retuned model replaced the fixed 500 us render slack with a
+    // p99 preparation percentile over a longer learning window; with every
+    // observed preparation at 1000 us the learned lead is exactly that.
+    expect(controller.renderLeadUs() == 1000,
+           "render lead must follow the learned preparation percentile");
+    // The 5000 us decode tail must be LEARNED (demand includes spread plus
+    // the arrival guard), while 60-on-120's wide cadence headroom absorbs it
+    // without a standing reserve: budget stays at the floor of minimum
+    // reserve + render lead + presentation safety.
+    expect(controller.diagnostics().readinessDemandUs >= 5000,
+           "a decode tail must be learned into readiness demand");
+    expect(controller.timingBudgetUs() == 1750,
+           "wide cadence headroom must absorb the tail without standing latency");
 }
 
 void testRateChangeReseedsReadinessBudget()

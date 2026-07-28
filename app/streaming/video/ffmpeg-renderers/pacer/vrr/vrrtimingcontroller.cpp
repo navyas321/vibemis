@@ -756,6 +756,12 @@ void VrrTimingController::updateLearnedBudgets()
             percentile(m_TargetSchedulerDelays,
                        m_Parameters.schedulerPercentile));
     }
+
+    // BL-2541: a larger learned render lead must IMMEDIATELY shrink the
+    // scheduling reserve. The readiness model runs before this in
+    // noteSubmission, so without this call the budget would stay capped
+    // against the previous, smaller render lead until the next acquire.
+    enforceSourceIntervalBudget();
 }
 
 void VrrTimingController::updateReadinessModel()
@@ -829,7 +835,21 @@ void VrrTimingController::applyReadinessBudget(bool acquireReserve)
         effectiveDemandUs > usableHeadroomUs ?
             effectiveDemandUs - usableHeadroomUs : 0);
 
+    // BL-2541: near the panel ceiling, presentation backpressure is part of
+    // the queue age that this reserve creates. Letting readiness consume a
+    // complete source interval before adding render lead turns that feedback
+    // into a standing multi-frame buffer: the worker reaches its bounded
+    // capacity, coalesces otherwise displayable frames, and reports the loss
+    // as a pacer drop. Cap the reserve here and bound the ramp TARGET below,
+    // so the budget never even transiently exceeds what one source interval
+    // can pay for -- clamping only the ramp's result would let each acquire
+    // step overshoot the cap between submissions.
+    enforceSourceIntervalBudget();
+
     const int64_t ceilingUs = static_cast<int64_t>(readinessCeilingUs());
+    const int64_t maximumBudgetUs = static_cast<int64_t>(
+        std::min<uint64_t>(maximumReadinessBudgetUs(),
+                           static_cast<uint64_t>(ceilingUs)));
     const int64_t reserveUs = static_cast<int64_t>(
         std::min<uint64_t>(m_AppliedReadinessReserveUs,
                            static_cast<uint64_t>(ceilingUs)));
@@ -838,10 +858,10 @@ void VrrTimingController::applyReadinessBudget(bool acquireReserve)
         std::numeric_limits<int64_t>::max() :
         m_ReadinessPhaseUs + reserveUs;
     const int64_t clampedDesiredUs = std::max(
-        -ceilingUs, std::min(desiredUs, ceilingUs));
+        -ceilingUs, std::min(desiredUs, maximumBudgetUs));
     if (!acquireReserve) {
         m_ReadinessBudgetUs = std::max(
-            -ceilingUs, std::min(m_ReadinessPhaseUs, ceilingUs));
+            -ceilingUs, std::min(m_ReadinessPhaseUs, maximumBudgetUs));
     }
     else if (clampedDesiredUs > m_ReadinessBudgetUs) {
         m_ReadinessBudgetUs += std::min<int64_t>(
@@ -853,11 +873,6 @@ void VrrTimingController::applyReadinessBudget(bool acquireReserve)
             m_ReadinessBudgetUs - clampedDesiredUs,
             static_cast<int64_t>(m_Parameters.readinessAcquireStepUs));
     }
-
-    // BL-2541: the reserve ramp above can otherwise carry a multi-frame
-    // budget forward after presentation backpressure appears. Cap it to what
-    // one source interval can actually pay for.
-    enforceSourceIntervalBudget();
 }
 
 uint64_t VrrTimingController::timingBudgetUs() const
@@ -979,13 +994,21 @@ VrrTimingDiagnostics VrrTimingController::diagnostics() const
 
 uint64_t VrrTimingController::renderLeadFloorUs() const
 {
-    return std::min(m_Parameters.renderLeadFloorUs, m_SourcePeriodUs);
+    // BL-2541: render lead may never consume the presentation-safety margin;
+    // the source-interval budget cap depends on that margin staying free.
+    const uint64_t maximumLeadUs = m_SourcePeriodUs >
+            m_Parameters.presentationSafetyUs ?
+        m_SourcePeriodUs - m_Parameters.presentationSafetyUs : 0;
+    return std::min(m_Parameters.renderLeadFloorUs, maximumLeadUs);
 }
 
 uint64_t VrrTimingController::renderLeadCeilingUs() const
 {
+    const uint64_t maximumLeadUs = m_SourcePeriodUs >
+            m_Parameters.presentationSafetyUs ?
+        m_SourcePeriodUs - m_Parameters.presentationSafetyUs : 0;
     const uint64_t ceilingUs = std::min(m_Parameters.renderLeadCeilingUs,
-                                        m_SourcePeriodUs);
+                                        maximumLeadUs);
     return std::max(renderLeadFloorUs(), ceilingUs);
 }
 

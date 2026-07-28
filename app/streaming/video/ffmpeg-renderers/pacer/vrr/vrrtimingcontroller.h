@@ -9,25 +9,42 @@
 // This list is also the replay/trace parameter schema. Keeping the JSON name,
 // C++ member, type, and production default together prevents those copies from
 // drifting while avoiding hand-written serialization for every field.
+//
+// Defaults follow current upstream (nonary/master) except four deliberate
+// vibemis-local values, all replay-overridable:
+//   - presentation_safety_us 250 (upstream 0): the margin between our
+//     source-interval budget cap and the interval end. With 0, the capped
+//     budget lands exactly on the next frame's due time and any scheduling
+//     jitter becomes present backpressure -- the standing-queue collapse
+//     BL-2541's cap exists to prevent. Upstream has no such cap to protect.
+//   - arrival_spread_guard_us 250 (upstream 900): with safety restored, 900
+//     would put the idle near-ceiling timing budget at 2150 us, breaking the
+//     tested <= 2000 us idle-latency envelope. The dynamic reserve learning
+//     (attack/release, acquire step) stays upstream.
+//   - latch_*_period_numerator 0 (upstream 3 and 13): upstream's
+//     period-scaled thresholds latch every cadence faster than refresh/4,
+//     which would remove immediate flips from genuinely adaptive displays.
+//     vibemis keeps its flat 1500/2000 us near-refresh latch policy. The
+//     defect arm (116-on-120) latches under both policies.
 #define VRR_TIMING_PARAMETER_FIELDS(X) \
     X(uint64_t, maximum_forward_movement_us, maximumForwardMovementUs, 1000000) \
     X(uint64_t, render_lead_floor_us, renderLeadFloorUs, 1000) \
     X(uint64_t, render_lead_ceiling_us, renderLeadCeilingUs, 6500) \
     X(uint64_t, render_lead_slack_us, renderLeadSlackUs, 0) \
-    X(uint64_t, presentation_safety_us, presentationSafetyUs, 0) \
+    X(uint64_t, presentation_safety_us, presentationSafetyUs, 250) \
     X(uint64_t, readiness_ceiling_us, readinessCeilingUs, 10000) \
     X(uint64_t, minimum_readiness_reserve_us, minimumReadinessReserveUs, 500) \
     X(uint64_t, cold_start_readiness_demand_us, coldStartReadinessDemandUs, 1500) \
-    X(uint64_t, arrival_spread_guard_us, arrivalSpreadGuardUs, 900) \
+    X(uint64_t, arrival_spread_guard_us, arrivalSpreadGuardUs, 250) \
     X(uint64_t, readiness_acquire_step_us, readinessAcquireStepUs, 1000) \
     X(uint64_t, maximum_render_wake_lead_us, maximumRenderWakeLeadUs, 2000) \
     X(uint64_t, maximum_target_wake_lead_us, maximumTargetWakeLeadUs, 500) \
     X(uint64_t, minimum_guard_us, minimumGuardUs, 100) \
     X(uint64_t, latch_enter_headroom_us, latchedPresentationHeadroomUs, 1500) \
     X(uint64_t, latch_exit_headroom_us, latchedPresentationExitHeadroomUs, 2000) \
-    X(uint64_t, latch_enter_headroom_period_numerator, latchedPresentationHeadroomPeriodNumerator, 3) \
+    X(uint64_t, latch_enter_headroom_period_numerator, latchedPresentationHeadroomPeriodNumerator, 0) \
     X(uint64_t, latch_enter_headroom_period_denominator, latchedPresentationHeadroomPeriodDenominator, 1) \
-    X(uint64_t, latch_exit_headroom_period_numerator, latchedPresentationExitHeadroomPeriodNumerator, 13) \
+    X(uint64_t, latch_exit_headroom_period_numerator, latchedPresentationExitHeadroomPeriodNumerator, 0) \
     X(uint64_t, latch_exit_headroom_period_denominator, latchedPresentationExitHeadroomPeriodDenominator, 4) \
     X(uint64_t, maximum_base_guard_us, maximumBaseGuardUs, 250) \
     X(uint64_t, maximum_adaptive_guard_us, maximumAdaptiveGuardUs, 1000) \
