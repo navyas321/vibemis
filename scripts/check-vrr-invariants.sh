@@ -61,13 +61,19 @@ if [ "$fail" -eq 0 ]; then
 
   # ---- VRR pacing path routing ---------------------------------------------
   #
-  # The VRR decision must flow through the tested pacing-mode policy. VRR
-  # always creates the worker when active (matching upstream Nonary), and
-  # forces pacing on when VRR is rejected (since VRR requires V-sync).
+  # RATIFICATION (2026-07-29, maintainer directive "no divergences at all"):
+  # BL-2529's three-mode pacing gate (AdaptivePaced/AdaptiveUnpaced/Fixed) was
+  # deliberately replaced with Nonary's two-mode model (AdaptivePaced/Fixed).
+  # VRR always creates the worker when active, matching upstream. The Frame
+  # pacing switch is inert under VRR — the worker runs regardless.
+  #
+  # BL-2529's original motivation (hardware-measured best combo on Legion Go:
+  # V-Sync on, frame pacing off, VRR on) is superseded by the Nonary alignment,
+  # which prevents the ~20% throughput loss via dropFrameForEnqueue() that the
+  # unpaced path caused. If this trade-off needs revisiting, the decision record
+  # is in DAILY-WORK-REVIEW-2026-07-29.md (vibemis-agent-meta).
   grep -qF 'VrrPacingPolicy::select(' "$pacer_init_source" ||
     err "Pacer no longer routes the VRR decision through the tested pacing-mode policy"
-  grep -qF 'enablePacing' "$pacing_mode_header" ||
-    err "the VRR pacing-mode policy no longer consults the frame-pacing preference"
   grep -qF 'isAdaptivePresentationActive()' "$session_source" ||
     err "Session no longer consults adaptive-presentation state"
 

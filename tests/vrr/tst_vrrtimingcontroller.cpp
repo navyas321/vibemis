@@ -192,17 +192,27 @@ void testTimingFormulaeAndReserveCap()
     VrrTimingController controller(config(60, 120));
     VrrTimingDecision first = controller.schedule(
         frame(1, 0, true, 100000), 100000);
-    expect(first.guardUs == 100,
-           "display guard must be displayPeriod / 96 clamped to the minimum guard");
-    expect(first.headroomUs == 8234,
+    const VrrTimingParameters& parameters = controller.parameters();
+    const uint64_t expectedGuardUs = std::clamp(
+        controller.displayPeriodUs() / parameters.baseGuardDivisor,
+        parameters.minimumGuardUs, parameters.maximumBaseGuardUs);
+    expect(first.guardUs == expectedGuardUs,
+           "display guard must honor the configured divisor and bounds");
+    expect(first.headroomUs ==
+               controller.sourcePeriodUs() - controller.displayPeriodUs() -
+                   expectedGuardUs,
            "headroom must subtract one display period and the guard");
-    expect(first.targetUs == 101000 && first.renderStartUs == 100000,
-           "target must include render lead");
+    expect(first.targetUs ==
+               100000 + first.renderLeadUs + parameters.presentationSafetyUs &&
+               first.renderStartUs ==
+                   first.targetUs - first.renderLeadUs - first.renderWakeLeadUs,
+           "target must include render lead and presentation safety");
 
     controller.noteSubmission(true, false, first.targetUs);
     VrrTimingDecision second = controller.schedule(
         frame(2, 1500, true, 116666), 116666);
-    expect(second.targetUs >= first.targetUs + 8333 + 100,
+    expect(second.targetUs >=
+               first.targetUs + controller.displayPeriodUs() + expectedGuardUs,
            "target must honor the prior presentation floor and guard");
 
     VrrTimingController capped(config(360, 120));
@@ -402,10 +412,10 @@ void testNearRefreshRequestsLatchedPresentation()
     expect(decision.latchedPresentation,
            "a near-refresh cadence must request latched presentation");
 
-    VrrTimingController withHeadroom(config(96, 120));
+    VrrTimingController withHeadroom(config(20, 120));
     decision = withHeadroom.schedule(frame(1, 0, true, 100000), 100000);
-    expect(decision.latchedPresentation,
-           "period-scaled latch threshold catches cadences faster than refresh/4");
+    expect(!decision.latchedPresentation,
+           "a cadence beyond the display-scaled protection window must keep immediate flips");
 
     VrrTimingController immutableMailbox(config(116, 120), false);
     decision = immutableMailbox.schedule(
@@ -416,19 +426,72 @@ void testNearRefreshRequestsLatchedPresentation()
 
 void testLatchedPresentationRecoversAfterGuardDecay()
 {
-    // With the period-scaled latch threshold (3 * displayPeriod = 24999 us
-    // on a 120 Hz panel), cadences faster than ~30 FPS latch. 100 FPS is
-    // well inside the latch zone and stays latched regardless of guard state.
-    VrrTimingController controller(config(100, 120));
+    VrrTimingController controller(config(35, 144));
     VrrTimingDecision decision = controller.schedule(
         frame(1, 0, true, 100000), 100000);
-    expect(decision.latchedPresentation,
-           "100 FPS latches under the period-scaled threshold");
+    expect(!decision.latchedPresentation,
+           "a cadence beyond the scaled entry window must begin in immediate mode");
 
-    controller.noteSpacingDeficit(70);
-    decision = controller.schedule(frame(2, 900, true, 110000), 110000);
+    const uint64_t baseGuardUs = decision.guardUs;
+    const VrrTimingParameters& parameters = controller.parameters();
+    const uint64_t scaledLatchHeadroomUs =
+        controller.displayPeriodUs() *
+            parameters.latchedPresentationHeadroomPeriodNumerator /
+            parameters.latchedPresentationHeadroomPeriodDenominator;
+    const uint64_t latchHeadroomUs = std::max(
+        parameters.latchedPresentationHeadroomUs,
+        scaledLatchHeadroomUs);
+    const uint64_t latchDeficitUs =
+        decision.headroomUs - latchHeadroomUs + 1;
+    controller.noteSpacingDeficit(latchDeficitUs);
+    decision = controller.schedule(
+        frame(2, 2571, true, 128571), 128571);
     expect(decision.latchedPresentation,
-           "100 FPS stays latched with guard increase");
+           "a transient guard increase must select the safe latched path");
+
+    const size_t decayCycles = static_cast<size_t>(
+        (controller.guardUs() - baseGuardUs +
+         parameters.guardStepUs - 1) /
+        parameters.guardStepUs);
+    for (size_t i = 0;
+         i < decayCycles * parameters.guardDecayFrames; ++i) {
+        controller.noteSpacingDeficit(0);
+    }
+    decision = controller.schedule(
+        frame(3, 5143, true, 157144), 157144);
+    expect(!decision.latchedPresentation,
+           "a fully recovered guard must restore immediate presentation outside the scaled window");
+}
+
+void testDisplayScaledLatchedPresentationBoundary()
+{
+    const struct {
+        int displayHz;
+        int protectedRateHz;
+        int adaptiveRateHz;
+    } cases[] = {
+        {60, 15, 14},
+        {120, 30, 29},
+        {144, 36, 35},
+        {165, 42, 41},
+    };
+    for (const auto& value : cases) {
+        VrrTimingController protectedController(
+            config(value.protectedRateHz, value.displayHz));
+        const VrrTimingDecision protectedDecision =
+            protectedController.schedule(
+                frame(1, 0, true, 100000), 100000);
+        expect(protectedDecision.latchedPresentation,
+               "three-period latch protection must scale with display refresh");
+
+        VrrTimingController adaptiveController(
+            config(value.adaptiveRateHz, value.displayHz));
+        const VrrTimingDecision adaptiveDecision =
+            adaptiveController.schedule(
+                frame(1, 0, true, 100000), 100000);
+        expect(!adaptiveDecision.latchedPresentation,
+               "cadence beyond the three-period window must stay adaptive at every display rate");
+    }
 }
 
 void testHeadroomAwareReadinessReserve()
@@ -1111,6 +1174,7 @@ int main()
     testSpacingGuardFeedback();
     testNearRefreshRequestsLatchedPresentation();
     testLatchedPresentationRecoversAfterGuardDecay();
+    testDisplayScaledLatchedPresentationBoundary();
     testHeadroomAwareReadinessReserve();
     testNearCeilingBufferFitsOneSourceInterval();
     testRenderLeadGrowthIsStable();
