@@ -42,7 +42,11 @@ BASE=$(git merge-base "$BASE" "$HEAD" 2>/dev/null || printf '%s' "$BASE")
 # code block, i.e. someone quoting an example -- including the specimen note printed by
 # this script's own failure message. Accepting it would let a copy-pasted example both
 # satisfy this guard and become the release's hero bullet.
-note_in() { printf '%s\n' "$1" | grep -qiE '^Changelog!?:[[:space:]]*[^[:space:]]'; }
+#
+# `Changelog-Major:` counts too: it IS the note (it carries the sentence and additionally
+# marks the fix as big enough to headline a production release). Omitting it here would
+# fail a PR that wrote the strongest possible note and tell it to write a weaker one.
+note_in() { printf '%s\n' "$1" | grep -qiE '^Changelog(-Major)?!?:[[:space:]]*[^[:space:]]'; }
 
 # 1. Does this PR change anything a user receives?
 #
@@ -104,6 +108,15 @@ Changelog: Fixes stuttering and choppy video on AMD handhelds (Legion Go S, Stea
 
 Write the effect, not the mechanism. "Enable RFI by default on AMD/Gallium" is the
 mechanism; the line above is what actually changed for someone using the app.
+
+If this is a BIG fix -- one that resolves a major issue and should headline the next
+production release rather than sit in the collapsed changelog -- write it as:
+
+Changelog-Major: Fixes stuttering and choppy video on AMD handhelds (Legion Go S, Steam Deck)
+
+A stable release's "What's new for you" carries features plus Changelog-Major: fixes only;
+plain Changelog: notes still appear in full on every pre-release and in the stable
+release's complete technical changelog.
 
 Escape hatches, when they genuinely apply:
   Changelog: none    - looks user-facing by its type but truly is not (pure refactor,

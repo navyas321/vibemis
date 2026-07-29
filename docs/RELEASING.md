@@ -122,6 +122,9 @@ So the rule is simple: **anything a user could notice needs a `Changelog:` line.
 enforces it — the `Changelog note` check fails a PR that changes shipping files without
 one (`scripts/check-pr-changelog-note.sh`). Plumbing-only PRs are exempt automatically.
 
+On a **stable** cut the hero is curated down to features and major-marked fixes — see
+[A stable hero is curated](#a-stable-hero-is-curated-a-pre-release-hero-is-complete) below.
+
 If nobody writes a note, the hero honestly says no highlights were flagged rather than
 promoting jargon into it. **Do not fix that after the fact with `gh release edit`.** That
 is what used to happen — `0.5.0-beta.001`, `0.4.3` and `0.5.0-beta.004` all had their
@@ -181,6 +184,41 @@ Two explicit overrides exist for the genuine edge cases:
 |---|---|
 | `Changelog: none` | Looks user-facing by type but is not (pure refactor, internal-only fix). Demotes it. |
 | `Changelog!: <text>` | Really is user-visible despite touching only build/docs paths (e.g. a packaging change that alters what the AppImage does on the device). Promotes it. |
+| `Changelog-Major: <text>` | This fix resolves a **major** issue and should headline the next **stable** release. Carries the note text as well — do not also write a plain `Changelog:` line. |
+
+### A stable hero is curated; a pre-release hero is complete
+
+The two tiers are read by different people asking different questions, so they get
+different hero sections. The technical changelog is identical either way and always lists
+**every** commit — nothing is ever dropped, only moved.
+
+| | Pre-release (`-alpha`/`-beta`/`-rc`) | Stable (bare `X.Y.Z`) |
+|---|---|---|
+| Hero contains | every `Changelog:` note | `feat:` notes + `Changelog-Major:` notes |
+| Technical changelog | `## 🚧 Development Build Changelog`, expanded | collapsed into one `<details>`, plumbing inside it |
+
+A beta reader is a tester tracking the cycle — "what changed since the last build?" — and
+every note belongs in that answer. A stable reader is deciding whether to install.
+`0.5.0`, the first production release cut by this generator, answered them with **28 hero
+bullets, 26 of them fixes**, each a forty-word sentence about a frame-pacing internal.
+Every line was true; the section as a whole said nothing about what the release *was*.
+
+So: **write `Changelog-Major:` on the fixes that are the reason to ship a release.** If a
+stable cut has no feature and no major-marked fix, the hero says so honestly — it is a
+maintenance roll-up, and that is a real and useful thing to tell someone.
+
+### Upstream attribution never reaches the hero
+
+Fork and maintainer handles (`Nonary`, `wjbeckett`, `cgutman`, `moonlight-qt`) are
+**developer provenance**, and the generator keeps a note that names one out of the hero on
+every tier — it still appears in full in the technical changelog. `0.5.0`'s second hero
+bullet was *"Adopt Nonary VRR10 active-wait fix: remove the fixed yield-count limit
+(4096)…"*: a sentence addressed to whoever tracks the fork graph, published to people who
+wanted to know whether their handheld stutters less. Put the attribution in the commit
+body and write the *effect* in the note.
+
+Host types and protocols — **Artemis, Apollo, Sunshine, Moonlight** — are a genuine
+user-facing choice and are deliberately *not* filtered.
 
 **The trailer must start at column 0.** An indented line is a markdown code block — i.e.
 someone quoting an example — and is ignored on purpose. Before that rule existed, pasting

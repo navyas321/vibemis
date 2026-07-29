@@ -64,6 +64,17 @@ changelog_any_ships() {
 CHANGELOG_NOTE_RE='^Changelog:'
 CHANGELOG_BANG_NOTE_RE='^Changelog!:'
 
+# `Changelog-Major: <text>` is the SEVERITY marker, and it only matters on a stable cut.
+#
+# A pre-release hero answers "what landed since the last beta?", so every note belongs in
+# it. A production hero answers a different question -- "should I install this?" -- and a
+# 40-bullet wall of individually-true fix sentences answers it badly: 0.5.0 shipped with
+# 28 hero bullets, 26 of them fixes, and nothing in that list told a reader what the
+# release WAS. So a stable hero carries features plus the handful of fixes that resolve a
+# genuinely major issue, and this trailer is how an author says "this fix is one of them".
+# Everything else stays in the full technical changelog, which is complete either way.
+CHANGELOG_MAJOR_NOTE_RE='^Changelog-Major:'
+
 # A NOTE MAY WRAP ACROSS LINES.
 #
 # This used to read exactly one line (`grep -m1 | sed`), and 0.5.0-beta.017 shipped the
@@ -86,7 +97,8 @@ CHANGELOG_BANG_NOTE_RE='^Changelog!:'
 # only the note's FIRST line must sit at column 0, for the code-block reason below.
 CHANGELOG_TRAILER_KEY_RE='^[A-Za-z][A-Za-z0-9-]*!?:([ \t]|$)'
 
-changelog_extract_note() {  # $1 = "" for Changelog:, "!" for Changelog!:  (text on stdin)
+changelog_extract_note() {  # $1 = key variant: "" (Changelog:), "!" (Changelog!:),
+                            #      "-major" (Changelog-Major:).  Body text on stdin.
   local bang="${1:-}"
   # Case-INsensitive on the key, and the key is stripped with the SAME spellings it is
   # matched with. A previous version allowed case variation only on the first letter

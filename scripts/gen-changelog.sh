@@ -22,6 +22,12 @@
 #   ## 🚧 Development Build Changelog  <- categorized technical detail w/ hashes
 #   <details> 🔩 Internal / build plumbing </details>   <- collapsed, out of the way
 #
+# A BARE STABLE VERSION IS CURATED DIFFERENTLY (see is_stable_cut below): its hero carries
+# features plus fixes marked `Changelog-Major:`, and the whole technical changelog --
+# plumbing included -- collapses into one <details> underneath. Same generator, same
+# commits, nothing dropped; a production release page just leads with the two lines
+# someone deciding whether to install actually reads.
+#
 # The hero section is built EXCLUSIVELY from `Changelog:` lines that a human wrote in
 # the commit body. It never falls back to commit subjects, because a commit subject is
 # written for other developers and reads like one -- "CI consolidation + release gating
@@ -55,6 +61,35 @@ tier_rank() {  # $1 = tag/version -> stability rank (higher = more stable)
     *)         echo 4 ;;  # bare (no pre-release suffix) = stable
   esac
 }
+
+# ── Stable cuts get a CURATED hero, pre-releases get the full one ───────────────
+# The two tiers are read by different people asking different questions.
+#
+# A beta reader is a tester tracking the cycle: "what changed since the last build?"
+# Every note belongs in that list. A stable reader is deciding whether to install, and
+# 0.5.0 answered them with 28 hero bullets of which 26 were fixes -- "Fixes VRR streams
+# rendering below the decoded frame rate near the display refresh ceiling", "Corrects the
+# performance overlay's mislabeled network-jitter counter", forty-odd words each. Every
+# sentence true, the section as a whole useless: nothing in it said what the release WAS.
+#
+# So on a bare stable the hero is features plus fixes an author explicitly marked
+# `Changelog-Major:`, and the categorized technical changelog (which is unchanged, and
+# still lists every commit) moves into a collapsed block underneath. Nothing is deleted --
+# it stops competing with the two lines someone actually reads.
+is_stable_cut() {  # $1 = version -> 0 if this cut is a production release
+  is_version_tag "$1" || return 1
+  [ "$(tier_rank "$1")" -eq 4 ]
+}
+
+# Upstream forks and their maintainers are DEVELOPER provenance, not user-facing news.
+# 0.5.0's hero opened its second bullet with "Adopt Nonary VRR10 active-wait fix: remove
+# the fixed yield-count limit (4096)..." -- a sentence addressed to whoever tracks the
+# fork graph, published to people who wanted to know if their handheld stutters less.
+# The attribution belongs in the commit body and the technical changelog, both of which
+# keep it; the hero is the one place it does not belong. Deliberately narrow: only fork
+# and maintainer handles. "Artemis", "Apollo", "Sunshine" and "Moonlight" are host types
+# and protocols a user genuinely picks between, so they are NOT listed here.
+HERO_ATTRIBUTION_RE='(^|[^[:alnum:]])(nonary|wjbeckett|cgutman|moonlight-qt)([^[:alnum:]]|$)'
 
 # Only a real version tag may anchor a range. tier_rank() calls anything without a
 # pre-release infix "stable" (rank 4), which is right for `0.4.3` and catastrophically
@@ -211,6 +246,12 @@ ships() {  # $1 = hash -> 0 if any changed file reaches a user
 FEATURES=""; BUGFIXES=""; IMPROVEMENTS=""; OTHER=""; INTERNAL=""; WHATSNEW=""
 have_commits=false
 
+STABLE_CUT=false
+if is_stable_cut "$CURRENT_VERSION"; then
+  STABLE_CUT=true
+  echo "Stable cut: hero is curated (features + Changelog-Major: fixes); full changelog collapses below it." >&2
+fi
+
 while IFS='|' read -r hash subject; do
   [ -z "$hash" ] && continue
   have_commits=true
@@ -235,11 +276,22 @@ while IFS='|' read -r hash subject; do
   # dropped and the change vanished from the release notes entirely. The header called
   # the bang "the ONLY way to override the diff" while a stray sibling line defeated it.
   note_bang=$(changelog_extract_note "!" <<< "$body" || true)
+  note_major=$(changelog_extract_note "-major" <<< "$body" || true)
   note_plain=$(changelog_extract_note "" <<< "$body" || true)
   force_user_facing=false
+  # `Changelog-Major:` marks severity, NOT provenance, so it is orthogonal to the bang:
+  # it does not override the diff (a fix big enough to headline a production release
+  # ships code by definition, so the diff already agrees) and it does not change any
+  # technical-section routing. Its only effect is that the note survives the stable
+  # hero's curation gate below. Text-wise it is a note like any other, so it slots into
+  # the same precedence chain and an author never has to write the sentence twice.
+  is_major=false
+  [ -n "$note_major" ] && is_major=true
   if [ -n "$note_bang" ]; then
     note="$note_bang"
     force_user_facing=true
+  elif [ -n "$note_major" ]; then
+    note="$note_major"
   else
     note="$note_plain"
   fi
@@ -258,7 +310,7 @@ while IFS='|' read -r hash subject; do
   # `Changelog!: none` opts out too, instead of rendering a hero bullet reading "None".
   force_internal=false
   case "$(printf '%s' "$note" | tr '[:upper:]' '[:lower:]')" in
-    none|skip|internal|n/a|-) force_internal=true; force_user_facing=false; note="" ;;
+    none|skip|internal|n/a|-) force_internal=true; force_user_facing=false; is_major=false; note="" ;;
   esac
 
   # Plumbing is decided by the SUBJECT TYPE and THE DIFF -- never by whether a note
@@ -277,7 +329,30 @@ while IFS='|' read -r hash subject; do
 
   entry=$(md_escape "$(sentence_case "$(strip_md_structure "${note:-$clean}")")")
 
-  if [ -n "$note" ]; then
+  # Classified ONCE, and read by both the hero gate and the technical routing below.
+  # These used to be one if/elif chain at the bottom; the stable hero needs to know
+  # "is this a feature?" too, and two copies of the same regex ladder is how the hero
+  # and the technical section end up disagreeing about what a commit is.
+  kind=other
+  if   printf '%s' "$subject" | grep -qiE '^(feat|feature|add|implement|new)[:(]'; then kind=feature
+  elif printf '%s' "$subject" | grep -qiE '^(fix|bug|resolve|correct|hotfix)[:(]'; then kind=fix
+  elif printf '%s' "$subject" | grep -qiE '^(improve|enhance|update|optimize|optimise|perf|refactor)[:(]'; then kind=improvement
+  fi
+
+  # ── Does this note earn a place in the hero? ─────────────────────────────────
+  hero=true
+  if printf '%s' "$note" | grep -qiE "$HERO_ATTRIBUTION_RE"; then
+    # Fork provenance, not user-facing news. Kept in the technical changelog.
+    hero=false
+    echo "Note: hero bullet from ${hash} names an upstream fork/maintainer; technical section only." >&2
+  elif [ "$STABLE_CUT" = true ] && [ "$kind" != feature ] && [ "$is_major" != true ]; then
+    # A production hero is features + explicitly-marked major fixes. Everything else is
+    # accumulated maintenance and reads as noise next to them; it is all still listed,
+    # in full, in the collapsed technical changelog.
+    hero=false
+  fi
+
+  if [ -n "$note" ] && [ "$hero" = true ]; then
     # Dedupe: two commits carrying the same note render one hero bullet.
     # A note is arbitrary human text that can contain `*`, `?` and `[...]`. `grep -Fx`
     # states "literal, whole line" outright. (A `case $'\n'"$W" in *$'\n'"- $entry"...`
@@ -289,15 +364,12 @@ while IFS='|' read -r hash subject; do
     fi
   fi
 
-  if printf '%s' "$subject" | grep -qiE '^(feat|feature|add|implement|new)[:(]'; then
-    FEATURES="${FEATURES}- ${entry} (\`${hash}\`)"$'\n'
-  elif printf '%s' "$subject" | grep -qiE '^(fix|bug|resolve|correct|hotfix)[:(]'; then
-    BUGFIXES="${BUGFIXES}- ${entry} (\`${hash}\`)"$'\n'
-  elif printf '%s' "$subject" | grep -qiE '^(improve|enhance|update|optimize|optimise|perf|refactor)[:(]'; then
-    IMPROVEMENTS="${IMPROVEMENTS}- ${entry} (\`${hash}\`)"$'\n'
-  else
-    OTHER="${OTHER}- ${entry} (\`${hash}\`)"$'\n'
-  fi
+  case "$kind" in
+    feature)     FEATURES="${FEATURES}- ${entry} (\`${hash}\`)"$'\n' ;;
+    fix)         BUGFIXES="${BUGFIXES}- ${entry} (\`${hash}\`)"$'\n' ;;
+    improvement) IMPROVEMENTS="${IMPROVEMENTS}- ${entry} (\`${hash}\`)"$'\n' ;;
+    *)           OTHER="${OTHER}- ${entry} (\`${hash}\`)"$'\n' ;;
+  esac
 done <<< "$COMMITS"
 
 # ── Assembly ───────────────────────────────────────────────────────────────────
@@ -310,11 +382,25 @@ elif [ "$have_commits" != true ]; then
   printf '%s\n\n' "_No code changes since the previous release — this build was cut from the same source (CI re-run or infrastructure-only update)._"
 elif [ -z "${FEATURES}${BUGFIXES}${IMPROVEMENTS}${OTHER}" ]; then
   printf '%s\n\n' "_Internal tooling and maintenance only — nothing user-facing changed in this build._"
+elif [ "$STABLE_CUT" = true ]; then
+  # Said differently from the pre-release wording on purpose. "No highlights were
+  # flagged" reads as a process failure; on a stable cut with plenty of noted fixes and
+  # no feature or major-severity marker, a roll-up release is what this genuinely IS.
+  printf '%s\n\n' "_A maintenance release — no new features or major fixes in this one. The full list of changes is below._"
 else
   printf '%s\n\n' "_No user-facing highlights were flagged for this build — the technical changelog below has the full detail._"
 fi
 
-printf '## 🚧 Development Build Changelog\n\n'
+# On a stable cut the whole technical changelog collapses, plumbing included, so the
+# release page is the curated hero and nothing else until someone asks for detail. One
+# <details> rather than nesting the Internal block inside a second one: GitHub renders
+# nested collapsibles inconsistently, and the distinction only matters to whoever has
+# already opened the block -- a heading inside it carries that just as well.
+if [ "$STABLE_CUT" = true ]; then
+  printf '<details><summary>🚧 Full technical changelog — every change in this release</summary>\n\n'
+else
+  printf '## 🚧 Development Build Changelog\n\n'
+fi
 [ -n "$FEATURES" ]     && printf '### ✨ New Features\n%s\n' "$FEATURES"
 [ -n "$BUGFIXES" ]     && printf '### 🐛 Bug Fixes\n%s\n' "$BUGFIXES"
 [ -n "$IMPROVEMENTS" ] && printf '### 🔧 Improvements\n%s\n' "$IMPROVEMENTS"
@@ -324,7 +410,10 @@ if [ -z "${FEATURES}${BUGFIXES}${IMPROVEMENTS}${OTHER}" ] && [ -z "$INTERNAL" ];
 fi
 # Plumbing last and collapsed -- present for traceability, out of the way of what a
 # user actually gets from this build.
-if [ -n "$INTERNAL" ]; then
+if [ "$STABLE_CUT" = true ]; then
+  [ -n "$INTERNAL" ] && printf '### 🔩 Internal / build plumbing\n%s\n' "$INTERNAL"
+  printf '</details>\n'
+elif [ -n "$INTERNAL" ]; then
   printf '<details><summary>🔩 Internal / build plumbing</summary>\n\n%s\n</details>\n' "$INTERNAL"
 fi
 exit 0

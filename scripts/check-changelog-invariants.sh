@@ -94,6 +94,22 @@ mkrepo() {
   cd "$TMP/r" || { echo "FAIL: cannot cd to $TMP/r" >&2; exit 1; }
   t0=$fail
   git init -q -b main .
+  # THIS ALREADY HAPPENED. The $TMP guard above only validates the path this script
+  # computed; it cannot see a `git init` that silently re-inits an existing repo or a cd
+  # that landed somewhere else. On 2026-07-29 the identity below reached the real repo's
+  # .git/config, and 21 commits were authored as "guard <guard@example.com>" and pushed
+  # before anyone read an author line.
+  #
+  # Comparing `git rev-parse --show-toplevel` against "$TMP/r" is NOT the check: on Git
+  # Bash `mktemp -d` returns /tmp/tmp.XXXX while git returns C:/Users/…/Temp/tmp.XXXX,
+  # so a string compare fails every Windows run for a reason that has nothing to do with
+  # safety. Assert the property that actually separates the throwaway repo from anyone's
+  # real one, in any path format: it was created one line ago, so it has no commits and
+  # no remotes. A repo worth protecting has both.
+  if git rev-parse -q --verify HEAD >/dev/null 2>&1 || [ -n "$(git remote 2>/dev/null)" ]; then
+    echo "FAIL: $PWD already has commits or remotes — this is not the throwaway repo; refusing to write identity config into it" >&2
+    exit 1
+  fi
   git config user.name  "guard"
   git config user.email "guard@example.com"
   git config commit.gpgsign false
@@ -444,6 +460,99 @@ grep -qi "Co-authored-by\|s@example.com" <<<"$out" \
 grep -q "all six binaries" <<<"$out" \
   && err "25: the note absorbed the following paragraph — a continuation must stop at a blank line"
 [ "$fail" = "$t0" ] && ok "wrapped Changelog: notes are published whole, stopping at a blank line or the next trailer"
+
+# ── Stable-tier hero curation (26-30) ──────────────────────────────────────────
+# 0.5.0 -- the first production release cut by this generator -- opened with 28 hero
+# bullets, 26 of which were fixes, each a forty-word sentence about a frame-pacing
+# internal. Every line was true and the section as a whole told a prospective user
+# nothing about what the release WAS. A pre-release hero is a changelist for testers and
+# is right to list everything; a production hero has to answer "should I install this?".
+# So on a bare stable it carries features plus fixes an author marked as major, and the
+# complete technical changelog collapses underneath -- nothing dropped, just not competing.
+stable_hero() { awk '/^<details><summary>🚧/{exit} {print}' <<<"$1"; }
+mkstable() { mkrepo; git tag 0.1.0; }   # a same-tier ancestor, so the range is 0.1.0..cut
+
+# --- 26. the curation itself: on a stable, a plain noted fix is technical-only while a
+#         feature headlines. On the SAME commits cut as a beta, both are in the hero --
+#         the rule is tier-dependent, not a new way to lose a note.
+mkstable
+commit "feat: add a per-game bitrate override" "Changelog: You can now set a bitrate per game"
+commit "fix: correct the jitter counter label" "Changelog: Corrects the mislabeled network-jitter counter"
+out=$(gen 0.2.0)
+stable_hero "$out" | grep -qxF -- "- You can now set a bitrate per game" || err "26: a feature note is missing from the stable hero"
+stable_hero "$out" | grep -qi "jitter" && err "26: an unmarked fix reached the stable hero (the 0.5.0 wall-of-fixes)"
+grep -q "Corrects the mislabeled network-jitter counter" <<<"$out" || err "26: the unmarked fix was DROPPED instead of demoted — the technical changelog must still list it"
+# Rebuilt from scratch for the beta half: gen() CREATES the tag it generates, so reusing
+# the repo would leave 0.2.0 sitting on HEAD as a same-or-higher-tier ancestor of
+# 0.2.0-beta.001 -- an empty range, and an assertion that passes or fails for a reason
+# that has nothing to do with tier curation.
+c26_t0=$t0
+mkrepo
+t0=$c26_t0   # mkrepo re-baselines t0; keep this case's, so a stable-half failure still reports
+commit "feat: add a per-game bitrate override" "Changelog: You can now set a bitrate per game"
+commit "fix: correct the jitter counter label" "Changelog: Corrects the mislabeled network-jitter counter"
+out=$(gen 0.1.0-beta.002)
+awk '/^## 🚧/{exit} {print}' <<<"$out" | grep -qi "jitter" || err "26: a pre-release hero must still list every note"
+[ "$fail" = "$t0" ] && ok "stable hero = features only; the same fix still heroes on a beta and is never lost"
+
+# --- 27. the opt-in that makes a big fix headline a production release. Without it the
+#         rule would have no way to say "this one matters" and stables would advertise
+#         features only -- which is wrong for a release whose whole point is a fix.
+mkstable
+commit "fix: enable RFI by default on AMD/Gallium" \
+       "Changelog-Major: Fixes stuttering and choppy video on AMD handhelds (Legion Go S, Steam Deck)"
+out=$(gen 0.2.0)
+stable_hero "$out" | grep -qxF -- "- Fixes stuttering and choppy video on AMD handhelds (Legion Go S, Steam Deck)" \
+  || err "27: Changelog-Major: did not put a major fix in the stable hero"
+grep -q "### 🐛 Bug Fixes" <<<"$out" || err "27: a Changelog-Major: fix must still route to Bug Fixes by its subject type"
+grep -qi "Changelog-Major" <<<"$out" && err "27: the trailer key itself was published"
+[ "$fail" = "$t0" ] && ok "'Changelog-Major:' promotes a fix into the stable hero without changing its routing"
+
+# --- 28. `Changelog-Major: none` opts out like the other two spellings, rather than
+#         rendering "- None" as the single headline of a production release.
+mkstable
+commit "fix: internal-only cleanup" "Changelog-Major: none"
+out=$(gen 0.2.0)
+grep -qi "^- None$" <<<"$out" && err "28: 'Changelog-Major: none' published a 'None' bullet"
+grep -q "🔩 Internal / build plumbing" <<<"$out" || err "28: 'Changelog-Major: none' did not demote the commit"
+[ "$fail" = "$t0" ] && ok "'Changelog-Major: none' opts out instead of publishing 'None'"
+
+# --- 29. UPSTREAM ATTRIBUTION IS NOT NEWS. 0.5.0's second hero bullet was "Adopt Nonary
+#         VRR10 active-wait fix: remove the fixed yield-count limit (4096)..." -- a
+#         sentence addressed to whoever tracks the fork graph, shown to someone deciding
+#         whether their handheld stutters less. Fork/maintainer handles stay in the
+#         commit body and the technical changelog; they never reach the hero, on either
+#         tier. Host types and protocols (Artemis, Apollo, Sunshine, Moonlight) are a
+#         real user-facing choice and must NOT be caught by the same rule.
+mkrepo
+commit "fix(vrr): adopt the upstream active-wait bound" \
+       "Changelog: Adopt Nonary VRR10 active-wait fix: remove the fixed yield-count limit (4096)"
+commit "feat: show the host type on each computer card" \
+       "Changelog: Host cards now show whether the PC is running Apollo, Sunshine or Artemis"
+out=$(gen 0.1.0-beta.002)
+awk '/^## 🚧/{exit} {print}' <<<"$out" | grep -qi "nonary" \
+  && err "29: an upstream fork attribution reached the hero (the 0.5.0 Nonary bullet)"
+grep -qi "nonary" <<<"$out" || err "29: the attribution was dropped entirely — the technical changelog must keep it"
+awk '/^## 🚧/{exit} {print}' <<<"$out" | grep -q "Apollo, Sunshine or Artemis" \
+  || err "29: the attribution filter is over-broad — host types are a user-facing choice, not fork provenance"
+[ "$fail" = "$t0" ] && ok "fork/maintainer attribution stays out of the hero; host types are untouched"
+
+# --- 30. the stable BODY shape: hero first and uncollapsed, everything technical --
+#         plumbing included -- inside one <details> that is properly closed. An unclosed
+#         or doubly-nested block silently swallows the rest of the release page.
+mkstable
+commit "feat: add a thing" "Changelog: You can now do the thing"
+commit "ci: retune the guard"
+out=$(gen 0.2.0)
+grep -q "^## 🚧 Development Build Changelog" <<<"$out" && err "30: a production release is still headed 'Development Build Changelog'"
+hero_line=$(grep -n "What's new for you" <<<"$out" | head -1 | cut -d: -f1)
+det_line=$(grep -n "Full technical changelog" <<<"$out" | head -1 | cut -d: -f1)
+[ -n "$hero_line" ] && [ -n "$det_line" ] && [ "$hero_line" -lt "$det_line" ] \
+  || err "30: the hero must come before the collapsed technical changelog"
+[ "$(grep -c '<details>' <<<"$out")" = "1" ] || err "30: expected exactly one <details> on a stable (nested collapsibles render inconsistently on GitHub)"
+[ "$(grep -c '</details>' <<<"$out")" = "1" ] || err "30: the stable <details> block is not closed exactly once — the rest of the page would be swallowed"
+grep -q "🔩 Internal / build plumbing" <<<"$out" || err "30: plumbing vanished instead of moving inside the collapsed block"
+[ "$fail" = "$t0" ] && ok "stable body: uncollapsed hero, one closed <details> holding the full changelog and plumbing"
 
 cd "$ROOT"
 if [ "$fail" = 0 ]; then
