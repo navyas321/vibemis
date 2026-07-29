@@ -688,18 +688,16 @@ int main(int argc, char *argv[])
         QSurfaceFormat::setDefaultFormat(fmt);
     }
 
-    // Some ARM and RISC-V embedded devices don't have working GLX which can cause
-    // SDL to fail to find a working OpenGL implementation at all. Let's force EGL
-    // on all platforms for both SDL and Qt. This also avoids GLX-EGL interop issues
-    // when trying to use EGL on the main thread after Qt uses GLX.
+#ifndef Q_PROCESSOR_X86
+    // Some ARM and RISC-V embedded devices don't have working GLX which can
+    // cause SDL to fail to find a working OpenGL implementation at all.
+    // Force EGL on non-x86 platforms where GLX is often unavailable.
     //
-    // However, EGL can be broken on certain setups (NVIDIA GPU passthrough in
-    // QEMU, specific driver versions). Respect user-provided overrides so they
-    // can fall back to GLX with QT_XCB_GL_INTEGRATION=xcb_glx.
+    // On x86, GLX is reliably available and forcing EGL breaks certain
+    // setups (NVIDIA GPU passthrough in QEMU under XWayland — #308).
     SDL_SetHint(SDL_HINT_VIDEO_X11_FORCE_EGL, "1");
-    if (!qEnvironmentVariableIsSet("QT_XCB_GL_INTEGRATION")) {
-        qputenv("QT_XCB_GL_INTEGRATION", "xcb_egl");
-    }
+    qputenv("QT_XCB_GL_INTEGRATION", "xcb_egl");
+#endif
 
 #ifdef Q_OS_WIN32
     // Let us see the true VBlank rather than DWM's approximation. We do this here
