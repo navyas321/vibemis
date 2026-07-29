@@ -692,8 +692,14 @@ int main(int argc, char *argv[])
     // SDL to fail to find a working OpenGL implementation at all. Let's force EGL
     // on all platforms for both SDL and Qt. This also avoids GLX-EGL interop issues
     // when trying to use EGL on the main thread after Qt uses GLX.
+    //
+    // However, EGL can be broken on certain setups (NVIDIA GPU passthrough in
+    // QEMU, specific driver versions). Respect user-provided overrides so they
+    // can fall back to GLX with QT_XCB_GL_INTEGRATION=xcb_glx.
     SDL_SetHint(SDL_HINT_VIDEO_X11_FORCE_EGL, "1");
-    qputenv("QT_XCB_GL_INTEGRATION", "xcb_egl");
+    if (!qEnvironmentVariableIsSet("QT_XCB_GL_INTEGRATION")) {
+        qputenv("QT_XCB_GL_INTEGRATION", "xcb_egl");
+    }
 
 #ifdef Q_OS_WIN32
     // Let us see the true VBlank rather than DWM's approximation. We do this here
