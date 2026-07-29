@@ -10,8 +10,8 @@
 // C++ member, type, and production default together prevents those copies from
 // drifting while avoiding hand-written serialization for every field.
 //
-// Defaults follow current upstream (nonary/master) except four deliberate
-// vibemis-local values, all replay-overridable:
+// Defaults follow upstream VRR10 (Nonary v6.1.0-vrr10, 2026-07-25) except
+// four deliberate vibemis-local values, all replay-overridable:
 //   - presentation_safety_us 250 (upstream 0): the margin between our
 //     source-interval budget cap and the interval end. With 0, the capped
 //     budget lands exactly on the next frame's due time and any scheduling

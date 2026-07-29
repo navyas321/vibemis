@@ -107,12 +107,9 @@ VrrTargetWaitResult VrrTargetWaiter::waitUntil(
         const uint64_t activeLimitUs = saturatingAdd(
             activeStartUs, activeWaitUs);
         unsigned int stagnantYields = 0;
-        unsigned int yieldCount = 0;
 
-        while (nowUs < deadlineUs && nowUs < activeLimitUs &&
-               yieldCount < 4096) {
+        while (nowUs < deadlineUs && nowUs < activeLimitUs) {
             m_Hooks.yield();
-            ++yieldCount;
             const uint64_t afterYieldUs = m_Hooks.nowUs();
             if (afterYieldUs <= nowUs) {
                 if (++stagnantYields >= 64) {
