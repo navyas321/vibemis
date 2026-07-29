@@ -673,30 +673,38 @@ int main(int argc, char *argv[])
 #endif
     }
 
+#ifndef Q_PROCESSOR_X86
+    // Non-x86 platforms (ARM, RISC-V): force EGL and GLES. GLX is often
+    // unavailable, and the GLES workaround for QTBUG-106065 is only
+    // relevant under EGL anyway. Respect user overrides for both.
     bool forceGles;
     if (!Utils::getEnvironmentVariableOverride("FORCE_QT_GLES", &forceGles)) {
         forceGles = WMUtils::isRunningNvidiaProprietaryDriver() ||
                     !WMUtils::supportsDesktopGLWithEGL();
     }
     if (forceGles) {
-        // The Nvidia proprietary driver causes Qt to render a black window when using
-        // the default Desktop GL profile with EGL. AS a workaround, we default to
-        // OpenGL ES when running on Nvidia on X11.
-        // https://qt-project.atlassian.net/browse/QTBUG-106065
         QSurfaceFormat fmt;
         fmt.setRenderableType(QSurfaceFormat::OpenGLES);
         QSurfaceFormat::setDefaultFormat(fmt);
     }
-
-#ifndef Q_PROCESSOR_X86
-    // Some ARM and RISC-V embedded devices don't have working GLX which can
-    // cause SDL to fail to find a working OpenGL implementation at all.
-    // Force EGL on non-x86 platforms where GLX is often unavailable.
-    //
-    // On x86, GLX is reliably available and forcing EGL breaks certain
-    // setups (NVIDIA GPU passthrough in QEMU under XWayland — #308).
     SDL_SetHint(SDL_HINT_VIDEO_X11_FORCE_EGL, "1");
-    qputenv("QT_XCB_GL_INTEGRATION", "xcb_egl");
+    if (!qEnvironmentVariableIsSet("QT_XCB_GL_INTEGRATION")) {
+        qputenv("QT_XCB_GL_INTEGRATION", "xcb_egl");
+    }
+#else
+    // x86: GLX is the reliable default. Forcing EGL triggers QTBUG-106065
+    // (blank window under xcb_egl + NVIDIA) and broke QEMU GPU passthrough
+    // setups (#308). The GLES QSurfaceFormat override is also gated here
+    // because it only makes sense under EGL — requesting GLES via
+    // GLX_EXT_create_context_es2_profile is a combination alpha.003 never
+    // shipped. FORCE_QT_GLES=1 remains available for users who explicitly
+    // need it.
+    bool forceGles;
+    if (Utils::getEnvironmentVariableOverride("FORCE_QT_GLES", &forceGles) && forceGles) {
+        QSurfaceFormat fmt;
+        fmt.setRenderableType(QSurfaceFormat::OpenGLES);
+        QSurfaceFormat::setDefaultFormat(fmt);
+    }
 #endif
 
 #ifdef Q_OS_WIN32
