@@ -85,11 +85,33 @@ is_stable_cut() {  # $1 = version -> 0 if this cut is a production release
 # 0.5.0's hero opened its second bullet with "Adopt Nonary VRR10 active-wait fix: remove
 # the fixed yield-count limit (4096)..." -- a sentence addressed to whoever tracks the
 # fork graph, published to people who wanted to know if their handheld stutters less.
-# The attribution belongs in the commit body and the technical changelog, both of which
-# keep it; the hero is the one place it does not belong. Deliberately narrow: only fork
-# and maintainer handles. "Artemis", "Apollo", "Sunshine" and "Moonlight" are host types
-# and protocols a user genuinely picks between, so they are NOT listed here.
-HERO_ATTRIBUTION_RE='(^|[^[:alnum:]])(nonary|wjbeckett|cgutman|moonlight-qt)([^[:alnum:]]|$)'
+#
+# Deliberately narrow: fork and maintainer HANDLES only. "Artemis", "Apollo", "Sunshine"
+# and "Moonlight" are host types and protocols a user genuinely picks between, so they
+# are NOT listed here and must never be.
+ATTRIBUTION_HANDLES='nonary|wjbeckett|cgutman|moonlight-qt'
+HERO_ATTRIBUTION_RE="(^|[^[:alnum:]])(${ATTRIBUTION_HANDLES})([^[:alnum:]]|\$)"
+
+# A handle is REWRITTEN, not deleted, and everywhere -- hero, technical sections and the
+# collapsed plumbing block alike. Deleting the bullet would lose a real changelog entry;
+# leaving the handle in the technical section still puts a fork maintainer's name on the
+# release page, which is what was asked to stop. "Upstream" says the same thing about
+# where the change came from without naming anyone.
+#
+# The one wrinkle worth the code: a subject that ALREADY says "upstream" ("Eliminate all
+# divergences with Nonary VRR10 upstream") would come out as "...with upstream VRR10
+# upstream". So substitute the word in only when the sentence does not already carry it,
+# and simply drop the handle when it does. Runs BEFORE sentence_case, so a handle at the
+# start of a subject still yields a capitalized bullet.
+scrub_attribution() {
+  local s="$1" repl='upstream '
+  if printf '%s' "$s" | grep -qiE '(^|[^[:alnum:]])upstream([^[:alnum:]]|$)'; then
+    repl=''
+  fi
+  printf '%s' "$s" \
+    | sed -E "s/(^|[^[:alnum:]-])(${ATTRIBUTION_HANDLES})([^[:alnum:]-]|\$)/\1${repl}\3/gI" \
+    | sed -E 's/  +/ /g; s/ +([,.;:])/\1/g; s/^[[:space:]]+//; s/[[:space:]]+$//'
+}
 
 # Only a real version tag may anchor a range. tier_rank() calls anything without a
 # pre-release infix "stable" (rank 4), which is right for `0.4.3` and catastrophically
@@ -323,11 +345,11 @@ while IFS='|' read -r hash subject; do
   if [ "$force_internal" = true ] \
      || { [ "$force_user_facing" != true ] \
           && { printf '%s' "$subject" | grep -qiE "$INTERNAL_SUBJECT_RE" || ! ships "$hash"; }; }; then
-    INTERNAL="${INTERNAL}- $(md_escape "$(sentence_case "$(strip_md_structure "$clean")")") (\`${hash}\`)"$'\n'
+    INTERNAL="${INTERNAL}- $(md_escape "$(sentence_case "$(scrub_attribution "$(strip_md_structure "$clean")")")") (\`${hash}\`)"$'\n'
     continue
   fi
 
-  entry=$(md_escape "$(sentence_case "$(strip_md_structure "${note:-$clean}")")")
+  entry=$(md_escape "$(sentence_case "$(scrub_attribution "$(strip_md_structure "${note:-$clean}")")")")
 
   # Classified ONCE, and read by both the hero gate and the technical routing below.
   # These used to be one if/elif chain at the bottom; the stable hero needs to know
@@ -341,8 +363,12 @@ while IFS='|' read -r hash subject; do
 
   # ── Does this note earn a place in the hero? ─────────────────────────────────
   hero=true
+  # Tested against the RAW note, not $entry: $entry has already been through
+  # scrub_attribution, so the handle is gone and this would never match. A note that
+  # NEEDED scrubbing is provenance-flavoured writing, which is the signal being read
+  # here -- the scrub neutralises the name, this keeps the sentence out of the hero.
   if printf '%s' "$note" | grep -qiE "$HERO_ATTRIBUTION_RE"; then
-    # Fork provenance, not user-facing news. Kept in the technical changelog.
+    # Fork provenance, not user-facing news. Kept, rewritten, in the technical changelog.
     hero=false
     echo "Note: hero bullet from ${hash} names an upstream fork/maintainer; technical section only." >&2
   elif [ "$STABLE_CUT" = true ] && [ "$kind" != feature ] && [ "$is_major" != true ]; then

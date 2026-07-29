@@ -522,8 +522,10 @@ grep -q "🔩 Internal / build plumbing" <<<"$out" || err "28: 'Changelog-Major:
 #         sentence addressed to whoever tracks the fork graph, shown to someone deciding
 #         whether their handheld stutters less. Fork/maintainer handles stay in the
 #         commit body and the technical changelog; they never reach the hero, on either
-#         tier. Host types and protocols (Artemis, Apollo, Sunshine, Moonlight) are a
-#         real user-facing choice and must NOT be caught by the same rule.
+#         tier -- and the handle is REWRITTEN to "upstream" wherever it does appear, so
+#         the name is nowhere on the release page while the changelog entry survives.
+#         Host types and protocols (Artemis, Apollo, Sunshine, Moonlight) are a real
+#         user-facing choice and must NOT be caught by the same rule.
 mkrepo
 commit "fix(vrr): adopt the upstream active-wait bound" \
        "Changelog: Adopt Nonary VRR10 active-wait fix: remove the fixed yield-count limit (4096)"
@@ -532,10 +534,12 @@ commit "feat: show the host type on each computer card" \
 out=$(gen 0.1.0-beta.002)
 awk '/^## 🚧/{exit} {print}' <<<"$out" | grep -qi "nonary" \
   && err "29: an upstream fork attribution reached the hero (the 0.5.0 Nonary bullet)"
-grep -qi "nonary" <<<"$out" || err "29: the attribution was dropped entirely — the technical changelog must keep it"
+grep -qi "nonary" <<<"$out" && err "29: a fork handle survived somewhere on the release page"
+grep -q "VRR10 active-wait fix" <<<"$out" \
+  || err "29: the entry was DELETED rather than rewritten — the changelog must keep the change, minus the name"
 awk '/^## 🚧/{exit} {print}' <<<"$out" | grep -q "Apollo, Sunshine or Artemis" \
   || err "29: the attribution filter is over-broad — host types are a user-facing choice, not fork provenance"
-[ "$fail" = "$t0" ] && ok "fork/maintainer attribution stays out of the hero; host types are untouched"
+[ "$fail" = "$t0" ] && ok "fork handles are rewritten out of the whole page, entries survive, host types untouched"
 
 # --- 30. the stable BODY shape: hero first and uncollapsed, everything technical --
 #         plumbing included -- inside one <details> that is properly closed. An unclosed
@@ -553,6 +557,26 @@ det_line=$(grep -n "Full technical changelog" <<<"$out" | head -1 | cut -d: -f1)
 [ "$(grep -c '</details>' <<<"$out")" = "1" ] || err "30: the stable <details> block is not closed exactly once — the rest of the page would be swallowed"
 grep -q "🔩 Internal / build plumbing" <<<"$out" || err "30: plumbing vanished instead of moving inside the collapsed block"
 [ "$fail" = "$t0" ] && ok "stable body: uncollapsed hero, one closed <details> holding the full changelog and plumbing"
+
+# --- 31. the scrub reaches the COLLAPSED PLUMBING block too, and reads as English on
+#         both sides of the one wrinkle: a subject that already says "upstream" must not
+#         come out as "...with upstream VRR10 upstream", and one that doesn't must gain
+#         the word rather than losing the sense ("Guard VRR features" reads as if we
+#         guard our own). All four spellings below are real 0.5.0 subjects.
+mkrepo
+commit "chore(vrr): eliminate all divergences with Nonary VRR10 upstream"
+commit "test(vrr): restore Nonary latch tests, ratify trade-off"
+commit "build: guard Nonary VRR features behind version checks"
+commit "ci: port the gamescope hook from moonlight-qt"
+out=$(gen 0.1.0-beta.002)
+grep -qi "nonary\|moonlight-qt" <<<"$out" && err "31: a handle survived inside the collapsed plumbing block"
+grep -qF -- "- Eliminate all divergences with VRR10 upstream (" <<<"$out" \
+  || err "31: a subject that already says 'upstream' was doubled up instead of just dropping the handle"
+grep -qF -- "- Restore upstream latch tests, ratify trade-off (" <<<"$out" \
+  || err "31: the handle was deleted where the sentence needed the word 'upstream' to still make sense"
+grep -qF -- "- Guard upstream VRR features behind version checks (" <<<"$out" || err "31: scrub mangled a plumbing subject"
+grep -qF -- "- Port the gamescope hook from upstream (" <<<"$out" || err "31: a hyphenated handle (moonlight-qt) was not scrubbed cleanly"
+[ "$fail" = "$t0" ] && ok "handles are scrubbed inside the plumbing block and each rewrite reads as English"
 
 cd "$ROOT"
 if [ "$fail" = 0 ]; then
