@@ -675,7 +675,7 @@ int main(int argc, char *argv[])
 
     bool forceGles;
     if (!Utils::getEnvironmentVariableOverride("FORCE_QT_GLES", &forceGles)) {
-        forceGles = WMUtils::isRunningNvidiaProprietaryDriverX11() ||
+        forceGles = WMUtils::isRunningNvidiaProprietaryDriver() ||
                     !WMUtils::supportsDesktopGLWithEGL();
     }
     if (forceGles) {

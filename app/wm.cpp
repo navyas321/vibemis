@@ -92,6 +92,37 @@ bool WMUtils::isRunningNvidiaProprietaryDriverX11()
 #endif
 }
 
+bool WMUtils::isRunningNvidiaProprietaryDriver()
+{
+#ifdef HAVE_EGL
+    static SDL_atomic_t isRunningOnNvidiaDriver;
+
+    int val = SDL_AtomicGet(&isRunningOnNvidiaDriver);
+    if (!(val & VALUE_SET)) {
+        bool nvidiaDriver = isRunningNvidiaProprietaryDriverX11();
+
+        if (!nvidiaDriver) {
+            EGLDisplay display = eglGetPlatformDisplay(EGL_PLATFORM_GBM_KHR, EGL_DEFAULT_DISPLAY, nullptr);
+            if (display == EGL_NO_DISPLAY) {
+                display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+            }
+            if (display != EGL_NO_DISPLAY && eglInitialize(display, nullptr, nullptr)) {
+                const char* vendorString = eglQueryString(display, EGL_VENDOR);
+                nvidiaDriver = vendorString && strstr(vendorString, "NVIDIA") != NULL;
+                eglTerminate(display);
+            }
+        }
+
+        val = VALUE_SET | (nvidiaDriver ? VALUE_TRUE : 0);
+        SDL_AtomicSet(&isRunningOnNvidiaDriver, val);
+    }
+
+    return !!(val & VALUE_TRUE);
+#else
+    return false;
+#endif
+}
+
 bool WMUtils::supportsDesktopGLWithEGL()
 {
 #ifdef HAVE_EGL
