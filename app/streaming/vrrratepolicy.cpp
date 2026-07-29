@@ -49,8 +49,7 @@ int VrrRatePolicy::lowLatencyRateForRefresh(int refreshHz)
         return 0;
     }
 
-    const long long fiveSixths = static_cast<long long>(refreshHz) * 5LL / 6LL;
-    return static_cast<int>((fiveSixths / 5LL) * 5LL);
+    return static_cast<int>((static_cast<long long>(refreshHz) / 6LL) * 5LL);
 }
 
 bool VrrRatePolicy::isNativeRefreshRate(int fps, const std::vector<int>& refreshRates)

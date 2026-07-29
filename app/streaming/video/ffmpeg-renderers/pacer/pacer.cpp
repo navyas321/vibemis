@@ -359,36 +359,18 @@ bool Pacer::initialize(SDL_Window* window, int maxVideoFps,
     }
 
     if (enableVrr) {
-        if (m_PacingMode == VrrPacingMode::AdaptiveUnpaced) {
-            // Not a fallback and not a downgrade: the renderer keeps the
-            // adaptive present mode and swapchain depth it selected for this
-            // session, and the render thread started below drives it. Only the
-            // pacing layer -- target wait, readiness budget, worker queue --
-            // is absent, which is what the preference names.
-            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                        "VRR pacing worker disabled by the frame-pacing preference; "
-                        "the render thread drives adaptive presentation unpaced");
-        }
-        else {
-            // Name the pacing the fallback actually gets. It used to be forced
-            // on here, so "falling back to fixed V-sync pacing" was always
-            // true; now it follows the preference and the log has to say which.
-            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                        "VRR pacing unavailable: %s; falling back to fixed presentation with frame pacing %s",
-                        vrrFallbackReasonName(fallbackReason),
-                        selection.fixedPacing ? "on" : "off");
-        }
-    }
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "VRR pacing unavailable: %s; falling back to fixed V-sync pacing",
+                    vrrFallbackReasonName(fallbackReason));
 
-    // BL-2529: this used to be `enablePacing || enableVsync` inside the VRR
-    // rejection path. VRR requires V-sync, so that expression forced pacing on
-    // for every VRR user regardless of their preference -- including the ones
-    // who deliberately turned it off. A rejected VRR session now gets exactly
-    // the fixed path a non-VRR session with the same settings would get.
-    // Renderers that genuinely cannot run unpaced are still covered: the
-    // decoder ORs RENDERER_ATTRIBUTE_FORCE_PACING into this argument before
-    // Pacer ever sees it (see FFmpegVideoDecoder::completeInitialization).
-    enablePacing = selection.fixedPacing;
+        // VRR requires V-sync at the session boundary, so its rejection still
+        // has a valid fixed-pacing fallback even if the user did not select
+        // the older frame-pacing checkbox.
+        enablePacing = enablePacing || enableVsync;
+    }
+    else {
+        enablePacing = selection.fixedPacing;
+    }
 
     // The VRR success path uses its strict session refresh snapshot and
     // returned above. Keep the legacy fallback query out of that path so it
@@ -778,10 +760,6 @@ bool Pacer::isVrrActive() const
 
 bool Pacer::isAdaptivePresentationActive() const
 {
-    // m_PacingMode is reset to Fixed on every path that restores fixed
-    // presentation (including a worker start failure), so the mode alone is
-    // authoritative: AdaptivePaced means the worker is pacing an adaptive
-    // swapchain, AdaptiveUnpaced means the render thread is driving one.
     return vrrPacingModeHoldsAdaptivePresentation(m_PacingMode);
 }
 
@@ -794,10 +772,6 @@ const char* Pacer::pacingModeName() const
     // this line exists to expose.
     if (m_VrrWorker != nullptr) {
         return "vrr-worker";
-    }
-
-    if (m_PacingMode == VrrPacingMode::AdaptiveUnpaced) {
-        return "vrr-unpaced";
     }
 
     return m_VsyncSource != nullptr ? "vsync" : "none";

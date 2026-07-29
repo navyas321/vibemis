@@ -133,9 +133,6 @@ void VrrTimingController::clearTimeline(bool retainLearnedBudgets)
         m_RenderLeadUs = clampUnsigned(previousRenderLeadUs,
                                        renderLeadFloorUs(),
                                        renderLeadCeilingUs());
-        // BL-2541: a larger learned render lead must IMMEDIATELY shrink the
-        // scheduling reserve, not wait for the ramp.
-        enforceSourceIntervalBudget();
         m_RenderWakeLeadUs = std::min(previousRenderWakeLeadUs,
                                       m_Parameters.maximumRenderWakeLeadUs);
         m_TargetWakeLeadUs = std::min(previousTargetWakeLeadUs,
@@ -152,9 +149,6 @@ void VrrTimingController::clearTimeline(bool retainLearnedBudgets)
         m_TargetWakeLeadUs = 0;
         m_GuardUs = m_BaseGuardUs;
     }
-    // BL-2541: apply the same source-interval cap every other write path
-    // applies, so the budget never reports a state the scheduler would not use.
-    enforceSourceIntervalBudget();
 }
 
 void VrrTimingController::initializeTimeline(const PacedFrame& frame)
@@ -643,7 +637,6 @@ bool VrrTimingController::acceptSourcePeriodQ16(uint64_t periodUsQ16)
     m_RenderLeadUs = clampUnsigned(m_RenderLeadUs,
                                    renderLeadFloorUs(),
                                    renderLeadCeilingUs());
-    enforceSourceIntervalBudget();
     m_GuardUs = clampUnsigned(m_GuardUs,
                               m_BaseGuardUs,
                               guardCeilingUs());
@@ -757,11 +750,6 @@ void VrrTimingController::updateLearnedBudgets()
                        m_Parameters.schedulerPercentile));
     }
 
-    // BL-2541: a larger learned render lead must IMMEDIATELY shrink the
-    // scheduling reserve. The readiness model runs before this in
-    // noteSubmission, so without this call the budget would stay capped
-    // against the previous, smaller render lead until the next acquire.
-    enforceSourceIntervalBudget();
 }
 
 void VrrTimingController::updateReadinessModel()
@@ -835,21 +823,7 @@ void VrrTimingController::applyReadinessBudget(bool acquireReserve)
         effectiveDemandUs > usableHeadroomUs ?
             effectiveDemandUs - usableHeadroomUs : 0);
 
-    // BL-2541: near the panel ceiling, presentation backpressure is part of
-    // the queue age that this reserve creates. Letting readiness consume a
-    // complete source interval before adding render lead turns that feedback
-    // into a standing multi-frame buffer: the worker reaches its bounded
-    // capacity, coalesces otherwise displayable frames, and reports the loss
-    // as a pacer drop. Cap the reserve here and bound the ramp TARGET below,
-    // so the budget never even transiently exceeds what one source interval
-    // can pay for -- clamping only the ramp's result would let each acquire
-    // step overshoot the cap between submissions.
-    enforceSourceIntervalBudget();
-
     const int64_t ceilingUs = static_cast<int64_t>(readinessCeilingUs());
-    const int64_t maximumBudgetUs = static_cast<int64_t>(
-        std::min<uint64_t>(maximumReadinessBudgetUs(),
-                           static_cast<uint64_t>(ceilingUs)));
     const int64_t reserveUs = static_cast<int64_t>(
         std::min<uint64_t>(m_AppliedReadinessReserveUs,
                            static_cast<uint64_t>(ceilingUs)));
@@ -858,10 +832,10 @@ void VrrTimingController::applyReadinessBudget(bool acquireReserve)
         std::numeric_limits<int64_t>::max() :
         m_ReadinessPhaseUs + reserveUs;
     const int64_t clampedDesiredUs = std::max(
-        -ceilingUs, std::min(desiredUs, maximumBudgetUs));
+        -ceilingUs, std::min(desiredUs, ceilingUs));
     if (!acquireReserve) {
         m_ReadinessBudgetUs = std::max(
-            -ceilingUs, std::min(m_ReadinessPhaseUs, maximumBudgetUs));
+            -ceilingUs, std::min(m_ReadinessPhaseUs, ceilingUs));
     }
     else if (clampedDesiredUs > m_ReadinessBudgetUs) {
         m_ReadinessBudgetUs += std::min<int64_t>(
@@ -1010,24 +984,6 @@ uint64_t VrrTimingController::renderLeadCeilingUs() const
     const uint64_t ceilingUs = std::min(m_Parameters.renderLeadCeilingUs,
                                         maximumLeadUs);
     return std::max(renderLeadFloorUs(), ceilingUs);
-}
-
-uint64_t VrrTimingController::maximumReadinessBudgetUs() const
-{
-    const uint64_t nonReadinessBudgetUs = saturatingAdd(
-        m_RenderLeadUs, m_Parameters.presentationSafetyUs);
-    return m_SourcePeriodUs > nonReadinessBudgetUs ?
-        m_SourcePeriodUs - nonReadinessBudgetUs : 0;
-}
-
-void VrrTimingController::enforceSourceIntervalBudget()
-{
-    const uint64_t maximumBudgetUs = maximumReadinessBudgetUs();
-    m_AppliedReadinessReserveUs = std::min(
-        m_AppliedReadinessReserveUs, maximumBudgetUs);
-    if (m_ReadinessBudgetUs > static_cast<int64_t>(maximumBudgetUs)) {
-        m_ReadinessBudgetUs = static_cast<int64_t>(maximumBudgetUs);
-    }
 }
 
 uint64_t VrrTimingController::readinessCeilingUs() const

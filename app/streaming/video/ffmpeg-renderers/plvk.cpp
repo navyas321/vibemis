@@ -208,18 +208,14 @@ static void pl_log_cb(void*, enum pl_log_level level, const char *msg)
 
 void PlVkRenderer::lockQueue(struct AVHWDeviceContext *dev_ctx, uint32_t queue_family, uint32_t index)
 {
-    Q_UNUSED(dev_ctx);
-    Q_UNUSED(queue_family);
-    Q_UNUSED(index);
-    // No-op for compatibility across libplacebo versions
+    auto me = (PlVkRenderer*)dev_ctx->user_opaque;
+    me->m_Vulkan->lock_queue(me->m_Vulkan, queue_family, index);
 }
 
 void PlVkRenderer::unlockQueue(struct AVHWDeviceContext *dev_ctx, uint32_t queue_family, uint32_t index)
 {
-    Q_UNUSED(dev_ctx);
-    Q_UNUSED(queue_family);
-    Q_UNUSED(index);
-    // No-op for compatibility across libplacebo versions
+    auto me = (PlVkRenderer*)dev_ctx->user_opaque;
+    me->m_Vulkan->unlock_queue(me->m_Vulkan, queue_family, index);
 }
 
 void PlVkRenderer::overlayUploadComplete(void* opaque)
@@ -454,6 +450,7 @@ bool PlVkRenderer::tryInitializeDevice(VkPhysicalDevice device, VkPhysicalDevice
     vkParams.device = device;
     vkParams.opt_extensions = k_OptionalDeviceExtensions;
     vkParams.num_opt_extensions = SDL_arraysize(k_OptionalDeviceExtensions);
+    vkParams.extra_queues = VK_QUEUE_FLAG_BITS_MAX_ENUM;
     m_Vulkan = pl_vulkan_create(m_Log, &vkParams);
     if (m_Vulkan == nullptr) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
@@ -615,6 +612,7 @@ bool PlVkRenderer::initialize(PDECODER_PARAMETERS params)
         hwDeviceContext->user_opaque = this; // Used by lockQueue()/unlockQueue()
 
         auto vkDeviceContext = (AVVulkanDeviceContext*)((AVHWDeviceContext *)m_HwDeviceCtx->data)->hwctx;
+        vkDeviceContext->get_proc_addr = m_PlVkInstance->get_proc_addr;
         vkDeviceContext->inst = m_PlVkInstance->instance;
         vkDeviceContext->phys_dev = m_Vulkan->phys_device;
         vkDeviceContext->act_dev = m_Vulkan->device;
@@ -1492,7 +1490,7 @@ void PlVkRenderer::renderFrame(AVFrame *frame)
 
         // Recreate the renderer
         SDL_Event event;
-        event.type = SDL_RENDER_TARGETS_RESET;
+        event.type = SDL_RENDER_DEVICE_RESET;
         SDL_PushEvent(&event);
         goto UnmapExit;
     }

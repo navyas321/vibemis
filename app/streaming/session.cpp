@@ -2928,11 +2928,6 @@ void Session::execInternal()
                 refreshMayHaveChanged = refreshMayHaveChanged ||
                     event.window.event == SDL_WINDOWEVENT_DISPLAY_CHANGED;
 #endif
-                // BL-2529: keyed on adaptive presentation, not the worker. An
-                // AdaptiveUnpaced session (VRR on, frame pacing off) has no
-                // worker but still holds an adaptive swapchain qualified at
-                // m_ActiveVrrRefreshHz, and a refresh switch makes that
-                // qualification just as stale as it does for the paced mode.
                 if (StreamUtils::vrrRefreshSwitchNeedsProbe(m_ActiveVrrRefreshHz,
                                                             m_VideoDecoder->isAdaptivePresentationActive(),
                                                             refreshMayHaveChanged)) {
@@ -3109,15 +3104,6 @@ void Session::execInternal()
                 // but this decoder ended up on fixed presentation (non-Vulkan
                 // renderer, presenter rejection, or worker startup failure),
                 // surface a visible one-time notice.
-                //
-                // BL-2529: keyed on adaptive presentation, not the worker. An
-                // AdaptiveUnpaced session (frame pacing off) runs no worker by
-                // construction, so isVrrActive() would flag every user of the
-                // V-Sync-on/pacing-off/VRR-on combination when nothing failed.
-                // isAdaptivePresentationActive() is true for both adaptive
-                // modes, so the notice fires exactly when VRR was requested
-                // and the session genuinely fell back to fixed presentation --
-                // for every pacing preference.
                 if (m_Preferences->enableVrr &&
                         !m_VideoDecoder->isAdaptivePresentationActive() &&
                         !m_VrrFallbackNotified) {

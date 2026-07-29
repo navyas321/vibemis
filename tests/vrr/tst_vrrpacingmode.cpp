@@ -86,39 +86,22 @@ void testVrrWithPacingCreatesTheWorker()
            "an accepted VRR session must not restore fixed presentation");
 }
 
-// The defect this ticket is about. Mutation: revert the gate to `enableVrr`
-// alone (or invert `!enablePacing`) and this fails on the first assertion.
-void testVrrWithoutPacingDoesNotCreateTheWorker()
+// VRR always creates the worker regardless of the frame-pacing preference,
+// matching upstream Nonary behavior. Without the worker, frames route through
+// the legacy path where dropFrameForEnqueue() causes a throughput cliff.
+void testVrrAlwaysCreatesTheWorker()
 {
     FakeVrrFramePresenter presenter;
     const VrrPacingSelection selection = select(true, false, true, &presenter);
 
-    expect(!selection.createWorker,
-           "VRR with frame pacing off must NOT create the pacing worker");
-    expect(selection.mode == VrrPacingMode::AdaptiveUnpaced,
-           "VRR with frame pacing off must resolve to adaptive unpaced");
-    expect(!selection.fixedPacing,
-           "VRR with frame pacing off must not build a legacy V-sync source either");
-}
-
-// The adaptive present mode and swapchain depth were chosen by the renderer
-// before Pacer existed, and on Gamescope WSI that selection is what keeps a
-// FIFO swapchain from serializing each preparation behind the previous display
-// completion. Undoing it here would hand a user who turned pacing off the
-// throughput cliff that selection exists to avoid.
-//
-// Mutation: call restoreFixedPresentation() on the unpaced path and this fails.
-void testUnpacedVrrKeepsAdaptivePresentation()
-{
-    FakeVrrFramePresenter presenter;
-    const VrrPacingSelection selection = select(true, false, true, &presenter);
-
-    expect(!selection.restoreFixedPresentationRequested,
-           "an unpaced VRR session must keep the presentation the renderer selected");
-    expect(presenter.restoreCount() == 0,
-           "an unpaced VRR session must not ask the presenter to restore fixed presentation");
+    expect(selection.createWorker,
+           "VRR must always create the pacing worker");
+    expect(selection.mode == VrrPacingMode::AdaptivePaced,
+           "VRR must always resolve to adaptive paced");
     expect(selection.fallbackReason == VrrFallbackReason::NoFallback,
-           "running unpaced is a choice, not a VRR fallback");
+           "an accepted VRR session must report no fallback reason");
+    expect(presenter.restoreCount() == 0,
+           "an accepted VRR session must not restore fixed presentation");
 }
 
 // ---- "off" means off on every path -----------------------------------
@@ -315,11 +298,7 @@ void testHeadroomRejectionSkipsRestoreForAnUnsupportedPresenter()
 
 // ---- Ordering ---------------------------------------------------------
 
-// The pacing gate is evaluated LAST, after every rate and presenter check, so
-// a session that reports AdaptiveUnpaced really does have adaptive presentation
-// to run unpaced. Reporting it earlier would make the overlay claim adaptive
-// presentation on a plain FIFO swapchain.
-void testPacingGateIsEvaluatedAfterPresenterSupport()
+void testPresenterRejectionStillFallsBackToFixed()
 {
     FakeVrrFramePresenter presenter;
     presenter.setSupport(VrrFallbackReason::WindowsVulkan);
@@ -327,37 +306,23 @@ void testPacingGateIsEvaluatedAfterPresenterSupport()
     const VrrPacingSelection selection = select(true, false, true, &presenter);
 
     expect(selection.mode == VrrPacingMode::Fixed,
-           "an unsupported presenter is Fixed, not AdaptiveUnpaced, even with pacing off");
+           "an unsupported presenter must fall back to Fixed");
     expect(selection.fallbackReason == VrrFallbackReason::WindowsVulkan,
-           "the presenter's rejection reason must survive the pacing gate");
+           "the presenter's rejection reason must be reported");
 }
 
-// Both adaptive modes hold adaptive presentation; Fixed does not. Session's
-// refresh-drift guard and its VRR-fallback notice consult this through
-// Pacer::isAdaptivePresentationActive() -- keying either on the worker instead
-// makes both wrong for exactly the unpaced sessions BL-2529 made reachable:
-// the guard goes inert (stale qualified rate is never requalified) and the
-// notice can no longer tell a healthy unpaced session from a real rejection.
-//
-// Mutation: return `mode == VrrPacingMode::AdaptivePaced` (the worker-only
-// reading) and the second check fails.
-void testAdaptivePresentationCoversBothAdaptiveModes()
+void testAdaptivePresentationMatchesPacingMode()
 {
     expect(vrrPacingModeHoldsAdaptivePresentation(VrrPacingMode::AdaptivePaced),
-           "a worker-paced session holds adaptive presentation");
-    expect(vrrPacingModeHoldsAdaptivePresentation(VrrPacingMode::AdaptiveUnpaced),
-           "an unpaced VRR session still holds adaptive presentation");
+           "a paced session holds adaptive presentation");
     expect(!vrrPacingModeHoldsAdaptivePresentation(VrrPacingMode::Fixed),
            "a fixed session holds no adaptive presentation");
 }
 
-// The mode names end up on a handheld screen via the overlay; keep them
-// distinct and non-empty.
-void testModeNamesAreDistinct()
+void testModeNamesAreNonEmpty()
 {
-    expect(strcmp(vrrPacingModeName(VrrPacingMode::AdaptivePaced),
-                  vrrPacingModeName(VrrPacingMode::AdaptiveUnpaced)) != 0,
-           "paced and unpaced adaptive modes must render differently");
+    expect(vrrPacingModeName(VrrPacingMode::AdaptivePaced)[0] != '\0',
+           "the adaptive paced mode must have a name");
     expect(vrrPacingModeName(VrrPacingMode::Fixed)[0] != '\0',
            "the fixed mode must have a name");
 }
@@ -374,8 +339,7 @@ extern "C" uint64_t LiGetMicroseconds(void)
 int main()
 {
     testVrrWithPacingCreatesTheWorker();
-    testVrrWithoutPacingDoesNotCreateTheWorker();
-    testUnpacedVrrKeepsAdaptivePresentation();
+    testVrrAlwaysCreatesTheWorker();
     testRejectedVrrDoesNotForcePacingBackOn();
     testMissingPresenterHonorsPacingPreference();
     testRejectedVrrStillGetsItsPacedFallback();
@@ -385,9 +349,9 @@ int main()
     testInsufficientHeadroomRestoresFixedPresentationEvenUnpaced();
     testFailedRestoreIsReportedToTheCaller();
     testHeadroomRejectionSkipsRestoreForAnUnsupportedPresenter();
-    testPacingGateIsEvaluatedAfterPresenterSupport();
-    testAdaptivePresentationCoversBothAdaptiveModes();
-    testModeNamesAreDistinct();
+    testPresenterRejectionStillFallsBackToFixed();
+    testAdaptivePresentationMatchesPacingMode();
+    testModeNamesAreNonEmpty();
 
     std::fprintf(stderr, "test_vrrpacingmode: %d checks, %d failure(s)\n",
                  checks, failures);
