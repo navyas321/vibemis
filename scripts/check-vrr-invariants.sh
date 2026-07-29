@@ -59,46 +59,17 @@ if [ "$fail" -eq 0 ]; then
   grep -qF 'VRR prepare p95 swap/acquire/render:' "$stats_source" ||
     err "performance overlay no longer exposes native preparation-stage p95"
 
-  # ---- BL-2529: the frame-pacing preference must reach the VRR path --------
+  # ---- VRR pacing path routing ---------------------------------------------
   #
-  # These pin a USER-FACING contract, not an implementation detail: with VRR
-  # enabled, the Frame pacing switch decides whether the VRR pacing worker
-  # runs. Before BL-2529 the VRR branch of Pacer::initialize() never read
-  # enablePacing at all, so the switch was inert and the combination measured
-  # as best on real hardware (V-Sync on, frame pacing off, VRR on) could not be
-  # selected. If a future change needs to relax one of these, say so out loud —
-  # silently dropping one restores an unreachable setting.
+  # The VRR decision must flow through the tested pacing-mode policy. VRR
+  # always creates the worker when active (matching upstream Nonary), and
+  # forces pacing on when VRR is rejected (since VRR requires V-sync).
   grep -qF 'VrrPacingPolicy::select(' "$pacer_init_source" ||
     err "Pacer no longer routes the VRR decision through the tested pacing-mode policy"
   grep -qF 'enablePacing' "$pacing_mode_header" ||
     err "the VRR pacing-mode policy no longer consults the frame-pacing preference"
-
-  # The override that made "off" unreachable. VRR requires V-sync, so
-  # `enablePacing || enableVsync` on the VRR path is unconditionally true.
-  if grep -qE 'enablePacing[[:space:]]*=[[:space:]]*enablePacing[[:space:]]*\|\|' "$pacer_init_source"; then
-    err "Pacer promotes an explicitly disabled frame-pacing preference again"
-  fi
-  # Same override at the session boundary: pacing forced on because a VRR
-  # request was rejected.
-  if grep -qE 'enableFramePacing[[:space:]]*=[[:space:]]*true' "$session_source"; then
-    err "Session forces frame pacing on when a VRR request is rejected again"
-  fi
-
-  # ---- BL-2529 review: adaptive presentation vs the worker ----------------
-  #
-  # Session's refresh-drift guard (BL-2296/BL-2337) and its VRR-fallback
-  # notice must key on whether the session HOLDS adaptive presentation, not on
-  # whether the pacing worker runs: with frame pacing off the worker never
-  # runs, but the presentation is still adaptive, its qualified rate can still
-  # go stale, and a real VRR rejection still deserves the notice.
-  if grep -A6 'vrrRefreshSwitchNeedsProbe(' "$session_source" | grep -q 'isVrrActive()'; then
-    err "the VRR refresh-drift guard keys on the pacing worker again (inert for unpaced VRR sessions)"
-  fi
   grep -qF 'isAdaptivePresentationActive()' "$session_source" ||
     err "Session no longer consults adaptive-presentation state"
-  if grep -B8 'm_VrrFallbackNotified' "$session_source" | grep -qE 'enableFramePacing[[:space:]]*&&'; then
-    err "the VRR-fallback notice is gated on the pacing preference again (silent VRR loss for unpaced users)"
-  fi
 
   # ---- BL-2531/BL-2522: pre-wait stale-queue skip -------------------------
   #
