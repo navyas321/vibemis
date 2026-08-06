@@ -4,7 +4,9 @@
 
 SdlAudioRenderer::SdlAudioRenderer()
     : m_AudioDevice(0),
-      m_AudioBuffer(nullptr)
+      m_AudioBuffer(nullptr),
+      m_FrameSize(0),
+      m_FrameDurationMs(0)
 {
     // Upstream asserted sole ownership of SDL_INIT_AUDIO here, but
     // UiSoundManager may hold a transient refcounted reference (UI nav sounds,
@@ -45,6 +47,15 @@ bool SdlAudioRenderer::prepareForPlayback(const OPUS_MULTISTREAM_CONFIGURATION* 
     m_FrameSize = opusConfig->samplesPerFrame *
                   opusConfig->channelCount *
                   getAudioBufferSampleSize();
+
+    // Duration of one Opus frame in ms, so the queue backpressure below can budget
+    // in TIME rather than in frames. samplesPerFrame is 48 * AudioPacketDuration and
+    // sampleRate is always 48000 (moonlight-common-c AudioStream.c / RtspConnection.c),
+    // so this is exactly the negotiated packet duration: 5 ms normally, 10 ms on slow
+    // decoders and low-bitrate links. No div-by-zero: sampleRate is hardcoded 48000
+    // here and in audio.cpp, and the identical unguarded expression already ships in
+    // soundioaudiorenderer.cpp.
+    m_FrameDurationMs = opusConfig->samplesPerFrame / (opusConfig->sampleRate / 1000);
 
     m_AudioDevice = SDL_OpenAudioDevice(NULL, 0, &want, &have, 0);
     if (m_AudioDevice == 0) {
@@ -127,8 +138,13 @@ bool SdlAudioRenderer::submitAudio(int bytesWritten)
             return false;
         }
 
-        // Only queue more samples where there are 10 frames or less in SDL's queue
-        if (SDL_GetQueuedAudioSize(m_AudioDevice) / m_FrameSize <= 10) {
+        // Only queue more samples when 50 ms or less of audio is left in SDL's queue.
+        // This was a flat 10-FRAME cap, which meant the buffer depth silently tracked
+        // the negotiated packet duration: 50 ms at 5 ms frames but 100 ms at 10 ms
+        // frames, i.e. the slow decoders and low-bitrate links that get 10 ms packets
+        // were also handed double the latency. Budgeting in time keeps it at 50 ms
+        // either way (upstream moonlight-qt 4cf498b0).
+        if (SDL_GetQueuedAudioSize(m_AudioDevice) / m_FrameSize * m_FrameDurationMs <= 50) {
             break;
         }
 

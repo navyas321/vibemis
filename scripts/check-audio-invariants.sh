@@ -17,9 +17,25 @@ AUDIOCPP="app/streaming/audio/audio.cpp"
 grep -qF 'want.samples = SDL_max(480, opusConfig->samplesPerFrame * 3);' "$SDLAUD" \
   || err "sdlaud.cpp: want.samples formula changed"
 
-# 2. 10-frame SDL queue backpressure (NOT upstream 4cf498b0's 50 ms duration cap)
-grep -qF 'SDL_GetQueuedAudioSize(m_AudioDevice) / m_FrameSize <= 10' "$SDLAUD" \
-  || err "sdlaud.cpp: 10-frame backpressure cap changed"
+# 2. 50 ms SDL queue backpressure budget (upstream 4cf498b0's duration cap).
+#    HISTORY (BL-2523): this check used to pin the 10-FRAME cap and named 4cf498b0 as
+#    the thing to keep out. That cap was frame-counted, so the real buffer depth tracked
+#    the negotiated Opus packet duration -- 50 ms at 5 ms frames, but 100 ms at the 10 ms
+#    frames handed to slow decoders and low-bitrate links. The port was taken on maintainer
+#    directive (2026-08-06) to make the budget 50 ms in both cases. The BL-2213 no-crackle
+#    protection is unchanged in INTENT: what must never regress is a bounded SDL queue, and
+#    at the 5 ms frames a normal session negotiates the bound is numerically identical to
+#    what shipped before. The on-device A/B is the beta that carries this change; if
+#    crackling returns on a Bazzite/ROG Ally (issue #239), revert to the 10-frame form and
+#    restore this check with it.
+grep -qF 'SDL_GetQueuedAudioSize(m_AudioDevice) / m_FrameSize * m_FrameDurationMs <= 50' "$SDLAUD" \
+  || err "sdlaud.cpp: 50 ms backpressure budget changed"
+
+# 2b. The duration the budget divides by must stay the NEGOTIATED packet duration.
+#     Hardcoding it (or losing the assignment) silently turns the 50 ms budget into a
+#     wrong-by-a-factor-of-two cap without touching the line above.
+grep -qF 'm_FrameDurationMs = opusConfig->samplesPerFrame / (opusConfig->sampleRate / 1000);' "$SDLAUD" \
+  || err "sdlaud.cpp: frame-duration derivation changed"
 
 # 3. 30 ms pending-audio drop gate
 grep -qF 'LiGetPendingAudioDuration() > 30' "$SDLAUD" \
