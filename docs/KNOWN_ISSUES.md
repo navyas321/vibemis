@@ -35,10 +35,11 @@ version-less and free of any issues/limitations tables.
 
 ## Experimental / not yet validated
 
-The items below are validation gaps specific to the current build — each resolves once the code
-path is exercised on the hardware or under the conditions it was written for.
+Features that ship behind an Experimental label, and validation gaps specific to the current
+build — a gap resolves once the code path is exercised on the hardware or under the conditions
+it was written for.
 
 | Feature | Status |
 |---|---|
-| **HDR streaming** | Ships **opt-in and marked Experimental** (off by default; auto-disabled on unsupported PCs). The code path is complete but has not yet been validated on HDR hardware — the primary test device's panel is SDR. Validation is planned via an external HDR display. |
+| **HDR streaming** | **Validated on HDR hardware — confirmed working 2026-08-06.** Still ships **opt-in and marked Experimental** (off by default; auto-disabled on unsupported PCs) while it accumulates real-world use across displays; the earlier caveat that the path had never been exercised on an HDR panel no longer applies. |
 | **Ghosting / lost frames with Enable VRR on** | **Believed fixed, not yet re-confirmed on device.** The cause was a VRR timing core that had been vendored verbatim from an older upstream revision and never re-synced, so it ran a stale tuning model; the core has since been re-vendored from current upstream with the local fixes re-applied, alongside a fix for frames the pacer discarded without counting them. Two earlier explanations posted here — panel overdrive, and host-side frame generation — were both measured and **withdrawn**; neither was the cause. What is still missing is the matched A/B against the reference client with host-side frame generation enabled, so parity is stated but unproven (BL-2541). If ghosting or a rendered rate below the decoded rate recurs, report it with the pacing overlay open. |
