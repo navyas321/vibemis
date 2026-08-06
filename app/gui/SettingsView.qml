@@ -2336,7 +2336,7 @@ Item {
 
                 VbToggleRow {
                     id: enableHdr
-                    text: qsTr("Enable HDR (Experimental)")
+                    text: qsTr("Enable HDR")
 
                     enabled: SystemProperties.supportsHdr
                     checked: enabled && StreamingPreferences.enableHdr
