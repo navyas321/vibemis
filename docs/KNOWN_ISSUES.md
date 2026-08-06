@@ -38,11 +38,6 @@ version-less and free of any issues/limitations tables.
 Validation gaps specific to the current build — each resolves once the code path is exercised on
 the hardware, or under the conditions, it was written for.
 
-HDR streaming used to sit here. It was validated on HDR hardware on 2026-08-06 and is no longer
-experimental: the row is gone and the Settings toggle now reads simply "Enable HDR". The separate
-HDR-to-SDR tone-map option keeps its Experimental label — tone-mapping down to an SDR panel is a
-different code path and has not been validated on its own.
-
 | Feature | Status |
 |---|---|
 | **Ghosting / lost frames with Enable VRR on** | **Believed fixed, not yet re-confirmed on device.** The cause was a VRR timing core that had been vendored verbatim from an older upstream revision and never re-synced, so it ran a stale tuning model; the core has since been re-vendored from current upstream with the local fixes re-applied, alongside a fix for frames the pacer discarded without counting them. Two earlier explanations posted here — panel overdrive, and host-side frame generation — were both measured and **withdrawn**; neither was the cause. What is still missing is the matched A/B against the reference client with host-side frame generation enabled, so parity is stated but unproven (BL-2541). If ghosting or a rendered rate below the decoded rate recurs, report it with the pacing overlay open. |
