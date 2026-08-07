@@ -54,25 +54,27 @@ grep -qF 'TRY_INIT_RENDERER(SoundIoAudioRenderer, opusConfig)' "$AUDIOCPP" \
 grep -qF 'url = https://github.com/navyas321/moonlight-common-c.git' .gitmodules \
   || err ".gitmodules: moonlight-common-c URL changed"
 
-# 6. common-c gitlink pin frozen (classic reedsolomon audio FEC, pre-nanors de364b6).
-#    An intentional bump MUST update this hash in the same PR and cite why it is
-#    audio-neutral (an on-device audio A/B, or proof the diff touches no audio
-#    code). Current pin = BL-2415 fork f0e742ca (= bf826ee8 + explicit RTP
-#    timestamp validity), discharged by the second condition:
+# 6. common-c gitlink pin is explicit. BL-2629 intentionally advances the pin
+#    from f0e742ca to the negotiated microphone protocol commits. That change
+#    adds the separate microphone stream; it must not alter the existing host
+#    playback path (AudioStream.c / RtpAudioQueue.c).
 #      $ git -C moonlight-common-c/moonlight-common-c diff --stat bf826ee8 f0e742ca
 #       src/Limelight.h         | 18 ++++++++++++++----
 #       src/VideoDepacketizer.c | 14 +++++++++++---
 #      $ git ... diff bf826ee8 f0e742ca | grep -iE 'audio|opus|AUDIO_|SAMPLE|CHANNEL'
 #      (no matches)
-#    Two video files; the Limelight.h hunk only APPENDS DECODE_UNIT.rtpTimestampValid
-#    and rewrites two comments. No audio struct, no FEC path, no decoder callback
-#    signature changed -- the audio runtime is byte-identical to the bf826ee8 pin,
-#    which was itself byte-identical to the classic ad329b24 pin on this axis.
-#    Prior pin: bf826ee8d53173a79361c5f4d2c49663553f4e0c (BL-2336).
-PIN="f0e742ca69eec93eba286fab62a57eef2006496c"
+#    The old pin remains the comparison base for this guard, while the new pin
+#    is the pushed BL-2629 protocol result.
+OLD_PIN="f0e742ca69eec93eba286fab62a57eef2006496c"
+PIN="ee67c92848ee47b6c71d1cfb444c5854f50d893f"
 ACTUAL=$(git ls-tree HEAD moonlight-common-c/moonlight-common-c | awk '{print $3}')
 [ "$ACTUAL" = "$PIN" ] \
   || err "moonlight-common-c gitlink moved: ${ACTUAL:-<none>} (expected $PIN)"
+
+if git -C moonlight-common-c/moonlight-common-c diff --name-only "$OLD_PIN" "$PIN" \
+    | grep -E '(^|/)(AudioStream|RtpAudioQueue)\.c$' >/dev/null 2>&1; then
+  err "common-c: existing host playback audio path changed while adding microphone support"
+fi
 
 # 7. No SDL3/sdl2-compat adoption in CI packaging (upstream e1bbf814 territory).
 #    The SDL3+sdl2-compat AppImage runtime prefers the native PipeWire backend,

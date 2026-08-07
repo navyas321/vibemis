@@ -176,6 +176,7 @@ Item {
         // This enables Tab and BackTab based navigation rather than arrow keys.
         // It is required to shift focus between controls on the settings page.
         SdlGamepadKeyNavigation.setUiNavMode(true)
+        StreamingPreferences.setMicrophoneMonitorActive(true)
 
         // Highlight the first sidebar category row if a gamepad is connected.
         if (SdlGamepadKeyNavigation.getConnectedGamepads() > 0 && sidebarRepeater.count > 0) {
@@ -188,6 +189,7 @@ Item {
 
     StackView.onDeactivating: {
         SdlGamepadKeyNavigation.setUiNavMode(false)
+        StreamingPreferences.setMicrophoneMonitorActive(false)
 
         // Save the prefs so the Session can observe the changes
         StreamingPreferences.save()
@@ -196,6 +198,7 @@ Item {
     Component.onDestruction: {
         // Also save preferences on destruction, since we won't get a
         // deactivating callback if the user just closes Moonlight
+        StreamingPreferences.setMicrophoneMonitorActive(false)
         StreamingPreferences.save()
     }
 
@@ -2787,6 +2790,101 @@ Item {
                     ToolTip.timeout: 5000
                     ToolTip.visible: hovered
                     ToolTip.text: qsTr("Mutes Vibemis's audio when you Alt+Tab out of the stream or click on a different window.")
+                }
+
+                VbToggleRow {
+                    id: enableMicrophoneCheck
+                    text: qsTr("Enable microphone streaming")
+                    checked: StreamingPreferences.enableMicrophone
+                    onCheckedChanged: {
+                        StreamingPreferences.enableMicrophone = checked
+                        StreamingPreferences.refreshMicrophoneMonitor()
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Streams your microphone audio to the host PC when the host supports microphone passthrough.")
+                }
+
+                AutoResizingComboBox {
+                    id: microphoneDeviceComboBox
+                    width: parent.width
+                    enabled: enableMicrophoneCheck.checked
+                    model: [qsTr("Default system microphone")].concat(StreamingPreferences.microphoneDevices)
+
+                    function syncSelection() {
+                        const savedDevice = StreamingPreferences.microphoneDevice
+                        currentIndex = 0
+                        for (let i = 0; i < StreamingPreferences.microphoneDevices.length; i++) {
+                            if (StreamingPreferences.microphoneDevices[i] === savedDevice) {
+                                currentIndex = i + 1
+                                return
+                            }
+                        }
+                    }
+
+                    Component.onCompleted: {
+                        StreamingPreferences.refreshMicrophoneDevices()
+                        syncSelection()
+                    }
+
+                    onActivated: {
+                        StreamingPreferences.microphoneDevice = currentIndex === 0 ?
+                            "" : StreamingPreferences.microphoneDevices[currentIndex - 1]
+                        StreamingPreferences.refreshMicrophoneMonitor()
+                    }
+
+                    Connections {
+                        target: StreamingPreferences
+
+                        function onMicrophoneDevicesChanged() {
+                            microphoneDeviceComboBox.syncSelection()
+                        }
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Choose which local microphone Vibemis captures. Leave this on the default option to follow your system input device.")
+                }
+
+                Label {
+                    width: parent.width
+                    text: qsTr("Microphone input preview")
+                    font.pixelSize: VbTokens.typeLabel
+                    font.family: VbTokens.fontBody
+                    wrapMode: Text.Wrap
+                }
+
+                Rectangle {
+                    width: parent.width
+                    height: 16
+                    radius: 8
+                    color: VbTokens.bgWindow
+                    border.width: 1
+                    border.color: StreamingPreferences.microphoneMonitorSignalDetected ? VbTokens.statusSuccess : VbTokens.stroke
+
+                    Rectangle {
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: Math.max(6, parent.width * StreamingPreferences.microphoneMonitorLevel)
+                        height: parent.height
+                        radius: parent.radius
+                        visible: StreamingPreferences.microphoneMonitorLevel > 0.001
+                        color: StreamingPreferences.microphoneMonitorSignalDetected ? VbTokens.statusSuccess : VbTokens.textTertiary
+                    }
+                }
+
+                Label {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    font.pixelSize: VbTokens.typeCaption
+                    font.family: VbTokens.fontBody
+                    text: StreamingPreferences.microphoneMonitorStatus + "\n" +
+                          (StreamingPreferences.microphoneMonitorSignalDetected ?
+                               qsTr("Input detected on the selected microphone.") :
+                               qsTr("No microphone input detected yet."))
                 }
             }
         }

@@ -3,6 +3,7 @@
 #include "streaming/streamutils.h"
 #include "streaming/vrrratepolicy.h"
 #include "streaming/bitraterescuepolicy.h"
+#include "streaming/audio/capture/microphonecapture.h"
 #include "backend/richpresencemanager.h"
 #include "backend/appprofilemanager.h"
 #include "backend/quickmenumanager.h"
@@ -1172,6 +1173,7 @@ bool Session::initialize()
 
     // Only the first 4 bytes are populated in the RI key IV
     RAND_bytes(reinterpret_cast<unsigned char*>(m_StreamConfig.remoteInputAesIv), 4);
+    m_StreamConfig.enableMic = m_Preferences->enableMicrophone;
 
     switch (m_Preferences->audioConfig)
     {
@@ -2347,6 +2349,33 @@ void Session::setShouldQuitAppAfter()
     m_ShouldQuitAppAfter = true;
 }
 
+bool Session::initializeMicrophoneCapture()
+{
+    if (m_MicrophoneCapture != nullptr) {
+        return true;
+    }
+
+    m_MicrophoneCapture = new MicrophoneCapture();
+    m_MicrophoneCapture->setEnabled(m_Preferences->enableMicrophone);
+    if (!m_MicrophoneCapture->initialize(m_Preferences->microphoneDevice.toStdString())) {
+        delete m_MicrophoneCapture;
+        m_MicrophoneCapture = nullptr;
+        return false;
+    }
+
+    return true;
+}
+
+void Session::destroyMicrophoneCapture()
+{
+    if (m_MicrophoneCapture != nullptr) {
+        m_MicrophoneCapture->stop();
+        delete m_MicrophoneCapture;
+        m_MicrophoneCapture = nullptr;
+    }
+
+}
+
 class ExecThread : public QThread
 {
 public:
@@ -2458,11 +2487,26 @@ void Session::execInternal()
 
     // If the connection failed, clean up and abort the connection.
     if (!m_AsyncConnectionSuccess) {
+        destroyMicrophoneCapture();
         delete m_InputHandler;
         m_InputHandler = nullptr;
         SDL_QuitSubSystem(SDL_INIT_VIDEO);
         QThreadPool::globalInstance()->start(new DeferredSessionCleanupTask(this));
         return;
+    }
+
+    if (m_Preferences->enableMicrophone) {
+        if (LiIsMicrophoneStreamActive()) {
+            if (!initializeMicrophoneCapture() || !m_MicrophoneCapture->start()) {
+                SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                            "Microphone capture initialization failed after successful negotiation");
+                destroyMicrophoneCapture();
+            }
+        }
+        else {
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                        "Host did not negotiate microphone streaming; leaving client microphone disabled");
+        }
     }
 
     int x, y, width, height;
@@ -3203,6 +3247,8 @@ void Session::execInternal()
     }
 
 DispatchDeferredCleanup:
+    destroyMicrophoneCapture();
+
     // Uncapture the mouse and hide the window immediately,
     // so we can return to the Qt GUI ASAP.
     m_InputHandler->setCaptureActive(false);

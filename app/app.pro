@@ -196,6 +196,7 @@ SOURCES += \
     streaming/bitraterescuepolicy.cpp \
     streaming/vrrratepolicy.cpp \
     streaming/audio/audio.cpp \
+    streaming/audio/capture/microphonecapture.cpp \
     streaming/audio/renderers/sdlaud.cpp \
     gui/computermodel.cpp \
     gui/appmodel.cpp \
@@ -244,6 +245,7 @@ HEADERS += \
     streaming/session.h \
     streaming/bitraterescuepolicy.h \
     streaming/vrrratepolicy.h \
+    streaming/audio/capture/microphonecapture.h \
     streaming/audio/renderers/renderer.h \
     streaming/audio/renderers/sdl.h \
     gui/computermodel.h \

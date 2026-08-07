@@ -19,6 +19,7 @@
 class QuickMenuManager;
 class ServerCommandManager;
 class ClipboardManager;
+class MicrophoneCapture;
 
 class SupportedVideoFormatList : public QList<int>
 {
@@ -346,6 +347,9 @@ private:
 
     void triggerBitrateRescue(uint32_t elapsedMs, uint32_t delivered, uint32_t dropped);
 
+    bool initializeMicrophoneCapture();
+    void destroyMicrophoneCapture();
+
     StreamingPreferences* m_Preferences;
     bool m_IsFullScreen;
     SupportedVideoFormatList m_SupportedVideoFormats; // Sorted in order of descending priority
@@ -421,6 +425,7 @@ private:
     OPUS_MULTISTREAM_CONFIGURATION m_OriginalAudioConfig;
     int m_AudioSampleCount;
     Uint32 m_DropAudioEndTime;
+    MicrophoneCapture* m_MicrophoneCapture = nullptr;
 
     Overlay::OverlayManager m_OverlayManager;
     QuickMenuManager* m_QuickMenuManager;

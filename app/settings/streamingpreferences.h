@@ -5,13 +5,21 @@
 #include <QQmlEngine>
 #include <QVariant>
 
+#include <atomic>
+#include <QStringList>
+#include "SDL_compat.h"
+
 #include <vector>
+
+class QTimer;
 
 class StreamingPreferences : public QObject
 {
     Q_OBJECT
 
 public:
+    ~StreamingPreferences() override;
+
     static StreamingPreferences* get(QQmlEngine *qmlEngine = nullptr);
 
     Q_INVOKABLE static int
@@ -231,6 +239,12 @@ public:
     Q_PROPERTY(bool gamepadMouse MEMBER gamepadMouse NOTIFY gamepadMouseChanged)
     Q_PROPERTY(bool detectNetworkBlocking MEMBER detectNetworkBlocking NOTIFY detectNetworkBlockingChanged)
     Q_PROPERTY(bool showPerformanceOverlay MEMBER showPerformanceOverlay NOTIFY showPerformanceOverlayChanged)
+    Q_PROPERTY(bool enableMicrophone MEMBER enableMicrophone NOTIFY enableMicrophoneChanged)
+    Q_PROPERTY(QString microphoneDevice MEMBER microphoneDevice NOTIFY microphoneDeviceChanged)
+    Q_PROPERTY(QStringList microphoneDevices READ microphoneDevices NOTIFY microphoneDevicesChanged)
+    Q_PROPERTY(double microphoneMonitorLevel READ microphoneMonitorLevel NOTIFY microphoneMonitorLevelChanged)
+    Q_PROPERTY(QString microphoneMonitorStatus READ microphoneMonitorStatus NOTIFY microphoneMonitorStatusChanged)
+    Q_PROPERTY(bool microphoneMonitorSignalDetected READ microphoneMonitorSignalDetected NOTIFY microphoneMonitorSignalDetectedChanged)
     // Vibemis: when true, the performance overlay shows a single compact line
     // (fps · resolution/codec · latency · drops) instead of the full multi-line block —
     // far more legible on a small handheld screen during a stream.
@@ -297,6 +311,14 @@ public:
     Q_PROPERTY(int resolutionScaleFactor MEMBER resolutionScaleFactor NOTIFY resolutionScaleFactorChanged);
 
     Q_INVOKABLE bool retranslate();
+    Q_INVOKABLE void refreshMicrophoneDevices();
+    Q_INVOKABLE void setMicrophoneMonitorActive(bool active);
+    Q_INVOKABLE void refreshMicrophoneMonitor();
+
+    QStringList microphoneDevices() const;
+    double microphoneMonitorLevel() const;
+    QString microphoneMonitorStatus() const;
+    bool microphoneMonitorSignalDetected() const;
 
     // Vibemis (BL-2212): build the Settings FPS combo list. With VRR enabled
     // (and its V-sync precondition met), exact native refresh choices are
@@ -336,6 +358,8 @@ public:
     bool gamepadMouse;
     bool detectNetworkBlocking;
     bool showPerformanceOverlay;
+    bool enableMicrophone;
+    QString microphoneDevice;
     bool compactPerformanceOverlay;
     bool preferTailscale;
     bool forwardMotionControls;
@@ -425,6 +449,12 @@ signals:
     void gamepadMouseChanged();
     void detectNetworkBlockingChanged();
     void showPerformanceOverlayChanged();
+    void enableMicrophoneChanged();
+    void microphoneDeviceChanged();
+    void microphoneDevicesChanged();
+    void microphoneMonitorLevelChanged();
+    void microphoneMonitorStatusChanged();
+    void microphoneMonitorSignalDetectedChanged();
     void compactPerformanceOverlayChanged();
     void preferTailscaleChanged();
     void forwardMotionControlsChanged();
@@ -469,6 +499,22 @@ private:
 
     QString getSuffixFromLanguage(Language lang);
 
+    static void microphoneMonitorCallback(void* userdata, Uint8* stream, int len);
+    bool startMicrophoneMonitor();
+    void stopMicrophoneMonitor(const QString& status = QString());
+    void processMicrophoneMonitorData(const Uint8* stream, int len);
+    void updateMicrophoneMonitorState();
+    void setMicrophoneMonitorStatus(const QString& status);
+
     QQmlEngine* m_QmlEngine;
+    QStringList m_MicrophoneDevices;
+    SDL_AudioDeviceID m_MicrophoneMonitorDeviceId = 0;
+    SDL_AudioSpec m_MicrophoneMonitorSpec = {};
+    QTimer* m_MicrophoneMonitorTimer = nullptr;
+    std::atomic<int> m_PendingMicrophonePeak { 0 };
+    double m_MicrophoneMonitorLevel = 0.0;
+    QString m_MicrophoneMonitorStatus;
+    bool m_MicrophoneMonitorActive = false;
+    bool m_MicrophoneMonitorSignalDetected = false;
 };
 
