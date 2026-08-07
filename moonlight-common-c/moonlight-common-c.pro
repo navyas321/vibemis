@@ -64,6 +64,7 @@ SOURCES += \
     $$COMMON_C_DIR/src/FakeCallbacks.c \
     $$COMMON_C_DIR/src/InputStream.c \
     $$COMMON_C_DIR/src/LinkedBlockingQueue.c \
+    $$COMMON_C_DIR/src/MicrophoneStream.c \
     $$COMMON_C_DIR/src/Misc.c \
     $$COMMON_C_DIR/src/Platform.c \
     $$COMMON_C_DIR/src/PlatformCrypto.c \

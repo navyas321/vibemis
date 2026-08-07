@@ -76,6 +76,12 @@ if git -C moonlight-common-c/moonlight-common-c diff --name-only "$OLD_PIN" "$PI
   err "common-c: existing host playback audio path changed while adding microphone support"
 fi
 
+# 6b. The qmake wrapper owns the static-library source list. A submodule pin can
+#     contain the microphone implementation while the final app still fails to
+#     link if MicrophoneStream.c is omitted here.
+grep -qF '$$COMMON_C_DIR/src/MicrophoneStream.c' moonlight-common-c/moonlight-common-c.pro \
+  || err "moonlight-common-c.pro: MicrophoneStream.c is not linked into the client"
+
 # 7. No SDL3/sdl2-compat adoption in CI packaging (upstream e1bbf814 territory).
 #    The SDL3+sdl2-compat AppImage runtime prefers the native PipeWire backend,
 #    which is the prime crackle suspect on PipeWire handhelds.
