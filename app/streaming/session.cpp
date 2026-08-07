@@ -2582,6 +2582,7 @@ void Session::execInternal()
                          "SDL_CreateWindow() failed: %s",
                          SDL_GetError());
 
+            destroyMicrophoneCapture();
             delete m_InputHandler;
             m_InputHandler = nullptr;
             SDL_QuitSubSystem(SDL_INIT_VIDEO);
