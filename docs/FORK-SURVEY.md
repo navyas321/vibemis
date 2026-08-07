@@ -4,7 +4,13 @@ Timeboxed research spike. **Deliverable is a ranked adoption shortlist, not code
 ported until the user reviews and accepts a candidate; each accepted candidate then gets its own
 epic or task.
 
-**Surveyed:** 2026-08-07, against `moonlight-stream/moonlight-qt@master` (1210 forks at survey time).
+**Surveyed:** 2026-08-07, against `moonlight-stream/moonlight-qt@master`, which had 1210 forks at
+survey time. Star counts and divergence figures below are point-in-time; re-measure before acting on
+them rather than trusting the numbers in this file.
+
+**Reviewed:** independently re-verified 2026-08-07. Every divergence figure, the `wjbeckett/artemis`
+findings and the `.gitmodules` column checked out; the review caught one substantive error, which is
+corrected — and explained — in §2 of the adoption order.
 
 ## Method (reproducible)
 
@@ -64,8 +70,9 @@ All GPL-3.0 — license-compatible with vibemis. Upstream attribution belongs in
 ### 1. Nonary/moonlight-qt — VRR adaptive frame pacing (recommended first)
 
 Highest strategic fit and lowest risk. **Nonary authors Vibepollo**, the host vibemis actually pairs
-with, so this is the client half designed against our host. All 17 commits are VRR pacing on **stock
-common-c** — app-layer only, so no submodule surgery:
+with, so this is the client half designed against our host. Of the 17 commits ahead, 14 are VRR
+pacing work — the rest are two merges and `fix(vrr): restore fullscreen toggle shortcut`. All of it
+is on **stock common-c**, app-layer only, so no submodule surgery:
 
 `feat(vrr): add GPU-ready adaptive frame pacing` · `fix(vrr): stabilize host-quantized source
 cadence` · `feat(vrr): split pacing telemetry by outcome` · `fix(vrr): retain Gamescope WSI adaptive
@@ -79,19 +86,29 @@ This should be scoped as *"diff our pacing against Nonary's and adopt what measu
 wholesale merge. `fix(vrr): retain Gamescope WSI adaptive pacing` is directly relevant to our Game
 Mode path. Ties into BL-2642.
 
-### 2. Cross-fork fixes that upstream has not merged
+### 2. We are 474 commits behind upstream master — merge, don't mine
 
-Four fixes appear independently in **both** qiin2333 and Hestia but are absent from
-moonlight-qt master — meaning they are circulating in the fork ecosystem while upstream lags. Small,
-self-contained, stock-common-c, and cheap to verify:
+Four fixes appear in **both** qiin2333 and Hestia, which initially looked like fork-only work
+circulating while upstream lagged. **That reading was wrong**, and the way it was wrong is worth
+recording because the trap is easy to re-enter:
 
-- `Fix manual address being clobbered when using the CLI`
-- `Loosen applist XML validation to accept empty app names`
-- `Fix blocking during rendering rather than in waitToRender() on MoltenVK`
-- `Use libplacebo renderer on macOS`
+| Fix | Upstream master | On vibemis-main |
+|---|---|---|
+| `Fix manual address being clobbered when using the CLI` | `5034a324`, 2026-06-28 | missing |
+| `Loosen applist XML validation to accept empty app names` | `cdacb3d2`, 2026-06-28 | missing |
+| `Fix blocking during rendering rather than in waitToRender() on MoltenVK` | `6e231778`, 2026-06-26 | missing |
+| `Use libplacebo renderer on macOS` | `e223bf9a`, 2026-06-15 | missing |
 
-The last two are macOS-only and therefore low value for our Linux/handheld focus. The first two are
-platform-neutral bug fixes and are the cheapest real wins in this survey.
+**The trap:** the forks carry these as *rebased/cherry-picked commits with different SHAs*, so
+`compare/master...OWNER:BRANCH` lists them under `.commits[]` as "ahead". They look fork-exclusive
+unless you separately check master's own log. Always confirm with
+`git merge-base --is-ancestor <sha> moonlight/master` before calling anything fork-only.
+
+**The real finding this exposed:** we want all four, but not one of them is a fork port. They are
+upstream commits, and `vibemis-main` is **474 commits behind `moonlight-stream/moonlight-qt@master`**
+(and 1157 ahead) as of this survey. Every fix in this section arrives free with an upstream merge.
+The actionable item is a rebase/merge campaign against upstream master — which is BL-2418's territory
+— not a fork-mining task. Nothing in this section should be scoped as a port.
 
 ### 3. qiin2333/moonlight-qt — selective cherry-picks only
 
@@ -125,6 +142,8 @@ Most of this fork exists to integrate a different host ("Hermes") and forks comm
 branch, so it is not adoptable wholesale. Generic pieces worth reading:
 
 - `Pace from fractional refresh rate, not a rounded integer` — small, and squarely in our VRR lane.
+  Note this is a **diff, not a new feature**: vibemis already has an `enableFractionalRefreshRate`
+  preference (`nvhttp.cpp`), so the question is whether their pacing math beats ours.
 - `feat(audio): add selectable buffering profiles` + `enhance buffer policy with prebuffering and
   recovery parameters` — compare against our BL-2523 SDL queue backpressure work.
 - `Add codec capability probe` and `Add quality presets` — we have neither.
@@ -142,8 +161,12 @@ peripheral passthrough becomes a goal.
 
 ## Recommended next step
 
-Adopt in this order, each as its own task after user review: **(1) Nonary VRR comparison →
-(2) the two platform-neutral cross-fork fixes → (3) qiin2333 HDR brightness profile.** Everything
-below that is opportunistic.
+Adopt in this order, each as its own task after user review: **(1) an upstream-master merge campaign
+(474 commits behind; picks up all four fixes in §2 for free) → (2) Nonary VRR comparison →
+(3) qiin2333 HDR brightness profile.** Everything below that is opportunistic.
+
+Note that §2 is ranked first not because it is the most interesting but because it is the only item
+here that is pure debt: it costs nothing to decide and everything else is easier once we are closer
+to upstream.
 
 Re-run the method above when upstream moonlight-qt cuts a release, or roughly every 6 months.

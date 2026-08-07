@@ -114,6 +114,12 @@ public:
     // NB: This may not get destroyed for a long time! Don't put any cleanup here.
     // Use Session::exec() or DeferredSessionCleanupTask instead.
     virtual ~Session() {
+        // Last-resort net only. Every exec() path already tears the microphone down
+        // explicitly, and that is where it must happen -- this destructor can run long
+        // after the stream ends, so reaching here means an SDL capture device stayed
+        // open longer than it should have. Upstream got this net for free from QObject
+        // parenting; our MicrophoneCapture is not a QObject, so it needs saying.
+        destroyMicrophoneCapture();
         if (m_QuickMenuManager) {
             delete m_QuickMenuManager;
             m_QuickMenuManager = nullptr;
