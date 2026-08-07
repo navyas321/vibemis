@@ -2497,6 +2497,9 @@ void Session::execInternal()
 
     if (m_Preferences->enableMicrophone) {
         if (LiIsMicrophoneStreamActive()) {
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                        "Microphone stream encryption: %s",
+                        LiIsMicrophoneEncryptionEnabled() ? "enabled" : "disabled");
             if (!initializeMicrophoneCapture() || !m_MicrophoneCapture->start()) {
                 SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
                             "Microphone capture initialization failed after successful negotiation");

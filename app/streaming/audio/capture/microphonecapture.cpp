@@ -1,6 +1,5 @@
 #include "microphonecapture.h"
 
-#include <algorithm>
 #include <chrono>
 
 #include <Limelight.h>
@@ -9,6 +8,8 @@ MicrophoneCapture::MicrophoneCapture()
     : m_DeviceId(0)
     , m_ObtainedSpec({})
     , m_Encoder(nullptr)
+    , m_SampleReadOffset(0)
+    , m_SampleCount(0)
     , m_Streaming(false)
     , m_StopEncoderThread(false)
     , m_Initialized(false)
@@ -123,7 +124,6 @@ bool MicrophoneCapture::initialize(const std::string& deviceName)
     }
 
     SDL_PauseAudioDevice(m_DeviceId, 1);
-    m_SampleBuffer.reserve(kFrameSize * 4);
     m_StopEncoderThread.store(false, std::memory_order_release);
     m_EncoderThread = std::thread(&MicrophoneCapture::encoderLoop, this);
     m_Initialized = true;
@@ -194,11 +194,15 @@ void MicrophoneCapture::handleAudioData(const Uint8* stream, int len)
 
     {
         std::lock_guard lock(m_BufferMutex);
-        m_SampleBuffer.insert(m_SampleBuffer.end(), inputSamples, inputSamples + sampleCount);
-        constexpr size_t maxBufferedSamples = kFrameSize * 12;
-        if (m_SampleBuffer.size() > maxBufferedSamples) {
-            const auto trimSamples = m_SampleBuffer.size() - maxBufferedSamples;
-            m_SampleBuffer.erase(m_SampleBuffer.begin(), m_SampleBuffer.begin() + trimSamples);
+        for (int i = 0; i < sampleCount; ++i) {
+            if (m_SampleCount == kMaxBufferedSamples) {
+                m_SampleReadOffset = (m_SampleReadOffset + 1) % kMaxBufferedSamples;
+                --m_SampleCount;
+            }
+
+            const size_t writeOffset = (m_SampleReadOffset + m_SampleCount) % kMaxBufferedSamples;
+            m_SampleBuffer[writeOffset] = inputSamples[i];
+            ++m_SampleCount;
         }
     }
     m_BufferCondition.notify_one();
@@ -216,20 +220,23 @@ void MicrophoneCapture::encoderLoop()
             std::unique_lock lock(m_BufferMutex);
             m_BufferCondition.wait(lock, [this] {
                 return m_StopEncoderThread.load(std::memory_order_acquire) ||
-                       (m_Streaming.load(std::memory_order_acquire) && m_SampleBuffer.size() >= static_cast<size_t>(kFrameSize));
+                       (m_Streaming.load(std::memory_order_acquire) && m_SampleCount >= static_cast<size_t>(kFrameSize));
             });
 
             if (m_StopEncoderThread.load(std::memory_order_acquire)) {
                 break;
             }
 
-            if (!m_Streaming.load(std::memory_order_acquire) || m_SampleBuffer.size() < static_cast<size_t>(kFrameSize)) {
+            if (!m_Streaming.load(std::memory_order_acquire) || m_SampleCount < static_cast<size_t>(kFrameSize)) {
                 pacingActive = false;
                 continue;
             }
 
-            std::copy_n(m_SampleBuffer.begin(), kFrameSize, frame.begin());
-            m_SampleBuffer.erase(m_SampleBuffer.begin(), m_SampleBuffer.begin() + kFrameSize);
+            for (int i = 0; i < kFrameSize; ++i) {
+                frame[i] = m_SampleBuffer[(m_SampleReadOffset + static_cast<size_t>(i)) % kMaxBufferedSamples];
+            }
+            m_SampleReadOffset = (m_SampleReadOffset + kFrameSize) % kMaxBufferedSamples;
+            m_SampleCount -= kFrameSize;
         }
 
         const auto now = std::chrono::steady_clock::now();
@@ -272,5 +279,6 @@ void MicrophoneCapture::encoderLoop()
 void MicrophoneCapture::clearBufferedSamples()
 {
     std::lock_guard lock(m_BufferMutex);
-    m_SampleBuffer.clear();
+    m_SampleReadOffset = 0;
+    m_SampleCount = 0;
 }

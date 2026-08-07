@@ -2,11 +2,11 @@
 
 #include <atomic>
 #include <array>
+#include <cstddef>
 #include <condition_variable>
 #include <mutex>
 #include <string>
 #include <thread>
-#include <vector>
 
 #include <SDL.h>
 #include <opus.h>
@@ -26,6 +26,12 @@ public:
     bool isStreaming() const;
 
 private:
+    static constexpr int kSampleRate = 48000;
+    static constexpr int kChannels = 1;
+    static constexpr int kFrameSize = 960;
+    static constexpr int kBitrate = 64000;
+    static constexpr size_t kMaxBufferedSamples = kFrameSize * 12;
+
     static void audioCallback(void* userdata, Uint8* stream, int len);
     void handleAudioData(const Uint8* stream, int len);
     void clearBufferedSamples();
@@ -34,7 +40,9 @@ private:
     SDL_AudioDeviceID m_DeviceId;
     SDL_AudioSpec m_ObtainedSpec;
     OpusEncoder* m_Encoder;
-    std::vector<opus_int16> m_SampleBuffer;
+    std::array<opus_int16, kMaxBufferedSamples> m_SampleBuffer;
+    size_t m_SampleReadOffset;
+    size_t m_SampleCount;
     std::array<unsigned char, 1400> m_EncodedPacket;
     std::atomic_bool m_Streaming;
     std::atomic_bool m_StopEncoderThread;
@@ -45,8 +53,4 @@ private:
     std::condition_variable m_BufferCondition;
     std::thread m_EncoderThread;
 
-    static constexpr int kSampleRate = 48000;
-    static constexpr int kChannels = 1;
-    static constexpr int kFrameSize = 960;
-    static constexpr int kBitrate = 64000;
 };
