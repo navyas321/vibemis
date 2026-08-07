@@ -29,9 +29,9 @@ Clipboard sync, server commands, OTP pairing, virtual display control, an in-str
 - **SteamOS one-click integration** (guided setup, add-to-Steam helpers, self-update).
 - Bounded **auto-reconnect** on stream drop, **per-game stream profiles**, **settings export/import**,
   battery-saver bitrate, a compact performance overlay, and `vibemis selftest` for CI/on-device tests.
-- **Optional microphone passthrough** with device selection, live input preview, negotiated Opus capture,
-  and graceful fallback when the host does not support microphone streaming. Full host-receipt validation
-  remains tracked by BL-2633/BL-2634.
+- **Optional microphone passthrough** (off by default) with device selection, a live input preview,
+  negotiated Opus capture, and a clean fallback when the host does not support microphone streaming.
+  End-to-end host receipt is still unproven — see `docs/KNOWN_ISSUES.md`.
 
 ## Install
 Download the `.AppImage` from the release, make it executable, and double-click — or in SteamOS
