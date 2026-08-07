@@ -1,6 +1,7 @@
 #include "microphonecapture.h"
 
 #include <chrono>
+#include <vector>
 
 #include <Limelight.h>
 
