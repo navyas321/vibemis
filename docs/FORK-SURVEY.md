@@ -92,23 +92,33 @@ Four fixes appear in **both** qiin2333 and Hestia, which initially looked like f
 circulating while upstream lagged. **That reading was wrong**, and the way it was wrong is worth
 recording because the trap is easy to re-enter:
 
-| Fix | Upstream master | On vibemis-main |
-|---|---|---|
-| `Fix manual address being clobbered when using the CLI` | `5034a324`, 2026-06-28 | missing |
-| `Loosen applist XML validation to accept empty app names` | `cdacb3d2`, 2026-06-28 | missing |
-| `Fix blocking during rendering rather than in waitToRender() on MoltenVK` | `6e231778`, 2026-06-26 | missing |
-| `Use libplacebo renderer on macOS` | `e223bf9a`, 2026-06-15 | missing |
+| Fix | Upstream master | SHA on vibemis-main | Content on vibemis-main |
+|---|---|---|---|
+| `Fix manual address being clobbered when using the CLI` | `5034a324`, 2026-06-28 | absent | **already present** |
+| `Loosen applist XML validation to accept empty app names` | `cdacb3d2`, 2026-06-28 | absent | **already present** |
+| `Fix blocking during rendering rather than in waitToRender() on MoltenVK` | `6e231778`, 2026-06-26 | absent | macOS-only, not adopted |
+| `Use libplacebo renderer on macOS` | `e223bf9a`, 2026-06-15 | absent | macOS-only, not adopted |
 
 **The trap:** the forks carry these as *rebased/cherry-picked commits with different SHAs*, so
 `compare/master...OWNER:BRANCH` lists them under `.commits[]` as "ahead". They look fork-exclusive
-unless you separately check master's own log. Always confirm with
-`git merge-base --is-ancestor <sha> moonlight/master` before calling anything fork-only.
+unless you separately check master's own log.
 
-**The real finding this exposed:** we want all four, but not one of them is a fork port. They are
-upstream commits, and `vibemis-main` is **474 commits behind `moonlight-stream/moonlight-qt@master`**
-(and 1157 ahead) as of this survey. Every fix in this section arrives free with an upstream merge.
-The actionable item is a rebase/merge campaign against upstream master — which is BL-2418's territory
-— not a fork-mining task. Nothing in this section should be scoped as a port.
+**The same trap runs in reverse, and this survey fell into it** (corrected 2026-08-08 during
+BL-2654). `git merge-base --is-ancestor <sha> <branch>` answers a question about **ancestry, never
+about content**. The first two fixes above are not in our history under those SHAs — and are
+nonetheless already in our tree, hand-ported by BL-2226's slice B, with `nvhttp.cpp` carrying an
+explicit "Vibemis: hand-merged — upstream's null-AppTitle normalization for Sunshine is adopted"
+comment. `app/backend/computerseeker.cpp` is byte-identical to upstream master today. To test
+whether upstream work is present, compare content:
+`git format-patch -1 --stdout <sha> | git apply --check -R -` succeeds when it is already applied.
+
+**The real finding this exposed:** `vibemis-main` is 474 commits behind by SHA count — but that
+number measures ancestry too, and does not fall when we adopt upstream content as squashed fork
+commits, which is exactly how BL-2226 and BL-2418 adopted it. The honest gap is 229 files, of which
+128 need real merge work and 62 are already content-identical. The merge campaign is real and is
+tracked as BL-2654; see **`docs/UPSTREAM-MERGE-STRATEGY.md`** for the measurement method, the
+interface-boundary batching rule, and batch progress. Nothing in this section should be scoped as a
+port.
 
 ### 3. qiin2333/moonlight-qt — selective cherry-picks only
 
@@ -161,12 +171,14 @@ peripheral passthrough becomes a goal.
 
 ## Recommended next step
 
-Adopt in this order, each as its own task after user review: **(1) an upstream-master merge campaign
-(474 commits behind; picks up all four fixes in §2 for free) → (2) Nonary VRR comparison →
-(3) qiin2333 HDR brightness profile.** Everything below that is opportunistic.
+Adopt in this order, each as its own task after user review: **(1) the upstream-master merge
+campaign → (2) Nonary VRR comparison → (3) qiin2333 HDR brightness profile.** Everything below that
+is opportunistic.
 
 Note that §2 is ranked first not because it is the most interesting but because it is the only item
 here that is pure debt: it costs nothing to decide and everything else is easier once we are closer
-to upstream.
+to upstream. It is **in progress** as BL-2654 — batch 1 landed 2026-08-08; the strategy, the honest
+gap measurement, and the batch queue live in `docs/UPSTREAM-MERGE-STRATEGY.md`. Do not re-derive the
+"474 commits behind" figure from this file; it measures ancestry, not content.
 
 Re-run the method above when upstream moonlight-qt cuts a release, or roughly every 6 months.
