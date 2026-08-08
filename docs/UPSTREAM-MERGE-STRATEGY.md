@@ -189,7 +189,53 @@ moved `TAKE-THEIRS` → `BOTH` (partially closed — 1 and 12 lines residual res
 removing a declaration from a file we had not otherwise touched still counts as touching it.
 SHA distance unchanged at 474, as predicted.
 
-### Suggested batch 2
+### Batch 2 — vendor h264bitstream (2026-08-08)
+
+Upstream replaced the `h264bitstream` **git submodule** with a vendored minimal source set
+(`b7adc70e`), then fixed real bugs in it (`3e24a7a1`) and an MSVC warning (`7794a428`). The bug
+fixes are in the SPS-parsing path that `ffmpeg.cpp` uses for SPS fixups, so this is user-visible
+H.264 correctness, not just build hygiene. Chosen as batch 2 over the `eglimagefactory` interface
+because it is fully self-contained — a third-party parser with no entanglement in our fork.
+
+- Cherry-picked all three `-x` (`360b153a`, `2cd86151`, `ccefda41`). One conflict, in `.gitmodules`:
+  upstream's hunk deletes the `h264bitstream` submodule entry, ours also carries the
+  `moonlight-common-c` fork pointer. Resolved by dropping only the `h264bitstream` block — **our
+  `navyas321/moonlight-common-c` @ `vibemis-rtp-timestamp` entry is preserved**, and
+  `check-submodule-invariants.sh` confirms it.
+- Removed `h264bitstream/libh264bitstream.a` (`94b7706a`). This 998 KB prebuilt static library was
+  committed by accident during the 2025-07 quick-menu work and is not tracked upstream. Now that
+  `h264bitstream.pro` is `TEMPLATE = lib` compiling the vendored sources and `app.pro` links out of
+  `$$OUT_PWD`, a stale `.a` in the *source* tree can shadow a fresh in-source build.
+
+**Result:** all six files under `h264bitstream/` are byte-identical to upstream. All 11 guards
+exit 0. CI run 31277994460 SUCCESS (AppImage Build, Compile Sanity (Linux), VRR Tests, Invariants).
+
+**Gap after batch 2:** 229 files — 128 BOTH, **69 CONVERGED** (was 62), **16 TAKE-THEIRS** (was 22),
+14 WE-DELETED, 2 UP-DELETED.
+
+## The Artemis line is exhausted — do not re-survey it
+
+Checked directly against our own tree 2026-08-08, which is a stronger test than the GitHub compare
+API the fork survey used:
+
+| Artemis branch | We are behind | Content |
+|---|---:|---|
+| `upstream/develop` (default) | **0** | nothing — we contain all of it |
+| `upstream/master` | 2 | `Create FUNDING.yml` then `Delete .github/FUNDING.yml` |
+| `upstream/fix/hdr-renderer-logic` | 13 | Flatpak packaging only, despite the branch name |
+
+**Correction to `FORK-SURVEY.md`:** that file says `wjbeckett/artemis` has "detached history —
+`compare` returns no common ancestor". That is true of *moonlight-qt vs artemis*, but not of *us vs
+artemis*: `git merge-base vibemis-main upstream/develop` returns `afe2de7f`, which is artemis's own
+HEAD. Artemis is **vibemis's origin**, and we are 870 commits ahead of it with nothing behind.
+
+The 13-commit `fix/hdr-renderer-logic` branch is misleadingly named — it contains no HDR renderer
+logic. It is VA-API driver builds, NVDEC/NVENC with a custom FFmpeg, libva hashes and Flathub
+runtime changes, unmerged and unpushed since 2025-09-11. The only idea worth noting is bundling
+GPU drivers into the Flatpak for no-setup hardware decode; our `flatpak.yml` has diverged, so that
+would be a deliberate feature decision, not a merge. Nothing here is upstream debt.
+
+### Suggested batch 3
 
 The `eglimagefactory` interface — constructor, `exportDRMImages()`, `exportVAImages()`,
 `resetCache()`, and the new `EglImageContext` RAII wrapper — together with its two callers
