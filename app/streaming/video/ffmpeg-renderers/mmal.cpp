@@ -77,17 +77,8 @@ void MmalRenderer::prepareToRender()
     // can get spurious SDL_WINDOWEVENT events that will cause us to (again) recreate our
     // renderer. This can lead to an infinite to renderer recreation, so discard all
     // SDL_WINDOWEVENT events after SDL_CreateRenderer().
-    Session* session = Session::get();
-    if (session != nullptr) {
-        // If we get here during a session, we need to synchronize with the event loop
-        // to ensure we don't drop any important events.
-        session->flushWindowEvents();
-    }
-    else {
-        // If we get here prior to the start of a session, just pump and flush ourselves.
-        SDL_PumpEvents();
-        SDL_FlushEvent(SDL_WINDOWEVENT);
-    }
+    SDL_assert(Session::get());
+    Session::get()->flushWindowEvents();
 
     SDL_SetRenderDrawColor(m_BackgroundRenderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
     SDL_RenderClear(m_BackgroundRenderer);
@@ -249,6 +240,12 @@ int MmalRenderer::getDecoderColorspace()
     // MMAL seems to always use Rec. 709 colorspace for rendering
     // even when we try to set something else in the input format.
     return COLORSPACE_REC_709;
+}
+
+int MmalRenderer::getDecoderColorRange()
+{
+    // MMAL_COLOR_SPACE_ITUR_BT709 assumes limited range content
+    return COLOR_RANGE_LIMITED;
 }
 
 void MmalRenderer::InputPortCallback(MMAL_PORT_T*, MMAL_BUFFER_HEADER_T* buffer)
