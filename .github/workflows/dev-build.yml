@@ -275,6 +275,52 @@ jobs:
           fi
           echo "- Overlay test suite: both binaries passed" >> "$GITHUB_STEP_SUMMARY"
 
+      # tests/keyboard covers the table that turns one local key press into the
+      # keyboard event the host receives (app/streaming/input/keyremotemap.h).
+      # It exists because of the ABNT2 `/` `?` defect: SDL's X11 backend reports
+      # SDL_SCANCODE_INTERNATIONAL1 for X11 keycode 97, the table folded that
+      # into the ISO extra-key VK, and the host pressed the same physical key as
+      # `\` `|`. Nothing on a US keyboard can see that failure, so this suite is
+      # the only place the bug can be caught. libsdl2-dev is already installed
+      # above for the timing tests and the suite needs nothing beyond SDL's
+      # headers -- it drives the real production header, not a copy of it.
+      - name: Build the keyboard mapping test suite
+        run: |
+          set -Eeuo pipefail
+          mkdir -p build-keyboard-tests
+          cd build-keyboard-tests
+          qmake6 "$GITHUB_WORKSPACE/tests/keyboard/keyboard.pro"
+          make -j"$(nproc)"
+
+      - name: Run the keyboard mapping test suite
+        run: |
+          set -Eeuo pipefail
+          cd build-keyboard-tests
+          export QT_QPA_PLATFORM=offscreen
+          rc=0
+          # Named explicitly for the same reason as the two lists above.
+          for t in tst_keyremotemap; do
+            bin=$(find "$GITHUB_WORKSPACE" -type f -name "$t" -perm -u+x -print -quit)
+            if [ -z "$bin" ]; then
+              echo "::error title=Keyboard test binary missing::$t was not built — did it drop out of tests/keyboard/keyboard.pro?"
+              rc=1
+              continue
+            fi
+            echo "::group::$t"
+            if "$bin"; then
+              echo "$t: PASS"
+            else
+              echo "::error title=Keyboard test failed::$t exited non-zero"
+              rc=1
+            fi
+            echo "::endgroup::"
+          done
+          if [ "$rc" -ne 0 ]; then
+            echo "- Keyboard mapping test suite FAILED" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "- Keyboard mapping test suite: passed" >> "$GITHUB_STEP_SUMMARY"
+
   # A change a user can notice must ship with a sentence a user can read.
   #
   # The release body's "🎯 What's new for you" section is built EXCLUSIVELY from

@@ -149,6 +149,22 @@ fi
 printf '%s' "$crd" | grep -q 'needs:.*vrr-tests' \
   || err "create-dev-release no longer 'needs: vrr-tests' — a red VRR test would still publish a release"
 
+# 7b. The keyboard mapping suite must RUN as well; it rides the same required job.
+#
+# It is the only thing that can catch a remote-key collapse like the ABNT2 one,
+# where the `/` `?` key and the `\` `|` key both reached the host as VK_OEM_102
+# and the host pressed the same physical key for both. That class of defect is
+# invisible from a US keyboard — no amount of reviewing or dogfooding on QWERTY
+# finds it — so the guard has to be mechanical.
+if [ -z "$vrr_job" ]; then
+  err "the vrr-tests job is gone, so tests/keyboard has no job left to run in"
+else
+  printf '%s' "$vrr_job" | grep -q 'tests/keyboard/keyboard.pro' \
+    || err "no job builds tests/keyboard/keyboard.pro — the ABNT2 remote-key regression would silently stop running"
+  printf '%s' "$vrr_job" | grep -q 'tst_keyremotemap' \
+    || err "no job executes tst_keyremotemap — building it proves nothing"
+fi
+
 if [ "$fail" -ne 0 ]; then
   echo "One or more release-pipeline invariants failed." >&2
   exit 1
