@@ -65,8 +65,15 @@ grep -qF 'url = https://github.com/navyas321/moonlight-common-c.git' .gitmodules
 #      (no matches)
 #    The old pin remains the comparison base for this guard, while the new pin
 #    is the pushed BL-2629 protocol result.
+#
+#    BL-2657 (2026-10-21) advances the pin from ee67c928 by five cherry-picks of
+#    upstream moonlight-common-c fixes: d85371c / be43885 / 62e0663 (RFI and
+#    partial-IDR frame-loss handling), e2722dc (uninitialised ping payload) and
+#    5ec8397 (RTSP option leak). None touches the audio path:
+#      $ git ... diff --name-only ee67c928 64ba215d
+#      src/ControlStream.c  src/RtpVideoQueue.c  src/RtspParser.c  src/VideoDepacketizer.c
 OLD_PIN="f0e742ca69eec93eba286fab62a57eef2006496c"
-PIN="ee67c92848ee47b6c71d1cfb444c5854f50d893f"
+PIN="64ba215d4c741567682287532d10337d9749a078"
 ACTUAL=$(git ls-tree HEAD moonlight-common-c/moonlight-common-c | awk '{print $3}')
 [ "$ACTUAL" = "$PIN" ] \
   || err "moonlight-common-c gitlink moved: ${ACTUAL:-<none>} (expected $PIN)"
