@@ -1178,7 +1178,7 @@ jobs:
           build-essential \
           libegl1-mesa-dev libgl1-mesa-dev \
           libopus-dev libsdl2-dev libsdl2-ttf-dev \
-          libssl-dev libavcodec-dev libavformat-dev libavutil-dev libswscale-dev \
+          libssl-dev nasm libvdpau-dev \
           libxkbcommon-dev wayland-protocols libdrm-dev libgbm-dev \
           libva-dev \
           libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
@@ -1240,6 +1240,44 @@ jobs:
         printf '/usr/local/lib\n/usr/local/lib/x86_64-linux-gnu\n' | sudo tee /etc/ld.so.conf.d/vibemis-local.conf
         sudo ldconfig
         echo "Bundled libplacebo: $(pkg-config --modversion libplacebo 2>/dev/null || echo '??')"
+
+    # GitHub #319 / BL-2695: jammy's apt FFmpeg 4.4 has no VAAPI or Vulkan hwaccel
+    # for HEVC 4:4:4 (added in 6.0 / 6.1), so a YUV 4:4:4 stream always fell back to
+    # software decode on Intel/AMD. Build the Flatpak's pins instead (dav1d 1.5.3 +
+    # cgutman FFmpeg moonlight_8.1.1_r1), with the Flatpak's configure flags minus the
+    # ARM-only V4L2 options, --enable-lto, and --fatal-warnings (jammy's libvdpau 1.4
+    # has no AV1, so av1_vdpau is disabled with a warning). dav1d is built too because
+    # FFmpeg 8.1 needs dav1d >= 1.0 and jammy ships 0.9.2. Runs after the libplacebo
+    # step: the Vulkan hwaccels need the LunarG headers installed there.
+    - name: Build dav1d + FFmpeg (Flatpak pins)
+      run: |
+        set -euxo pipefail
+        export PKG_CONFIG_PATH="/usr/local/lib/x86_64-linux-gnu/pkgconfig:/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+        rm -rf deps/dav1d deps/ffmpeg
+        git clone --depth 1 --branch 1.5.3 https://code.videolan.org/videolan/dav1d.git deps/dav1d
+        test "$(git -C deps/dav1d rev-parse HEAD)" = b546257f770768b2c88258c533da38b91a06f737
+        ( cd deps/dav1d && meson setup build -Denable_tools=false -Denable_tests=false && ninja -C build && sudo ninja install -C build )
+        sudo ldconfig
+        mkdir -p deps/ffmpeg
+        curl -fsSL --retry 3 https://github.com/cgutman/FFmpeg/archive/f116128cafb244bc0f809d0285932ced0471268d.tar.gz \
+          | tar xz --strip-components=1 -C deps/ffmpeg
+        ( cd deps/ffmpeg && ./configure --prefix=/usr/local --disable-stripping \
+            --enable-pic --enable-shared --disable-static --disable-all \
+            --enable-avcodec --enable-avformat --enable-swscale \
+            --enable-decoder=h264 --enable-decoder=hevc --enable-decoder=av1 \
+            --enable-hwaccel=h264_vaapi --enable-hwaccel=hevc_vaapi --enable-hwaccel=av1_vaapi \
+            --enable-hwaccel=h264_vdpau --enable-hwaccel=hevc_vdpau --enable-hwaccel=av1_vdpau \
+            --enable-libdrm \
+            --enable-hwaccel=h264_vulkan --enable-hwaccel=hevc_vulkan --enable-hwaccel=av1_vulkan \
+            --enable-libdav1d --enable-decoder=libdav1d \
+          && make -j"$(nproc)" && sudo make install )
+        sudo ldconfig
+        echo "Bundled libavcodec: $(pkg-config --modversion libavcodec)"
+        # Fail here, not on a user's machine, if a hwaccel #319 needs was dropped.
+        for hw in HEVC_VAAPI HEVC_VULKAN; do
+          grep -q "^#define CONFIG_${hw}_HWACCEL 1" deps/ffmpeg/config.h \
+            || { echo "ERROR: ${hw} hwaccel not enabled"; exit 1; }
+        done
 
     - name: Build and install
       run: |
@@ -1367,6 +1405,16 @@ jobs:
         echo "AppImage: $APP"
         md5sum "$APP"
         file "$APP"
+
+        # #319 / BL-2695: the bundled FFmpeg must be the source-built 8.x
+        # (libavcodec.so.62), never jammy's 4.4 (libavcodec.so.58).
+        ls -l deploy/usr/lib/ | grep -E 'libav|libdav1d' || true
+        if ls deploy/usr/lib/libavcodec.so.58* >/dev/null 2>&1; then
+            echo "ERROR: AppImage bundles jammy's FFmpeg 4.4 (libavcodec.so.58)"
+            exit 1
+        fi
+        ls deploy/usr/lib/libavcodec.so.62* >/dev/null 2>&1 \
+            || { echo "ERROR: source-built libavcodec.so.62 not bundled"; exit 1; }
 
         # BL-2266 teardown contract: the type-2 runtime execs AppRun in-place
         # and unmounts the payload the moment the AppRun process tree's last
