@@ -502,6 +502,11 @@ Item {
         anchors.bottom: hintBar.top
 
         boundsBehavior: Flickable.OvershootBounds
+        // Hold a press briefly so a vertical drag that starts on a control (slider,
+        // combo box, checkbox) scrolls the panel instead of being swallowed by that
+        // control. Only vertical drags are claimed (contentWidth == width), so a
+        // horizontal slider drag still reaches the slider.
+        pressDelay: 100
 
         // Symmetric return path: unhandled d-pad LEFT from any focused content
         // control bubbles up here and returns focus to the selected sidebar row. Controls
