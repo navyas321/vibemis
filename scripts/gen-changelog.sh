@@ -18,9 +18,9 @@
 #
 # OUTPUT CONTRACT (the thing the user actually asked for)
 # ------------------------------------------------------
-#   ## 🎯 What's new for you      <- plain language, ALWAYS present, human-written
-#   ## 🚧 Development Build Changelog  <- categorized technical detail w/ hashes
-#   <details> 🔩 Internal / build plumbing </details>   <- collapsed, out of the way
+#   ## What's new for you      <- plain language, ALWAYS present, human-written
+#   ## Development Build Changelog  <- categorized technical detail w/ hashes
+#   <details> Internal / build plumbing </details>   <- collapsed, out of the way
 #
 # A BARE STABLE VERSION IS CURATED DIFFERENTLY (see is_stable_cut below): its hero carries
 # features plus fixes marked `Changelog-Major:`, and the whole technical changelog --
@@ -375,7 +375,7 @@ done <<< "$COMMITS"
 # ── Assembly ───────────────────────────────────────────────────────────────────
 # Hero FIRST and always present. Never a bare header: every branch below prints a
 # real sentence, so a release body can't come out looking half-generated.
-printf '## 🎯 What'"'"'s new for you\n\n'
+printf '## What'"'"'s new for you\n\n'
 if [ -n "$WHATSNEW" ]; then
   printf '%s\n' "$WHATSNEW"
 elif [ "$have_commits" != true ]; then
@@ -397,23 +397,23 @@ fi
 # nested collapsibles inconsistently, and the distinction only matters to whoever has
 # already opened the block -- a heading inside it carries that just as well.
 if [ "$STABLE_CUT" = true ]; then
-  printf '<details><summary>🚧 Full technical changelog — every change in this release</summary>\n\n'
+  printf '<details><summary>Full technical changelog — every change in this release</summary>\n\n'
 else
-  printf '## 🚧 Development Build Changelog\n\n'
+  printf '## Development Build Changelog\n\n'
 fi
-[ -n "$FEATURES" ]     && printf '### ✨ New Features\n%s\n' "$FEATURES"
-[ -n "$BUGFIXES" ]     && printf '### 🐛 Bug Fixes\n%s\n' "$BUGFIXES"
-[ -n "$IMPROVEMENTS" ] && printf '### 🔧 Improvements\n%s\n' "$IMPROVEMENTS"
-[ -n "$OTHER" ]        && printf '### 📝 Other Changes\n%s\n' "$OTHER"
+[ -n "$FEATURES" ]     && printf '### New Features\n%s\n' "$FEATURES"
+[ -n "$BUGFIXES" ]     && printf '### Bug Fixes\n%s\n' "$BUGFIXES"
+[ -n "$IMPROVEMENTS" ] && printf '### Improvements\n%s\n' "$IMPROVEMENTS"
+[ -n "$OTHER" ]        && printf '### Other Changes\n%s\n' "$OTHER"
 if [ -z "${FEATURES}${BUGFIXES}${IMPROVEMENTS}${OTHER}" ] && [ -z "$INTERNAL" ]; then
   printf '%s\n\n' "_No commits in this range._"
 fi
 # Plumbing last and collapsed -- present for traceability, out of the way of what a
 # user actually gets from this build.
 if [ "$STABLE_CUT" = true ]; then
-  [ -n "$INTERNAL" ] && printf '### 🔩 Internal / build plumbing\n%s\n' "$INTERNAL"
+  [ -n "$INTERNAL" ] && printf '### Internal / build plumbing\n%s\n' "$INTERNAL"
   printf '</details>\n'
 elif [ -n "$INTERNAL" ]; then
-  printf '<details><summary>🔩 Internal / build plumbing</summary>\n\n%s\n</details>\n' "$INTERNAL"
+  printf '<details><summary>Internal / build plumbing</summary>\n\n%s\n</details>\n' "$INTERNAL"
 fi
 exit 0

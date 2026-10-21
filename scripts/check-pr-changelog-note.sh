@@ -6,7 +6,7 @@
 #
 # WHY THIS EXISTS
 # ---------------
-# scripts/gen-changelog.sh builds the "🎯 What's new for you" section EXCLUSIVELY from
+# scripts/gen-changelog.sh builds the "What's new for you" section EXCLUSIVELY from
 # `Changelog:` lines a human wrote. It never falls back to commit subjects, because a
 # commit subject is written for other developers and reads like one -- "CI consolidation
 # + release gating + stable gate + changelog regression" is a true sentence and a
@@ -63,7 +63,7 @@ if ! CHANGED=$(git diff --name-only "$BASE" "$HEAD" 2>&1); then
 fi
 if ! changelog_any_ships <<< "$CHANGED"; then
   echo "OK: this PR changes no shipping files (CI, docs and guards only) — no release note needed."
-  echo "    It will appear in the collapsed '🔩 Internal / build plumbing' section."
+  echo "    It will appear in the collapsed 'Internal / build plumbing' section."
   exit 0
 fi
 
@@ -94,7 +94,7 @@ FAIL: this PR changes files that reach users, but no 'Changelog:' note was writt
 Shipping files changed:
 $FILES
 
-The release body's "🎯 What's new for you" section is built ONLY from Changelog: notes.
+The release body's "What's new for you" section is built ONLY from Changelog: notes.
 Without one, this change is invisible to that section and the release just says no
 highlights were flagged — which is how release notes quietly rot back into commit
 subjects. Commit subjects describe the mechanism to developers; this describes the

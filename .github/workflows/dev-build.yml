@@ -3,10 +3,10 @@ name: Vibemis CI & Releases
 # This workflow handles development builds with intelligent build skipping (rules cleaned
 # up 2026-07-21, BL-2270 — deterministic, content-based, merge-method-agnostic):
 # - test** branches: ANY push whose DIFF vs vibemis-main contains meaningful (non-docs)
-#   changes builds a 🔬 alpha pre-release. The branch name IS the intent — no [alpha]
+#   changes builds an alpha pre-release. The branch name IS the intent — no [alpha]
 #   marker commit is required (the old marker + per-commit gate skipped empty marker
 #   commits and forced cherry-pick dances). An empty/no-op branch is skipped.
-# - vibemis-main: ANY push that changes non-docs paths publishes a 🧪 beta — merge commit,
+# - vibemis-main: ANY push that changes non-docs paths publishes a beta — merge commit,
 #   squash merge, rebase merge, and direct push all count identically. The decision is by
 #   CONTENT (what the push changed), never by whether HEAD is a merge commit (the old
 #   HEAD-is-a-merge-commit rule silently skipped every squash merge). Docs/config-only
@@ -23,9 +23,9 @@ on:
   push:
     branches:
       # Keep this list TIGHT to avoid noisy builds/releases. Only:
-      #  - vibemis-main : integration branch → 🧪 beta (latest)
-      #  - test**       : test cycle branches → 🔬 alpha (pre-release, for test-cycle validation)
-      #  - release/**   : explicit stable ship → ✅ release
+      #  - vibemis-main : integration branch → beta (latest)
+      #  - test**       : test cycle branches → alpha (pre-release, for test-cycle validation)
+      #  - release/**   : explicit stable ship → release
       #  - main/master  : stable
       # fix/**, feat/**, hotfix/**, chore/**, develop, etc. intentionally do NOT build
       # (they produced the old noisy alpha/dev/hotfix prereleases).
@@ -277,7 +277,7 @@ jobs:
 
   # A change a user can notice must ship with a sentence a user can read.
   #
-  # The release body's "🎯 What's new for you" section is built EXCLUSIVELY from
+  # The release body's "What's new for you" section is built EXCLUSIVELY from
   # `Changelog:` lines written by a human -- it never falls back to commit subjects,
   # because a commit subject is written for other developers and reads like one. That
   # design only yields good release notes if the notes actually get written, and for
@@ -475,7 +475,7 @@ jobs:
 
           echo "::error title=A push was silently dropped::code landed on ${REF_NAME} with a CI-skip marker, so it cut no build"
           {
-            echo "### ⚠ Commits that suppressed their own build"
+            echo "### Commits that suppressed their own build"
             echo
             echo "These landed on \`${REF_NAME}\` since \`${LAST_TAG:-the last 50 commits}\` carrying a"
             echo "CI-skip marker, so GitHub dropped their push event: no build, no guards, no beta."
@@ -563,7 +563,7 @@ jobs:
             echo $((CODE_FILES + WORKFLOW_FILES))
           }
 
-          # vibemis-main (beta integration branch): a 🧪 beta is published for ANY push
+          # vibemis-main (beta integration branch): a beta is published for ANY push
           # that changes non-docs paths. The decision is by push CONTENT (event.before →
           # HEAD), never by whether HEAD is a merge commit — the old merge-commit rule
           # silently skipped every squash/rebase merge (#243/#244/#246/#247/#248/#251).
@@ -598,7 +598,7 @@ jobs:
           # was unreachable code that read as protection. The real handling is the `skip-ci-guard`
           # job (PR-time rejection + post-hoc audit of pushes that silently cut no beta).
 
-          # test** (alpha channel): ANY push builds a 🔬 alpha when the branch's diff vs
+          # test** (alpha channel): ANY push builds an alpha when the branch's diff vs
           # the merge-base with vibemis-main contains meaningful (non-docs) changes.
           # No [alpha] marker commit is required — the old marker + per-commit gate
           # SKIPPED empty marker commits (test137) and forced cherry-pick dances.
@@ -738,7 +738,7 @@ jobs:
           # ── Release tier determination (strict semver; <next> = app/version.txt) ──
           # Tier     Trigger                                              Version            Prerelease
           # release  dispatch release_type=stable / release/** / main     <next> (bare)      false (Latest)
-          #          ⚠ MAINTAINER-APPROVAL GATE: only the maintainer decides a stable cut;
+          #          MAINTAINER-APPROVAL GATE: only the maintainer decides a stable cut;
           #            a stable dispatch requires the CONFIRM-STABLE approval input.
           # rc       dispatch release_type=rc                             <next>-rc.NNN      true
           # beta     any non-docs push to vibemis-main (any merge method)  <next>-beta.NNN    true
@@ -749,7 +749,7 @@ jobs:
           RELEASE_TIER="dev"
 
           if [[ "${{ github.event.inputs.release_type }}" == "stable" ]]; then
-            # ✅ Production release — the bare next-stable version. Bump version.txt to
+            # Production release — the bare next-stable version. Bump version.txt to
             # the following stable right after the cut. Hotfix patches via version_override.
             #
             # BL-2458: a bare stable is minted ONLY by an explicit release_type=stable
@@ -769,7 +769,7 @@ jobs:
             RELEASE_TIER="release"
 
           elif [[ "${{ github.event.inputs.release_type }}" == "rc" ]]; then
-            # 🎯 Release candidate — the exact build proposed as the next stable, cut for
+            # Release candidate — the exact build proposed as the next stable, cut for
             # on-device verification. Prerelease-flagged; the updater's RC channel matches
             # the -rc suffix. Never takes Latest.
             VERSION="${BASE_VERSION}-rc.$(next_counter rc)"
@@ -777,7 +777,7 @@ jobs:
             RELEASE_TIER="rc"
 
           elif [[ "$BRANCH_NAME" == "vibemis-main" || "$BRANCH_NAME" == "develop" ]]; then
-            # 🧪 Beta — semver pre-release of the upcoming stable. Prerelease-flagged on
+            # Beta — semver pre-release of the upcoming stable. Prerelease-flagged on
             # GitHub (only bare stables are full releases); the updater's beta channel
             # matches the -beta suffix on every deployed client generation.
             VERSION="${BASE_VERSION}-beta.$(next_counter beta)"
@@ -785,7 +785,7 @@ jobs:
             RELEASE_TIER="beta"
 
           elif [[ "$BRANCH_NAME" =~ ^test ]]; then
-            # 🔬 Alpha — pre-release; the branch is shown in the release body.
+            # Alpha — pre-release; the branch is shown in the release body.
             # test** only. fix/feat/hotfix refs (reachable only via manual dispatch)
             # version as dev — the alpha channel consumes test<N> branches exclusively,
             # so a fix-branch "alpha" could never be picked up anyway.
@@ -793,7 +793,7 @@ jobs:
             RELEASE_TIER="alpha"
 
           else
-            # 🔧 Dev — suffixed so channel detection can never match it.
+            # Dev — suffixed so channel detection can never match it.
             VERSION="${BASE_VERSION}-dev.${RUN_N}.$BRANCH_SANITIZED"
             RELEASE_TIER="dev"
           fi
@@ -1560,36 +1560,36 @@ jobs:
         name: Vibemis release ${{ needs.setup-version.outputs.version }}
         body: |
           ${{
-            needs.setup-version.outputs.release_tier == 'release' && '✅ **Production Release**
+            needs.setup-version.outputs.release_tier == 'release' && '**Production Release**
 
           Verified and tested. Recommended for general use.
 
-          📲 **Already have Vibemis installed?** No download needed — in the app open
+          **Already have Vibemis installed?** No download needed — in the app open
           Settings → Advanced → **Software updates**, set the channel to **Stable**,
           then *Check for updates* → *Update now* to install this build.' ||
-            needs.setup-version.outputs.release_tier == 'rc' && '🎯 **Release Candidate**
+            needs.setup-version.outputs.release_tier == 'rc' && '**Release Candidate**
 
           The exact build proposed as the next stable, cut for on-device verification.
 
-          📲 **Already have Vibemis installed?** In the app open Settings → Advanced →
+          **Already have Vibemis installed?** In the app open Settings → Advanced →
           **Software updates**, set the channel to **Release candidate**, then
           *Check for updates* → *Update now* to install this build.' ||
-            needs.setup-version.outputs.release_tier == 'beta' && '🧪 **Beta Build**
+            needs.setup-version.outputs.release_tier == 'beta' && '**Beta Build**
 
           Merged into `vibemis-main`. Functionally complete; broader smoke testing welcome.
           Not yet a production release.
 
-          📲 **Already have Vibemis installed?** In the app open Settings → Advanced →
+          **Already have Vibemis installed?** In the app open Settings → Advanced →
           **Software updates**, set the channel to **Beta**, then *Check for updates* →
           *Update now* to install this build.' ||
-            needs.setup-version.outputs.release_tier == 'alpha' && '🔬 **Alpha Build**
+            needs.setup-version.outputs.release_tier == 'alpha' && '**Alpha Build**
 
           Test-cycle build from a test** branch, for targeted testing only.
           **Do not use as a daily driver.**
 
-          📲 **Updating from a previous install:** Settings → Advanced → **Software
+          **Updating from a previous install:** Settings → Advanced → **Software
           updates**, channel **Alpha**, then *Check for updates* → *Update now*.' ||
-            '🔧 **Dev Build** — automated build from a non-standard branch. Dev builds are
+            '**Dev Build** — automated build from a non-standard branch. Dev builds are
           not served by any in-app update channel — download the artifact manually.'
           }}
           
@@ -1599,14 +1599,14 @@ jobs:
           
           ---
           
-          ## 📋 Build Information
+          ## Build Information
           - **Version**: `${{ needs.setup-version.outputs.version }}`
           - **Numeric Version**: `${{ needs.setup-version.outputs.numeric_version }}`
           - **Branch**: `${{ github.ref_name }}`
           - **Commit**: `${{ github.sha }}`
           - **Build**: #${{ github.run_number }}
           
-          ## 🎮 Install on Steam Deck / SteamOS (no terminal needed)
+          ## Install on Steam Deck / SteamOS (no terminal needed)
           ${{ (steps.check-artifacts.outputs.artifacts_exist == 'true' || steps.find-previous.outputs.reused_artifacts_available == 'true') && '**Just want to play? Follow these three steps in Desktop Mode.**
 
           1. **Switch to Desktop Mode** (hold the **power button** → **Switch to Desktop**) and **download the `.AppImage`** below with the browser.

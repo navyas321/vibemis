@@ -26,7 +26,7 @@ screens 1a–1f were then built as launcher-only `test<N>` PRs (test89–92, 94�
 the anchor for all P3.17/P3.18 design work. It is one of four curated `accentOptions`; index 0 is the
 default; everything else is designed against it.
 
-> **⚠ Reconciliation flag (accent).** The design-time `HANDOFF.md` summarised the accent as
+> **Reconciliation flag (accent).** The design-time `HANDOFF.md` summarised the accent as
 > **`#2FC6D0`** (with 3 alt accents). The in-repo canonical is **`#00CCCC`** — the BL-2077
 > user-signed-off value, decided *after* the design export. `VbTokens.accent` = `#00CCCC` **wins**;
 > `#2FC6D0` is treated as superseded. This is surfaced, not silently changed — if the full
@@ -251,15 +251,15 @@ Per P3.17 step 3 / P3.19 waves. The six handoff screens are `1a`–`1f`.
 
 | # | Screen (handoff id) | QML | Status |
 |---|---------------------|-----|--------|
-| 0 | **Token layer** (VbTokens + Vb* components) | `VbTokens.qml`, `VbFocusRing/Card/HintBar/HostCard/HostSheet/StatusPill/Badge` | ✅ base (test88); **semantic layer this PR (test130, BL-2107)** |
-| 1a | **Computers** host list | `PcView.qml` + `VbHostCard.qml` | ✅ merged (test92) |
-| 1b | **App grid** | `AppView.qml` | ✅ merged (test91) |
-| 1c | **Add-PC dialog** | `PcView.qml` dialog | ✅ merged (test90) |
-| 1d | **Host options side-sheet** | `VbHostSheet.qml` + `VbSheetIcon.qml` | ✅ implemented |
-| 1e | **Settings** (sidebar categories) | `SettingsView.qml` | 🟡 structure + chip + LB/RB nav merged (test96/108); **colors on semantic tokens this PR (test130)**; type pass tracked |
-| 1f | **Help** | `VbHelpView.qml` | ✅ merged (test89 / BL-1684) |
-| — | **Onboarding / first-run** *(not a handoff screen)* | — | 📝 spec ready → `docs/design/specs/onboarding-first-run.md` |
-| — | **In-stream Quick Menu overlay** *(not a handoff screen)* | `QuickMenu.qml` | 📝 spec ready → `docs/design/specs/quick-menu.md` |
+| 0 | **Token layer** (VbTokens + Vb* components) | `VbTokens.qml`, `VbFocusRing/Card/HintBar/HostCard/HostSheet/StatusPill/Badge` | base (test88); **semantic layer this PR (test130, BL-2107)** |
+| 1a | **Computers** host list | `PcView.qml` + `VbHostCard.qml` | merged (test92) |
+| 1b | **App grid** | `AppView.qml` | merged (test91) |
+| 1c | **Add-PC dialog** | `PcView.qml` dialog | merged (test90) |
+| 1d | **Host options side-sheet** | `VbHostSheet.qml` + `VbSheetIcon.qml` | implemented |
+| 1e | **Settings** (sidebar categories) | `SettingsView.qml` | partial: structure + chip + LB/RB nav merged (test96/108); **colors on semantic tokens this PR (test130)**; type pass tracked |
+| 1f | **Help** | `VbHelpView.qml` | merged (test89 / BL-1684) |
+| — | **Onboarding / first-run** *(not a handoff screen)* | — | spec ready → `docs/design/specs/onboarding-first-run.md` |
+| — | **In-stream Quick Menu overlay** *(not a handoff screen)* | `QuickMenu.qml` | spec ready → `docs/design/specs/quick-menu.md` |
 | 5 | **Accessibility / ergonomics pass** | all | device sign-off (Game Mode) — deferred to on-device |
 
 The six launcher screens (`1a`–`1f`) are implemented against the handoff; do **not** re-spec them.

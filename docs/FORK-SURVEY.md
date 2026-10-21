@@ -36,7 +36,7 @@ that also forks common-c cannot be merged — its protocol commits must be cherr
 
 ## Candidates
 
-| Fork | ★ | Ahead / behind | Files | common-c | License | Port risk |
+| Fork | Stars | Ahead / behind | Files | common-c | License | Port risk |
 |---|---|---|---|---|---|---|
 | [Nonary/moonlight-qt](https://github.com/Nonary/moonlight-qt) | 34 | 17 / 24 | 105 | **stock** | GPL-3.0 | **Low** |
 | [qiin2333/moonlight-qt](https://github.com/qiin2333/moonlight-qt) | 901 | 269 / 12 | 300+ | forked | GPL-3.0 | High (cherry-pick only) |
@@ -49,7 +49,7 @@ All GPL-3.0 — license-compatible with vibemis. Upstream attribution belongs in
 
 ### Ruled out (evidence, not opinion)
 
-- **`wjbeckett/artemis` — this is "Artemis Qt".** 367★, GPL-3.0, branch `develop`. It is **not** a
+- **`wjbeckett/artemis` — this is "Artemis Qt".** 367 stars, GPL-3.0, branch `develop`. It is **not** a
   GitHub fork of moonlight-qt (detached history — `compare` returns no common ancestor), and it has
   been **unpushed since 2025-09-11**, ~11 months stale at survey time. Its commit content is
   overwhelmingly Flatpak / SPIR-V / glslang / shaderc / libplacebo *build plumbing*, plus a
@@ -122,7 +122,7 @@ port.
 
 ### 3. qiin2333/moonlight-qt — selective cherry-picks only
 
-The most active fork by far (901★, 269 ahead, daily pushes, largely Chinese-language commits).
+The most active fork by far (901 stars, 269 ahead, daily pushes, largely Chinese-language commits).
 **Do not merge** — it forks common-c and 269 commits carry heavy UI divergence (it reskins the whole
 app to neo-brutalism, `feat(ui) #134`). Cherry-pick candidates:
 

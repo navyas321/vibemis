@@ -45,7 +45,7 @@ Streaming clients in this world come in two flavors, and until now you couldn't 
 No building, no installer, no dependencies. Vibemis is a single self-contained file —
 **download it and double-click it.**
 
-> 📲 **Already have Vibemis installed?** Skip the download — it updates itself. In the app
+> **Already have Vibemis installed?** Skip the download — it updates itself. In the app
 > open Settings → Advanced → **Software updates**, pick your channel (**Stable** recommended;
 > **Beta** for the newest features), then *Check for updates* → *Update now*. Details in
 > [Downloads & updates](#downloads--updates).
@@ -266,7 +266,7 @@ The AppImage is Vibemis's distribution channel (there is no Flatpak/Flathub buil
 **Vibemis keeps itself current — no re-download, no reinstall.** Point it at a channel once and
 the app watches that channel's release feed and offers the new build in place when one appears:
 
-📲 **Already have a previous version installed? Update in-app.** Open Settings → Advanced →
+**Already have a previous version installed? Update in-app.** Open Settings → Advanced →
 **Software updates**, pick the channel that matches the build you want (see the table below —
 **Stable** for `0.x.y`, **Release candidate** for `-rc`, **Beta** for `-beta`, **Alpha** for
 `-alpha`), then *Check for updates* → *Update now*. When you're on **Stable**, Vibemis detects
@@ -280,14 +280,14 @@ zero-padded counters. The first stable is `0.1.0`; its release-candidate lineage
 
 | Channel | Tag shape | Built from | Use |
 |---|---|---|---|
-| ✅ **Stable** | `0.x.y` (bare) | Explicit release cuts | **Recommended** — hand-verified on device |
-| 🎯 **Release candidate** | `0.x.y-rc.NNN` | Explicit rc cuts | The exact build proposed as the next stable, for on-device verification |
-| 🧪 **Beta** | `0.x.y-beta.NNN` | `vibemis-main` | **Manual-testing channel** — newest features |
-| 🔬 **Alpha** | `0.x.y-alpha.NNN` | `test<N>-*` branches (on request) | Automated CI artifacts |
+| **Stable** | `0.x.y` (bare) | Explicit release cuts | **Recommended** — hand-verified on device |
+| **Release candidate** | `0.x.y-rc.NNN` | Explicit rc cuts | The exact build proposed as the next stable, for on-device verification |
+| **Beta** | `0.x.y-beta.NNN` | `vibemis-main` | **Manual-testing channel** — newest features |
+| **Alpha** | `0.x.y-alpha.NNN` | `test<N>-*` branches (on request) | Automated CI artifacts |
 
-**[→ Download the latest stable](https://github.com/navyas321/vibemis/releases/latest)** · **[📅 build timeline — newest first, all channels](https://github.com/navyas321/vibemis/blob/releases-index/RELEASES.md)** · [all releases](https://github.com/navyas321/vibemis/releases) · [newest betas](https://github.com/navyas321/vibemis/releases?q=beta&expanded=false) · [newest alphas](https://github.com/navyas321/vibemis/releases?q=alpha&expanded=false)
+**[→ Download the latest stable](https://github.com/navyas321/vibemis/releases/latest)** · **[build timeline — newest first, all channels](https://github.com/navyas321/vibemis/blob/releases-index/RELEASES.md)** · [all releases](https://github.com/navyas321/vibemis/releases) · [newest betas](https://github.com/navyas321/vibemis/releases?q=beta&expanded=false) · [newest alphas](https://github.com/navyas321/vibemis/releases?q=alpha&expanded=false)
 
-> ℹ️ GitHub's Releases and Tags pages sort by **SemVer precedence**, not date — and per
+> **Note:** GitHub's Releases and Tags pages sort by **SemVer precedence**, not date — and per
 > SemVer, `alpha` pre-releases rank *below* `beta` ones of the same version, so the newest
 > alpha appears **after all the betas** (often on page 2). Use the filtered links above, or
 > the in-app channel picker, to find the newest build of a specific tier.

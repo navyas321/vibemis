@@ -22,7 +22,7 @@ the CI smart-build behavior, and the README-update rule.
   | rc | dispatch `release_type=rc` when the next stable is feature-complete and betas are green | maintainer discretion |
   | stable | dispatch `release_type=stable` | **MAINTAINER APPROVAL REQUIRED** (rc must already exist) |
 
-  ⚠ **Stable cuts are approval-gated: never dispatch
+  **Stable cuts are approval-gated: never dispatch
   `release_type=stable` (or push `release/**`/`main`/`master`) without the
   maintainer explicitly approving that specific cut.**
   Alphas, betas and RCs can be cut per the matrix above.
@@ -31,7 +31,7 @@ the CI smart-build behavior, and the README-update rule.
   before anything builds. Type the phrase only when relaying the maintainer's
   explicit approval of that specific cut.
 
-  ⚠ **rc-before-stable (maintainer 2026-07-17): a MINOR or MAJOR stable release MUST be
+  **rc-before-stable (maintainer 2026-07-17): a MINOR or MAJOR stable release MUST be
   promoted from a release candidate — you cannot cut a feature/breaking stable straight
   from a beta.** The train is beta → **rc** → stable: dispatch `release_type=rc` (builds
   `<version>-rc.NNN`), verify it green, THEN cut stable. **CI-enforced:** the `Enforce
@@ -80,13 +80,13 @@ and `create-dev-release` jobs are **skipped entirely** — no AppImage is produc
 
 1. **`vibemis-main`**: the WHOLE PUSH (`event.before → HEAD`) is inspected. If it changes
    any non-docs path (anything except `.md`/`.txt`/non-workflow `.yml`/`.yaml`;
-   `.github/workflows/` counts as meaningful), a 🧪 beta cuts — merge commit, squash,
+   `.github/workflows/` counts as meaningful), a beta cuts — merge commit, squash,
    rebase, or direct push alike. Commit ORDER inside the push no longer matters (the old
    HEAD-commit-only check that punished a trailing docs commit is gone). A docs-only
    push builds nothing.
 
 2. **`test**`**: the branch's DIFF vs the merge-base with `vibemis-main` is inspected.
-   Any push builds a 🔬 alpha when that diff touches non-docs paths — no `[alpha]`
+   Any push builds an alpha when that diff touches non-docs paths — no `[alpha]`
    marker commit, no per-commit gate. A branch with no diff vs `vibemis-main`
    (empty/no-op) skips.
 
@@ -112,7 +112,7 @@ nothing; "fixes the stuttering/choppy video on AMD handhelds" tells them whether
 
 ### The `Changelog:` note is not optional — it is the whole hero section
 
-The release body opens with **`## 🎯 What's new for you`**, and that section is built
+The release body opens with **`## What's new for you`**, and that section is built
 **exclusively** from `Changelog:` lines written by a human. It never falls back to commit
 subjects. That is deliberate: a commit subject is written for other developers and reads
 like one. "CI consolidation + release gating + stable gate + changelog regression" is a
@@ -195,7 +195,7 @@ different hero sections. The technical changelog is identical either way and alw
 | | Pre-release (`-alpha`/`-beta`/`-rc`) | Stable (bare `X.Y.Z`) |
 |---|---|---|
 | Hero contains | every `Changelog:` note | `feat:` notes + `Changelog-Major:` notes |
-| Technical changelog | `## 🚧 Development Build Changelog`, expanded | collapsed into one `<details>`, plumbing inside it |
+| Technical changelog | `## Development Build Changelog`, expanded | collapsed into one `<details>`, plumbing inside it |
 
 A beta reader is a tester tracking the cycle — "what changed since the last build?" — and
 every note belongs in that answer. A stable reader is deciding whether to install.
@@ -236,7 +236,7 @@ bash scripts/gen-changelog.sh 0.5.0-beta.005   # exactly what the release body w
 bash scripts/check-changelog-invariants.sh     # the format contract
 ```
 
-## ⚠ Never put `[skip ci]` on a code merge to `vibemis-main` (BL-2460)
+## Never put `[skip ci]` on a code merge to `vibemis-main` (BL-2460)
 
 GitHub **natively** skips the `push` and `pull_request` events for any commit whose message
 contains one of its documented markers — no workflow runs, so **no beta is cut and the code
@@ -360,7 +360,7 @@ Required shape for a stable body:
 
 1. A short plain-language highlight of **this** cut (what changed for you).
 2. The auto-generated commit changelog for this cut.
-3. `## 🎉 What's new in X.Y (cumulative — everything in X.Y.0 … X.Y.Z-1 is included in this build)`
+3. `## What's new in X.Y (cumulative — everything in X.Y.0 … X.Y.Z-1 is included in this build)`
    — the whole minor line's user-facing features. Carry the previous patch's cumulative section
    forward and prepend the new fix; never rewrite it from scratch.
 4. Collapsed `<details>` blocks with the commit-level changelog of each earlier patch in the line
