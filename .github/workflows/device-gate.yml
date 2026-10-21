@@ -1,0 +1,92 @@
+name: Device Gate
+
+# Alpha-first release flow (BL-2706).
+#
+# Code reaches vibemis-main (and therefore a beta) only after the exact commit has
+# shipped as an alpha and passed the on-device test. The mechanism is one commit
+# status, `device-test`, on the PR head SHA:
+#
+#   - docs-only PR (same "meaningful file" rule as dev-build.yml)  -> success
+#   - code PR from a branch that does not start with `test`        -> failure
+#       (only test* pushes build an alpha, so there is nothing to device-test)
+#   - code PR from a test* branch                                   -> pending
+#       until the device test agent, or the maintainer, posts success for that
+#       SHA with scripts/device-test-status.sh, which refuses unless an alpha
+#       release was built from that exact commit.
+#
+# The status is bound to the SHA, so any new push starts pending again and a
+# device result can never approve code it did not run. Branch protection
+# requires the `device-test` context.
+#
+# pull_request_target so fork PRs get a writable token. SECURITY: this workflow
+# must never check out or execute PR code. It reads the changed-file list
+# through the API and nothing else.
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [vibemis-main]
+
+permissions:
+  contents: read
+  pull-requests: read
+  statuses: write
+
+concurrency:
+  group: device-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  device-gate:
+    name: Device Gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post the device-test status for this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        run: |
+          set -euo pipefail
+
+          post() {  # $1 = state, $2 = description (<= 140 chars)
+            gh api -X POST "repos/$REPO/statuses/$SHA" \
+              -f state="$1" -f context=device-test -f description="${2:0:140}" >/dev/null
+            echo "device-test: $1 - $2"
+          }
+
+          # Never downgrade a result already posted for this exact commit (a reopen,
+          # or a re-run after the device agent reported).
+          existing=$(gh api "repos/$REPO/commits/$SHA/statuses?per_page=100" \
+            --jq '[.[] | select(.context == "device-test")][0].state // ""')
+          if [ "$existing" = "success" ] || [ "$existing" = "failure" ]; then
+            echo "device-test already $existing for $SHA; leaving it."
+            exit 0
+          fi
+
+          # Meaningful = the dev-build.yml rule: anything that is not .md/.txt/.yml/.yaml,
+          # plus workflow files. Docs-only changes build nothing, so need no device test.
+          files=$(gh api --paginate "repos/$REPO/pulls/$PR/files?per_page=100" --jq '.[].filename')
+          code=$(printf '%s\n' "$files" | grep -v -E '(\.md|\.txt|\.yml|\.yaml)$' | grep -c . || true)
+          workflows=$(printf '%s\n' "$files" | grep -c -E '^\.github/workflows/.*\.(yml|yaml)$' || true)
+          if [ $((code + workflows)) -eq 0 ]; then
+            post success "Docs-only change: no build, so no device test needed."
+            exit 0
+          fi
+
+          if [ "$HEAD_REPO" != "$REPO" ]; then
+            post pending "External PR: push its head to a test-* branch here to build an alpha, then run the device test."
+            exit 0
+          fi
+
+          case "$HEAD_REF" in
+            test*)
+              post pending "Waiting for the on-device test of the alpha built from ${SHA:0:8}."
+              ;;
+            *)
+              post failure "Code must come from a test-* branch so it ships as an alpha and is device-tested first (see RELEASING.md)."
+              ;;
+          esac

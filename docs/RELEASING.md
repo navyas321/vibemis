@@ -75,6 +75,31 @@ the CI smart-build behavior, and the README-update rule.
   beta.009; the four runs between them showed as cancelled). Only `test**` alpha builds
   use cancel-in-progress (a newer alpha supersedes an older in-flight one).
 
+## Alpha-first: every code change ships as an alpha before it can merge (BL-2706)
+
+Betas used to be the first build most changes ever got: work went on `fix/*` / `feat/*`
+branches, which build nothing, so the merge itself cut the first artifact. Measured on
+2026-10-21: July ran 108 alphas to 136 betas, while August to October ran 3 alphas to 11
+betas. The rule now:
+
+1. **Branch as `test-bl<id>-<slug>`** for anything that changes code. Every push to a
+   `test*` branch with meaningful changes builds an alpha (`<next>-alpha.NNN`), so each
+   iteration is a tested artifact rather than a local build.
+2. **Open the PR from that branch.** The `Device Gate` workflow posts a `device-test`
+   commit status on the PR head: success for docs-only changes, failure for code from a
+   non-`test*` branch, otherwise pending.
+3. **The on-device test agent tests the alpha built from the PR head** and records the
+   result with `scripts/device-test-status.sh <pr> success|failure "<summary>" [report-url]`.
+   The script refuses a success unless an alpha release was built from that exact commit.
+4. **Merge only on a green `device-test`** (a required status check). The merge cuts the
+   beta, so a beta is always a set of already device-tested alphas.
+
+The status is tied to the commit, so pushing again resets it to pending: a device result
+can never approve code it did not run. External PRs get pending; the maintainer pushes
+their head to a `test*` branch to build the alpha. Docs-only PRs pass automatically. The
+maintainer can post the status by hand when a device run is impossible, and should say why
+in the summary.
+
 ## CI / AppImage release rules — READ BEFORE PUSHING
 
 The CI smart-build check (`setup-version` → `check-changes`) decides `should_build` by
