@@ -126,7 +126,13 @@ jobs:
           [ "$rc" -eq 0 ] && echo "All invariant guards passed."
           exit $rc
 
-  # ── The VRR regression suite, which until now CI never built or ran ───────────────
+  # ── Tests: every Qt unit-test suite (VRR, overlay, keyboard, updater, bitrate) ───
+  #
+  # Named plain "Tests" because it runs all five suites, not only VRR (it was "VRR
+  # Tests" until 2026-10-21). The required status check in branch protection is
+  # "Tests"; renaming this job means updating that rule in the same change.
+  #
+  # History: the VRR suite was the first one wired in, after CI never built or ran it.
   #
   # tests/vrr holds six binaries covering the timing controller, the rate policy, the
   # refresh guard, the Gamescope swapchain-depth policy and the pacing worker — the
@@ -143,8 +149,8 @@ jobs:
   # install-qt-action the compile jobs use: these are console programs with no GUI, no
   # QML scenegraph and no multimedia, so the ~2 minutes of aqt download buys nothing.
   # 6.4.2 is also the version the suite is verified against on the dev box.
-  vrr-tests:
-    name: VRR Tests
+  tests:
+    name: Tests
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -1531,10 +1537,10 @@ jobs:
     # AppImage, and on beta/alpha tiers that job is skipped entirely now.
     # `invariants` is REQUIRED here (BL-2459): a red semantic guard must block the
     # publish, not just the merge — a dispatch/push cut doesn't go through a PR.
-    # `vrr-tests` is required for the same reason: the VRR regression suite covers the
+    # `tests` is required for the same reason: its VRR regression suite covers the
     # code path behind nearly every fix in the beta.013..beta.017 wave, and a cut that
     # publishes over a red one is exactly the soak-free ship this pipeline must prevent.
-    needs: [setup-version, build-appimage-dev, invariants, vrr-tests]
+    needs: [setup-version, build-appimage-dev, invariants, tests]
     runs-on: ubuntu-latest
     permissions:
       # `contents: write` publishes the release and force-pushes the build timeline to

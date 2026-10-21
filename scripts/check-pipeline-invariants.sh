@@ -131,23 +131,25 @@ fi
 #    tests/vrr existed for months without a single workflow building it — `grep -rn
 #    tests .github/workflows/` returned nothing — while beta.013..beta.017 were almost
 #    entirely VRR fixes. A test suite nothing executes is not coverage, it is a file.
-vrr_job=$(awk '/^  vrr-tests:/{f=1} f&&/^  [a-z][a-z-]*:$/&&!/vrr-tests/{exit} f{print}' "$WF")
-if [ -z "$vrr_job" ]; then
-  err "the vrr-tests job is gone — the VRR regression suite would stop running (it already sat unrun in CI for months)"
+# The suites run in the job with id `tests` (display name "Tests"; it was
+# `vrr-tests` / "VRR Tests" until 2026-10-21).
+tests_job=$(awk '/^  tests:$/{f=1; print; next} f&&/^  [a-z][a-z-]*:$/{exit} f{print}' "$WF")
+if [ -z "$tests_job" ]; then
+  err "the tests job is gone — the VRR regression suite would stop running (it already sat unrun in CI for months)"
 else
-  printf '%s' "$vrr_job" | grep -q 'tests/vrr/vrr.pro' \
-    || err "vrr-tests no longer builds tests/vrr/vrr.pro"
-  printf '%s' "$vrr_job" | grep -q 'tst_vrrtimingcontroller' \
-    || err "vrr-tests no longer executes the test binaries — building them proves nothing"
+  printf '%s' "$tests_job" | grep -q 'tests/vrr/vrr.pro' \
+    || err "the tests job no longer builds tests/vrr/vrr.pro"
+  printf '%s' "$tests_job" | grep -q 'tst_vrrtimingcontroller' \
+    || err "the tests job no longer executes the test binaries — building them proves nothing"
   # pacingworker.pro puts moonlight-common-c/moonlight-common-c/src on the include path
   # and vrrpacingworker.cpp does `#include <Limelight.h>`, which exists nowhere else in
   # the tree. A plain checkout compiles five of the six targets and then dies, so the
   # job fails before it has run a single test — a red build that says nothing about VRR.
-  printf '%s' "$vrr_job" | grep -q 'submodules:' \
-    || err "vrr-tests checks out without submodules — <Limelight.h> is only in moonlight-common-c, so the pacing-worker target cannot compile"
+  printf '%s' "$tests_job" | grep -q 'submodules:' \
+    || err "the tests job checks out without submodules — <Limelight.h> is only in moonlight-common-c, so the pacing-worker target cannot compile"
 fi
-printf '%s' "$crd" | grep -q 'needs:.*vrr-tests' \
-  || err "create-dev-release no longer 'needs: vrr-tests' — a red VRR test would still publish a release"
+printf '%s' "$crd" | grep -qE 'needs:.*[[ ,]tests[],]' \
+  || err "create-dev-release no longer 'needs: tests' — a red test would still publish a release"
 
 # 7b. The keyboard mapping suite must RUN as well; it rides the same required job.
 #
@@ -156,12 +158,12 @@ printf '%s' "$crd" | grep -q 'needs:.*vrr-tests' \
 # and the host pressed the same physical key for both. That class of defect is
 # invisible from a US keyboard — no amount of reviewing or dogfooding on QWERTY
 # finds it — so the guard has to be mechanical.
-if [ -z "$vrr_job" ]; then
-  err "the vrr-tests job is gone, so tests/keyboard has no job left to run in"
+if [ -z "$tests_job" ]; then
+  err "the tests job is gone, so tests/keyboard has no job left to run in"
 else
-  printf '%s' "$vrr_job" | grep -q 'tests/keyboard/keyboard.pro' \
+  printf '%s' "$tests_job" | grep -q 'tests/keyboard/keyboard.pro' \
     || err "no job builds tests/keyboard/keyboard.pro — the ABNT2 remote-key regression would silently stop running"
-  printf '%s' "$vrr_job" | grep -q 'tst_keyremotemap' \
+  printf '%s' "$tests_job" | grep -q 'tst_keyremotemap' \
     || err "no job executes tst_keyremotemap — building it proves nothing"
 fi
 
