@@ -2,20 +2,22 @@ name: Vibemis CI & Releases
 
 # This workflow handles development builds with intelligent build skipping (rules cleaned
 # up 2026-07-21, BL-2270 — deterministic, content-based, merge-method-agnostic):
-# - test** branches: ANY push whose DIFF vs vibemis-main contains meaningful (non-docs)
-#   changes builds an alpha pre-release. The branch name IS the intent — no [alpha]
-#   marker commit is required (the old marker + per-commit gate skipped empty marker
-#   commits and forced cherry-pick dances). An empty/no-op branch is skipped.
-# - vibemis-main: ANY push that changes non-docs paths publishes a beta — merge commit,
-#   squash merge, rebase merge, and direct push all count identically. The decision is by
-#   CONTENT (what the push changed), never by whether HEAD is a merge commit (the old
-#   HEAD-is-a-merge-commit rule silently skipped every squash merge). Docs/config-only
-#   pushes (.md/.txt/non-workflow .yml) do NOT build — the quiet fast path stays.
-# - release/** / main / master / workflow_dispatch: ALWAYS build + create production releases
+# Release flow (BL-2708, maintainer 2026-10-21): alpha per merge -> beta for automated
+# device testing -> rc for manual testing -> stable.
+# - vibemis-main: ANY push that changes non-docs paths publishes an ALPHA, so every merged
+#   PR is its own alpha. Merge commit, squash, rebase and direct push all count; the
+#   decision is by CONTENT (what the push changed), never by commit shape. Docs/config-only
+#   pushes (.md/.txt/non-workflow .yml) do NOT build.
+# - test** branches: a push publishes a BETA when the branch has meaningful changes since
+#   the previous beta. Push vibemis-main's HEAD to a test-* branch when a batch of alphas is
+#   ready for the on-device test agent; the beta's notes cover every alpha since the last
+#   beta. (Or dispatch release_type=beta on vibemis-main.)
+# - rc: dispatch release_type=rc once the automated device test passes; it is the build
+#   handed to manual testing. stable: dispatch release_type=stable (maintainer approval).
+# - release/** / main / master: build only (dev tier); only a dispatch mints a stable.
 #
-# Beta policy = "a beta tracks every meaningful change landing on vibemis-main, regardless
-# of merge method." Release builds on vibemis-main are NEVER concurrency-cancelled (they
-# queue — see the concurrency block); only test** alpha builds may be superseded.
+# An in-progress release build is never cancelled; a queued one can be superseded by a
+# newer push, whose HEAD contains it (see the concurrency block).
 # Releases are PERMANENT: every cut stays on the Releases page forever, like tags —
 # SemVer §3 released-version immutability. Superseded releases are never deleted.
 
@@ -23,8 +25,8 @@ on:
   push:
     branches:
       # Keep this list TIGHT to avoid noisy builds/releases. Only:
-      #  - vibemis-main : integration branch → beta (latest)
-      #  - test**       : test cycle branches → alpha (pre-release, for test-cycle validation)
+      #  - vibemis-main : integration branch → alpha per merged change
+      #  - test**       : device-test cut → beta (on-device test agent picks it up)
       #  - release/**   : explicit stable ship → release
       #  - main/master  : stable
       # fix/**, feat/**, hotfix/**, chore/**, develop, etc. intentionally do NOT build
@@ -40,10 +42,10 @@ on:
   workflow_dispatch:
     inputs:
       release_type:
-        description: '"stable" = production release (bare semver, Latest); "rc" = release candidate of the next stable (<next>-rc.NNN, prerelease)'
+        description: '"beta" = device-test cut (<next>-beta.NNN); "rc" = release candidate for manual testing (<next>-rc.NNN); "stable" = production release (bare semver, Latest). Empty on vibemis-main = alpha.'
         required: false
         type: choice
-        options: ['', 'stable', 'rc']
+        options: ['', 'beta', 'rc', 'stable']
         default: ''
       version_override:
         description: 'Stable cuts only: exact version for a hotfix patch (e.g. 0.5.1). Leave empty for the version.txt next-stable.'
@@ -79,11 +81,11 @@ env:
 # in setup-version ~5 min before the tag is created) and collided at publish time —
 # one published, the other failed at Create Development Release (BL-2457). Keying the
 # group on the ref alone makes push+dispatch on a ref serialize (queue), so the later
-# run recomputes the counter after the earlier tag exists. cancel-in-progress still
-# only supersedes test** alpha pushes; vibemis-main release builds always queue.
+# run recomputes the counter after the earlier tag exists. Since BL-2708 test** pushes
+# cut betas, so no tier cancels an in-progress build (a cancel could land mid-publish).
 concurrency:
   group: dev-build-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'push' && startsWith(github.ref_name, 'test') }}
+  cancel-in-progress: false
 
 jobs:
   # ALL fast, grep-based semantic regression guards run here, in ONE job on ONE
@@ -455,13 +457,13 @@ jobs:
           fail=0
 
           if printf '%s' "$PR_TITLE" | grep -qEi "$MARKERS"; then
-            echo "::error title=Merge subject would skip the beta::PR title contains a CI-skip marker: $PR_TITLE"
+            echo "::error title=Merge subject would skip the alpha::PR title contains a CI-skip marker: $PR_TITLE"
             fail=1
           fi
           # A `skip-checks: true` TRAILER is the other documented form. Anchored at
           # column 0 so prose or a quoted example in a description cannot trip it.
           if printf '%s\n' "$PR_TITLE" | grep -qEi '^skip-checks:[[:space:]]*true[[:space:]]*$'; then
-            echo "::error title=Merge subject would skip the beta::PR title contains a skip-checks trailer"
+            echo "::error title=Merge subject would skip the alpha::PR title contains a skip-checks trailer"
             fail=1
           fi
 
@@ -474,7 +476,7 @@ jobs:
           while IFS= read -r line; do
             if [ -z "$line" ]; then continue; fi
             if printf '%s' "${line#* }" | grep -qEi "$MARKERS"; then
-              echo "::error title=Commit subject would skip the beta::$line"
+              echo "::error title=Commit subject would skip the alpha::$line"
               fail=1
             fi
           done < <(git log --format='%H %s' --no-merges "$BASE..$HEAD_SHA" 2>/dev/null)
@@ -483,7 +485,7 @@ jobs:
             cat >&2 <<'EOF'
           FAIL: this PR would merge with a CI-skip marker in the subject.
 
-          GitHub skips the push event for such a commit, so NO WORKFLOW RUNS: no beta is
+          GitHub skips the push event for such a commit, so NO WORKFLOW RUNS: no alpha is
           cut, the AppImage is never built, the invariant guards never run, and the code
           reaches stable with no soak. That is not a theoretical risk — #272 shipped a
           Quick Menu rendering fix straight into stable 0.4.2 that way.
@@ -525,7 +527,7 @@ jobs:
           fi
           echo "Auditing $RANGE for commits whose subject suppressed their own build."
 
-          # Only code matters. A docs-only commit cuts no beta anyway (the check-changes
+          # Only code matters. A docs-only commit cuts no alpha anyway (the check-changes
           # step decides by content), so a marker on one costs nothing and flagging it
           # would just teach people to ignore this job. Mirrors count_meaningful().
           touches_code() {  # $1 = commit -> 0 if it changes a non-docs path
@@ -563,10 +565,10 @@ jobs:
             echo "### Commits that suppressed their own build"
             echo
             echo "These landed on \`${REF_NAME}\` since \`${LAST_TAG:-the last 50 commits}\` carrying a"
-            echo "CI-skip marker, so GitHub dropped their push event: no build, no guards, no beta."
+            echo "CI-skip marker, so GitHub dropped their push event: no build, no guards, no alpha."
             echo
             printf '%s\n' "$flagged"
-            echo "This cut covers them, so nothing is lost — but they got no beta of their own and no"
+            echo "This cut covers them, so nothing is lost — but they got no alpha of their own and no"
             echo "soak. Nothing to clean up: the next audit range starts at the tag this run creates."
           } >> "$GITHUB_STEP_SUMMARY"
           printf '%s\n' "$flagged" >&2
@@ -613,11 +615,10 @@ jobs:
         id: check-changes
         run: |
           # ── Release-cut rules (BL-2270, 2026-07-21) — deterministic + content-based ──
-          #   beta  : ANY push to vibemis-main whose CONTENT changes non-docs paths.
-          #           Merge commit / squash / rebase / direct push all count identically.
-          #   alpha : ANY push to a test** branch whose DIFF vs vibemis-main (merge-base)
-          #           contains non-docs changes. No [alpha] marker commit — the branch
-          #           name IS the intent. Empty/no-op branches are skipped.
+          #   alpha : ANY push to vibemis-main whose CONTENT changes non-docs paths
+          #           (one alpha per merged change; any merge method counts).
+          #   beta  : ANY push to a test** branch with non-docs changes since the previous
+          #           beta tag (BL-2708). Re-pushing an already-tested state is skipped.
           #   docs-only pushes (only .md/.txt/non-workflow .yml/.yaml) never release.
 
           # Pull requests must emit the two real branch-protection checks. A PR runs
@@ -648,7 +649,7 @@ jobs:
             echo $((CODE_FILES + WORKFLOW_FILES))
           }
 
-          # vibemis-main (beta integration branch): a beta is published for ANY push
+          # vibemis-main (integration branch): an alpha is published for ANY push
           # that changes non-docs paths. The decision is by push CONTENT (event.before →
           # HEAD), never by whether HEAD is a merge commit — the old merge-commit rule
           # silently skipped every squash/rebase merge (#243/#244/#246/#247/#248/#251).
@@ -662,16 +663,16 @@ jobs:
             fi
             if [ -z "$BASE" ]; then
               echo "should_build=true" >> $GITHUB_OUTPUT
-              echo "Building beta — no usable diff base (root commit?); failing open"
+              echo "Building alpha — no usable diff base (root commit?); failing open"
               exit 0
             fi
             TOTAL=$(count_meaningful "$BASE" HEAD)
             if [ "$TOTAL" -eq 0 ]; then
               echo "should_build=false" >> $GITHUB_OUTPUT
-              echo "Skipping beta — push to vibemis-main changed only docs/config paths (range $BASE..HEAD)"
+              echo "Skipping alpha — push to vibemis-main changed only docs/config paths (range $BASE..HEAD)"
             else
               echo "should_build=true" >> $GITHUB_OUTPUT
-              echo "Building beta — push to vibemis-main changed $TOTAL meaningful file(s) (range $BASE..HEAD)"
+              echo "Building alpha — push to vibemis-main changed $TOTAL meaningful file(s) (range $BASE..HEAD)"
             fi
             exit 0
           fi
@@ -683,27 +684,25 @@ jobs:
           # was unreachable code that read as protection. The real handling is the `skip-ci-guard`
           # job (PR-time rejection + post-hoc audit of pushes that silently cut no beta).
 
-          # test** (alpha channel): ANY push builds an alpha when the branch's diff vs
-          # the merge-base with vibemis-main contains meaningful (non-docs) changes.
-          # No [alpha] marker commit is required — the old marker + per-commit gate
-          # SKIPPED empty marker commits (test137) and forced cherry-pick dances.
-          # Diffing vs the merge-base means a cherry-picked or merged test branch always
-          # qualifies; an empty/no-op branch (no diff vs vibemis-main) does not.
+          # test** (beta channel, BL-2708): a push is a "ready for device testing" cut.
+          # Build a beta when the branch has meaningful (non-docs) changes since the
+          # newest beta tag it contains; pushing an already-tested state again builds
+          # nothing. No previous beta in the branch's history fails open and builds.
           if [[ "${{ github.ref_name }}" =~ ^test ]]; then
-            git fetch --no-tags origin "+refs/heads/vibemis-main:refs/remotes/origin/vibemis-main" 2>/dev/null || true
-            MERGE_BASE=$(git merge-base HEAD origin/vibemis-main 2>/dev/null || echo "")
-            if [ -z "$MERGE_BASE" ]; then
+            git fetch --tags --force origin 2>/dev/null || true
+            PREV_BETA=$(git describe --tags --abbrev=0 --match '*-beta.*' HEAD 2>/dev/null || echo "")
+            if [ -z "$PREV_BETA" ]; then
               echo "should_build=true" >> $GITHUB_OUTPUT
-              echo "Building alpha — no merge-base with vibemis-main; failing open"
+              echo "Building beta — no previous beta in this branch's history; failing open"
               exit 0
             fi
-            TOTAL=$(count_meaningful "$MERGE_BASE" HEAD)
+            TOTAL=$(count_meaningful "$PREV_BETA" HEAD)
             if [ "$TOTAL" -eq 0 ]; then
               echo "should_build=false" >> $GITHUB_OUTPUT
-              echo "Skipping alpha — test branch has no meaningful (non-docs) diff vs vibemis-main (merge-base $MERGE_BASE)"
+              echo "Skipping beta — no meaningful (non-docs) changes since $PREV_BETA"
             else
               echo "should_build=true" >> $GITHUB_OUTPUT
-              echo "Building alpha — test branch diff vs vibemis-main has $TOTAL meaningful file(s) (merge-base $MERGE_BASE)"
+              echo "Building beta — $TOTAL meaningful file(s) changed since $PREV_BETA"
             fi
             exit 0
           fi
@@ -826,8 +825,9 @@ jobs:
           #          MAINTAINER-APPROVAL GATE: only the maintainer decides a stable cut;
           #            a stable dispatch requires the CONFIRM-STABLE approval input.
           # rc       dispatch release_type=rc                             <next>-rc.NNN      true
-          # beta     any non-docs push to vibemis-main (any merge method)  <next>-beta.NNN    true
-          # alpha    test** push with non-docs diff vs vibemis-main        <next>-alpha.NNN   true
+          # beta     test** push with non-docs changes since the last beta,  <next>-beta.NNN    true
+          #          or dispatch release_type=beta (device-test cut, BL-2708)
+          # alpha    any non-docs push to vibemis-main (one per merged PR)  <next>-alpha.NNN   true
           # dev      any other branch                                     <next>-dev.<run>.<branch>  true
 
           IS_PRERELEASE="true"
@@ -861,19 +861,16 @@ jobs:
             IS_PRERELEASE="true"
             RELEASE_TIER="rc"
 
-          elif [[ "$BRANCH_NAME" == "vibemis-main" || "$BRANCH_NAME" == "develop" ]]; then
-            # Beta — semver pre-release of the upcoming stable. Prerelease-flagged on
-            # GitHub (only bare stables are full releases); the updater's beta channel
-            # matches the -beta suffix on every deployed client generation.
+          elif [[ "${{ github.event.inputs.release_type }}" == "beta" || "$BRANCH_NAME" =~ ^test ]]; then
+            # Beta — the device-test cut (BL-2708): every alpha since the previous beta,
+            # handed to the on-device test agent. Prerelease-flagged; the updater's beta
+            # channel matches the -beta suffix on every deployed client generation.
             VERSION="${BASE_VERSION}-beta.$(next_counter beta)"
             IS_PRERELEASE="true"
             RELEASE_TIER="beta"
 
-          elif [[ "$BRANCH_NAME" =~ ^test ]]; then
-            # Alpha — pre-release; the branch is shown in the release body.
-            # test** only. fix/feat/hotfix refs (reachable only via manual dispatch)
-            # version as dev — the alpha channel consumes test<N> branches exclusively,
-            # so a fix-branch "alpha" could never be picked up anyway.
+          elif [[ "$BRANCH_NAME" == "vibemis-main" || "$BRANCH_NAME" == "develop" ]]; then
+            # Alpha — one per merged change on the integration branch (BL-2708).
             VERSION="${BASE_VERSION}-alpha.$(next_counter alpha)"
             RELEASE_TIER="alpha"
 
@@ -1696,37 +1693,29 @@ jobs:
         name: Vibemis release ${{ needs.setup-version.outputs.version }}
         body: |
           ${{
-            needs.setup-version.outputs.release_tier == 'release' && '**Production Release**
+            needs.setup-version.outputs.release_tier == 'release' && '## Production release
 
           Verified and tested. Recommended for general use.
 
-          **Already have Vibemis installed?** No download needed — in the app open
-          Settings → Advanced → **Software updates**, set the channel to **Stable**,
-          then *Check for updates* → *Update now* to install this build.' ||
-            needs.setup-version.outputs.release_tier == 'rc' && '**Release Candidate**
+          **Already have Vibemis installed?** No download needed: in the app, open Settings → Advanced → **Software updates**, set the channel to **Stable**, then choose *Check for updates* → *Update now*.' ||
+            needs.setup-version.outputs.release_tier == 'rc' && '## Release candidate
 
-          The exact build proposed as the next stable, cut for on-device verification.
+          The build proposed as the next stable, for manual testing after it passed the automated on-device test.
 
-          **Already have Vibemis installed?** In the app open Settings → Advanced →
-          **Software updates**, set the channel to **Release candidate**, then
-          *Check for updates* → *Update now* to install this build.' ||
-            needs.setup-version.outputs.release_tier == 'beta' && '**Beta Build**
+          **Already have Vibemis installed?** In the app, open Settings → Advanced → **Software updates**, set the channel to **Release candidate**, then choose *Check for updates* → *Update now*.' ||
+            needs.setup-version.outputs.release_tier == 'beta' && '## Beta build
 
-          Merged into `vibemis-main`. Functionally complete; broader smoke testing welcome.
-          Not yet a production release.
+          A batch of merged changes cut for the automated on-device test. It includes every alpha since the previous beta. Not yet a production release.
 
-          **Already have Vibemis installed?** In the app open Settings → Advanced →
-          **Software updates**, set the channel to **Beta**, then *Check for updates* →
-          *Update now* to install this build.' ||
-            needs.setup-version.outputs.release_tier == 'alpha' && '**Alpha Build**
+          **Already have Vibemis installed?** In the app, open Settings → Advanced → **Software updates**, set the channel to **Beta**, then choose *Check for updates* → *Update now*.' ||
+            needs.setup-version.outputs.release_tier == 'alpha' && '## Alpha build
 
-          Test-cycle build from a test** branch, for targeted testing only.
-          **Do not use as a daily driver.**
+          Built automatically from one merged change on `vibemis-main`, before device testing. Not for daily use.
 
-          **Updating from a previous install:** Settings → Advanced → **Software
-          updates**, channel **Alpha**, then *Check for updates* → *Update now*.' ||
-            '**Dev Build** — automated build from a non-standard branch. Dev builds are
-          not served by any in-app update channel — download the artifact manually.'
+          **Already have Vibemis installed?** In the app, open Settings → Advanced → **Software updates**, set the channel to **Alpha**, then choose *Check for updates* → *Update now*.' ||
+            '## Dev build
+
+          An automated build from a non-standard branch. No in-app update channel serves dev builds; download the artifact manually.'
           }}
           
           ---

@@ -101,7 +101,7 @@ fi
 #
 #    GitHub skips the push/pull_request EVENT ITSELF when the head commit carries
 #    [skip ci] / [ci skip] / [no ci] / [skip actions] / [actions skip] or a
-#    `skip-checks: true` trailer. The workflow never starts, so no beta is cut and the
+#    `skip-checks: true` trailer. The workflow never starts, so no release is cut and the
 #    code ships with no soak: 970cfb94 (#272) went straight into stable 0.4.2 that way,
 #    and f2fb187b (#274), 02fff5aa (#275) and 80b2e731 (#276) cut nothing either.
 #
@@ -118,7 +118,7 @@ elif printf '%s' "$sv_job" | grep -v '^[[:space:]]*#' | grep -qiE 'skip[ _-]ci|c
 fi
 sg_job=$(awk '/^  skip-ci-guard:/{f=1} f&&/^  [a-z][a-z-]*:$/&&!/skip-ci-guard/{exit} f{print}' "$WF")
 if [ -z "$sg_job" ]; then
-  err "the skip-ci-guard job is gone — a merge subject carrying [skip ci] would silently cut no beta again (BL-2460)"
+  err "the skip-ci-guard job is gone — a merge subject carrying [skip ci] would silently cut no release again (BL-2460)"
 else
   printf '%s' "$sg_job" | grep -q "event_name == 'pull_request'" \
     || err "skip-ci-guard no longer rejects at PR time — that is the only moment the marker can still be removed"
