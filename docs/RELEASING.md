@@ -199,7 +199,7 @@ different hero sections. The technical changelog is identical either way and alw
 | | Pre-release (`-alpha`/`-beta`/`-rc`) | Stable (bare `X.Y.Z`) |
 |---|---|---|
 | Hero contains | every `Changelog:` note | `feat:` notes + `Changelog-Major:` notes |
-| Technical changelog | `## Development Build Changelog`, expanded | collapsed into one `<details>`, plumbing inside it |
+| Technical changelog | collapsed into one `<details>`, plumbing inside it | same |
 
 A beta reader is a tester tracking the cycle — "what changed since the last build?" — and
 every note belongs in that answer. A stable reader is deciding whether to install.
