@@ -1338,7 +1338,12 @@ jobs:
         set -euxo pipefail
         export PKG_CONFIG_PATH="/usr/local/lib/x86_64-linux-gnu/pkgconfig:/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
         rm -rf deps/dav1d deps/ffmpeg
-        git clone --depth 1 --branch 1.5.3 https://code.videolan.org/videolan/dav1d.git deps/dav1d
+        # code.videolan.org has refused connections during CI (2026-10-21); fall back to
+        # VideoLAN's GitHub mirror. The commit check below pins the source either way.
+        for url in https://code.videolan.org/videolan/dav1d.git https://github.com/videolan/dav1d.git; do
+          git clone --depth 1 --branch 1.5.3 "$url" deps/dav1d && break
+          rm -rf deps/dav1d
+        done
         test "$(git -C deps/dav1d rev-parse HEAD)" = b546257f770768b2c88258c533da38b91a06f737
         ( cd deps/dav1d && meson setup build -Denable_tools=false -Denable_tests=false && ninja -C build && sudo ninja install -C build )
         sudo ldconfig
