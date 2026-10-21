@@ -281,9 +281,9 @@ zero-padded counters. The first stable is `0.1.0`; its release-candidate lineage
 | Channel | Tag shape | Built from | Use |
 |---|---|---|---|
 | **Stable** | `0.x.y` (bare) | Explicit release cuts | **Recommended** — hand-verified on device |
-| **Release candidate** | `0.x.y-rc.NNN` | Explicit rc cuts | The exact build proposed as the next stable, for on-device verification |
-| **Beta** | `0.x.y-beta.NNN` | `vibemis-main` | **Manual-testing channel** — newest features |
-| **Alpha** | `0.x.y-alpha.NNN` | `test<N>-*` branches (on request) | Automated CI artifacts |
+| **Release candidate** | `0.x.y-rc.NNN` | Explicit rc cuts after the device test passes | The build proposed as the next stable, for manual testing |
+| **Beta** | `0.x.y-beta.NNN` | `test-*` device-test cuts | A batch of merged changes, going through the automated on-device test |
+| **Alpha** | `0.x.y-alpha.NNN` | every merge to `vibemis-main` | Newest changes, before device testing |
 
 **[→ Download the latest stable](https://github.com/navyas321/vibemis/releases/latest)** · **[build timeline — newest first, all channels](https://github.com/navyas321/vibemis/blob/releases-index/RELEASES.md)** · [all releases](https://github.com/navyas321/vibemis/releases) · [newest betas](https://github.com/navyas321/vibemis/releases?q=beta&expanded=false) · [newest alphas](https://github.com/navyas321/vibemis/releases?q=alpha&expanded=false)
 

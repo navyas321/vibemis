@@ -17,9 +17,9 @@ the CI smart-build behavior, and the README-update rule.
   `check-changes` step of `.github/workflows/dev-build.yml`):
   | Tier | Trigger | Who decides |
   |------|---------|-------------|
-  | alpha | ANY `test**` push whose diff vs `vibemis-main` touches non-docs paths (no `[alpha]` marker needed — the branch name is the intent; empty/no-op branches skip) | automatic |
-  | beta | ANY push to `vibemis-main` touching non-docs paths — merge commit, squash, rebase, or direct push all count (content-based, not merge-method-based); or plain dispatch on `vibemis-main` | automatic |
-  | rc | dispatch `release_type=rc` when the next stable is feature-complete and betas are green | maintainer discretion |
+  | alpha | ANY push to `vibemis-main` touching non-docs paths, so every merged PR is an alpha (merge commit, squash, rebase or direct push all count) | automatic |
+  | beta | push `vibemis-main`'s HEAD to a `test-*` branch when a batch of alphas is ready for the automated on-device test (builds only if there are non-docs changes since the previous beta), or dispatch `release_type=beta` | whoever starts the device-test cycle |
+  | rc | dispatch `release_type=rc` once the automated device test passes on the beta; the rc goes to manual testing | maintainer discretion |
   | stable | dispatch `release_type=stable` | **MAINTAINER APPROVAL REQUIRED** (rc must already exist) |
 
   **Stable cuts are approval-gated: never dispatch
@@ -43,8 +43,8 @@ the CI smart-build behavior, and the README-update rule.
   skips the rc requirement. Only minor/major cuts (X.Y.0) need the rc. So: a minor/major
   stable needs BOTH `stable_confirm=CONFIRM-STABLE` AND a pre-existing rc; a patch/hotfix
   needs only `stable_confirm=CONFIRM-STABLE`.
-- **Beta** = `0.5.0-beta.NNN` (vibemis-main), **alpha** = `0.5.0-alpha.NNN` (test
-  branches), dev = `0.5.0-dev.<run>.<branch>`. NNN is dense + zero-padded, computed
+- **Alpha** = `0.5.0-alpha.NNN` (vibemis-main), **beta** = `0.5.0-beta.NNN` (`test-*`
+  device-test cuts), dev = `0.5.0-dev.<run>.<branch>`. NNN is dense + zero-padded, computed
   from existing tags — never delete a tag. **Page-ordering decision:
   tags stay clean and the GitHub Releases/Tags pages
   keep their SemVer-precedence order** (alphas list after betas of the same base —
@@ -62,8 +62,8 @@ the CI smart-build behavior, and the README-update rule.
   in `docs/RELEASE_HISTORY.md` — never prune or reuse it.
 - **A release number is NEVER reused for different bits** — a burnt number stays burnt.
 - Release titles are uniform: `Vibemis release <tag>`.
-- Betas publish **on every `vibemis-main` push that touches non-docs paths, regardless
-  of merge method** (BL-2270 — the old merge-commit-only rule silently skipped squash
+- Alphas publish **on every `vibemis-main` push that touches non-docs paths, regardless
+  of merge method** (BL-2708; content-based since BL-2270 — the old merge-commit-only rule silently skipped squash
   merges). Docs-only pushes never release;
   `gh workflow run dev-build.yml --ref vibemis-main` still builds immediately.
 - **An in-progress release build is never cancelled** (BL-2270): a follow-up push to
@@ -71,9 +71,9 @@ the CI smart-build behavior, and the README-update rule.
   **one pending** run per concurrency group, though, so when several merges land while a
   build is running, the queued runs in between are superseded and only the newest one
   builds. Nothing is lost: that newest HEAD contains the superseded commits, and its
-  beta's changelog covers them (2026-10-21: six quick merges produced beta.008 and
-  beta.009; the four runs between them showed as cancelled). Only `test**` alpha builds
-  use cancel-in-progress (a newer alpha supersedes an older in-flight one).
+  release's changelog covers them (2026-10-21: six quick merges produced beta.008 and
+  beta.009; the four runs between them showed as cancelled). Since BL-2708 no tier uses
+  cancel-in-progress, because `test**` pushes now publish betas.
 
 ## CI / AppImage release rules — READ BEFORE PUSHING
 
@@ -98,9 +98,8 @@ and `create-dev-release` jobs are **skipped entirely** — no AppImage is produc
 3. **If a docs-only push built nothing and you still need a build:** use
    `gh workflow run dev-build.yml --ref vibemis-main` — a manual dispatch ALWAYS builds.
 
-4. **Release builds are never cancelled by follow-up pushes**: `vibemis-main` and stable
-   builds queue (`cancel-in-progress: false` for those refs); only `test**` alpha builds
-   may be superseded mid-flight by a newer alpha.
+4. **Release builds are never cancelled by follow-up pushes**: every ref queues
+   (`cancel-in-progress: false`), since `vibemis-main` cuts alphas and `test**` cuts betas.
 
 5. **The `create-dev-release` job publishes only from `test**`, `vibemis-main`,
    `main`/`master`, `release/**`, or a stable dispatch.** Other branch prefixes
