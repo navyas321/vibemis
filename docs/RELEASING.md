@@ -284,7 +284,7 @@ permanently "Expected — Waiting for status to be reported"**, which blocks the
 
 > **Repo setting (must be done in the GitHub UI, not in this file):** add **`Skip-CI Guard`**
 > to the required status checks on `vibemis-main`, alongside `AppImage Build`,
-> `Compile Sanity (Linux)`, `Invariants` and `VRR Tests`.
+> `Compile Sanity (Linux)`, `Invariants` and `Tests` (named `VRR Tests` before 2026-10-21).
 
 The same signature identifies an already-merged incident: a commit on `vibemis-main` with **no
 checks at all** against it (not red — *absent*) is a push GitHub dropped.
@@ -302,12 +302,13 @@ goes through a PR, so a merge-only gate would not cover it:
 
 - **`Invariants`** — every `scripts/check-*-invariants.sh`, globbed. Adding a guard is zero
   workflow change: drop in a new `check-<x>-invariants.sh` and it runs.
-- **`VRR Tests`** — builds `tests/vrr/vrr.pro` against system Qt 6 and runs all seven VRR
+- **`Tests`** (`VRR Tests` before 2026-10-21) — builds `tests/vrr/vrr.pro` against system Qt 6 and runs all seven VRR
   binaries (`tst_vrrtimingcontroller`, `tst_vrrratepolicy`, `test_vrrratepolicy`,
   `test_vrrrefreshguard`, `test_vrrswapchainpolicy`, `test_vrrpacingmode`,
   `tst_vrrpacingworker`), then the same job builds and runs `tests/overlay`
   (`tst_decoderstatus`, `tst_overlayplacement`) and `tests/keyboard` (`tst_keyremotemap`,
-  which pins the local-key -> remote-key table that the ABNT2 `/` `?` defect broke). Each is
+  which pins the local-key -> remote-key table that the ABNT2 `/` `?` defect broke), then
+  `tests/updater` (`tst_updaterswap`) and `tests/bitrate` (`tst_bitraterescuepolicy`). Each is
   named explicitly and a **missing** binary fails the job — globbing whatever happens to be
   executable would let a target drop out of its `.pro` and leave the job green while covering
   less. That matters here: the VRR suite existed for months without any workflow building it,

@@ -64,7 +64,7 @@ than upstream's `src/rswrapper.c` / `nanors/`.
   Adding a guard is zero workflow change: add a new `check-<x>-invariants.sh`.
 - **Qt test suites:** `tests/tests.pro` only descends into its suites when qmake gets
   `CONFIG+=tests`. CI builds each suite directly and runs `vrr`, `overlay`, `keyboard`,
-  `updater` and `bitrate` in the required VRR Tests job; a missing binary fails the job.
+  `updater` and `bitrate` in the required `Tests` job; a missing binary fails the job.
   `tests/settings-ia` holds the scripts and manifests from the one-off Settings IA audit.
 - **On-device checks:** `vibemis selftest` and the log assertions in [SELFTEST.md](SELFTEST.md).
   CI green is not tested; every release candidate goes through an on-device pass.
