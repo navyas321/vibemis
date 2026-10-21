@@ -4048,7 +4048,7 @@ Item {
                         { k: qsTr("Vibemis version"), v: SystemProperties.versionString },
                         { k: qsTr("Architecture"),    v: SystemProperties.friendlyNativeArchName },
                         { k: qsTr("SteamOS / gamescope"), v: SystemProperties.isSteamDeck ? qsTr("Yes") : qsTr("No") },
-                        { k: qsTr("Display server"),  v: SystemProperties.isRunningWayland ? (SystemProperties.isRunningXWayland ? "XWayland" : "Wayland") : "X11" },
+                        { k: qsTr("Display server"),  v: SystemProperties.displayServer },
                         { k: qsTr("Hardware decode"), v: SystemProperties.hasHardwareAcceleration ? qsTr("Available") : qsTr("Not available") },
                         // These two report the DECODER, not the panel —
                         // 'HDR support: Yes' on an SDR device and 'Max resolution: 0×0' were
