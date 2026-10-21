@@ -1,83 +1,72 @@
-# Vibemis — Development Notes
+# Vibemis: Development Notes
+
+Where things live, and what is Vibemis-specific, for anyone changing the code. Build
+setup is in [BUILD_SYSTEM.md](BUILD_SYSTEM.md); versioning and release policy are in
+[RELEASING.md](RELEASING.md); upstream sync policy is in
+[UPSTREAM-MERGE-STRATEGY.md](UPSTREAM-MERGE-STRATEGY.md).
 
 ## Project structure
 
 ```
 vibemis/
-├── app/                    # Main application (C++/QML)
-│   ├── backend/            # NvHTTP, streaming manager, clipboard, OTP, etc.
-│   ├── gui/                # QML UI files (SettingsView.qml, QuickMenu.qml, etc.)
-│   ├── settings/           # StreamingPreferences (streamingpreferences.h/.cpp)
-│   ├── streaming/          # Session, video pipeline, renderers (session.cpp, etc.)
-│   └── deploy/linux/       # .desktop file, .appdata.xml
-├── moonlight-common-c/     # Submodule — navyas321 fork of the ClassicOldSong Apollo lineage
-├── qmdnsengine/            # Submodule — mDNS discovery
-├── scripts/
-│   └── build-appimage.sh   # AppImage bundler (linuxdeploy-based)
-├── docs/
-│   ├── BUILD_SYSTEM.md     # Build environment, AppImage, submodule notes
-│   ├── RELEASING.md        # Versioning, CI release tiers, AppImage pipeline
-│   ├── SELFTEST.md         # Scriptable self-test / verification surfaces
-│   └── DEVELOPMENT.md      # This file — project structure, key files
-└── README.md               # User-facing project README
+├── app/
+│   ├── backend/        # Host HTTP (nvhttp), pairing, computer/app models, updater,
+│   │                   # Quick Menu, server commands, Steam shortcuts
+│   ├── gui/            # QML UI (main.qml, PcView, AppView, SettingsView, QuickMenu, Vb* components)
+│   ├── settings/       # StreamingPreferences (every user setting, persisted via QSettings)
+│   ├── streaming/      # Session, input, audio (playback + microphone), video pipeline
+│   └── deploy/linux/   # Desktop entry, AppStream metadata, AppImage patches
+├── moonlight-common-c/ # Submodule: navyas321/moonlight-common-c @ vibemis-rtp-timestamp
+├── qmdnsengine/        # Submodule: mDNS discovery
+├── h264bitstream/      # Vendored from upstream moonlight-qt (SPS fix-ups); not a submodule
+├── packaging/flatpak/  # Flatpak manifest (SteamOS sideload bundle; Flathub-ready)
+├── scripts/            # Changelog generator, check-*-invariants.sh guards, install/update helpers
+├── tests/              # Qt test suites (vrr, updater, bitrate, overlay, keyboard) + settings-ia audit
+└── docs/
 ```
-
-> Versioning and release policy are documented in [RELEASING.md](RELEASING.md).
 
 ## Key source files
 
-### Settings
+The files that carry Vibemis-specific behavior, by area. Upstream moonlight-qt files
+that we have not changed are not listed.
 
-| File | What it does |
-|------|-------------|
-| `app/settings/streamingpreferences.h` | All user preferences as Q_PROPERTYs. `enableHdr`, `displayHdrCapability` (Vibemis addition). |
-| `app/settings/streamingpreferences.cpp` | `reload()` / `save()` with `QSettings`. Key: `SER_DISPLAY_HDR_CAPABILITY`. |
+| Area | Files | Notes |
+|------|-------|-------|
+| VRR pacing | `app/streaming/video/ffmpeg-renderers/pacer/` (`pacer.cpp`, `vrrpacingworker.cpp`, `vrr/vrrtimingcontroller.cpp`, `vrr/vrrtargetwaiter.cpp`) | Timing core vendored from Nonary `v6.1.0-vrr10` with local fixes; guarded by `scripts/check-vrr-invariants.sh` and `tests/vrr` |
+| VRR qualification | `app/streaming/session.cpp` (decoder-time and pre-launch checks), `app/streaming/vrrratepolicy.cpp` | Decides whether a session runs VRR and whether to send `clientVrrRequested` |
+| Vulkan presenter | `app/streaming/video/ffmpeg-renderers/plvk.cpp`, `vrrswapchainpolicy.h` | The active presenter on SteamOS handhelds |
+| Self-updater | `app/backend/autoupdatechecker.cpp`, `appimageswap.cpp` | Channel-aware feed selection, SHA-256 check, atomic in-place AppImage swap; guarded by `scripts/check-updater-invariants.sh` |
+| Bitrate rescue | `app/streaming/bitraterescuepolicy.cpp` | Detects a collapsed stream and retries at a lower bitrate |
+| Microphone | `app/streaming/audio/capture/microphonecapture.cpp` | Negotiated mic stream to Vibepollo hosts |
+| Keyboard | `app/streaming/input/keyboard.cpp`, `keyremotemap.h` | Local key to remote VK table, unit-tested in `tests/keyboard` |
+| Quick Menu | `app/backend/quickmenumanager.cpp`, `app/gui/QuickMenu.qml` | In-stream overlay menu |
+| Server commands | `app/backend/servercommandmanager.cpp`, `serverpermissions.cpp` | Apollo/Vibepollo host commands and permissions |
+| Settings | `app/settings/streamingpreferences.cpp`, `app/gui/SettingsView.qml` | Settings are saved when the page closes, on channel change, and on quit |
+| App identity | `app/main.cpp` | Organization "Vibemis Project", application "Vibemis"; settings live in `~/.config/Vibemis Project/Vibemis.conf` |
+| Version | `app/version.txt` | The NEXT stable version; CI derives every alpha/beta/rc tag from it |
 
-### Streaming session
+## Working with moonlight-common-c
 
-| File | What it does |
-|------|-------------|
-| `app/streaming/session.cpp` | Session setup, codec negotiation. `effectiveHdr = enableHdr && displayHdrCapability` (Vibemis addition). |
-| `app/streaming/session.h` | Session class declaration. |
+The submodule is our fork (`navyas321/moonlight-common-c`, branch
+`vibemis-rtp-timestamp`) of the ClassicOldSong/Apollo lineage, not
+`moonlight-stream/moonlight-common-c`. Before using a protocol API, check that it exists in
+`moonlight-common-c/moonlight-common-c/src/Limelight.h` at the pinned commit. Upstream
+submodule bumps cannot be taken as-is; protocol fixes are cherry-picked onto our branch and
+the submodule is re-pinned (see BUILD_SYSTEM.md).
 
-### UI
+`moonlight-common-c/moonlight-common-c.pro` builds the original `reedsolomon/rs.c` rather
+than upstream's `src/rswrapper.c` / `nanors/`.
 
-| File | What it does |
-|------|-------------|
-| `app/gui/SettingsView.qml` | Settings screen. Contains the `displayHdrCapability` checkbox added in the HDR display-capability gate (PR #5). |
-| `app/gui/QuickMenu.qml` | In-stream Quick Menu overlay (9 actions). |
+## Tests and guards
 
-### Build
+- **Invariants:** every `scripts/check-*-invariants.sh` runs in CI as one required job.
+  Run them locally with `for s in scripts/check-*-invariants.sh; do bash "$s"; done`.
+  Adding a guard is zero workflow change: add a new `check-<x>-invariants.sh`.
+- **Qt test suites:** `tests/tests.pro` only descends into its suites when qmake gets
+  `CONFIG+=tests`. CI builds each suite directly and runs `vrr`, `overlay`, `keyboard`,
+  `updater` and `bitrate` in the required VRR Tests job; a missing binary fails the job.
+  `tests/settings-ia` holds the scripts and manifests from the one-off Settings IA audit.
+- **On-device checks:** `vibemis selftest` and the log assertions in [SELFTEST.md](SELFTEST.md).
+  CI green is not tested; every release candidate goes through an on-device pass.
 
-| File | What it does |
-|------|-------------|
-| `vibemis.pro` | Top-level qmake project file. |
-| `moonlight-common-c/moonlight-common-c.pro` | Wrapper `.pro` for the submodule. Key fix: `SOURCES` uses `reedsolomon/rs.c` (not upstream's `src/rswrapper.c`); `INCLUDEPATH` uses `reedsolomon/` (not upstream's `nanors/`). |
-| `scripts/build-appimage.sh` | AppImage build. Contains the apprun-hook for LIBVA_DRIVERS_PATH + surgical libva symlink. |
-
-### App identity
-
-| File | What it does |
-|------|-------------|
-| `app/main.cpp` | `setOrganizationName("Vibemis Project")`, `setApplicationName("Vibemis")`. Sets QSettings path to `~/.config/Vibemis Project/Vibemis.conf`. |
-| `app/version.txt` | Current semver (`0.6.7`). |
-
-## Issues tracker
-
-| # | Issue | Status | Branch / PR |
-|---|-------|--------|-------------|
-| #11 | VAAPI — "No functioning hardware accelerated video decoder" on SteamOS | Open | `fix/appimage-vaapi-driver-paths` (PR #4) |
-| #12 | Controller input not working over stream | Open — likely a Vibepollo host permissions setting | — |
-| #13 | HDR applied on SDR display | Fixed | `fix/hdr-display-capability-gate` (PR #5) |
-
-## Vibemis vs upstream diff highlights
-
-### vs Vibemis Qt (`wjbeckett/vibemis develop`)
-- Upstream moonlight-qt sync (May 2026)
-- `displayHdrCapability` preference + `effectiveHdr` gate in session.cpp (PR #5)
-- AppImage apprun-hook: LIBVA_DRIVERS_PATH + surgical libva symlink (PR #4)
-- `moonlight-common-c.pro`: uses `reedsolomon/rs.c` not `src/rswrapper.c`
-
-### vs moonlight-stream/moonlight-qt master
-- Entire `app/streaming/` subtree kept on wjbeckett's API surface (session.h/cpp, all renderers). Upstream's renamed fields (`totalDecodeTimeUs`, etc.) and new APIs (`LiSendControllerTouchEvent2`, `LiGetMicroseconds`) are NOT present — don't use them in new code without first checking ClassicOldSong's submodule.
-- No upstream `.github/workflows/` (removed to avoid push permission errors)
+Bugs and feature requests are tracked in [GitHub issues](https://github.com/navyas321/vibemis/issues).
