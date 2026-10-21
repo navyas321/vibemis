@@ -17,6 +17,7 @@ public:
     Q_PROPERTY(bool rendererAlwaysFullScreen MEMBER rendererAlwaysFullScreen CONSTANT)
     Q_PROPERTY(bool isRunningWayland MEMBER isRunningWayland CONSTANT)
     Q_PROPERTY(bool isRunningXWayland MEMBER isRunningXWayland CONSTANT)
+    Q_PROPERTY(QString displayServer MEMBER displayServer CONSTANT)
     Q_PROPERTY(bool isWow64 MEMBER isWow64 CONSTANT)
     Q_PROPERTY(QString friendlyNativeArchName MEMBER friendlyNativeArchName CONSTANT)
     Q_PROPERTY(bool hasDesktopEnvironment MEMBER hasDesktopEnvironment CONSTANT)
@@ -61,6 +62,7 @@ private:
     bool rendererAlwaysFullScreen;
     bool isRunningWayland;
     bool isRunningXWayland;
+    QString displayServer;
     bool isWow64;
     QString friendlyNativeArchName;
     bool hasDesktopEnvironment;

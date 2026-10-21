@@ -26,6 +26,33 @@ SystemProperties::SystemProperties()
     hasDesktopEnvironment = WMUtils::isRunningDesktopEnvironment();
     isRunningWayland = WMUtils::isRunningWayland();
     isRunningXWayland = isRunningWayland && QGuiApplication::platformName() == "xcb";
+
+    // The System Information label. isRunningWayland() is always false in
+    // CONFIG+=disable-wayland builds (the AppImage ships only the xcb plugin),
+    // so an xcb client also checks the session environment to recognize
+    // XWayland. isRunningWayland/isRunningXWayland themselves are unchanged.
+    {
+        const QString qpa = QGuiApplication::platformName();
+        if (qpa == "xcb") {
+            const bool waylandSession = isRunningWayland ||
+                                        !qEnvironmentVariableIsEmpty("WAYLAND_DISPLAY") ||
+                                        qgetenv("XDG_SESSION_TYPE") == "wayland";
+            displayServer = waylandSession ? "XWayland" : "X11";
+        }
+        else if (qpa.startsWith("wayland")) {
+            displayServer = "Wayland";
+        }
+        else if (qpa == "windows") {
+            displayServer = "Windows";
+        }
+        else if (qpa == "cocoa") {
+            displayServer = "macOS";
+        }
+        else {
+            displayServer = qpa;
+        }
+    }
+
     usesMaterial3Theme = QLibraryInfo::version() >= QVersionNumber(6, 5, 0);
     QString nativeArch = QSysInfo::currentCpuArchitecture();
 
