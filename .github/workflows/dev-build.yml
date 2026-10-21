@@ -1248,7 +1248,9 @@ jobs:
     # ARM-only V4L2 options, --enable-lto, and --fatal-warnings (jammy's libvdpau 1.4
     # has no AV1, so av1_vdpau is disabled with a warning). dav1d is built too because
     # FFmpeg 8.1 needs dav1d >= 1.0 and jammy ships 0.9.2. Runs after the libplacebo
-    # step: the Vulkan hwaccels need the LunarG headers installed there.
+    # step: the Vulkan hwaccels need the LunarG headers installed there. The fork
+    # autodetects its V4L2-request hwcontext even under --disable-all, and jammy's
+    # kernel headers lack the pixel formats it needs, so it is disabled explicitly.
     - name: Build dav1d + FFmpeg (Flatpak pins)
       run: |
         set -euxo pipefail
@@ -1262,7 +1264,7 @@ jobs:
         curl -fsSL --retry 3 https://github.com/cgutman/FFmpeg/archive/f116128cafb244bc0f809d0285932ced0471268d.tar.gz \
           | tar xz --strip-components=1 -C deps/ffmpeg
         ( cd deps/ffmpeg && ./configure --prefix=/usr/local --disable-stripping \
-            --enable-pic --enable-shared --disable-static --disable-all \
+            --enable-pic --enable-shared --disable-static --disable-all --disable-v4l2-request \
             --enable-avcodec --enable-avformat --enable-swscale \
             --enable-decoder=h264 --enable-decoder=hevc --enable-decoder=av1 \
             --enable-hwaccel=h264_vaapi --enable-hwaccel=hevc_vaapi --enable-hwaccel=av1_vaapi \
