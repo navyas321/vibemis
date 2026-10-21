@@ -9,11 +9,11 @@ REPO="${1:-navyas321/vibemis}"
 
 channel() {
   case "$1" in
-    *-alpha.*) echo "🔬 Alpha" ;;
-    *-beta.*)  echo "🧪 Beta" ;;
-    *-rc.*)    echo "🎯 RC" ;;
-    *-dev.*)   echo "🔧 Dev" ;;
-    *)         echo "✅ Stable" ;;
+    *-alpha.*) echo "Alpha" ;;
+    *-beta.*)  echo "Beta" ;;
+    *-rc.*)    echo "RC" ;;
+    *-dev.*)   echo "Dev" ;;
+    *)         echo "Stable" ;;
   esac
 }
 

@@ -46,7 +46,7 @@ releases: `0.5.0-alpha.NNN` / `0.5.0-beta.NNN` → `0.5.0`.
 
 | Catalog version | Class | Commit | Run | Built |
 |---|---|---|---|---|
-| `0.1.0` | stable ✅ Latest | `60736b0` | #510 | 2026-07-13 13:33Z |
+| `0.1.0` | stable (Latest) | `60736b0` | #510 | 2026-07-13 13:33Z |
 | `0.1.0-alpha.001` | dev | `866a377` | — | 2025-07-25 09:11Z |
 | `0.1.0-alpha.002` | dev | `da2f0fc` | — | 2025-07-26 11:57Z |
 | `0.1.0-alpha.003` | dev | `edb66fc` | — | 2025-07-26 21:04Z |

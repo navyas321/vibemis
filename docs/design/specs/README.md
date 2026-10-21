@@ -38,13 +38,13 @@ follow-up that the BL-2107 color pass deliberately deferred.
 
 | Screen (handoff id) | QML | Status |
 |---|---|---|
-| Token layer + Vb* components | `VbTokens.qml`, `Vb*` | ✅ base test88 · **semantic layer test130 (BL-2107)** |
-| `1a` Computers | `PcView.qml` + `VbHostCard.qml` | ✅ merged test92 |
-| `1b` App grid | `AppView.qml` | ✅ merged test91 |
-| `1c` Add-PC dialog | `main.qml` `addPcDialog` | ✅ merged test90 |
-| `1d` Host options side-sheet | `VbHostSheet.qml` + `VbSheetIcon.qml` | ✅ implemented |
-| `1e` Settings (sidebar) | `SettingsView.qml` | 🟡 structure/chip/LB-RB merged · colors on tokens **test130** · **type pass pending → `settings-type-pass.md`** |
-| `1f` Help | `VbHelpView.qml` | ✅ merged test89 / BL-1684 |
+| Token layer + Vb* components | `VbTokens.qml`, `Vb*` | base test88 · **semantic layer test130 (BL-2107)** |
+| `1a` Computers | `PcView.qml` + `VbHostCard.qml` | merged test92 |
+| `1b` App grid | `AppView.qml` | merged test91 |
+| `1c` Add-PC dialog | `main.qml` `addPcDialog` | merged test90 |
+| `1d` Host options side-sheet | `VbHostSheet.qml` + `VbSheetIcon.qml` | implemented |
+| `1e` Settings (sidebar) | `SettingsView.qml` | partial: structure/chip/LB-RB merged · colors on tokens **test130** · **type pass pending → `settings-type-pass.md`** |
+| `1f` Help | `VbHelpView.qml` | merged test89 / BL-1684 |
 
 ## Ready-to-implement specs (what remains)
 

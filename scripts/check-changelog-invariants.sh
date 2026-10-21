@@ -71,7 +71,7 @@ fi
 grep -q "changelog_extract_note" "$GEN" \
   || err "the generator no longer uses the shared changelog_extract_note — the PR guard and the release body would drift apart"
 grep -q "What's new for you" "$GEN" \
-  || err "generator no longer emits the '🎯 What's new for you' hero section (that is the whole point — do not hand-edit releases instead)"
+  || err "generator no longer emits the 'What's new for you' hero section (that is the whole point — do not hand-edit releases instead)"
 grep -q 'gen-changelog.sh' .github/workflows/dev-build.yml \
   || err "dev-build.yml no longer calls scripts/gen-changelog.sh — the release body must come from the tested generator"
 
@@ -137,10 +137,10 @@ mkrepo
 commit "fix(BL-2408): enable RFI by default on AMD/Gallium (mirror upstream d3c23b55)" \
        "Mechanism lives here." "Changelog: Fixes stuttering and choppy video on AMD handhelds"
 out=$(gen 0.1.0-beta.002)
-grep -q "^## 🎯 What's new for you" <<<"$out" || err "1: no hero section"
+grep -q "^## What's new for you" <<<"$out" || err "1: no hero section"
 grep -q "^- Fixes stuttering and choppy video on AMD handhelds$" <<<"$out" || err "1: hero is missing the human-written note"
 grep -q "Gallium" <<<"$out" && err "1: the raw technical subject leaked into the release body"
-grep -q "### 🐛 Bug Fixes" <<<"$out" || err "1: the fix did not land in Bug Fixes"
+grep -q "### Bug Fixes" <<<"$out" || err "1: the fix did not land in Bug Fixes"
 [ "$fail" = "$t0" ] && ok "note-bearing fix -> hero bullet, technical subject suppressed"
 
 # --- 2. THE beta.005 REGRESSION: internal work is demoted even when it carries a
@@ -149,10 +149,10 @@ mkrepo
 commit "ci: consolidate invariant jobs and gate the release on the guard" \
        "Changelog: Release notes stay human-readable through squash merges"
 out=$(gen 0.1.0-beta.002)
-awk '/^## 🚧/{exit} {print}' <<<"$out" | grep -qi "human-readable" \
+awk '/^## Development Build Changelog/{exit} {print}' <<<"$out" | grep -qi "human-readable" \
   && err "2: an internal ci: commit with a note was promoted into the user-facing hero (the 0.5.0-beta.005 regression)"
-grep -q "🔩 Internal / build plumbing" <<<"$out" || err "2: internal commit is not in the collapsed Internal section"
-grep -q "### 🐛 Bug Fixes" <<<"$out" && err "2: an internal ci: commit was routed into Bug Fixes"
+grep -q "Internal / build plumbing" <<<"$out" || err "2: internal commit is not in the collapsed Internal section"
+grep -q "### Bug Fixes" <<<"$out" && err "2: an internal ci: commit was routed into Bug Fixes"
 grep -q "Internal tooling and maintenance only" <<<"$out" || err "2: an internal-only cut must say so honestly in the hero"
 [ "$fail" = "$t0" ] && ok "internal-only cut -> demoted, honest hero, nothing fake in Bug Fixes"
 
@@ -160,8 +160,8 @@ grep -q "Internal tooling and maintenance only" <<<"$out" || err "2: an internal
 mkrepo
 commit "fix: correct the release counter race" "Changelog: none"
 out=$(gen 0.1.0-beta.002)
-grep -q "🔩 Internal / build plumbing" <<<"$out" || err "3: 'Changelog: none' did not demote the commit"
-grep -q "### 🐛 Bug Fixes" <<<"$out" && err "3: 'Changelog: none' commit still reached Bug Fixes"
+grep -q "Internal / build plumbing" <<<"$out" || err "3: 'Changelog: none' did not demote the commit"
+grep -q "### Bug Fixes" <<<"$out" && err "3: 'Changelog: none' commit still reached Bug Fixes"
 [ "$fail" = "$t0" ] && ok "'Changelog: none' opt-out demotes a fix: commit"
 
 # --- 4. no note -> NOT in the hero (a commit subject is written for developers and
@@ -170,7 +170,7 @@ mkrepo
 commit "fix: Quick Menu selection wraps around at the top and bottom (BL-2443) (#287) [skip ci]"
 out=$(gen 0.1.0-beta.002)
 grep -q "No user-facing highlights were flagged" <<<"$out" || err "4: hero should honestly report that no note was written"
-awk '/^## 🚧/{exit} {print}' <<<"$out" | grep -q "Quick Menu" && err "4: an un-noted subject leaked into the hero"
+awk '/^## Development Build Changelog/{exit} {print}' <<<"$out" | grep -q "Quick Menu" && err "4: an un-noted subject leaked into the hero"
 grep -q "^- Quick Menu selection wraps around at the top and bottom (\`" <<<"$out" \
   || err "4: technical bullet not cleaned (expected the fix:/BL-tag/PR-ref/[skip ci] scrubs)"
 [ "$fail" = "$t0" ] && ok "un-noted commit -> cleaned technical bullet, honest hero, no jargon promoted"
@@ -191,14 +191,14 @@ mkrepo
 commit "fix: part one" "Changelog: Audio no longer crackles"
 commit "fix: part two" "Changelog: Audio no longer crackles"
 out=$(gen 0.1.0-beta.002)
-n=$(awk '/^## 🚧/{exit} /^- Audio no longer crackles$/{c++} END{print c+0}' <<<"$out")
+n=$(awk '/^## Development Build Changelog/{exit} /^- Audio no longer crackles$/{c++} END{print c+0}' <<<"$out")
 [ "$n" = "1" ] || err "6: expected 1 deduped hero bullet, got $n"
 [ "$fail" = "$t0" ] && ok "duplicate notes dedupe to one hero bullet"
 
 # --- 7. a cut with no commits at all still reads as a finished document.
 mkrepo
 out=$(gen 0.1.0-beta.002)
-grep -q "^## 🎯 What's new for you" <<<"$out" || err "7: hero header missing on an empty range"
+grep -q "^## What's new for you" <<<"$out" || err "7: hero header missing on an empty range"
 grep -q "No code changes since the previous release" <<<"$out" || err "7: empty range must say so"
 [ "$fail" = "$t0" ] && ok "empty range renders an honest, complete body"
 
@@ -210,7 +210,7 @@ hero_line=$(grep -n "What's new for you" <<<"$out" | head -1 | cut -d: -f1)
 tech_line=$(grep -n "Development Build Changelog" <<<"$out" | head -1 | cut -d: -f1)
 [ -n "$hero_line" ] && [ -n "$tech_line" ] && [ "$hero_line" -lt "$tech_line" ] \
   || err "8: the hero section must come before the technical changelog"
-grep -q "### ✨ New Features" <<<"$out" || err "8: feat: did not route to New Features"
+grep -q "### New Features" <<<"$out" || err "8: feat: did not route to New Features"
 [ "$fail" = "$t0" ] && ok "hero precedes the technical changelog"
 
 # --- 9. THE #289 CASE, and the reason subject prefixes alone are not enough.
@@ -225,10 +225,10 @@ git add -A
 git commit -q -m "fix: CI consolidation + release gating + stable gate (BL-2458/2459/2460) (#289)" \
   -m "Changelog: Release notes stay human-readable through squash merges, a broken guard now blocks the release"
 out=$(gen 0.1.0-beta.002)
-awk '/^## 🚧/{exit} {print}' <<<"$out" | grep -qi "human-readable" \
+awk '/^## Development Build Changelog/{exit} {print}' <<<"$out" | grep -qi "human-readable" \
   && err "9: a commit whose whole diff is .github/docs/CI-scripts was promoted to the user-facing hero"
-grep -q "### 🐛 Bug Fixes" <<<"$out" && err "9: non-shipping commit routed into Bug Fixes despite the fix: prefix"
-grep -q "🔩 Internal / build plumbing" <<<"$out" || err "9: non-shipping commit is not in the Internal section"
+grep -q "### Bug Fixes" <<<"$out" && err "9: non-shipping commit routed into Bug Fixes despite the fix: prefix"
+grep -q "Internal / build plumbing" <<<"$out" || err "9: non-shipping commit is not in the Internal section"
 [ "$fail" = "$t0" ] && ok "non-shipping diff demotes a fix: commit even when it carries a note (#289 case)"
 
 # --- 10. the matching opt-in: `Changelog!:` overrides the diff for the rare
@@ -354,7 +354,7 @@ git commit -q -m "fix: unicode docs filename" -m "Changelog: Should not be user 
 out=$(gen 0.1.0-beta.002)
 grep -q "Should not be user facing" <<<"$out" \
   && err "24: a docs-only commit with a non-ASCII path was published as user-facing (core.quotepath)"
-grep -q "🔩 Internal / build plumbing" <<<"$out" || err "24: non-ASCII docs-only commit not demoted"
+grep -q "Internal / build plumbing" <<<"$out" || err "24: non-ASCII docs-only commit not demoted"
 [ "$fail" = "$t0" ] && ok "non-ASCII docs paths are still recognized as plumbing"
 
 # --- 13. an INDENTED `Changelog:` is a markdown code block -- someone quoting an
@@ -375,7 +375,7 @@ mkrepo
 commit "build: tweak packaging" "Changelog!: none"
 out=$(gen 0.1.0-beta.002)
 grep -qi "^- None$" <<<"$out" && err "14: 'Changelog!: none' rendered a hero bullet reading 'None'"
-grep -q "🔩 Internal / build plumbing" <<<"$out" || err "14: 'Changelog!: none' did not demote"
+grep -q "Internal / build plumbing" <<<"$out" || err "14: 'Changelog!: none' did not demote"
 [ "$fail" = "$t0" ] && ok "'Changelog!: none' opts out instead of publishing 'None'"
 
 # --- 15. raw HTML in a subject must not close the collapsed Internal block early and
@@ -469,7 +469,7 @@ grep -q "all six binaries" <<<"$out" \
 # is right to list everything; a production hero has to answer "should I install this?".
 # So on a bare stable it carries features plus fixes an author marked as major, and the
 # complete technical changelog collapses underneath -- nothing dropped, just not competing.
-stable_hero() { awk '/^<details><summary>🚧/{exit} {print}' <<<"$1"; }
+stable_hero() { awk '/^<details><summary>Full technical changelog/{exit} {print}' <<<"$1"; }
 mkstable() { mkrepo; git tag 0.1.0; }   # a same-tier ancestor, so the range is 0.1.0..cut
 
 # --- 26. the curation itself: on a stable, a plain noted fix is technical-only while a
@@ -492,7 +492,7 @@ t0=$c26_t0   # mkrepo re-baselines t0; keep this case's, so a stable-half failur
 commit "feat: add a per-game bitrate override" "Changelog: You can now set a bitrate per game"
 commit "fix: correct the jitter counter label" "Changelog: Corrects the mislabeled network-jitter counter"
 out=$(gen 0.1.0-beta.002)
-awk '/^## 🚧/{exit} {print}' <<<"$out" | grep -qi "jitter" || err "26: a pre-release hero must still list every note"
+awk '/^## Development Build Changelog/{exit} {print}' <<<"$out" | grep -qi "jitter" || err "26: a pre-release hero must still list every note"
 [ "$fail" = "$t0" ] && ok "stable hero = features only; the same fix still heroes on a beta and is never lost"
 
 # --- 27. the opt-in that makes a big fix headline a production release. Without it the
@@ -504,7 +504,7 @@ commit "fix: enable RFI by default on AMD/Gallium" \
 out=$(gen 0.2.0)
 stable_hero "$out" | grep -qxF -- "- Fixes stuttering and choppy video on AMD handhelds (Legion Go S, Steam Deck)" \
   || err "27: Changelog-Major: did not put a major fix in the stable hero"
-grep -q "### 🐛 Bug Fixes" <<<"$out" || err "27: a Changelog-Major: fix must still route to Bug Fixes by its subject type"
+grep -q "### Bug Fixes" <<<"$out" || err "27: a Changelog-Major: fix must still route to Bug Fixes by its subject type"
 grep -qi "Changelog-Major" <<<"$out" && err "27: the trailer key itself was published"
 [ "$fail" = "$t0" ] && ok "'Changelog-Major:' promotes a fix into the stable hero without changing its routing"
 
@@ -514,7 +514,7 @@ mkstable
 commit "fix: internal-only cleanup" "Changelog-Major: none"
 out=$(gen 0.2.0)
 grep -qi "^- None$" <<<"$out" && err "28: 'Changelog-Major: none' published a 'None' bullet"
-grep -q "🔩 Internal / build plumbing" <<<"$out" || err "28: 'Changelog-Major: none' did not demote the commit"
+grep -q "Internal / build plumbing" <<<"$out" || err "28: 'Changelog-Major: none' did not demote the commit"
 [ "$fail" = "$t0" ] && ok "'Changelog-Major: none' opts out instead of publishing 'None'"
 
 # --- 29. UPSTREAM ATTRIBUTION IS NOT NEWS. 0.5.0's second hero bullet was "Adopt Nonary
@@ -530,10 +530,10 @@ commit "fix(vrr): adopt the upstream active-wait bound" \
 commit "feat: show the host type on each computer card" \
        "Changelog: Host cards now show whether the PC is running Apollo, Sunshine or Artemis"
 out=$(gen 0.1.0-beta.002)
-awk '/^## 🚧/{exit} {print}' <<<"$out" | grep -qi "nonary" \
+awk '/^## Development Build Changelog/{exit} {print}' <<<"$out" | grep -qi "nonary" \
   && err "29: an upstream fork attribution reached the hero (the 0.5.0 Nonary bullet)"
 grep -qi "nonary" <<<"$out" || err "29: the attribution was dropped entirely — the technical changelog must keep it"
-awk '/^## 🚧/{exit} {print}' <<<"$out" | grep -q "Apollo, Sunshine or Artemis" \
+awk '/^## Development Build Changelog/{exit} {print}' <<<"$out" | grep -q "Apollo, Sunshine or Artemis" \
   || err "29: the attribution filter is over-broad — host types are a user-facing choice, not fork provenance"
 [ "$fail" = "$t0" ] && ok "fork/maintainer attribution stays out of the hero; host types are untouched"
 
@@ -544,14 +544,14 @@ mkstable
 commit "feat: add a thing" "Changelog: You can now do the thing"
 commit "ci: retune the guard"
 out=$(gen 0.2.0)
-grep -q "^## 🚧 Development Build Changelog" <<<"$out" && err "30: a production release is still headed 'Development Build Changelog'"
+grep -q "^## Development Build Changelog" <<<"$out" && err "30: a production release is still headed 'Development Build Changelog'"
 hero_line=$(grep -n "What's new for you" <<<"$out" | head -1 | cut -d: -f1)
 det_line=$(grep -n "Full technical changelog" <<<"$out" | head -1 | cut -d: -f1)
 [ -n "$hero_line" ] && [ -n "$det_line" ] && [ "$hero_line" -lt "$det_line" ] \
   || err "30: the hero must come before the collapsed technical changelog"
 [ "$(grep -c '<details>' <<<"$out")" = "1" ] || err "30: expected exactly one <details> on a stable (nested collapsibles render inconsistently on GitHub)"
 [ "$(grep -c '</details>' <<<"$out")" = "1" ] || err "30: the stable <details> block is not closed exactly once — the rest of the page would be swallowed"
-grep -q "🔩 Internal / build plumbing" <<<"$out" || err "30: plumbing vanished instead of moving inside the collapsed block"
+grep -q "Internal / build plumbing" <<<"$out" || err "30: plumbing vanished instead of moving inside the collapsed block"
 [ "$fail" = "$t0" ] && ok "stable body: uncollapsed hero, one closed <details> holding the full changelog and plumbing"
 
 cd "$ROOT"
