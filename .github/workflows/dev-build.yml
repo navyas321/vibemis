@@ -1276,8 +1276,9 @@ jobs:
         sudo ldconfig
         echo "Bundled libavcodec: $(pkg-config --modversion libavcodec)"
         # Fail here, not on a user's machine, if a hwaccel #319 needs was dropped.
+        # (Component switches live in config_components.h since FFmpeg 5.1.)
         for hw in HEVC_VAAPI HEVC_VULKAN; do
-          grep -q "^#define CONFIG_${hw}_HWACCEL 1" deps/ffmpeg/config.h \
+          grep -q "^#define CONFIG_${hw}_HWACCEL 1" deps/ffmpeg/config_components.h \
             || { echo "ERROR: ${hw} hwaccel not enabled"; exit 1; }
         done
 
