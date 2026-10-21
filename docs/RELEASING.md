@@ -66,9 +66,14 @@ the CI smart-build behavior, and the README-update rule.
   of merge method** (BL-2270 — the old merge-commit-only rule silently skipped squash
   merges). Docs-only pushes never release;
   `gh workflow run dev-build.yml --ref vibemis-main` still builds immediately.
-- **Release builds are never concurrency-cancelled** (BL-2270): `vibemis-main`/stable
-  builds queue behind each other instead of being killed by a follow-up push. Only
-  `test**` alpha builds keep cancel-in-progress (a newer alpha supersedes an older one).
+- **An in-progress release build is never cancelled** (BL-2270): a follow-up push to
+  `vibemis-main` waits for the running build instead of killing it. GitHub keeps only
+  **one pending** run per concurrency group, though, so when several merges land while a
+  build is running, the queued runs in between are superseded and only the newest one
+  builds. Nothing is lost: that newest HEAD contains the superseded commits, and its
+  beta's changelog covers them (2026-10-21: six quick merges produced beta.008 and
+  beta.009; the four runs between them showed as cancelled). Only `test**` alpha builds
+  use cancel-in-progress (a newer alpha supersedes an older in-flight one).
 
 ## CI / AppImage release rules — READ BEFORE PUSHING
 

@@ -31,8 +31,8 @@ Valve's own Steam Link; no Moonlight-lineage client has ever been on the store).
    (libplacebo, libdecor, SDL3+SDL2-compat+SDL2_ttf, dav1d, ffmpeg with vaapi/vdpau/vulkan hwaccels,
    gamescope-wsi layer) verbatim; only the final module changes to point at this repo + `vibemis.pro`
    (`buildsystem: qmake`, or `simple` with explicit `qmake6 vibemis.pro … && make && make install`);
-   `disable-shallow-clone: true` so the submodules (ClassicOldSong moonlight-common-c, qmdnsengine,
-   h264bitstream) resolve.
+   `disable-shallow-clone: true` so the submodules (navyas321/moonlight-common-c, qmdnsengine,
+   SDL_GameControllerDB) resolve; h264bitstream is vendored in-tree.
 4. **Build locally** with `flatpak-builder`, then **verify on the Legion Go S in Game Mode**
    (hardware decode + gamepad + Quick Menu overlay). If the AMD/Mesa VAAPI fix is still needed, add
    `--env=FORCE_VAAPI=1` to `finish-args` and `--filesystem=host-os:ro` for host drivers.

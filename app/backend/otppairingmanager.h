@@ -65,12 +65,6 @@ private:
     // Network request helpers
     void sendOTPPairingRequest(NvComputer *computer, const QString &otpHash, const QString &salt, const QString &passphrase);
     
-    // Apollo OTP pairing implementation
-    PairState performApolloOTPPairing(NvPairingManager &pairingManager, NvComputer *serverInfo, const QString &pin, const QString &passphrase);
-    
-    // AES encryption/decryption helpers (similar to NvPairingManager)
-    QByteArray encryptAES(const QByteArray &plaintext, const QByteArray &key);
-    QByteArray decryptAES(const QByteArray &ciphertext, const QByteArray &key);
 
 private:
     static constexpr int OTP_PIN_LENGTH = 4; // Matches Android constant

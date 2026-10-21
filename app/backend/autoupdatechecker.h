@@ -128,6 +128,9 @@ private:
     static int channelFloor(int updateChannel);
     // browser_download_url of the release's .AppImage asset ("" if none).
     static QString appImageAssetUrl(const QJsonObject& release);
+    // Lower-case hex SHA-256 GitHub publishes for that asset ("digest":
+    // "sha256:<hex>"), or "" when the release predates asset digests.
+    static QString appImageAssetSha256(const QJsonObject& release);
 
     void clearOffer();
     void setStatus(const QString& message);
@@ -143,6 +146,9 @@ private:
     QString m_OfferVersion;
     QString m_ReleaseUrl;
     QString m_AssetUrl;
+    // Expected SHA-256 of m_AssetUrl's file; the download must match it before
+    // it may be swapped in. Empty = the release published no digest.
+    QString m_AssetSha256;
     // Stability tier of the release m_AssetUrl came from, re-asserted against the
     // live channel floor in install() so a stale or mis-selected offer can never
     // put a prerelease on a Stable-channel machine (BL-2437). -1 = no offer.

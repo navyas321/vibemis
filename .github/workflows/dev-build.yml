@@ -321,6 +321,39 @@ jobs:
           fi
           echo "- Keyboard mapping test suite: passed" >> "$GITHUB_STEP_SUMMARY"
 
+      # tests/updater (the atomic AppImage swap the self-updater relies on) and
+      # tests/bitrate (the bitrate-collapse rescue policy) existed for months
+      # without any job building them (BL-2702). Both are QtCore-only.
+      - name: Build and run the updater and bitrate test suites
+        run: |
+          set -Eeuo pipefail
+          export QT_QPA_PLATFORM=offscreen
+          rc=0
+          for suite in updater:tst_updaterswap bitrate:tst_bitraterescuepolicy; do
+            dir=${suite%%:*}; t=${suite##*:}
+            mkdir -p "build-$dir-tests"
+            ( cd "build-$dir-tests" && qmake6 "$GITHUB_WORKSPACE/tests/$dir/$dir.pro" && make -j"$(nproc)" )
+            bin=$(find "$GITHUB_WORKSPACE/build-$dir-tests" -type f -name "$t" -perm -u+x -print -quit)
+            if [ -z "$bin" ]; then
+              echo "::error title=Test binary missing::$t was not built from tests/$dir/$dir.pro"
+              rc=1
+              continue
+            fi
+            echo "::group::$t"
+            if "$bin"; then
+              echo "$t: PASS"
+            else
+              echo "::error title=Test failed::$t exited non-zero"
+              rc=1
+            fi
+            echo "::endgroup::"
+          done
+          if [ "$rc" -ne 0 ]; then
+            echo "- Updater/bitrate test suites FAILED" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "- Updater and bitrate test suites: passed" >> "$GITHUB_STEP_SUMMARY"
+
   # A change a user can notice must ship with a sentence a user can read.
   #
   # The release body's "What's new for you" section is built EXCLUSIVELY from

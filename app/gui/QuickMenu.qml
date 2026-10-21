@@ -41,6 +41,17 @@ Rectangle {
     
     // Handle keyboard input for navigation
     Keys.onPressed: function(event) {
+        // Text typed before the compose field has taken focus (it focuses on a
+        // short timer after the view opens) lands here on the root, which used to
+        // drop it, losing the first character. Hand it to the field instead.
+        if (currentMenu === "text_send" && !sendTextField.activeFocus
+                && event.text.length > 0 && event.text.charCodeAt(0) >= 0x20
+                && event.text.charCodeAt(0) !== 0x7f && event.key !== Qt.Key_Escape) {
+            sendTextField.forceActiveFocus()
+            sendTextField.insert(sendTextField.cursorPosition, event.text)
+            event.accepted = true
+            return
+        }
         if (event.key === Qt.Key_Escape) {
             // From a submenu, Esc/B/Back returns to the main menu (matching the
             // on-screen "← Back" button); from the main menu it resumes the game.
