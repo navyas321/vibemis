@@ -243,6 +243,77 @@ The `eglimagefactory` interface — constructor, `exportDRMImages()`, `exportVAI
 Linux-relevant (the EGL/DRM/VAAPI import path our handheld target actually uses), and it is
 guarded by `check-rfi-invariants.sh` and `check-vrr-invariants.sh` so a regression is caught early.
 
+## 2026-10-21 review: rebase decision, batch 3, and the Nonary VRR line (BL-2691)
+
+### Rebase: no
+
+Upstream `moonlight/master` is 525 commits ahead of the merge base `1bf86f52` (2025-07-04), and
+about 51 of those landed after batch 2 (2026-08-08). A rebase would replay 870+ fork commits,
+most of them squashed hand-ports, onto a base that conflicts in the same 128 files batch 1 and
+2 already had to merge by hand. It would cost more than the gap it closes, and it would
+invalidate every on-device result recorded against the current history. **Keep the batch
+model.** Take small self-contained upstream fixes as `cherry-pick -x` batches, and keep
+interface-sized units for the deep conflicts.
+
+### Batch 3 (PR #323): upstream fixes from 2026-10
+
+These nine applied cleanly: `ee557e83` and `2bd4b9f7` (pairing challenge-response and X509
+parse checks), `a6149245` (QSslKey algorithm), `a57e947d`, `fa6ae809`, `289782c6`, `9b8886a6`
+and `71c3191e` (h264bitstream, which is now vendored 1:1 so these apply as-is), and `e4db5c2c`
+(pacer: empty-queue check after a wakeup).
+
+Not taken:
+
+- `a2486eaf` patches a FreeBSD/OpenBSD branch of `hasFastAes()` that we don't have.
+- `9af0e9f5` (DXVsyncSource robustness) conflicts with our VRR-modified `pacer.cpp`. It belongs
+  with the pacer convergence below.
+
+Still worth taking, each as its own unit:
+
+- The `moonlight-common-c` bumps `14c26d8c` (frame-loss fixes) and `dc92b6d2`. These must be
+  cherry-picked onto `navyas321/moonlight-common-c@vibemis-rtp-timestamp`, not taken as a bump.
+- The AppImage libva changes (`526bde55`, `513ceca9`, `54f8fed5`, `b1824e9d`), weighed against
+  our own host-libva apprun hook.
+- The D3D11 device-selection fixes (`09873287`, `b86b5f71`, `e9d77967`) for Windows.
+
+The eglimagefactory unit above is still the next interface-sized batch.
+
+### Nonary VRR: a re-vendor campaign, not a pull
+
+Our VRR timing core was vendored from Nonary `v6.1.0-vrr10` (2026-07-25), and the target waiter
+was synced to VRR10 in `11470f45`. Nonary has since shipped vrr11 through vrr18 (the newest tag
+is `v6.1.0-vrr18`, 2026-09-28, and `master` is at `f94c06e7`, 2026-10-20). Those releases are a
+**redesign** of the pacer, not a set of fixes on top of it:
+
+- vrr12 replaced timestamp replay with cadence smoothing and a learned playout delay.
+- vrr14 added presentation feedback (Wayland presentation-time, Gamescope, DXGI).
+- vrr15 added latency presets.
+- vrr16 rewrote the adaptive queue.
+- vrr17 added a GPU-readiness lead.
+
+`v6.1.0-vrr10..nonary/master` touches the pacer with 100 commits. The pacer directory grew to
+45 files (~745 KB); `vrrtimingcontroller.cpp` alone gained ~4,100 lines and now sits in a
+`Vrr13` namespace with a different public API. Callers must feed it presentation observations,
+GPU-ready waits and input-buffer misses, and our worker and presenters produce none of those.
+The change also reaches `ivrrframepresenter.h`, `plvk.cpp` (+1.4k), `d3d11va.cpp`,
+`vulkantiming.cpp`, the Wayland feedback protocols, the session presentation snapshot, and new
+settings (`VrrTimingSettings.qml`). vrr18 also carries non-VRR features (PyroWave, DualSense
+haptics, KWin scanout) that are out of scope here.
+
+So adopting "the latest Nonary VRR" means **replacing our VRR pipeline with Nonary's**, staged
+like this:
+
+1. Vendor the timing core (`pacer/vrr/**`) together with its test fixtures, building alongside
+   the old core behind a compile-time switch.
+2. Move the worker and the `IVrrFramePresenter` contract to Nonary's interface.
+3. Bring presenter feedback over, plvk first (the handheld path), then D3D11.
+4. Bring over the settings and presets.
+
+Each stage needs CI plus an on-device A/B against Nonary's own build. BL-2521 and BL-2545 are
+defects in the current core and would be superseded rather than fixed. There is no local Qt
+toolchain (see BL-2657), so every iteration is a ~6 minute CI loop. Restoring a WSL Qt
+toolchain should come before stage 1.
+
 ## Reproducing the measurement
 
 The three-blob classifier is a dozen lines of stdlib Python: list `git ls-tree -r` for the merge
