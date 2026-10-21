@@ -60,7 +60,7 @@ const int MaxRendererChars = 44;
 const int MaxVendorChars = 44;
 
 // BL-2529: caps for the pacing line. The pacing names come from
-// Pacer::pacingModeName() ("vrr-worker", "vrr-unpaced", "vsync", "none") and
+// Pacer::pacingModeName() ("vrr-worker", "vsync", "none") and
 // the present mode from IFFmpegRenderer::getPresentationModeName() ("Immediate",
 // "Mailbox", "FIFO", "FIFO Relaxed").
 const int MaxPacingModeChars = 12;

@@ -152,12 +152,11 @@ public:
         return false;
     }
 
-    // BL-2529: true when the session holds adaptive presentation at all --
-    // worker-paced or unpaced. This, not isVrrActive(), is what Session's
-    // refresh-drift guard and VRR-fallback notice consult: with frame pacing
-    // off the worker never runs, but the presentation is still adaptive and
-    // its qualified refresh rate can still go stale. Defaults to isVrrActive()
-    // because decoders without the unpaced mode have no gap between the two.
+    // BL-2529: true when the session holds adaptive presentation at all. This,
+    // not isVrrActive(), is what Session's refresh-drift guard and
+    // VRR-fallback notice consult, because presentation is what they depend
+    // on. With the unpaced VRR mode removed (00d01555) the two currently
+    // agree, hence the default.
     virtual bool isAdaptivePresentationActive() {
         return isVrrActive();
     }

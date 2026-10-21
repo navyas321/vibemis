@@ -51,11 +51,10 @@ public:
     // refresh when a VRR session actually holds adaptive presentation and the
     // window event could have changed the display refresh.
     //
-    // BL-2529: the second input is isAdaptivePresentationActive(), NOT
-    // isVrrActive(). An unpaced VRR session (frame pacing off) runs no worker
-    // but still presents on an adaptive swapchain qualified at a specific
-    // refresh rate; gating on the worker made this guard inert for exactly
-    // those sessions.
+    // BL-2529: the second input is isAdaptivePresentationActive(): what the
+    // guard protects is a swapchain presenting adaptively at a qualified
+    // refresh rate. (The unpaced VRR mode that once made this differ from
+    // isVrrActive() was removed in 00d01555.)
     static
     bool vrrRefreshSwitchNeedsProbe(int qualifiedRefreshHz,
                                     bool adaptivePresentationActive,

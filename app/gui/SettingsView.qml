@@ -1961,10 +1961,10 @@ Item {
                 //
                 // BL-2529: this row sits between V-Sync and Enable VRR on purpose —
                 // the same order Nonary shows, and the order the three settings
-                // depend on each other in. It is the switch that decides whether the
-                // VRR pacing worker runs at all, so its sublabel names VRR directly
-                // rather than leaving a user to guess that "frame pacing" and
-                // "VRR pacing" are the same knob.
+                // depend on each other in. BL-2704: with Enable VRR on this switch
+                // has no effect — a VRR session always runs the pacing worker
+                // (00d01555), and a rejected one falls back to paced fixed V-sync —
+                // so the sublabel says so instead of offering a knob that does nothing.
                 CheckBox {
                     id: framePacingCheck
                     width: parent.width
@@ -2022,7 +2022,7 @@ Item {
                             Text {
                                 width: parent.width
                                 text: StreamingPreferences.enableVrr
-                                      ? qsTr("Delays early frames. Also runs VRR's pacing worker — off is usually smoother with VRR")
+                                      ? qsTr("No effect while Enable VRR is on: VRR always paces frames itself")
                                       : qsTr("Reduces micro-stutter by delaying early frames")
                                 font.family: VbTokens.fontBody
                                 font.pixelSize: VbTokens.sizeLabel
@@ -2048,7 +2048,7 @@ Item {
                     ToolTip.delay: 1000
                     ToolTip.timeout: 8000
                     ToolTip.visible: hovered
-                    ToolTip.text: qsTr("Holds each frame back until its display slot instead of showing it as soon as it decodes. Smooths micro-stutter at the cost of a little latency. With VRR enabled this same switch controls VRR's own pacing worker: turn it off and VRR still presents adaptively, just without the extra wait. Off is the default, and is often the faster choice on a VRR display.")
+                    ToolTip.text: qsTr("Holds each frame back until its display slot instead of showing it as soon as it decodes. Smooths micro-stutter at the cost of a little latency. Applies to fixed V-Sync streaming. With Enable VRR on it has no effect: VRR always paces frames itself, and if VRR can't run the stream falls back to paced V-Sync.")
                 }
 
                 // Vibemis (BL-2212): VRR pacing toggle (vendored from Nonary
