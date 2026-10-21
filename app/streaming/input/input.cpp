@@ -312,8 +312,13 @@ void SdlInputHandler::raiseAllKeys()
                 "Raising %d keys",
                 (int)m_KeysDown.count());
 
-    for (auto keyDown : std::as_const(m_KeysDown)) {
-        LiSendKeyboardEvent(keyDown, KEY_ACTION_UP, 0);
+    for (auto keyDown = m_KeysDown.constBegin(); keyDown != m_KeysDown.constEnd(); ++keyDown) {
+        // Repeat the press's normalisation flag (see m_KeysDown). LiSendKeyboardEvent()
+        // would send flags = 0, which reads as "this VK names a US-layout position".
+        LiSendKeyboardEvent2(keyDown.key(),
+                             KEY_ACTION_UP,
+                             0,
+                             keyDown.value() ? SS_KBE_FLAG_NON_NORMALIZED : 0);
     }
 
     m_KeysDown.clear();

@@ -257,7 +257,13 @@ private:
 
     int m_GamepadMask;
     GamepadState m_GamepadState[MAX_GAMEPADS];
-    QSet<short> m_KeysDown;
+    // Keys currently held on the host, mapped to whether the press went out with
+    // SS_KBE_FLAG_NON_NORMALIZED. The flag must be repeated on a synthetic
+    // release: for a VK with no US-layout scancode (VK_ABNT_C1 on the Brazilian
+    // `/` key, for instance) the host resolves a normalised code in a table that
+    // cannot contain it, so a raise-all that drops the flag answers the release
+    // under a different contract than the press it is cancelling.
+    QHash<short, bool> m_KeysDown;
     // Scancodes whose key-DOWN the Quick Menu consumed; their key-UP
     // must be swallowed too — but a key held since BEFORE the menu opened must still get
     // its release sent to the host (stuck-key fix).

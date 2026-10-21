@@ -297,12 +297,15 @@ goes through a PR, so a merge-only gate would not cover it:
 
 - **`Invariants`** — every `scripts/check-*-invariants.sh`, globbed. Adding a guard is zero
   workflow change: drop in a new `check-<x>-invariants.sh` and it runs.
-- **`VRR Tests`** — builds `tests/vrr/vrr.pro` against system Qt 6 and runs all six binaries
-  (`tst_vrrtimingcontroller`, `tst_vrrratepolicy`, `test_vrrratepolicy`,
-  `test_vrrrefreshguard`, `test_vrrswapchainpolicy`, `tst_vrrpacingworker`). Each is named
-  explicitly and a **missing** binary fails the job — globbing whatever happens to be
-  executable would let a target drop out of `vrr.pro` and leave the job green while covering
-  less. That matters here: this suite existed for months without any workflow building it,
+- **`VRR Tests`** — builds `tests/vrr/vrr.pro` against system Qt 6 and runs all seven VRR
+  binaries (`tst_vrrtimingcontroller`, `tst_vrrratepolicy`, `test_vrrratepolicy`,
+  `test_vrrrefreshguard`, `test_vrrswapchainpolicy`, `test_vrrpacingmode`,
+  `tst_vrrpacingworker`), then the same job builds and runs `tests/overlay`
+  (`tst_decoderstatus`, `tst_overlayplacement`) and `tests/keyboard` (`tst_keyremotemap`,
+  which pins the local-key -> remote-key table that the ABNT2 `/` `?` defect broke). Each is
+  named explicitly and a **missing** binary fails the job — globbing whatever happens to be
+  executable would let a target drop out of its `.pro` and leave the job green while covering
+  less. That matters here: the VRR suite existed for months without any workflow building it,
   through a run of releases that were almost entirely VRR fixes.
 
 `tests/tests.pro` is opt-in — it only descends into its `SUBDIRS` when qmake is given

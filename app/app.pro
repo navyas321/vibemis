@@ -242,6 +242,7 @@ HEADERS += \
     cli/startstream.h \
     settings/streamingpreferences.h \
     streaming/input/input.h \
+    streaming/input/keyremotemap.h \
     streaming/session.h \
     streaming/bitraterescuepolicy.h \
     streaming/vrrratepolicy.h \
