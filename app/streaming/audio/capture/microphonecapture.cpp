@@ -14,6 +14,7 @@ MicrophoneCapture::MicrophoneCapture()
     , m_Streaming(false)
     , m_StopEncoderThread(false)
     , m_Initialized(false)
+    , m_AudioSubsystemInitialized(false)
     , m_Enabled(false)
     , m_FirstPacketLogged(false)
 {
@@ -29,6 +30,15 @@ MicrophoneCapture::~MicrophoneCapture()
         m_EncoderThread.join();
     }
 
+    releaseResources();
+}
+
+// Closes the device, frees the encoder and drops the SDL audio refcount taken
+// by initialize(). Called from the destructor and from every initialize()
+// failure path, so a failed or retried initialize() leaks nothing (BL-2650).
+// The encoder thread must not be running.
+void MicrophoneCapture::releaseResources()
+{
     if (m_DeviceId != 0) {
         SDL_CloseAudioDevice(m_DeviceId);
         m_DeviceId = 0;
@@ -37,6 +47,11 @@ MicrophoneCapture::~MicrophoneCapture()
     if (m_Encoder != nullptr) {
         opus_encoder_destroy(m_Encoder);
         m_Encoder = nullptr;
+    }
+
+    if (m_AudioSubsystemInitialized) {
+        SDL_QuitSubSystem(SDL_INIT_AUDIO);
+        m_AudioSubsystemInitialized = false;
     }
 }
 
@@ -52,6 +67,7 @@ bool MicrophoneCapture::initialize(const std::string& deviceName)
                     SDL_GetError());
         return false;
     }
+    m_AudioSubsystemInitialized = true;
 
     int opusError = OPUS_OK;
     m_Encoder = opus_encoder_create(kSampleRate, kChannels, OPUS_APPLICATION_VOIP, &opusError);
@@ -59,6 +75,7 @@ bool MicrophoneCapture::initialize(const std::string& deviceName)
         SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
                     "opus_encoder_create() failed for microphone capture: %s",
                     opus_strerror(opusError));
+        releaseResources();
         return false;
     }
 
@@ -94,6 +111,7 @@ bool MicrophoneCapture::initialize(const std::string& deviceName)
         SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
                     "SDL_OpenAudioDevice() failed for microphone capture: %s",
                     SDL_GetError());
+        releaseResources();
         return false;
     }
 
@@ -113,6 +131,7 @@ bool MicrophoneCapture::initialize(const std::string& deviceName)
                     m_ObtainedSpec.freq,
                     m_ObtainedSpec.channels,
                     m_ObtainedSpec.format);
+        releaseResources();
         return false;
     }
 
