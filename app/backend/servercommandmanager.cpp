@@ -385,20 +385,6 @@ void ServerCommandManager::sendCommandExecution(const QString &commandId)
     }
 }
 
-void ServerCommandManager::onCommandsReceived()
-{
-    // TODO: Handle response from fetchAvailableCommands()
-    // This would parse the HTTP response and update available commands
-    qDebug() << "ServerCommandManager: Commands received from server";
-}
-
-void ServerCommandManager::onCommandExecutionFinished()
-{
-    // TODO: Handle response from sendCommandExecution()
-    // This would parse the execution result and emit commandExecuted signal
-    qDebug() << "ServerCommandManager: Command execution finished";
-}
-
 bool ServerCommandManager::isStreamingSessionActive() const
 {
     // Check if there's an active streaming session using Session::get()
