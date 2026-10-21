@@ -194,6 +194,17 @@ fi
 echo "Newest release: ${TAG:-unknown}"
 echo "AppImage:       $URL"
 
+# SHA-256 GitHub publishes for that AppImage asset ("digest": "sha256:<hex>"),
+# taken from the same release object as $URL. Tokens are read in document order,
+# so this works whether the API returned compact or pretty-printed JSON; a digest
+# always precedes its own asset's browser_download_url. Empty for releases that
+# predate asset digests.
+SHA256=$(printf '%s' "${REL_JSON:-}" \
+    | grep -oE '"digest": *("sha256:[0-9a-fA-F]+"|null)|"browser_download_url": *"[^"]+"' \
+    | awk '/"digest"/ { d = ($0 ~ /sha256:/) ? $0 : ""; next }
+           /\.AppImage"$/ { sub(/.*sha256:/, "", d); sub(/".*/, "", d); print tolower(d); exit }
+           { d = "" }')
+
 if [ "$CHECK_ONLY" -eq 1 ]; then
     exit 0
 fi
@@ -271,6 +282,19 @@ mkdir -p "$DEST_DIR"
 TMP=$(mktemp "$DEST_DIR/.vibemis-update.XXXXXX")
 echo "Downloading to $DEST ..."
 if curl -fL --progress-bar -o "$TMP" "$URL"; then
+    # Same integrity contract as the in-app updater: never swap in a file that
+    # differs from the asset GitHub published.
+    if [ -n "$SHA256" ] && command -v sha256sum >/dev/null 2>&1; then
+        ACTUAL=$(sha256sum "$TMP" | cut -d' ' -f1)
+        if [ "$ACTUAL" != "$SHA256" ]; then
+            rm -f "$TMP"
+            echo "ERROR: checksum mismatch (expected $SHA256, got $ACTUAL); nothing was replaced." >&2
+            exit 1
+        fi
+        echo "SHA-256 verified."
+    else
+        echo "(No published checksum for this release, or sha256sum missing; skipping verification.)"
+    fi
     chmod +x "$TMP"
     # Keep the previous build for rollback (same contract as the in-app updater)
     if [ -f "$DEST" ]; then

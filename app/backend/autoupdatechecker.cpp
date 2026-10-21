@@ -11,6 +11,7 @@
 #include <QFile>
 #include <QProcess>
 #include <QSharedPointer>
+#include <QCryptographicHash>
 
 #if defined(Q_OS_UNIX)
 #include <unistd.h>
@@ -191,6 +192,22 @@ QString AutoUpdateChecker::appImageAssetUrl(const QJsonObject& release)
     return QString();
 }
 
+QString AutoUpdateChecker::appImageAssetSha256(const QJsonObject& release)
+{
+    const QJsonArray assets = release["assets"].toArray();
+    for (const QJsonValue& assetVal : assets) {
+        QJsonObject asset = assetVal.toObject();
+        if (asset["name"].toString().endsWith(QLatin1String(".AppImage"), Qt::CaseInsensitive)) {
+            const QString digest = asset["digest"].toString();
+            if (digest.startsWith(QLatin1String("sha256:"), Qt::CaseInsensitive)) {
+                return digest.mid(7).toLower();
+            }
+            return QString();
+        }
+    }
+    return QString();
+}
+
 // ── Lifecycle ──────────────────────────────────────────────────────────────
 
 AutoUpdateChecker::AutoUpdateChecker(QObject *parent) :
@@ -258,6 +275,7 @@ void AutoUpdateChecker::clearOffer()
     m_OfferVersion.clear();
     m_ReleaseUrl.clear();
     m_AssetUrl.clear();
+    m_AssetSha256.clear();
     m_OfferTier = -1;
 }
 
@@ -417,6 +435,7 @@ void AutoUpdateChecker::handleFeedReply(QNetworkReply* reply, bool manual)
     m_OfferVersion = different ? version : QString();
     m_ReleaseUrl = releaseObj["html_url"].toString();
     m_AssetUrl = different ? appImageAssetUrl(releaseObj) : QString();
+    m_AssetSha256 = different ? appImageAssetSha256(releaseObj) : QString();
     m_OfferTier = different ? releaseTier(releaseObj) : -1;
 
     if (manual) {
@@ -463,6 +482,7 @@ void AutoUpdateChecker::install()
 
     QString appImagePath = qEnvironmentVariable("APPIMAGE");
     QString assetUrl = m_AssetUrl;
+    QString expectedSha256 = m_AssetSha256;
 
     m_Installing = true;
     m_StatusMessage = tr("Downloading update…");
@@ -475,7 +495,8 @@ void AutoUpdateChecker::install()
     // running build's squashfs is mounted from that inode, and overwriting it
     // in place SIGBUSes every running instance (BL-2259). Every failure path
     // leaves a runnable AppImage on disk, drops the offer's asset (so the
-    // next click falls back to the release page) and emits installFailed.
+    // next click re-checks the feed; never a browser, BL-2439) and emits
+    // installFailed.
     auto fail = [this](const QString& error) {
         m_Installing = false;
         m_AssetUrl.clear();
@@ -521,7 +542,9 @@ void AutoUpdateChecker::install()
     // can never masquerade as a complete download.
     auto bytesWritten = QSharedPointer<qint64>::create(0);
     auto writeFailed = QSharedPointer<bool>::create(false);
-    connect(reply, &QNetworkReply::readyRead, this, [reply, newFile, bytesWritten, writeFailed]() {
+    // Hash exactly the bytes that reached the file, as they stream.
+    auto hasher = QSharedPointer<QCryptographicHash>::create(QCryptographicHash::Sha256);
+    connect(reply, &QNetworkReply::readyRead, this, [reply, newFile, bytesWritten, writeFailed, hasher]() {
         QByteArray chunk = reply->readAll();
         qint64 written = newFile->write(chunk);
         if (written != chunk.size()) {
@@ -529,10 +552,12 @@ void AutoUpdateChecker::install()
             reply->abort();
             return;
         }
+        hasher->addData(chunk);
         *bytesWritten += written;
     });
     connect(reply, &QNetworkReply::finished, this,
-            [this, reply, newFile, appImagePath, newPath, fail, bytesWritten, writeFailed]() {
+            [this, reply, newFile, appImagePath, newPath, fail, bytesWritten, writeFailed,
+             hasher, expectedSha256]() {
         QByteArray tail = reply->readAll();
         if (!tail.isEmpty() && !*writeFailed) {
             qint64 written = newFile->write(tail);
@@ -540,6 +565,7 @@ void AutoUpdateChecker::install()
                 *writeFailed = true;
             }
             else {
+                hasher->addData(tail);
                 *bytesWritten += written;
             }
         }
@@ -580,6 +606,25 @@ void AutoUpdateChecker::install()
             newFile->deleteLater();
             fail(tr("Download failed: %1").arg(error));
             return;
+        }
+
+        // Integrity: the file must be byte-for-byte the asset GitHub published.
+        // Content-Length only proves the length; this proves the content, so a
+        // corrupted or substituted download can never replace a working build.
+        if (expectedSha256.isEmpty()) {
+            qInfo() << "Update asset has no published SHA-256 digest; skipping checksum verification";
+        }
+        else {
+            const QString actualSha256 = QString::fromLatin1(hasher->result().toHex());
+            if (actualSha256 != expectedSha256) {
+                qWarning() << "Update checksum mismatch: expected" << expectedSha256
+                           << "got" << actualSha256;
+                newFile->remove();
+                newFile->deleteLater();
+                fail(tr("Download failed: the file's checksum did not match the release"));
+                return;
+            }
+            qInfo() << "Update asset SHA-256 verified:" << actualSha256;
         }
 
         if (!newFile->setPermissions(QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner |
