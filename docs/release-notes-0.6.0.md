@@ -9,3 +9,4 @@ The headline changes in 0.6.0. Every change is listed in the full changelog on t
 - The Linux AppImage now hardware-decodes YUV 4:4:4 streams on Intel and AMD GPUs instead of falling back to software decoding.
 - Better recovery from packet loss: a frame lost across several error-correction blocks, or a partly dropped keyframe, now triggers the right recovery request to the host instead of a longer stall.
 - Pairing with a host is hardened against malformed certificates and challenge responses.
+- On Brazilian ABNT2 keyboards, the / ? key now types / and ? on the host instead of \ and |.
