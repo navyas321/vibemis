@@ -51,6 +51,17 @@ grep -qE '^CHANNEL_STABLE=1' "$UPDSH" \
 grep -qF -- '--beta|--prerelease' "$UPDSH" \
   || err "$UPDSH: no explicit --beta opt-in for prereleases"
 
+# 6. BL-2698: the update channel is persisted the moment it changes, and Settings
+#    saves on aboutToQuit. The AppImage _exit()s before QML teardown (BL-2266), so
+#    SettingsView's Component.onDestruction save never runs; without these a
+#    Beta -> Stable switch was lost on exit and the next launch installed a beta.
+SETTINGS="app/gui/SettingsView.qml"
+grep -A8 'StreamingPreferences.updateChannel = updateChannelListModel' "$SETTINGS" \
+  | grep -qF 'StreamingPreferences.save()' \
+  || err "$SETTINGS: changing the update channel no longer saves it immediately"
+grep -A3 'function onAboutToQuit' "$SETTINGS" | grep -qF 'StreamingPreferences.save()' \
+  || err "$SETTINGS: Settings no longer saves preferences on aboutToQuit"
+
 if [ "$fail" -ne 0 ]; then
   echo "One or more updater invariants failed." >&2
   exit 1
