@@ -202,6 +202,19 @@ Item {
         StreamingPreferences.save()
     }
 
+    // BL-2698: onDestruction above never runs in the AppImage. main() _exit()s
+    // straight after the event loop (BL-2266) and skips QML engine teardown, so
+    // quitting while Settings is open (window close, Steam ending the game,
+    // SIGTERM, the updater's install-and-relaunch) silently dropped every change
+    // made on this page. aboutToQuit is emitted inside exec(), before that
+    // _exit, and this handler only exists while the Settings page does.
+    Connections {
+        target: Qt.application
+        function onAboutToQuit() {
+            StreamingPreferences.save()
+        }
+    }
+
     // ---- Redesign: LB/RB switch category (matches the hint bar below) ----
     // SdlGamepadKeyNavigation forwards the shoulder buttons as Key_MediaPrevious (LB) /
     // Key_MediaNext (RB) — see sdlgamepadkeynavigation.cpp. The handler lives on the page root, so
@@ -3864,6 +3877,12 @@ Item {
                     // ::onActivated only fires on human-driven index changes
                     onActivated: {
                         StreamingPreferences.updateChannel = updateChannelListModel.get(currentIndex).val
+                        // Persist NOW, not when the page closes (BL-2698): the
+                        // background checker and the next launch both read the
+                        // saved channel, and an exit before the page closes used
+                        // to revert a Beta -> Stable switch, so the next
+                        // launch offered (and the toolbar installed) a beta.
+                        StreamingPreferences.save()
                         // A previous check's result doesn't apply to the new channel;
                         // the checker drops its offer and updates statusMessage.
                         AutoUpdateChecker.channelChanged()
