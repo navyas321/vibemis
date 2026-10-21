@@ -56,11 +56,11 @@ public:
 
     bool isVrrActive() const;
 
-    // BL-2529: true when this session holds ADAPTIVE PRESENTATION -- the VRR
-    // worker pacing it, or the render thread driving it unpaced. Distinct from
-    // isVrrActive(), which reports only the worker: the refresh-drift guard
-    // and the session's fallback notice care about the presentation, and
-    // keying them on the worker made both wrong for unpaced VRR sessions.
+    // BL-2529: true when this session holds ADAPTIVE PRESENTATION. Since the
+    // unpaced VRR mode was removed (00d01555) that only happens with the VRR
+    // worker running, so it matches isVrrActive(); the refresh-drift guard and
+    // the fallback notice still key on presentation, which is the property
+    // they actually depend on.
     bool isAdaptivePresentationActive() const;
 
     // BL-2541: present-timestamp trace for the NON-worker paths.
@@ -81,7 +81,6 @@ public:
     // initialize(); "none" before it runs.
     //
     //   "vrr-worker"  the VRR pacing worker owns presentation timing
-    //   "vrr-unpaced" adaptive presentation retained, no pacing layer
     //   "vsync"       legacy V-sync source is pacing the render queue
     //   "none"        frames go straight to the renderer as they decode
     const char* pacingModeName() const;

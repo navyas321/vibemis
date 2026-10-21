@@ -309,9 +309,11 @@ bool Pacer::initialize(SDL_Window* window, int maxVideoFps,
     // any legacy V-sync source or render thread can be created, and every
     // rejection continues through the original fixed path below.
     //
-    // BL-2529: the selection now consults the frame-pacing preference. See
-    // vrr/vrrpacingmode.h for the three modes and why "VRR + pacing off"
-    // keeps the renderer's adaptive presentation instead of undoing it.
+    // A qualified VRR session always runs the pacing worker, whatever the
+    // frame-pacing preference says: the unpaced VRR mode BL-2529 added was
+    // removed again in 00d01555 to match Nonary VRR10, because without the
+    // worker frames fell through to the legacy drop path (~20% fewer frames
+    // rendered). See vrr/vrrpacingmode.h.
     IVrrFramePresenter* presenter = enableVrr ?
         m_VsyncRenderer->getVrrFramePresenter() : nullptr;
     const VrrPacingSelection selection = VrrPacingPolicy::select(
