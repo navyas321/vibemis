@@ -36,6 +36,7 @@ private:
     void handleAudioData(const Uint8* stream, int len);
     void clearBufferedSamples();
     void encoderLoop();
+    void releaseResources();
 
     SDL_AudioDeviceID m_DeviceId;
     SDL_AudioSpec m_ObtainedSpec;
@@ -47,6 +48,7 @@ private:
     std::atomic_bool m_Streaming;
     std::atomic_bool m_StopEncoderThread;
     bool m_Initialized;
+    bool m_AudioSubsystemInitialized;
     bool m_Enabled;
     bool m_FirstPacketLogged;
     std::mutex m_BufferMutex;
