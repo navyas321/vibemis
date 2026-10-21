@@ -203,6 +203,7 @@ NvHTTP::startApp(QString verb,
                 bool localAudio,
                 int gamepadMask,
                 bool persistGameControllersOnDisconnect,
+                bool clientVrrRequested,
                 QString& rtspSessionUrl)
 {
     int riKeyId;
@@ -276,6 +277,16 @@ NvHTTP::startApp(QString verb,
         qInfo() << "Requesting virtual display from Apollo server";
     }
     
+    // Only set when the session pre-qualifies for VRR. Vibepollo/Vibeshine use
+    // it for a low-latency capture policy and, in their Automatic virtual
+    // display capture mode, a fixed 1000 Hz virtual display so capture
+    // timestamps stay within 1 ms of the game's present. Hosts that don't
+    // know the parameter ignore it.
+    if (clientVrrRequested) {
+        allParams += "&clientVrrRequested=1";
+        qInfo() << "Requesting VRR capture policy from host";
+    }
+
     if (prefs->enableResolutionScaling && prefs->resolutionScaleFactor != 100) {
         allParams += "&scaleFactor=" + QString::number(prefs->resolutionScaleFactor);
         qInfo() << "Requesting resolution scaling:" << prefs->resolutionScaleFactor << "%";

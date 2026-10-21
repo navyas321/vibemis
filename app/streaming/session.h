@@ -385,6 +385,8 @@ private:
     // window-event guard detect a same-display refresh-mode switch that
     // invalidates the qualified rate (BL-2296, Nonary v6.1.0-vrr9.1 parity).
     int m_ActiveVrrRefreshHz = 0;
+    // Pre-launch VRR eligibility sent to the host as clientVrrRequested.
+    bool m_ClientVrrRequested = false;
     // BL-2265 bitrate-collapse rescue state (v2 threading contract):
     //  - m_RescueLastFrameNumber: depacketizer thread ONLY.
     //  - m_RescueDeliveredTotal / m_RescueGapDroppedTotal: written on the

@@ -1151,6 +1151,33 @@ bool Session::initialize()
         }
     }
 
+    // Pre-launch VRR eligibility for the host's clientVrrRequested policy. The
+    // host switches to a low-latency capture policy for VRR clients, so only
+    // ask for it when the session can qualify. Mirrors the decoder-time
+    // qualification (strict refresh, effective V-sync, adaptive headroom),
+    // which still makes the final presentation decision.
+    m_ClientVrrRequested = false;
+    if (m_Preferences->enableVrr) {
+        int displayRefreshHz = 0;
+        const int sessionFps = getActualFpsForDecoderTest();
+        if (!StreamUtils::tryGetDisplayRefreshRate(testWindow, displayRefreshHz)) {
+            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                        "VRR: not requesting host VRR policy (display refresh unavailable)");
+        }
+        else if (!m_Preferences->enableVsync || displayRefreshHz + 5 < sessionFps) {
+            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                        "VRR: not requesting host VRR policy (V-sync will be ineffective)");
+        }
+        else if (!VrrRatePolicy::hasAdaptiveHeadroom(sessionFps, displayRefreshHz)) {
+            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                        "VRR: not requesting host VRR policy (%d FPS leaves insufficient adaptive-refresh headroom at %d Hz)",
+                        sessionFps, displayRefreshHz);
+        }
+        else {
+            m_ClientVrrRequested = true;
+        }
+    }
+
 #ifndef STEAM_LINK
     // Opt-in to all encryption features if we detect that the platform
     // has AES cryptography acceleration instructions and more than 2 cores.
@@ -2224,6 +2251,7 @@ bool Session::startConnectionAsync()
                       m_Preferences->playAudioOnHost,
                       m_InputHandler->getAttachedGamepadMask(),
                       !m_Preferences->multiController,
+                      m_ClientVrrRequested,
                       rtspSessionUrl);
     } catch (const GfeHttpResponseException& e) {
         emit displayLaunchError(tr("Host returned error: %1").arg(e.toQString()));
