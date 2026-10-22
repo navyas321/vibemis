@@ -391,16 +391,16 @@ else
   printf '%s\n\n' "_No user-facing highlights were flagged for this build — the technical changelog below has the full detail._"
 fi
 
-# On a stable cut the whole technical changelog collapses, plumbing included, so the
-# release page is the curated hero and nothing else until someone asks for detail. One
-# <details> rather than nesting the Internal block inside a second one: GitHub renders
-# nested collapsibles inconsistently, and the distinction only matters to whoever has
-# already opened the block -- a heading inside it carries that just as well.
-if [ "$STABLE_CUT" = true ]; then
-  printf '<details><summary>Full technical changelog — every change in this release</summary>\n\n'
-else
-  printf '## Development Build Changelog\n\n'
-fi
+# The whole technical changelog collapses, plumbing included, so the release page is
+# the hero and nothing else until someone asks for detail. One <details> rather than
+# nesting the Internal block inside a second one: GitHub renders nested collapsibles
+# inconsistently, and a heading inside the block carries the distinction just as well.
+#
+# Pre-releases used to print it expanded under "## Development Build Changelog". The
+# technical entries reuse each commit's user-facing note (developer subjects never reach
+# a release page), so every noted change appeared twice, word for word, one screen apart
+# (BL-2707). Collapsing it for every tier keeps the list complete without the repeat.
+printf '<details><summary>Full technical changelog — every change in this release</summary>\n\n'
 [ -n "$FEATURES" ]     && printf '### New Features\n%s\n' "$FEATURES"
 [ -n "$BUGFIXES" ]     && printf '### Bug Fixes\n%s\n' "$BUGFIXES"
 [ -n "$IMPROVEMENTS" ] && printf '### Improvements\n%s\n' "$IMPROVEMENTS"
@@ -408,12 +408,8 @@ fi
 if [ -z "${FEATURES}${BUGFIXES}${IMPROVEMENTS}${OTHER}" ] && [ -z "$INTERNAL" ]; then
   printf '%s\n\n' "_No commits in this range._"
 fi
-# Plumbing last and collapsed -- present for traceability, out of the way of what a
-# user actually gets from this build.
-if [ "$STABLE_CUT" = true ]; then
-  [ -n "$INTERNAL" ] && printf '### Internal / build plumbing\n%s\n' "$INTERNAL"
-  printf '</details>\n'
-elif [ -n "$INTERNAL" ]; then
-  printf '<details><summary>Internal / build plumbing</summary>\n\n%s\n</details>\n' "$INTERNAL"
-fi
+# Plumbing last -- present for traceability, out of the way of what a user actually
+# gets from this build.
+[ -n "$INTERNAL" ] && printf '### Internal / build plumbing\n%s\n' "$INTERNAL"
+printf '</details>\n'
 exit 0

@@ -149,7 +149,7 @@ mkrepo
 commit "ci: consolidate invariant jobs and gate the release on the guard" \
        "Changelog: Release notes stay human-readable through squash merges"
 out=$(gen 0.1.0-beta.002)
-awk '/^## Development Build Changelog/{exit} {print}' <<<"$out" | grep -qi "human-readable" \
+awk '/^<details><summary>Full technical changelog/{exit} {print}' <<<"$out" | grep -qi "human-readable" \
   && err "2: an internal ci: commit with a note was promoted into the user-facing hero (the 0.5.0-beta.005 regression)"
 grep -q "Internal / build plumbing" <<<"$out" || err "2: internal commit is not in the collapsed Internal section"
 grep -q "### Bug Fixes" <<<"$out" && err "2: an internal ci: commit was routed into Bug Fixes"
@@ -170,7 +170,7 @@ mkrepo
 commit "fix: Quick Menu selection wraps around at the top and bottom (BL-2443) (#287) [skip ci]"
 out=$(gen 0.1.0-beta.002)
 grep -q "No user-facing highlights were flagged" <<<"$out" || err "4: hero should honestly report that no note was written"
-awk '/^## Development Build Changelog/{exit} {print}' <<<"$out" | grep -q "Quick Menu" && err "4: an un-noted subject leaked into the hero"
+awk '/^<details><summary>Full technical changelog/{exit} {print}' <<<"$out" | grep -q "Quick Menu" && err "4: an un-noted subject leaked into the hero"
 grep -q "^- Quick Menu selection wraps around at the top and bottom (\`" <<<"$out" \
   || err "4: technical bullet not cleaned (expected the fix:/BL-tag/PR-ref/[skip ci] scrubs)"
 [ "$fail" = "$t0" ] && ok "un-noted commit -> cleaned technical bullet, honest hero, no jargon promoted"
@@ -191,7 +191,7 @@ mkrepo
 commit "fix: part one" "Changelog: Audio no longer crackles"
 commit "fix: part two" "Changelog: Audio no longer crackles"
 out=$(gen 0.1.0-beta.002)
-n=$(awk '/^## Development Build Changelog/{exit} /^- Audio no longer crackles$/{c++} END{print c+0}' <<<"$out")
+n=$(awk '/^<details><summary>Full technical changelog/{exit} /^- Audio no longer crackles$/{c++} END{print c+0}' <<<"$out")
 [ "$n" = "1" ] || err "6: expected 1 deduped hero bullet, got $n"
 [ "$fail" = "$t0" ] && ok "duplicate notes dedupe to one hero bullet"
 
@@ -207,7 +207,7 @@ mkrepo
 commit "feat: add a thing" "Changelog: You can now do the thing"
 out=$(gen 0.1.0-beta.002)
 hero_line=$(grep -n "What's new for you" <<<"$out" | head -1 | cut -d: -f1)
-tech_line=$(grep -n "Development Build Changelog" <<<"$out" | head -1 | cut -d: -f1)
+tech_line=$(grep -n "Full technical changelog" <<<"$out" | head -1 | cut -d: -f1)
 [ -n "$hero_line" ] && [ -n "$tech_line" ] && [ "$hero_line" -lt "$tech_line" ] \
   || err "8: the hero section must come before the technical changelog"
 grep -q "### New Features" <<<"$out" || err "8: feat: did not route to New Features"
@@ -225,7 +225,7 @@ git add -A
 git commit -q -m "fix: CI consolidation + release gating + stable gate (BL-2458/2459/2460) (#289)" \
   -m "Changelog: Release notes stay human-readable through squash merges, a broken guard now blocks the release"
 out=$(gen 0.1.0-beta.002)
-awk '/^## Development Build Changelog/{exit} {print}' <<<"$out" | grep -qi "human-readable" \
+awk '/^<details><summary>Full technical changelog/{exit} {print}' <<<"$out" | grep -qi "human-readable" \
   && err "9: a commit whose whole diff is .github/docs/CI-scripts was promoted to the user-facing hero"
 grep -q "### Bug Fixes" <<<"$out" && err "9: non-shipping commit routed into Bug Fixes despite the fix: prefix"
 grep -q "Internal / build plumbing" <<<"$out" || err "9: non-shipping commit is not in the Internal section"
@@ -492,7 +492,7 @@ t0=$c26_t0   # mkrepo re-baselines t0; keep this case's, so a stable-half failur
 commit "feat: add a per-game bitrate override" "Changelog: You can now set a bitrate per game"
 commit "fix: correct the jitter counter label" "Changelog: Corrects the mislabeled network-jitter counter"
 out=$(gen 0.1.0-beta.002)
-awk '/^## Development Build Changelog/{exit} {print}' <<<"$out" | grep -qi "jitter" || err "26: a pre-release hero must still list every note"
+awk '/^<details><summary>Full technical changelog/{exit} {print}' <<<"$out" | grep -qi "jitter" || err "26: a pre-release hero must still list every note"
 [ "$fail" = "$t0" ] && ok "stable hero = features only; the same fix still heroes on a beta and is never lost"
 
 # --- 27. the opt-in that makes a big fix headline a production release. Without it the
@@ -530,10 +530,10 @@ commit "fix(vrr): adopt the upstream active-wait bound" \
 commit "feat: show the host type on each computer card" \
        "Changelog: Host cards now show whether the PC is running Apollo, Sunshine or Artemis"
 out=$(gen 0.1.0-beta.002)
-awk '/^## Development Build Changelog/{exit} {print}' <<<"$out" | grep -qi "nonary" \
+awk '/^<details><summary>Full technical changelog/{exit} {print}' <<<"$out" | grep -qi "nonary" \
   && err "29: an upstream fork attribution reached the hero (the 0.5.0 Nonary bullet)"
 grep -qi "nonary" <<<"$out" || err "29: the attribution was dropped entirely — the technical changelog must keep it"
-awk '/^## Development Build Changelog/{exit} {print}' <<<"$out" | grep -q "Apollo, Sunshine or Artemis" \
+awk '/^<details><summary>Full technical changelog/{exit} {print}' <<<"$out" | grep -q "Apollo, Sunshine or Artemis" \
   || err "29: the attribution filter is over-broad — host types are a user-facing choice, not fork provenance"
 [ "$fail" = "$t0" ] && ok "fork/maintainer attribution stays out of the hero; host types are untouched"
 
