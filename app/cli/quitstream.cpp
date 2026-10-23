@@ -8,6 +8,7 @@
 #include <QTimer>
 
 #define COMPUTER_SEEK_TIMEOUT 10000
+#define QUIT_COMPLETION_TIMEOUT 30000
 
 namespace CliQuitStream
 {
@@ -75,6 +76,12 @@ public:
                 m_State = StateFailure;
                 emit q->failed(QObject::tr("Failed to connect to %1").arg(m_ComputerName));
             }
+            else if (m_State == StateQuitApp) {
+                m_State = StateFailure;
+                m_ComputerManager->stopPollingAsync();
+                emit q->failed(QObject::tr("%1 accepted the quit request but still reports the app running after %2 seconds.")
+                               .arg(m_ComputerName).arg(QUIT_COMPLETION_TIMEOUT / 1000));
+            }
             break;
         // Occurs when searched computer is found
         case Event::ComputerFound:
@@ -82,6 +89,13 @@ public:
                 if (event.computer->pairState == NvComputer::PS_PAIRED) {
                     m_State = StateQuitApp;
                     emit q->quittingApp();
+                    // The seeker stops polling once it finds the host, but a quit only
+                    // completes when a later poll sees the app gone. A host that tears the
+                    // app down asynchronously (Vibepollo's Playnite apps) still reports it
+                    // running on the one poll in flight, so without more polling the CLI
+                    // waited forever (BL-2712). Keep polling, and bound the wait.
+                    m_ComputerManager->startPolling();
+                    m_TimeoutTimer->start(QUIT_COMPLETION_TIMEOUT);
                     m_ComputerManager->quitRunningApp(event.computer);
                 } else {
                     m_State = StateFailure;
@@ -95,6 +109,8 @@ public:
         // Occurs when app quit completed (error message is set if failed)
         case Event::AppQuitCompleted:
             if (m_State == StateQuitApp) {
+                m_TimeoutTimer->stop();
+                m_ComputerManager->stopPollingAsync();
                 if (event.errorMessage.isEmpty()) {
                     QCoreApplication::exit(0);
                 } else {
