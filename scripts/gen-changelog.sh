@@ -243,7 +243,7 @@ ships() {  # $1 = hash -> 0 if any changed file reaches a user
   changelog_any_ships <<< "$(git -c core.quotepath=false show --name-only --format='' "$1" 2>/dev/null)"
 }
 
-FEATURES=""; BUGFIXES=""; IMPROVEMENTS=""; OTHER=""; INTERNAL=""; WHATSNEW=""
+FEATURES=""; BUGFIXES=""; IMPROVEMENTS=""; OTHER=""; INTERNAL=""; WHATSNEW=""; HERO_HASHES=""
 have_commits=false
 
 STABLE_CUT=false
@@ -362,6 +362,11 @@ while IFS='|' read -r hash subject; do
     if ! grep -qxF -- "- ${entry}" <<< "$WHATSNEW"; then
       WHATSNEW="${WHATSNEW}- ${entry}"$'\n'
     fi
+    # Said once (BL-2707): a change already in the hero is not repeated, word for word,
+    # in the technical changelog. Its commit is still listed there, by hash, so the page
+    # keeps accounting for every commit in the range.
+    HERO_HASHES="${HERO_HASHES} \`${hash}\`"
+    continue
   fi
 
   case "$kind" in
@@ -396,16 +401,17 @@ fi
 # nesting the Internal block inside a second one: GitHub renders nested collapsibles
 # inconsistently, and a heading inside the block carries the distinction just as well.
 #
-# Pre-releases used to print it expanded under "## Development Build Changelog". The
-# technical entries reuse each commit's user-facing note (developer subjects never reach
-# a release page), so every noted change appeared twice, word for word, one screen apart
-# (BL-2707). Collapsing it for every tier keeps the list complete without the repeat.
+# Changes already in the hero are not repeated here (BL-2707): the technical entries reuse
+# each commit's user-facing note (developer subjects never reach a release page), so
+# listing them again printed every one twice, word for word. They appear once above, and
+# their commits are referenced by hash on one line here.
 printf '<details><summary>Full technical changelog — every change in this release</summary>\n\n'
+[ -n "$HERO_HASHES" ] && printf '%s\n\n' "Covered in What's new above:${HERO_HASHES}"
 [ -n "$FEATURES" ]     && printf '### New Features\n%s\n' "$FEATURES"
 [ -n "$BUGFIXES" ]     && printf '### Bug Fixes\n%s\n' "$BUGFIXES"
 [ -n "$IMPROVEMENTS" ] && printf '### Improvements\n%s\n' "$IMPROVEMENTS"
 [ -n "$OTHER" ]        && printf '### Other Changes\n%s\n' "$OTHER"
-if [ -z "${FEATURES}${BUGFIXES}${IMPROVEMENTS}${OTHER}" ] && [ -z "$INTERNAL" ]; then
+if [ -z "${FEATURES}${BUGFIXES}${IMPROVEMENTS}${OTHER}${HERO_HASHES}" ] && [ -z "$INTERNAL" ]; then
   printf '%s\n\n' "_No commits in this range._"
 fi
 # Plumbing last -- present for traceability, out of the way of what a user actually

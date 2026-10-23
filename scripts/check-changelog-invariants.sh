@@ -140,7 +140,9 @@ out=$(gen 0.1.0-beta.002)
 grep -q "^## What's new for you" <<<"$out" || err "1: no hero section"
 grep -q "^- Fixes stuttering and choppy video on AMD handhelds$" <<<"$out" || err "1: hero is missing the human-written note"
 grep -q "Gallium" <<<"$out" && err "1: the raw technical subject leaked into the release body"
-grep -q "### Bug Fixes" <<<"$out" || err "1: the fix did not land in Bug Fixes"
+grep -q "^Covered in What's new above: \`" <<<"$out" || err "1: the hero change is not referenced by hash in the technical changelog"
+[ "$(grep -cF "Fixes stuttering and choppy video on AMD handhelds" <<<"$out")" -eq 1 ] \
+  || err "1: the note is printed more than once on the page (BL-2707)"
 [ "$fail" = "$t0" ] && ok "note-bearing fix -> hero bullet, technical subject suppressed"
 
 # --- 2. THE beta.005 REGRESSION: internal work is demoted even when it carries a
@@ -210,7 +212,8 @@ hero_line=$(grep -n "What's new for you" <<<"$out" | head -1 | cut -d: -f1)
 tech_line=$(grep -n "Full technical changelog" <<<"$out" | head -1 | cut -d: -f1)
 [ -n "$hero_line" ] && [ -n "$tech_line" ] && [ "$hero_line" -lt "$tech_line" ] \
   || err "8: the hero section must come before the technical changelog"
-grep -q "### New Features" <<<"$out" || err "8: feat: did not route to New Features"
+grep -q "^Covered in What's new above: \`" <<<"$out" || err "8: the hero feature is not referenced in the technical changelog"
+[ "$(grep -cF "You can now do the thing" <<<"$out")" -eq 1 ] || err "8: the feature note is repeated on the page"
 [ "$fail" = "$t0" ] && ok "hero precedes the technical changelog"
 
 # --- 9. THE #289 CASE, and the reason subject prefixes alone are not enough.
@@ -504,9 +507,11 @@ commit "fix: enable RFI by default on AMD/Gallium" \
 out=$(gen 0.2.0)
 stable_hero "$out" | grep -qxF -- "- Fixes stuttering and choppy video on AMD handhelds (Legion Go S, Steam Deck)" \
   || err "27: Changelog-Major: did not put a major fix in the stable hero"
-grep -q "### Bug Fixes" <<<"$out" || err "27: a Changelog-Major: fix must still route to Bug Fixes by its subject type"
+grep -q "^Covered in What's new above: \`" <<<"$out" || err "27: the major fix is not referenced in the technical changelog"
+[ "$(grep -cF "Fixes stuttering and choppy video on AMD handhelds (Legion Go S, Steam Deck)" <<<"$out")" -eq 1 ] \
+  || err "27: the major fix note is repeated on the page"
 grep -qi "Changelog-Major" <<<"$out" && err "27: the trailer key itself was published"
-[ "$fail" = "$t0" ] && ok "'Changelog-Major:' promotes a fix into the stable hero without changing its routing"
+[ "$fail" = "$t0" ] && ok "'Changelog-Major:' promotes a fix into the stable hero, said once"
 
 # --- 28. `Changelog-Major: none` opts out like the other two spellings, rather than
 #         rendering "- None" as the single headline of a production release.
