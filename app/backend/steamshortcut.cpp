@@ -466,6 +466,31 @@ bool upsertProfile(const QString &vdfPath, const QString &exe, const QString &st
             if (outAppId) { *outAppId = entryAppId(entry.children, exe); }
             return true;
         }
+
+        // BL-2711: the entry points at a DIFFERENT AppImage that still exists. That is the
+        // user's install; this process is some other copy (a downloaded beta, a test
+        // harness's scratch file, an extracted build). Re-pointing the tile at it made the
+        // library launch whatever copy ran last, and a deleted scratch copy left the tile
+        // dead. Only take the entry over when its target is gone; otherwise leave Exe and
+        // StartDir alone and at most repair a missing icon.
+        if (exeField && exeField->strVal != exeQuoted) {
+            QString currentExe = exeField->strVal;
+            if (currentExe.size() >= 2 && currentExe.startsWith(QLatin1Char('"'))
+                && currentExe.endsWith(QLatin1Char('"'))) {
+                currentExe = currentExe.mid(1, currentExe.size() - 2);
+            }
+            if (!currentExe.isEmpty() && QFileInfo(currentExe).isFile()) {
+                if (outAppId) { *outAppId = entryAppId(entry.children, currentExe); }
+                if (!iconField || icon.isEmpty()
+                    || (!iconField->strVal.isEmpty() && QFile::exists(iconField->strVal))) {
+                    return true;    // working shortcut owned by another install: nothing to write
+                }
+                iconField->strVal = icon;
+                updated = true;
+                break;
+            }
+        }
+
         if (exeField) {
             exeField->strVal = exeQuoted;
         }
