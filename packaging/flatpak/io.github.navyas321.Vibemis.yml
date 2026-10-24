@@ -18,7 +18,7 @@
 #     layer json — while DELIBERATELY DIVERGING on SDL: Nonary/upstream ship
 #     SDL3 + sdl2-compat; Vibemis builds REAL SDL2 (see the SDL2 module below
 #     and docs/engineering/BL-2213-audio-no-crackle-rca.md in the meta repo).
-#     Target: the current beta line (0.4.0-beta.001), not a stale stable pin.
+#     Target: the current release candidate (0.6.0-rc.001), not a stale stable pin.
 #
 # Flatpak is the right vehicle for SteamOS: the rootfs is read-only (no native
 # packages) and host-glibc-matched builds don't survive OS updates. It is
@@ -286,9 +286,9 @@ modules:
       # the public repo's newest bare stable tag (docs/FLATHUB.md checklist).
       - type: git
         url: https://github.com/navyas321/vibemis.git
-        tag: "0.4.0-beta.001"
-        commit: b0529aed8cd344b06dfd8f573c9a0cd2103b574e
-        # Full clone so the submodules (ClassicOldSong moonlight-common-c,
+        tag: "0.6.0-rc.001"
+        commit: d13eff44b06be96cb30bc600a52c30585cf9dbf1
+        # Full clone so the submodules (navyas321/moonlight-common-c,
         # qmdnsengine, h264bitstream, SDL_GameControllerDB) resolve.
         disable-shallow-clone: true
         # Auto-update PRs in the flathub repo when a new bare stable tag lands
@@ -298,10 +298,10 @@ modules:
           type: git
           tag-pattern: ^([0-9]+\.[0-9]+\.[0-9]+)$
       # Ported from Nonary b6c398ff: stamp the precise release identity into
-      # the build (in-tree app/version.txt carries only the bare 0.4.0).
+      # the build (in-tree app/version.txt carries only the bare 0.6.0).
       - type: shell
         commands:
-          - echo 0.4.0-beta.001 > app/version.txt
+          - echo 0.6.0-rc.001 > app/version.txt
       - type: file
         path: io.github.navyas321.Vibemis.desktop
       - type: file
