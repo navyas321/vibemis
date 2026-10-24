@@ -72,8 +72,14 @@ grep -qF 'url = https://github.com/navyas321/moonlight-common-c.git' .gitmodules
 #    5ec8397 (RTSP option leak). None touches the audio path:
 #      $ git ... diff --name-only ee67c928 64ba215d
 #      src/ControlStream.c  src/RtpVideoQueue.c  src/RtspParser.c  src/VideoDepacketizer.c
+#
+#    BL-2713 (2026-10-24) advances the pin from 64ba215d by one commit that sizes
+#    the video decode-unit queue from the stream FPS. Video only:
+#      $ git ... diff --name-only 64ba215d 7974aaef
+#      src/VideoDepacketizer.c
+#      (the only audio-pattern match is the word "off-channel" in a comment)
 OLD_PIN="f0e742ca69eec93eba286fab62a57eef2006496c"
-PIN="64ba215d4c741567682287532d10337d9749a078"
+PIN="7974aaef40a8e7f1d3130e649656f58b02268456"
 ACTUAL=$(git ls-tree HEAD moonlight-common-c/moonlight-common-c | awk '{print $3}')
 [ "$ACTUAL" = "$PIN" ] \
   || err "moonlight-common-c gitlink moved: ${ACTUAL:-<none>} (expected $PIN)"
