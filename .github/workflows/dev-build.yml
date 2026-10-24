@@ -182,10 +182,26 @@ jobs:
           # qt6-base-dev-tools provides qmake6; qt6-declarative-dev provides QtQml,
           # which pacingworker.pro needs (QT += core qml). libavutil/libsdl2 are
           # pulled in through pkg-config by the timing and pacing tests.
-          sudo apt-get install -y \
-            build-essential pkg-config \
-            qt6-base-dev qt6-base-dev-tools qt6-declarative-dev \
-            libavutil-dev libsdl2-dev
+          #
+          # The Acquire timeouts above do not catch a download that simply stops: on
+          # 2026-10-23 a mirror stalled mid-install with no output until the 20-minute
+          # job limit cancelled the run, twice. Bound each attempt and retry instead;
+          # packages already fetched stay in the apt cache between attempts.
+          for attempt in 1 2 3; do
+            if timeout 300 sudo apt-get install -y \
+                build-essential pkg-config \
+                qt6-base-dev qt6-base-dev-tools qt6-declarative-dev \
+                libavutil-dev libsdl2-dev; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::apt-get install failed or stalled 3 times"
+              exit 1
+            fi
+            echo "::warning::apt-get install attempt $attempt failed or stalled; retrying"
+            # A kill during unpack (not just download) can leave dpkg half-configured.
+            sudo dpkg --configure -a || true
+          done
 
       # tests/tests.pro is opt-in (it only descends into its SUBDIRS when qmake is
       # given CONFIG+=tests), so point qmake straight at tests/vrr/vrr.pro instead —
