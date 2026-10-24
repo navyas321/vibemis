@@ -93,14 +93,11 @@
   <content_rating type="oars-1.1" />
 
   <releases>
-    <release version="0.6.0-rc.001" date="2026-10-24" type="development">
-      <url type="details">https://github.com/navyas321/vibemis/releases/tag/0.6.0-rc.001</url>
+    <release version="0.4.0-beta.001" date="2026-07-18" type="development">
+      <url type="details">https://github.com/navyas321/vibemis/releases/tag/0.4.0-beta.001</url>
       <description>
-        <p>Release candidate for 0.6.0 (what the in-repo Flatpak manifest currently builds): a fix for repeating stutters when streaming above 60 FPS over Wi-Fi, VRR low-latency capture on Vibepollo/Vibeshine hosts, hardware YUV 4:4:4 decoding on Intel and AMD, better packet-loss recovery, and updates that stay on the chosen channel and are checksum-verified.</p>
+        <p>Beta of the 0.4 line (what the in-repo Flatpak manifest currently builds): Steam shortcut self-heal fix on top of the 0.4.0.0 gamepad-first redesign train.</p>
       </description>
-    </release>
-    <release version="0.5.0" date="2026-07-29" type="stable">
-      <url type="details">https://github.com/navyas321/vibemis/releases/tag/0.5.0</url>
     </release>
     <release version="0.3.1" date="2026-07-18" type="stable">
       <url type="details">https://github.com/navyas321/vibemis/releases/tag/0.3.1</url>
